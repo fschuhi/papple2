@@ -1,0 +1,82 @@
+# (This file is the basis of the `filesdump.txt` in which it is included, i.e. the document you are reading right now.
+# The files in this manifest are the relevant files for understanding how the project hangs together.
+# Files which are commented out exist but are not included in the `filesdump.txt`.)
+
+### --- Context & Meta ---
+# ⚠️ NON-NEGOTIABLE collaboration rules - READ FIRST
+CRITICAL_RULES.md
+
+# reading guide for bootstrapping a new session; either attached to the first message or passed as message body
+# FIRST_PROMPT.md
+
+LLM_INSTRUCTIONS.md
+manifest.lst
+tmp/project_tree.txt
+
+# standard project documentation -- work in progress
+README.md
+GOALS.md
+TODO.md
+# HISTORY.md
+
+### --- Build & Python Configuration ---
+Makefile
+requirements.txt
+# .gitignore
+# .gitattributes
+
+### --- DevOps tools ---
+# tools/concat_files.py
+
+### --- Source ---
+src/papple2/Annotations.py
+src/papple2/Apple.py
+src/papple2/Assembler.py
+src/papple2/Checkpoints.py
+src/papple2/CPU.py
+src/papple2/Disassembler.py
+src/papple2/Emulator.py
+src/papple2/Excel.py
+src/papple2/Hooks.py
+src/papple2/Labels.py
+src/papple2/MemLogDlg.py
+src/papple2/Memory.py
+src/papple2/MemoryMap.py
+src/papple2/Papple2.py
+src/papple2/Robotron.py
+src/papple2/RobotronXl.py
+src/papple2/Statemachines_example.py
+src/papple2/tests.py
+src/papple2/util.py
+src/papple2/Workbench.py
+
+### --- Tests and fixtures data ---
+tests/tests.py
+
+### --- Data ---
+#data/bin/A2ROM.BIN
+#data/bin/ROBOTRON#062dfd.bin
+#data/bin/ROBOTRON.BIN
+
+#data/do/Robotron 2084 (1983)(Atari).do
+
+#data/img/Robotron_2084_AP2_box.jpg
+#data/img/Robotron_2084_Atari_box.jpg
+
+### --- Docs ---
+#docs/advice_from_6502org.md
+#docs/link_list.md
+
+#docs/6502/6502 CheatSheet.pdf
+#docs/6502/6502 technical reference.pdf
+
+#docs/Apple/Apple Graphics & Arcade Game Design (Stanton 1982).pdf
+#docs/Apple/Apple II ASCII chart.jpg
+#docs/Apple/Apple II Computer Graphics (Williams 1983).pdf
+#docs/Apple/Apple II Monitors Peeled.pdf
+#docs/Apple/Apple IIe Reference Manual - memory organization.pdf
+
+#docs/Robotron/Robotron.dis65
+#docs/Robotron/Robotron (Apple).asm
+#docs/Robotron/Robotron sprites.xlsb
+#docs/Robotron/spirte_tables.md

@@ -1,0 +1,12 @@
+# papple2 -- History
+
+(Note: "I" in the following paragraphs refer to the user, "you" to you as the AI model.)
+
+- The resolved-work record: what was built and when (note date, or have the points in roughly reverse-chronological order).
+- This is the trophy case -- kept in the repo, **out of the per-session filesdump** (so it no longer rides along every session).
+- For *forward* work see `TODO.md`; for direction see `GOALS.md`; for the architecture as it stands see `README.md`.
+- See "Workflow for the Whole Session (CRITICAL)" in `LLM_INSTRUCTIONS.md` for the interplay between `TODO.md` and this file. 
+
+---
+
+TBD

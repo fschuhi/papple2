@@ -1,0 +1,24 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# Makefile artifacts, raw photos, Excel tempfiles
+tmp/
+~$*
+bak/
+
+# macOS
+.DS_Store
+
+# JetBrains
+.idea/
+
+# Environment / secrets
+.env
+*.toml
+!pyproject.toml
