@@ -9,4 +9,6 @@
 
 ---
 
-TBD
+## 2026-09-03 -- Inaugural papple2 session
+
+Revival of the emulator after the Robotron 2084 project went dormant. Full read-through of the code base with Claude (Fable 5.1). Result: `ACTION_PLAN.md` with milestones M1 (tests green on macOS) to M8 (documentation), ordered by cheapest visible value. The target-state list moved from `GOALS.md` to `ACTION_PLAN.md`; `GOALS.md` now holds only the vision and the session pointer; `TODO.md` holds the M1 tasks. Main findings: Windows-only paths, `pytest` missing from requirements, two identical `tests.py`, `from X import *` throughout, Robotron-specific behaviour inside `Memory.write_byte`. No code changed.
