@@ -1,3 +1,5 @@
 pygame
 pysm
 xlwings
+numpy
+pytest

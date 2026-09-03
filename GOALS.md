@@ -13,13 +13,19 @@
 - There are tests using `unittest`. As far as I remember, these are the tests from ApplePy
 - The emulator is not only for low level 6502 stuff but also for the Apple II. The screen and keyboard are emulated by `pygame`. I don't remember, but I think it's not possible to mock the `pygame` "Apple II".
 - I don't understand anymore how everything hangs together; it has been years since I've worked with Papple2 and the Robotron 2084 disassembly project.
+- The project had been used as a way to learn Python. Among other places, this shows in the `import` statements.
+- The code uses proprietary debugging concepts like "tiles" and "stretches".
+- The complexity of the codebase is considerable. Some patterns (like using statemachines) seem overengineered. But I also have to admit that aldon't understand everything anymore.
 
 **What's next:**
 We devise an action plan (as markdown document) which outlines the steps necessary to arrive at the target state of the project. This target state looks like this:
+- The code base is reviewed and refactored, broadly according to best practice for naming and organizing Python code in projects like `papple2`.
+- Non-standard / proprietary debugging concepts are understood, documented, and tested -- or removed when unnecessary or easier to be accomplished differently.
+- Functionality is deliniated sensibly, distinguishing between core emulator functionality and additional debugging facilities. 
 - `papple2` can be used in other Python project like `load-runner`(see "Strategic Vision" below).
+- The `papple2` library (is this even the correct terminology?) has a good pytest test coverage, including (1) 6502 specifics, (2) Apple II specifics, (3) running disk images with and without the `pygame` screen, (4) breakpoints and other debugging facilities.
 - The Robotron 2084 disassembly project is the showcase how to use the emulator. It doesn't have to be included in the project, but it could, to exemplify how `papple2` can be used.
 - The emulator can be run both with showing the `pygame` and taking keyboard input but also completely silently, including working with programmatic keypresses.
-- The `papple2` library (is this even the correct terminology?) has a good pytest test coverage, including (1) 6502 specifics, (2) Apple II specifics, (3) running disk images with and without the `pygame` screen, (4) breakpoints and other debugging facilities.
 - The Excel bridge is implemented with PyXll instead of xlwings.
 - Full set of the artefacts `README.md`, `GOALS.md`, `TODO.md`.
 

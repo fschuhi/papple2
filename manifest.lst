@@ -13,6 +13,9 @@ LLM_INSTRUCTIONS.md
 manifest.lst
 tmp/project_tree.txt
 
+# Current action plan to turn this project into a reusable module
+ACTION_PLAN.md
+
 # standard project documentation -- work in progress
 README.md
 GOALS.md
@@ -47,6 +50,7 @@ src/papple2/Robotron.py
 src/papple2/RobotronXl.py
 src/papple2/Statemachines_example.py
 src/papple2/tests.py
+src/papple2/Tiles.py
 src/papple2/util.py
 src/papple2/Workbench.py
 
