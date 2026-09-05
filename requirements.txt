@@ -3,3 +3,4 @@ pysm
 xlwings
 numpy
 pytest
+graphviz

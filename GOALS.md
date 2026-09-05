@@ -8,9 +8,9 @@
 
 ## 📍 Current Session Pointer
 
-**Where we are:** The inaugural `papple2` session (September 2026) produced `ACTION_PLAN.md` with milestones M1 to M8, moved the target state there, and rewrote this file and `TODO.md`. No code has been changed yet; the emulator does not run on macOS and `make test` fails.
+**Where we are:** M1 is done -- `make test` is all green on macOS. Along the way we made `src/papple2` a real installable package (Approach A), rewrote the `Makefile` for OS-branched venvs, split `tests.py` into per-topic `pytest` files, and fixed the two blocking bugs in `Apple2.__init__` (unconditional `pygame.init()`, a Windows-only ROM path). `README.md` and `TODO.md` are updated to match.
 
-**What's next:** Milestone M1 in `ACTION_PLAN.md` -- tests run and are green on macOS. First decision to make: package layout (`src/papple2/` as a package versus a flat layout), with the future use in `load-runner` in mind. Then the M1 tasks in `TODO.md`.
+**What's next:** Milestone M2 in `ACTION_PLAN.md` -- the emulator boots on macOS. Concrete tasks (remaining hardcoded paths, `util.msgbox`, the status-bar font) are in `TODO.md`.
 
 ---
 
@@ -28,15 +28,15 @@ Python is slow for emulation, but that never mattered for the debugging use. Wha
 
 ### Where it is going
 
-1. **A macOS-native library.** The code was written on a Windows machine. It moves to the MacBook and becomes a proper Python package that other projects can import. (Note that 5. below means that we should still be able to use the library from Windows as well, possibly via a bridge layer between PyXll and a server on macOS, even though that would be only second-best.) 
+1. **A macOS-native library.** The code was written on a Windows machine. It moves to the MacBook and becomes a proper Python package that other projects can import. (Note that 4. below means that we should still be able to use the library from Windows as well, possibly via a bridge layer between PyXll and a server on macOS, even though that would be only second-best.) 
 
 2. **A clean split into three layers.** The core emulator (6502, memory, Apple II hardware), the debugging tools built on top of it, and the Robotron 2084 disassembly project as the worked example of how to use both. Today these are mixed; separating them is what makes `papple2` reusable.
 
 3. **Runs with and without a screen.** With the pygame window for watching and interacting, and silently for tests and for scripted analysis: boot, run to a point, press keys from code, read the buffers, done.
 
-4. **Serving `load-runner`.** My private educational project ports an Apple II game to Godot. `papple2` can help in two ways: cycle counting, if I decide that timing fidelity matters for the port; and level extraction, by letting the original code load a level into memory and then reading the filled buffers instead of reverse-engineering the disk format by hand.
+4. **Reviving the Robotron work.** The Robotron 2084 disassembly was hibernated, but its workbench (call trees from tiles and stretches, the Excel front end) is the proof that the debugging tools work on a real program. It gets a second life in the project as a worked-through showcase. The Excel bridge moves from xlwings to PyXll.
 
-5. **Keeping the Robotron work alive.** The Robotron 2084 disassembly is hibernated, but its workbench (call trees from tiles and stretches, the Excel front end) is the proof that the debugging tools work on a real program. It stays in the project as the showcase. The Excel bridge moves from xlwings to PyXll when the disassembly project wakes up again.
+5. **Serving `load-runner`.** My private educational project ports an Apple II game to Godot. `papple2` can help in two ways: cycle counting, if I decide that timing fidelity matters for the port; and level extraction, by letting the original code load a level into memory and then reading the filled buffers instead of reverse-engineering the disk format by hand.
 
 ### What I want to learn along the way
 
