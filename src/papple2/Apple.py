@@ -494,15 +494,16 @@ class SoftSwitches:
 class Apple2:
 
     def __init__(self, no_display=False, quiet=True, frame_rate=20):
-        pygame.mixer.pre_init(11025, -16, 1)
-        pygame.init()
+        if not no_display:
+            pygame.mixer.pre_init(11025, -16, 1)
+            pygame.init()
 
         self.display = Display(self, no_display)
         self.speaker = Speaker(quiet)
         self.softswitches = SoftSwitches(self.display, self.speaker)
 
         self.memory = Memory(self)
-        self.memory.load_image(0xD000, r'bin\A2ROM.BIN')
+        self.memory.load_image(0xD000, 'data/bin/A2ROM.BIN')
         self.cpu = CPU(self.memory, program_counter=None)
 
     def pickle(self, pickler):
