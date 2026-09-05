@@ -20,10 +20,10 @@
 # https://www.hex-rays.com/products/ida/
 
 import time
-from Apple import *
-from MemoryMap import *
-from Hooks import *
-from Checkpoints import *
+from papple2.Apple import *
+from papple2.MemoryMap import *
+from papple2.Hooks import *
+from papple2.Checkpoints import *
 import io
 import pygame
 import sys

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-from RobotronXl import *
-from Assembler import *
+from papple2.RobotronXl import *
+from papple2.Assembler import *
 from pysm import State, StateMachine, Event
 
 def dump_stretches( workbench: Workbench ):

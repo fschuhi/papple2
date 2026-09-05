@@ -9,7 +9,7 @@
 import logging
 import io
 from pickle import *
-from Memory import *
+from papple2.Memory import *
 from enum import Enum
 import sys
 

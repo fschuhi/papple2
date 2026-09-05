@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-from util import *
-from CPU import *
+from papple2.util import *
+from papple2.CPU import *
 
 class Labels:
     def __init__(self):

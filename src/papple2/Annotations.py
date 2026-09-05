@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import collections
-from util import *
+from papple2.util import *
 
 class Annotations:
 

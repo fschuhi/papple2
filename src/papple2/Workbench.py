@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
 import sys
-from Labels import *
-from Disassembler import *
-from Emulator import *
-from Annotations import *
-from Tiles import *
-from MemLogDlg import *
+from papple2.Labels import *
+from papple2.Disassembler import *
+from papple2.Emulator import *
+from papple2.Annotations import *
+from papple2.Tiles import *
+from papple2.MemLogDlg import *
 
 
 class Workbench:

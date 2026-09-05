@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-from util import *
-from MemoryMap import *
+from papple2.util import *
+from papple2.MemoryMap import *
 
 TYPE_SEQUENTIAL = 1
 TYPE_BRANCH_ALWAYS = 2

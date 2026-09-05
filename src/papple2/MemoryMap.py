@@ -2,8 +2,8 @@
 
 # IMPORTANT: Try to have the MemoryMap as stateless as possible
 
-from Memory import *
-from CPU import *
+from papple2.Memory import *
+from papple2.CPU import *
 
 MEM_UNKNOWN = 0
 MEM_OPCODE = 1

@@ -1,9 +1,9 @@
 import unittest
-from Memory import Memory
-from CPU import CPU
-from Assembler import *
-from Disassembler import *
-from Apple import *
+from papple2.Memory import Memory
+from papple2.CPU import CPU
+from papple2.Assembler import *
+from papple2.Disassembler import *
+from papple2.Apple import *
 import re
 
 class TestMemory(unittest.TestCase):

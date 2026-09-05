@@ -2,7 +2,7 @@
 
 import sys
 
-from util import *
+from papple2.util import *
 
 INSTRUCTION = 1
 OPERAND     = 2

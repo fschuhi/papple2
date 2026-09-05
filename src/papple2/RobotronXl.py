@@ -4,10 +4,10 @@ import logging
 import pickle
 import os
 
-from Excel import *
-from Workbench import *
-from Emulator import *
-from Tiles import *
+from papple2.Excel import *
+from papple2.Workbench import *
+from papple2.Emulator import *
+from papple2.Tiles import *
 
 workbench = None  # type: Workbench
 emulator = None  # type: Emulator

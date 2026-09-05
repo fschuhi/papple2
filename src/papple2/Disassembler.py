@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
 import re
-from CPU import *
-from MemoryMap import *
-from util import *
-from Labels import *
-from Annotations import *
+from papple2.CPU import *
+from papple2.MemoryMap import *
+from papple2.util import *
+from papple2.Labels import *
+from papple2.Annotations import *
 
 class Disassembler:
     def __init__(self, cpu, map, labels):

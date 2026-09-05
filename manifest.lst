@@ -24,6 +24,7 @@ TODO.md
 
 ### --- Build & Python Configuration ---
 Makefile
+pyproject.toml
 requirements.txt
 # .gitignore
 # .gitattributes
