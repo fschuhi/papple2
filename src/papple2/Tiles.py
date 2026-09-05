@@ -485,8 +485,9 @@ class DotCallTree:
         with open( fnDot, "w" ) as text_file:
             print(*dot_lines, sep='\n', file=text_file)
 
-        import os
-        os.environ["PATH"] += os.pathsep + r's:\shared\Graphviz\bin'
+        # 05.09.26 removed, but might need to be revisited when using papple2 from Windows (via Excel)
+        # import os
+        # os.environ["PATH"] += os.pathsep + r's:\shared\Graphviz\bin'
 
         from graphviz import render
         fnRendered = render('dot', format, fnDot )

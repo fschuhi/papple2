@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import logging
+from pathlib import Path
 import pickle
 import os
 
@@ -21,16 +22,17 @@ def validate_memlog_dialog():
     #if workbench.memlog_dialog is None:
     #    create_memlog_dialog(15)
 
+
 @xw.func
-def start_emulator( path, show_window=True, time_machine=False, mem_access=False ):
+def start_emulator( data_dir, trace_dir, show_window=True, time_machine=False, mem_access=False ):
     global emulator
     global workbench
 
-    workbench = Workbench(path, show_window, time_machine, mem_access )
+    workbench = Workbench(data_dir, show_window, time_machine, mem_access )
     emulator = workbench.emulator
 
     # TODO: refactor logging
-    logging.basicConfig(filename='trace\\Robotron.log', level=logging.DEBUG, format='%(asctime)s %(message)s', datefmt='%d.%m.%Y %H:%M:%S')
+    logging.basicConfig(filename=str(Path(trace_dir) / "Robotron.log"), level=logging.DEBUG, format='%(asctime)s %(message)s', datefmt='%d.%m.%Y %H:%M:%S')
 
     return "started"
 
@@ -50,13 +52,13 @@ def continue_robotron(event_loop=True, simulate_execution=False, determine_stret
 
 
 @xw.func
-def save_results( format='png', cycles_ruler=True, show_trace=False ):
+def save_results( trace_dir, format='png', cycles_ruler=True, show_trace=False ):
     global emulator
     with ExcelContext() as XL:
         validate_workbench( )
-        workbench.save_map(r'trace\map.txt')
-        workbench.save_asm(r'trace\asm.txt')
-        fnRendered = workbench.save_dot(r'trace\call_tree.dot', format, cycles_ruler )
+        workbench.save_map(str(Path(trace_dir) / "map.txt"))
+        workbench.save_asm(str(Path(trace_dir) / "asm.txt"))
+        fnRendered = workbench.save_dot(str(Path(trace_dir) / "call_tree.dot"), format, cycles_ruler )
         if show_trace:
             os.system('start %s' % fnRendered)
     return XL.result

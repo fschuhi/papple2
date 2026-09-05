@@ -29,6 +29,9 @@ requirements.txt
 # .gitignore
 # .gitattributes
 
+### --- Project-specific Configuration ---
+papple2.toml
+
 ### --- DevOps tools ---
 # tools/concat_files.py
 

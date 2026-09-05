@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import sys
+from pathlib import Path
+
 from papple2.Labels import *
 from papple2.Disassembler import *
 from papple2.Emulator import *
@@ -10,15 +12,13 @@ from papple2.MemLogDlg import *
 
 
 class Workbench:
-    def __init__( self, path=None, show_window=True, time_machine=False, mem_access=False ):
-        if path is not None:
-            import os
-            os.chdir( path )
+    def __init__(self, data_dir=None, show_window=True, time_machine=False, mem_access=False):
 
         sys.setrecursionlimit( 3000 )
 
         self.emulator = Emulator( no_display=not show_window, quiet=True, time_machine=time_machine, mem_access=mem_access )
-        self.emulator.load_image( 0x2dfd, r'bin\ROBOTRON.BIN' )
+        rom_dir = Path(data_dir) if data_dir is not None else Path(".")
+        self.emulator.load_image( 0x2dfd, str(rom_dir / "bin" / "ROBOTRON.BIN") )
         # self.emulator.load_image( 0x2dfd, r"tmp\ROBOTRON#062DFD.BIN" )
 
         self.apple2 = self.emulator.apple2
@@ -269,7 +269,7 @@ class Workbench:
                 if mnemonic == '???':
                     break
 
-                info = mm.post_op( simulated_pc, operand_length, 0, prev_info )
+                info = self.map.post_op( simulated_pc, operand_length, 0, prev_info )
                 assert info is not None
 
                 if not info.is_leap( ):

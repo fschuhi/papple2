@@ -1,4 +1,8 @@
+
 #!/usr/bin/env python
+
+import tomllib
+from pathlib import Path
 
 from papple2.RobotronXl import *
 from papple2.Assembler import *
@@ -181,6 +185,16 @@ def dump_chars(workbench: Workbench, params: [str] ):
     time.sleep(0.5)
 
 
+def load_config():
+    config_path = Path("papple2.toml")
+    if config_path.exists():
+        with open(config_path, "rb") as f:
+            config = tomllib.load(f)
+    else:
+        config = {}
+    return config.get("data_dir", "data"), config.get("trace_dir", "trace")
+
+
 def get_arguments():
     import argparse
     parser = argparse.ArgumentParser()
@@ -205,10 +219,7 @@ if __name__ == "__main__":
 
     args = get_arguments()
 
-    # TODO: think about passing path to emulator - - really needed? or just use current?
-    # path = "s:\\Apple II\\Python\\Papple"
-    # path = "s:\\source\\Python\\Papple2"
-    path = "."
+    data_dir, trace_dir = load_config()
     show_window = (not args.exit) and (not args.nodisplay)
 
     mem_access = args.savemem
@@ -218,12 +229,12 @@ if __name__ == "__main__":
     time_machine = args.timemachine
     determine_stretches = not time_machine
 
-    start_emulator( path, show_window, time_machine=time_machine, mem_access=mem_access )
+    start_emulator( data_dir, trace_dir, show_window, time_machine=time_machine, mem_access=mem_access )
 
     from RobotronXl import workbench, emulator
 
     if args.load:
-        load_state(r'trace\Robotron.dat')
+        load_state(str(Path(trace_dir) / "Robotron.dat"))
 
     event_loop = not args.exit
     simulate_execution = args.simulate
@@ -245,13 +256,14 @@ if __name__ == "__main__":
             print("cannot find '%s'" % func )
 
     if args.save:
-        save_state(r'trace\Robotron.dat')
+        save_state(str(Path(trace_dir) / "Robotron.dat"))
 
     if not args.noresults:
-        save_results( args.format, args.cycles, args.showtrace )
+        save_results( trace_dir, args.format, args.cycles, args.showtrace )
 
     if args.savemem:
         fn = r'dat\test.dat'
         with open(fn, 'wb') as output:
             pickle.dump( emulator.mem_access.memory_states, output )
+
 
