@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import ctypes  # An included library with Python install.
 import itertools
 
 def chunks(l, n):
@@ -68,11 +67,6 @@ def hexbyte(address, lower=True):
 
 def hexbytes(bytes):
     return list(map(lambda b: hexbyte(b), bytes))
-
-
-def msgbox(text):
-    ctypes.windll.user32.MessageBoxW(0, str(text), "msgbox", 1)
-
 
 def dot_RGB( R, G, B ):
     # https://www.graphviz.org/doc/info/attrs.html#k:color

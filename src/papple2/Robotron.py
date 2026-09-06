@@ -231,7 +231,7 @@ if __name__ == "__main__":
 
     start_emulator( data_dir, trace_dir, show_window, time_machine=time_machine, mem_access=mem_access )
 
-    from RobotronXl import workbench, emulator
+    from papple2.RobotronXl import workbench, emulator
 
     if args.load:
         load_state(str(Path(trace_dir) / "Robotron.dat"))
@@ -262,8 +262,6 @@ if __name__ == "__main__":
         save_results( trace_dir, args.format, args.cycles, args.showtrace )
 
     if args.savemem:
-        fn = r'dat\test.dat'
+        fn = str(Path(data_dir) / "test.dat")
         with open(fn, 'wb') as output:
             pickle.dump( emulator.mem_access.memory_states, output )
-
-

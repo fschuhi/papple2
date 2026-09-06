@@ -110,7 +110,7 @@ This list moved here from `GOALS.md`. It is preliminary; more constraints will b
 
 **Done when:** the functions in `RobotronXl.py` are callable from Excel through PyXll on the Windows VM.
 
-**Note:** lowest priority; only started when the Robotron disassembly project wakes up again.
+**Note:** lowest priority, but not no priority. The Excel bridge is part of the Robotron showcase for `papple2`.
 
 ### M8 -- Documentation
 

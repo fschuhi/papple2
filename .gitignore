@@ -21,4 +21,5 @@ bak/
 # Environment / secrets
 .env
 *.toml
+!papple2.example.toml
 !pyproject.toml

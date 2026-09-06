@@ -1,0 +1,8 @@
+# papple2 local configuration
+#
+# Paths are relative to the directory this file lives in (repo root), or
+# absolute if you prefer. No secrets live here, so this file can be committed
+# as-is.
+
+data_dir = "data"
+trace_dir = "tmp/trace"

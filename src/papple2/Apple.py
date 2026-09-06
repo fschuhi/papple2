@@ -495,7 +495,8 @@ class Apple2:
 
     def __init__(self, no_display=False, quiet=True, frame_rate=20):
         if not no_display:
-            pygame.mixer.pre_init(11025, -16, 1)
+            if not quiet:
+                pygame.mixer.pre_init(11025, -16, 1)
             pygame.init()
 
         self.display = Display(self, no_display)

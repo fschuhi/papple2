@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from util import *
+from papple2.util import *
 from papple2.Emulator import *
 
 

@@ -30,7 +30,10 @@ requirements.txt
 # .gitattributes
 
 ### --- Project-specific Configuration ---
-papple2.toml
+papple2.example.toml
+
+# treat the actually used toml as secret; we don't include it in the filesdump, and it's .gitignore'd
+#papple2.toml
 
 ### --- DevOps tools ---
 # tools/concat_files.py
