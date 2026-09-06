@@ -4,6 +4,8 @@
 
 `papple2` is a real, installable Python package: the code lives in `src/papple2/`, declared in `pyproject.toml`, and installed in editable mode (`pip install -e .`, wired into `make setup`). The `Makefile` also builds an OS-specific venv (`.venv` on macOS, `.venv-win` on Windows). Every internal import is prefixed accordingly, e.g. `from papple2.Memory import Memory`.
 
+**Python version:** use Python 3.12 for the venv, not whatever `python3` happens to resolve to. As of this writing, `pygame` 2.6.1 does not build or run correctly under Python 3.14 -- `pygame.mixer` and `pygame.font` fail to import (open upstream packaging issue, not specific to this machine). `make setup` will happily produce a broken install if your default `python3` is 3.14. If needed: `rm -rf .venv && python3.12 -m venv .venv && make setup`.
+
 Two things this does *not* yet mean:
 - Imports are still star-imports (`from papple2.X import *`) in most files. Converting to explicit names is planned for M4, not done yet.
 - The package is not yet split into core / debugging tools / Robotron showcase. Today, `papple2` contains all of it -- CPU, memory, and Apple II hardware alongside the Robotron- and Excel-specific code. That split is also M4 work (see `ACTION_PLAN.md`).

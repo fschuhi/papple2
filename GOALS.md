@@ -6,11 +6,15 @@
 
 ---
 
-## 📍 Current Session Pointer
-
+# before
 **Where we are:** M1 is done -- `make test` is all green on macOS. Along the way we made `src/papple2` a real installable package (Approach A), rewrote the `Makefile` for OS-branched venvs, split `tests.py` into per-topic `pytest` files, and fixed the two blocking bugs in `Apple2.__init__` (unconditional `pygame.init()`, a Windows-only ROM path). `README.md` and `TODO.md` are updated to match.
 
 **What's next:** Milestone M2 in `ACTION_PLAN.md` -- the emulator boots on macOS. Concrete tasks (remaining hardcoded paths, `util.msgbox`, the status-bar font) are in `TODO.md`.
+
+# after
+**Where we are:** M2 is done -- `python -m papple2.Robotron` boots on macOS: the pygame window opens, the animated Robotron splash renders, Ctrl-X stops and resumes. Paths are now driven by `papple2.toml` (gitignored, `papple2.example.toml` committed) instead of hardcoded Windows strings, and the `os.chdir` in `Workbench.__init__` is gone. Two leftover un-prefixed imports and a stale `mm.post_op` bug were also found and fixed along the way. The venv needs Python 3.12 -- `pygame` doesn't yet support 3.14 (see `README.md`).
+
+**What's next:** Milestone M3 in `ACTION_PLAN.md` -- silent mode (no pygame window, programmatic keypresses, one pytest exercising it end-to-end). Concrete tasks are in `TODO.md`.
 
 ---
 
