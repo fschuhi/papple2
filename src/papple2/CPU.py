@@ -8,9 +8,9 @@
 
 import logging
 import io
-from pickle import *
-from papple2.Memory import *
-from enum import Enum
+from pickle import Pickler, Unpickler
+
+from papple2.util import hexaddr, hexbyte
 import sys
 
 

@@ -9,6 +9,11 @@
 
 ---
 
+## 2026-09-06 -- Imports untangled
+
+- Untangled the circular import between `Emulator`, `Hooks`, `Checkpoints`.
+- Replaced `from X import *` with explicit imports.
+
 ## 2026-09-06 -- M2
 
 - Replaced hardcoded Windows paths with `papple2.toml` (local, gitignored; `papple2.example.toml` committed instead), no `os.chdir` needed anymore. Also swept up `args.savemem`'s `dat\test.dat` (now under `data_dir`) and the Graphviz `PATH` hack in `Tiles.py` (removed; `dot` now found via `brew install graphviz`).

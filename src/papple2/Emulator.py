@@ -20,10 +20,12 @@
 # https://www.hex-rays.com/products/ida/
 
 import time
-from papple2.Apple import *
-from papple2.MemoryMap import *
-from papple2.Hooks import *
-from papple2.Checkpoints import *
+from papple2.util import hexaddr, hexbyte, Ascii2Apple2Ascii, Apple2Ascii2Ascii
+from papple2.Apple import Apple2, determine_states_from_kmods
+from papple2.CPU import JMP_indirect, JMP_absolute, RTS, JSR
+from papple2.MemoryMap import MemoryMap
+from papple2.Hooks import TimeMachine, MemAccessCollector
+# from papple2.Checkpoints import *
 import io
 import pygame
 import sys
@@ -435,4 +437,3 @@ class Emulator:
         else:
             matched_jsr = None
         self.map.register_rts( leap_from_info, self.cpu.PC, matched_jsr )  # caller can be None
-

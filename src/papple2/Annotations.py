@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import collections
-from papple2.util import *
+from papple2.util import hexaddr
 
 class Annotations:
 

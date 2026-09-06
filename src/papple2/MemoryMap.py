@@ -2,8 +2,9 @@
 
 # IMPORTANT: Try to have the MemoryMap as stateless as possible
 
-from papple2.Memory import *
-from papple2.CPU import *
+# from papple2.Memory import *
+from papple2.CPU import JSR, RTS, BPL, BMI, BVC, BVS, BCC, BCS, BNE, BEQ, JMP_absolute, JMP_indirect
+from papple2.util import hexaddr
 
 MEM_UNKNOWN = 0
 MEM_OPCODE = 1

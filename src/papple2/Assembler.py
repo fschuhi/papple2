@@ -2,7 +2,7 @@
 
 import sys
 
-from papple2.util import *
+from papple2.util import hexbyte
 
 INSTRUCTION = 1
 OPERAND     = 2

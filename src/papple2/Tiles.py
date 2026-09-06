@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
-from papple2.util import *
-from papple2.MemoryMap import *
+from papple2.util import hexaddr, pairwise, dot_RGB
+from papple2.CPU import JSR, RTS, JMP_absolute
+from papple2.MemoryMap import MemoryMap, OpInfo
+# from papple2.MemoryMap import *
 
 TYPE_SEQUENTIAL = 1
 TYPE_BRANCH_ALWAYS = 2

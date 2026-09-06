@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import pickle
-from papple2.util import *
 
 class Memory:
     def __init__( self, apple2 = None ):

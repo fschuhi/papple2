@@ -5,10 +5,14 @@ from pathlib import Path
 import pickle
 import os
 
-from papple2.Excel import *
-from papple2.Workbench import *
-from papple2.Emulator import *
-from papple2.Tiles import *
+import xlwings as xw
+
+from papple2.util import hex2int, hexaddr
+from papple2.MemoryMap import MEM_UNKNOWN
+from papple2.Excel import raise_error, ExcelContext
+from papple2.Workbench import Workbench
+from papple2.Emulator import Emulator
+from papple2.MemLogDlg import MemLogDialog
 
 workbench = None  # type: Workbench
 emulator = None  # type: Emulator

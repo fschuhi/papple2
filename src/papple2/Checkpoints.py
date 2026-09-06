@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
-from papple2.util import *
-from papple2.Emulator import *
+from papple2.util import hexbyte, Apple2Ascii2Ascii, Ascii2Apple2Ascii
 
 
 class RecordedKeys:

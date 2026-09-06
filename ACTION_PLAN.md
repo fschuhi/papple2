@@ -13,7 +13,7 @@
 - The code was written on Windows. File paths use backslashes and point to `bin\...` while the files live in `data/bin/`. `util.msgbox` uses a Windows-only call. Logging writes to `trace\...`. The emulator cannot start on macOS as it is.
 - `make test` fails because `pytest` is missing from `requirements.txt`. The test files use `unittest`, not `pytest`.
 - `src/papple2/tests.py` and `tests/tests.py` are identical copies.
-- All modules import each other as top-level modules (`from Memory import *`), not as members of the `papple2` package. `Emulator`, `Hooks`, and `Checkpoints` import each other in a circle.
+- ~~All modules import each other as top-level modules (`from Memory import *`), not as members of the `papple2` package. `Emulator`, `Hooks`, and `Checkpoints` import each other in a circle.~~ **2026-09-06** fixed in focused session after completing M2
 - Robotron-specific code sits inside the core emulator: protected memory ranges in `Memory.write_byte`, Robotron addresses in `Emulator.on_l`, an assertion in `Emulator.handle_rts` that only holds for Robotron.
 - `pygame.init()` runs unconditionally in `Apple2.__init__`. A `no_display` flag exists and is passed down to `Display`, but the window-less mode is untested and incomplete.
 - `pysm` state machines are used in three places: the run/stop state of the emulator, the scrolling memory-log dialog for Excel, and a learning example file.
@@ -85,8 +85,7 @@ This list moved here from `GOALS.md`. It is preliminary; more constraints will b
 **Work items:**
 
 - Move Robotron-specific behaviour out of `Memory.write_byte`, `Emulator.on_l`, `Emulator.handle_rts` into hooks or into the Robotron code.
-- Untangle the circular import between `Emulator`, `Hooks`, `Checkpoints`.
-- Replace `from X import *` with explicit imports.
+- ~~Untangle the circular import between `Emulator`, `Hooks`, `Checkpoints`. Replace `from X import *` with explicit imports.~~ **2026-09-06** fixed in focused session after completing M2
 - Decide module names (lower case per PEP 8) and rename in one approved step.
 - `Statemachines_example.py` and `Papple2.py`: move to `examples/` or remove.
 

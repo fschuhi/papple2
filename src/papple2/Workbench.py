@@ -3,12 +3,15 @@
 import sys
 from pathlib import Path
 
-from papple2.Labels import *
-from papple2.Disassembler import *
-from papple2.Emulator import *
-from papple2.Annotations import *
-from papple2.Tiles import *
-from papple2.MemLogDlg import *
+from papple2.Labels import Labels
+from papple2.CPU import JSR, RTS, JMP_indirect, JMP_absolute
+from papple2.util import hexaddr
+from papple2.MemoryMap import OpInfo, MEM_DATA, MEM_OPCODE, MEM_OPERAND, MEM_UNKNOWN
+from papple2.Disassembler import Disassembler
+from papple2.Emulator import Emulator
+from papple2.Annotations import Annotations
+from papple2.Tiles import TileFactory, Stretch, DotCallTree, TYPE_SHOWTEXT, TYPE_BRANCH_OVER_RTS, TYPE_BRANCH_OVER_JMP
+from papple2.MemLogDlg import MemLogDialog
 
 
 class Workbench:

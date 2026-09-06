@@ -14,8 +14,8 @@ with contextlib.redirect_stdout(None):
 import time
 
 import numpy
-from papple2.Memory import *
-from papple2.CPU import *
+from papple2.CPU import CPU
+from papple2.Memory import Memory
 
 class Display:
 
@@ -363,13 +363,13 @@ class Display:
             start_hires = 0x2000 if self.page == 1 else 0x4000
             end_hires = start_hires + 0x2000
             bytes = self.apple2.memory._mem[start_hires:end_hires]
-            pickle.dump(bytes, f)
+            self.pickle.dump(bytes, f)
 
     def load_hires_bytes( self, fn ):
         with open(fn, 'rb') as f:
             start_hires = 0x2000 if self.page == 1 else 0x4000
             end_hires = start_hires + 0x2000
-            bytes = pickle.load(f)
+            bytes = self.pickle.load(f)
             self.apple2.memory._mem[start_hires:end_hires] = bytes
         self.refresh_hires()
 
