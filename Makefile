@@ -17,7 +17,7 @@ RUN           = $(ACTIVATE) && python
 SETUP_STAMP   = $(VENV_DIR)/.setup_stamp
 
 # --- Phony targets ---
-.PHONY: all setup test test-verbose run clean showtree gentree filesdump help
+.PHONY: all setup test test-verbose run clean showtree gentree filesdump filesdump-detailed help
 
 all: setup
 
@@ -62,6 +62,14 @@ gentree: ## Save tree structure to file
 filesdump: $(SETUP_STAMP) gentree ## Create context dump for LLMs (requires manifest.lst)
 	@if [ -f manifest.lst ]; then \
 		$(RUN) tools/concat_files.py manifest.lst > tmp/filesdump.txt; \
+		echo "Generated tmp/filesdump.txt"; \
+	else \
+		echo "Error: manifest.lst not found"; \
+	fi
+
+filesdump-detailed: $(SETUP_STAMP) gentree ## Create context dump for LLMs (requires manifest.lst)
+	@if [ -f manifest.lst ]; then \
+		$(RUN) tools/concat_files.py --detailed --sort manifest.lst > tmp/filesdump.txt; \
 		echo "Generated tmp/filesdump.txt"; \
 	else \
 		echo "Error: manifest.lst not found"; \
