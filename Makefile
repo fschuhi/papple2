@@ -67,7 +67,7 @@ filesdump: $(SETUP_STAMP) gentree ## Create context dump for LLMs
 		echo "Error: manifest.lst not found"; \
 	fi
 
-filesdump-detailed: $(SETUP_STAMP) gentree ## Create context dump for LLMs, with details per file
+filesdump-detailed: $(SETUP_STAMP) gentree ## Create context dump for LLMs with per-file size details
 	@if [ -f manifest.lst ]; then \
 		$(RUN) tools/concat_files.py --detailed --sort manifest.lst > tmp/filesdump.txt; \
 		echo "Generated tmp/filesdump.txt"; \
