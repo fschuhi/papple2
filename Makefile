@@ -59,7 +59,7 @@ gentree: ## Save tree structure to file
 	mkdir -p tmp
 	tree -I ".venv|.venv-win|__pycache__|.idea|.pytest_cache|*egg-info|tmp" > tmp/project_tree.txt
 
-filesdump: $(SETUP_STAMP) gentree ## Create context dump for LLMs (requires manifest.lst)
+filesdump: $(SETUP_STAMP) gentree ## Create context dump for LLMs
 	@if [ -f manifest.lst ]; then \
 		$(RUN) tools/concat_files.py manifest.lst > tmp/filesdump.txt; \
 		echo "Generated tmp/filesdump.txt"; \
@@ -67,7 +67,7 @@ filesdump: $(SETUP_STAMP) gentree ## Create context dump for LLMs (requires mani
 		echo "Error: manifest.lst not found"; \
 	fi
 
-filesdump-detailed: $(SETUP_STAMP) gentree ## Create context dump for LLMs (requires manifest.lst)
+filesdump-detailed: $(SETUP_STAMP) gentree ## Create context dump for LLMs, with details per file
 	@if [ -f manifest.lst ]; then \
 		$(RUN) tools/concat_files.py --detailed --sort manifest.lst > tmp/filesdump.txt; \
 		echo "Generated tmp/filesdump.txt"; \
