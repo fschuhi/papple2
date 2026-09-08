@@ -1,4 +1,3 @@
-
 # papple2 -- TODO
 
 (Note: "I" in the following paragraphs refer to the user, "you" to you as the AI model.)
