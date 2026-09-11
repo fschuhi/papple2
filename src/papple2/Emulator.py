@@ -61,11 +61,8 @@ class EmulatorExecutingState( StateMachine ):
         print("action!!!! we are in state '%s', handling event '%s'" % (state.name, event.name))
 
     def on_key(self, state, event):
-        # high bit always set
         key = event.cargo['key']
-        apple2key = Ascii2Apple2Ascii(key)
-        self.apple2.softswitches.kbd = Ascii2Apple2Ascii(apple2key)
-        print(self.cpu.cycles, "pressed (pygame)", hexbyte(Apple2Ascii2Ascii(apple2key)))
+        self.emulator.press_key(key)
 
 
 class EmulatorNotExecutingState( StateMachine ):
@@ -166,6 +163,18 @@ class EmulatorStates(StateMachine):
         pass
 
 
+def after_instructions(n):
+    def until(emulator):
+        return emulator.instructions >= n
+    return until
+
+
+def at_address(address):
+    def until(emulator):
+        return emulator.cpu.PC == address
+    return until
+
+
 class Emulator:
 
     def __init__(self, no_display=False, quiet=True, frame_rate=20, time_machine=False, mem_access=False):
@@ -187,6 +196,7 @@ class Emulator:
         self.last_ticks = time.monotonic()
 
         self.checkpoints = []
+        self._until_checkpoint = None
         # self.add_checkpoint( RandomTesterCheckpoint(self).checkpoint)
         # self.add_checkpoint( RecordedKeys( ).press_keys )
         # self.add_checkpoint( PrintCharTester( ).LDA_indirect )
@@ -263,15 +273,32 @@ class Emulator:
         self.checkpoints.append( (active, func) )
 
 
+    def press_key(self, ascii_code):
+        # high bit always set
+        apple2key = Ascii2Apple2Ascii(ascii_code)
+        self.apple2.softswitches.kbd = Ascii2Apple2Ascii(apple2key)
+        print(self.cpu.cycles, "pressed (pygame)", hexbyte(Apple2Ascii2Ascii(apple2key)))
+
+
     def is_executing(self):
         return self.states.leaf_state.name == 'Executing'
 
 
-    def event_loop(self):
+    def run(self, until=None):
 
         self.instructions = 0
         self.stepsize = 10000
         self.executing = True
+
+        if self._until_checkpoint is not None:
+            self.checkpoints.remove(self._until_checkpoint)
+            self._until_checkpoint = None
+
+        if until is not None:
+            def check_until(emulator):
+                return (False, False) if until(emulator) else (True, True)
+            self._until_checkpoint = (True, check_until)
+            self.checkpoints.append(self._until_checkpoint)
 
         # exit event loop via setting exit_while, to do cleanup afterwards
         exit_while = False
@@ -317,6 +344,10 @@ class Emulator:
 
         # do some cleanup here
         print(self.states.leaf_state.name)
+
+
+    def event_loop(self):
+        return self.run()
 
 
     def post_op(self):

@@ -1,5 +1,5 @@
 import unittest
-from papple2.Emulator import Emulator
+from papple2.Emulator import Emulator, after_instructions, at_address
 
 
 class TestEmulatorSilent(unittest.TestCase):
@@ -13,3 +13,15 @@ class TestEmulatorSilent(unittest.TestCase):
         emulator = Emulator(no_display=True)
         emulator.load_image(0x2dfd, 'data/bin/ROBOTRON.BIN')
 
+    def test_run_stops_after_n_instructions(self):
+        emulator = Emulator(no_display=True)
+        emulator.load_image(0x2dfd, 'data/bin/ROBOTRON.BIN')
+        emulator.run(until=after_instructions(1000))
+        self.assertEqual(emulator.instructions, 1000)
+
+    def test_run_stops_at_address(self):
+        emulator = Emulator(no_display=True)
+        emulator.load_image(0x2dfd, 'data/bin/ROBOTRON.BIN')
+        emulator.run(until=at_address(0x2dfd))
+        self.assertEqual(emulator.cpu.PC, 0x2dfd)
+        self.assertEqual(emulator.instructions, 0)
