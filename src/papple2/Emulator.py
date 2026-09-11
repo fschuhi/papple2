@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 
 # http://rogerdudler.github.io/git-guide/
@@ -132,7 +133,6 @@ class EmulatorStates(StateMachine):
         self.emulator = emulator
         self.apple2 = self.emulator.apple2
         self.display = self.apple2.display
-        self.screen = self.display.screen
         self.cpu = self.apple2.cpu  # type: CPU
         self.mem = self.apple2.memory._mem   # type: [int]
         self.map = self.emulator.map
@@ -171,7 +171,6 @@ class Emulator:
     def __init__(self, no_display=False, quiet=True, frame_rate=20, time_machine=False, mem_access=False):
         self.apple2 = Apple2( no_display, quiet, frame_rate )  # type: Apple2
         self.display = self.apple2.display
-        self.screen = self.display.screen
         self.cpu = self.apple2.cpu  # type: CPU
         self.mem = self.apple2.memory._mem   # type: [int]
         self.map = MemoryMap( self.cpu.memory )  # type: MemoryMap
@@ -183,8 +182,8 @@ class Emulator:
         self.jsr_stack = []
         self.prev_info = None
 
-        self.elapsed_frame = 1 / int(frame_rate) * 1000
-        self.last_ticks = pygame.time.get_ticks()
+        self.elapsed_frame = 1 / int(frame_rate)
+        self.last_ticks = time.monotonic()
 
         self.checkpoints = []
         # self.add_checkpoint( RandomTesterCheckpoint(self).checkpoint)
@@ -267,14 +266,14 @@ class Emulator:
 
 
     def update_display(self):
-        elapsed_time = pygame.time.get_ticks() - self.last_ticks
+        elapsed_time = time.monotonic() - self.last_ticks
         if elapsed_time > self.elapsed_frame:
             if self.show_window:
                 self.apple2.display.flash( )
                 pygame.display.flip()
             # if self.speaker:
             #    self.speaker.update(cycle)  # wo kommt das cycle her? check ApplePy
-            self.last_ticks = pygame.time.get_ticks( )
+            self.last_ticks = time.monotonic()
 
 
     def is_executing(self):

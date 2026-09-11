@@ -148,12 +148,18 @@ class Display:
             self.init_chars()
 
     def clear_status(self, flip=True):
+        if self.no_display:
+            return
+
         r = pygame.Rect(0,384,560,384+20)
         self.screen.fill((50,50,50), r)
         if flip:
             pygame.display.flip()
 
     def show_status(self, text, flip=True):
+        if self.no_display:
+            return
+
         self.clear_status()
         text = self.status_font.render(text, True, (255,255,255))
         self.screen.blit(text, (0,384))
