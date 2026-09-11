@@ -1,4 +1,5 @@
 import unittest
+from pysm import Event
 from papple2.Emulator import Emulator, after_instructions, at_address
 
 
@@ -25,3 +26,11 @@ class TestEmulatorSilent(unittest.TestCase):
         emulator.run(until=at_address(0x2dfd))
         self.assertEqual(emulator.cpu.PC, 0x2dfd)
         self.assertEqual(emulator.instructions, 0)
+
+    def test_ctrlx_toggles_state(self):
+        emulator = Emulator(no_display=True)
+        self.assertEqual(emulator.states.leaf_state.name, 'Running')
+        emulator.states.dispatch(Event('ctrlx'))
+        self.assertEqual(emulator.states.leaf_state.name, 'Stopped')
+        emulator.states.dispatch(Event('ctrlx'))
+        self.assertEqual(emulator.states.leaf_state.name, 'Running')

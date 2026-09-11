@@ -8,9 +8,9 @@
 
 ## 📍 Current Session Pointer
 
-**Where we are:** M2 is done -- `python -m papple2.Robotron` boots on macOS: the pygame window opens, the animated Robotron splash renders, Ctrl-X stops and resumes. Paths are now driven by `papple2.toml` (gitignored, `papple2.example.toml` committed) instead of hardcoded Windows strings, and the `os.chdir` in `Workbench.__init__` is gone. Two leftover un-prefixed imports and a stale `mm.post_op` bug were also found and fixed along the way. The venv needs Python 3.12 -- `pygame` doesn't yet support 3.14 (see `README.md`).
+**Where we are:** M2.5 is done -- `Emulator.event_loop` has been split into the emulator core and the window/pygame layer: `src/papple2/Window.py` (`PygameWindow`/`NoWindow`), `run(until=None)`/`event_loop()` with `after_instructions`/`at_address` checkpoints, and `EmulatorStates` now composing a `StateMachine` (states `Running`/`Stopped`) instead of subclassing one. `Emulator(no_display=True)` works end-to-end. `make run` behaves exactly as before with the window open; `make test` is green (68 tests).
 
-**What's next:** Milestone M3 in `ACTION_PLAN.md` -- silent mode (no pygame window, programmatic keypresses, one pytest exercising it end-to-end). Concrete tasks are in `TODO.md`.
+**What's next:** M3 -- silent mode (no pygame window, programmatic keypresses, one pytest exercising it end-to-end). Concrete tasks are in `TODO.md`.
 
 ---
 

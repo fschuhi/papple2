@@ -31,9 +31,9 @@ import io
 import sys
 from pysm import State, StateMachine, Event
 
-class EmulatorExecutingState( StateMachine ):
+class EmulatorRunningState( StateMachine ):
     def __init__(self, emulator_states):
-        super().__init__('Executing')
+        super().__init__('Running')
         self.emulator_states = emulator_states  # type: EmulatorStates
         self.emulator = self.emulator_states.emulator
         self.apple2 = self.emulator.apple2
@@ -65,9 +65,9 @@ class EmulatorExecutingState( StateMachine ):
         self.emulator.press_key(key)
 
 
-class EmulatorNotExecutingState( StateMachine ):
+class EmulatorStoppedState( StateMachine ):
     def __init__(self, emulator_states):
-        super().__init__('NotExecuting')
+        super().__init__('Stopped')
         self.emulator_states = emulator_states  # type: EmulatorStates
         self.emulator = self.emulator_states.emulator
         self.window = self.emulator.window
@@ -123,10 +123,9 @@ class EmulatorNotExecutingState( StateMachine ):
         print("$1407=%s" % hexbyte(self.mem[0x1407]))
 
 
-class EmulatorStates(StateMachine):
+class EmulatorStates:
 
     def __init__(self, emulator):
-        super().__init__('emulator')
         self.emulator = emulator
         self.apple2 = self.emulator.apple2
         self.display = self.apple2.display
@@ -134,33 +133,33 @@ class EmulatorStates(StateMachine):
         self.mem = self.apple2.memory._mem   # type: [int]
         self.map = self.emulator.map
 
-        executing = EmulatorExecutingState(self)
-        not_executing = EmulatorNotExecutingState(self)
+        self.sm = StateMachine('emulator')
 
-        self.add_state(executing, initial=True)
-        self.add_state(not_executing)
+        running = EmulatorRunningState(self)
+        stopped = EmulatorStoppedState(self)
+
+        self.sm.add_state(running, initial=True)
+        self.sm.add_state(stopped)
 
         halt = State('halt')
-        self.add_state(halt)
+        self.sm.add_state(halt)
 
-        self.add_transition(executing, not_executing, events=['ctrlx'])
-        self.add_transition(not_executing, executing, events=['ctrlx'])
-        self.add_transition(executing, not_executing, events=['breakpoint'])
+        self.sm.add_transition(running, stopped, events=['ctrlx'])
+        self.sm.add_transition(stopped, running, events=['ctrlx'])
+        self.sm.add_transition(running, stopped, events=['breakpoint'])
 
-        # TODO: EmulatorStates sollte selbst keine StateMachine mehr sein, sondern eine enthalten
-        self.add_transition(executing, halt, events=['halt'])
-        self.add_transition(not_executing, halt, events=['halt'])
+        self.sm.add_transition(running, halt, events=['halt'])
+        self.sm.add_transition(stopped, halt, events=['halt'])
 
-        self.initialize()
+        self.sm.initialize()
 
 
-    def register_handlers(self):
-        self.handlers = {
-            'stop': self.on_stop,
-        }
+    @property
+    def leaf_state(self):
+        return self.sm.leaf_state
 
-    def on_stop(self, state, event):
-        pass
+    def dispatch(self, event):
+        return self.sm.dispatch(event)
 
 
 def after_instructions(n):
@@ -281,7 +280,7 @@ class Emulator:
 
 
     def is_executing(self):
-        return self.states.leaf_state.name == 'Executing'
+        return self.states.leaf_state.name == 'Running'
 
 
     def run(self, until=None):
@@ -309,12 +308,12 @@ class Emulator:
                     if active:
                         (continue_active, execute) = func(self)
                         if not execute:
-                            print("break from breakpoint")
-                            return
+                            self.states.dispatch(Event('breakpoint'))
                         else:
                             if not continue_active:
                                 self.checkpoints[index] = False, func
 
+            if self.is_executing():
                 # IMPORTANT: we first execute the current opcode (i.e. where pc points to)...
                 self.cpu.do_next_step()
                 self.post_op()
@@ -341,6 +340,9 @@ class Emulator:
 
             # after we've emptied the event queue we can update the screen
             self.window.present()
+
+            if until is not None and not self.is_executing():
+                exit_while = True
 
         # do some cleanup here
         print(self.states.leaf_state.name)

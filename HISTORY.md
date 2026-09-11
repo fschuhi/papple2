@@ -9,6 +9,11 @@
 
 ---
 
+## 2026-09-11 -- M2.5
+
+- Split `Emulator.event_loop` into the emulator core and the window/pygame layer, across four slices: headless construction (`self.screen` removed, `Display.show_status`/`clear_status` guarded, `time.monotonic()` replaces `pygame.time.get_ticks()`); `src/papple2/Window.py` extracted (`PygameWindow`/`NoWindow`, sharing `poll()`/`present()`/`status()`); the loop split into `run(until=None)`/`event_loop()` with `after_instructions`/`at_address` checkpoint helpers and `Emulator.press_key`; `EmulatorStates` now composes a `StateMachine` instead of subclassing one, with states renamed `Running`/`Stopped` and checkpoints dispatching a `breakpoint` event instead of hard-returning from `run`.
+- `make run` behaves exactly as before with the window open; `make test` green (68 tests, four new in `tests/test_emulator_silent.py`).
+
 ## 2026-09-06 -- Imports untangled
 
 - Untangled the circular import between `Emulator`, `Hooks`, `Checkpoints`.

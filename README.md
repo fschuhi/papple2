@@ -1,34 +1,102 @@
-**IMPORTANT: This is the old readme, from the Robotron2084 repo. It contains `Papple2`, to be replaced with the `papple2` standalone project.**
+# papple2
 
-## Package layout (current, as of the macOS port)
+**A small Apple II emulator written in Python, built as a debugging instrument rather than a player.**
 
-`papple2` is a real, installable Python package: the code lives in `src/papple2/`, declared in `pyproject.toml`, and installed in editable mode (`pip install -e .`, wired into `make setup`). The `Makefile` also builds an OS-specific venv (`.venv` on macOS, `.venv-win` on Windows). Every internal import is prefixed accordingly, e.g. `from papple2.Memory import Memory`.
+---
 
-**Python version:** use Python 3.12 for the venv, not whatever `python3` happens to resolve to. As of this writing, `pygame` 2.6.1 does not build or run correctly under Python 3.14 -- `pygame.mixer` and `pygame.font` fail to import (open upstream packaging issue, not specific to this machine). `make setup` will happily produce a broken install if your default `python3` is 3.14. If needed: `rm -rf .venv && python3.12 -m venv .venv && make setup`.
+## Vision
 
-Two things this does *not* yet mean:
-- Imports are still star-imports (`from papple2.X import *`) in most files. Converting to explicit names is planned for M4, not done yet.
-- The package is not yet split into core / debugging tools / Robotron showcase. Today, `papple2` contains all of it -- CPU, memory, and Apple II hardware alongside the Robotron- and Excel-specific code. That split is also M4 work (see `ACTION_PLAN.md`).
+`papple2` is a small Apple II emulator written in Python. It is not meant to compete with full emulators on speed or completeness. Its purpose is to be a debugging instrument: a machine I can stop, inspect, rewind, and script from Python while it runs Apple II code.
 
-The rest of this file is the original Robotron2084-repo readme, and predates the package. It will be rewritten once M4 settles the core/debug/showcase structure.
+The core comes from ApplePy by James Tauber, ported to Python 3 and stripped of what I did not need (the socket interface). Around that core I built tools that a normal emulator does not offer: an assembler and disassembler, breakpoints and hooks, a time machine that rewinds CPU and memory state, a log of every memory access, and a map of which instructions were executed and how control flowed between them.
 
-# Papple2
+**Core philosophy:**
 
-I did the first run on disassembling Robotron using Python. The Papple2 workbench is derived from [ApplePy](https://github.com/jtauber/applepy), an Apple II emulator in Python, written by James Tauber. The emulator uses Pygame for screen output. You might want to check out [James' intro on YouTube](https://www.youtube.com/watch?v=EhK5JNx0irA).
+- **Understandability over speed.** Python is slow for emulation, but that never mattered for the debugging use. What mattered was that the whole emulator is a few thousand lines I can read, change, and extend in an afternoon, and that the debugging tools can be written in the same language as the emulator, with no bridge in between.
+- **A debugging instrument, not a player.** The point isn't to run Apple II software well -- it's to run it *observably*: stoppable, inspectable, rewindable, scriptable.
+- **Runs with and without a screen.** The pygame window is for watching and interacting. Silent mode (`Emulator(no_display=True)`) is for tests and scripted analysis: boot, run to a point, press keys from code, read the buffers, done.
 
-Using Python as an emulator is of course an odd choice, because (I believe) all emulators in Python, including ApplePy, are slower than the original Apple II. At least in the beginning of the reengineering project that was not a problem at all. Compared to the more complete C# emulator Virtu (see below), ApplePy is very compact, easy to adapt and generally also easy to understand (which was important in the beginning, because I didn't know anything about Python in the beginning.)
+---
 
-I ported ApplePy to Python 3, removed some code (like all the interfacing with the emulator from the outside via sockets) and added a number of features:
-* an assembler
-* breakpoints, hooks
-* execution tracer
-* memory inspection tools
-* statemachines
-* call trees (using Graphviz)
-* interface with Excel as a workbench (via xlwings)
+## Architecture
 
-There are tests (in tests.py), both the set from ApplePy as well as new ones using the assembler, as part of the effort of learning 6502.
+### Target package split (M4, not yet done)
 
-I'm currently not developing on Papple2, but I can very well see myself coming back to it at a later point in time.
+Today `papple2` contains core emulator, debugging tools, and Robotron-specific code all mixed together in one package. The plan is a clean three-layer split:
 
-My  current disassembly is **Robotron (Apple).asm**, in the _Disassemblies_ folder.
+```mermaid
+graph TD
+    SHOW["Robotron showcase<br/>Workbench, RobotronXl, Excel bridge"]
+    DEBUG["Debugging tools<br/>Assembler, breakpoints/hooks,<br/>TimeMachine, MemoryMap"]
+    CORE["Core emulator<br/>CPU, Memory, Apple II hardware"]
+
+    SHOW --> DEBUG
+    DEBUG --> CORE
+```
+
+The showcase depends on the debugging tools, which depend on the core -- never the other way around. This is what makes `papple2` reusable outside the Robotron project. Not yet built; see `GOALS.md` for where this sits in the roadmap.
+
+### Emulator / Window / States (current, as of M2.5)
+
+This part is real and current, as of the M2.5 refactor (`HISTORY.md`, 2026-09-11). `Emulator.run` no longer touches pygame directly -- it polls a `Window`, dispatches whatever comes back to `EmulatorStates`, and lets `EmulatorStates` decide what that means:
+
+```mermaid
+graph TD
+    E["Emulator<br/>run(until=None)"]
+    W["Window<br/>PygameWindow / NoWindow"]
+    S["EmulatorStates<br/>composes a StateMachine"]
+    R["Running"]
+    ST["Stopped"]
+
+    E -- "poll() -> events" --> W
+    E -- "dispatch(event)" --> S
+    E -- "status(text)" --> W
+    S --> R
+    S --> ST
+    R -- "ctrlx / breakpoint" --> ST
+    ST -- "ctrlx" --> R
+```
+
+`PygameWindow` and `NoWindow` share the same three methods (`poll`, `present`, `status`), so `Emulator` doesn't know or care whether a window exists. A watcher firing -- a real breakpoint, or an `until` condition passed to `run` -- dispatches the same `breakpoint` event that `ctrlx` uses, so `Running` -> `Stopped` always goes through the state machine, never around it.
+
+---
+
+## Settled decisions
+
+This section is more useful to an LLM picking this project back up than to me -- which is exactly why it's here: `README.md` rides along in every session's `filesdump.txt` by default.
+
+- **`papple2` is a real, installable Python package** (`src/papple2/`, `pyproject.toml`, editable install via `make setup`). Internal imports are prefixed (`from papple2.X import Y`); star-imports (`from papple2.X import *`) are kept as-is on purpose for now -- converting to explicit names is M4 work.
+- **Python 3.12 for the venv, not whatever `python3` resolves to.** `pygame` 2.6.1 doesn't build or run correctly under Python 3.14 as of this writing (open upstream issue).
+- **Paths come from `papple2.toml`** (local, gitignored; `papple2.example.toml` committed), not hardcoded Windows strings, and not `os.chdir`.
+- **`EmulatorStates` composes a `StateMachine` rather than subclassing one.** It's the root of its own state tree and is never handed to code that expects a plain `StateMachine` -- the case for composition over inheritance. The individual states (`EmulatorRunningState`, `EmulatorStoppedState`) do legitimately subclass `StateMachine`, since they're genuinely registered as states via `add_state`.
+- **The window (pygame) is a separate, swappable layer, not baked into `Emulator`.** `src/papple2/Window.py`'s `PygameWindow`/`NoWindow` share `poll() -> list`, `present()`, `status(text)`; `Emulator.__init__` picks one based on `no_display`. `Emulator.run`/`event_loop` and the state handlers contain no pygame reference.
+- **A watcher firing dispatches `Event('breakpoint')` into the state machine, rather than hard-returning out of `run`.** Separately, `run(until=...)` returns to its caller once execution stops for any reason; a plain `run()`/`event_loop()` call (no `until`) keeps looping through pauses as before, and only stops on `halt`.
+- **`time.monotonic()`, not `pygame.time.get_ticks()`, for frame pacing** -- works identically whether or not a window exists.
+- **`QUIT` (closing the window) and the Print key both map to the same `halt` event.** There's no separate hard-exit path. Print exists mainly for the Windows heritage of this code; on macOS, closing the window is the primary way to trigger it.
+
+---
+
+## Relation to sibling projects
+
+**`load-runner`:** a private educational project porting an Apple II game to Godot. `papple2` can help two ways: cycle counting, if timing fidelity turns out to matter for the port; and level extraction, by letting the original code load a level into memory and then reading the filled buffers instead of reverse-engineering the disk format by hand. Not started yet.
+
+**`a2-hires-lab`:** a standalone Excel/VBA lab exploring Apple II hi-res graphics mechanics, built around Chapter 3 of the `load-runner` disassembly. No shared code or repo with `papple2`. Its NTSC color decision table, once fully verified by hand against the chapter's worked examples, is meant to become test fixtures for `papple2`'s `Display.update_hires`, which currently uses a simplified per-pixel color model with no neighbor-adjacency rules. That handoff hasn't happened yet.
+
+---
+
+## Running
+
+```bash
+make setup   # create the venv (Python 3.12), install dependencies in editable mode
+make test    # run the pytest suite
+make run     # boot Robotron with the pygame window open
+```
+
+`make setup` will happily produce a broken install if your default `python3` resolves to 3.14. If needed: `rm -rf .venv && python3.12 -m venv .venv && make setup`.
+
+---
+
+## Technical notes & gotchas
+
+- **`pygame` 2.6.1 does not build or run correctly under Python 3.14** -- `pygame.mixer` and `pygame.font` fail to import. Open upstream packaging issue, not specific to this machine. Use Python 3.12 for the venv until that's resolved.
+- **A checkpoint that pauses execution (a real breakpoint, or an `until` condition) stays registered after it fires.** If something resumes via `ctrlx` within the same `run()` call and the checkpoint's condition is still true, it re-fires immediately. `run(until=...)`'s own checkpoint is cleaned up automatically at the start of the next `run()` call, so this only affects hand-registered checkpoints (`add_checkpoint`) used interactively -- none are currently active by default.
