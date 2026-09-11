@@ -9,9 +9,17 @@
 
 ---
 
+## 2026-09-12 -- M3
+
+- Added `KeyScript` to `Checkpoints.py`: a checkpoint driven by `emulator.instructions` rather than `cpu.cycles`, so any assembled program can have keys scripted onto it, not just Robotron.
+- Added `tests/test_emulator_silent.py::test_keypress_reaches_program`, the first fully code-only run of `papple2` -- assembled with `Assembler`, no pygame, no ROBOTRON.BIN. Its docstring is written as a walkthrough, doubling as the first usage documentation for driving the emulator from code.
+- Found and fixed a real hang: in headless mode, a checkpoint requesting a stop (`execute=False`) without an `until` in play would flip the state machine to `Stopped` but then spin forever, since `NoWindow` never produces a `ctrlx` or `halt` event to resume or end it. `Emulator.run` now treats that case as a real halt when there's no window to recover from. Covered directly by `tests/test_emulator_silent.py::test_checkpoint_stop_halts_headless_run`, which registers a plain "stop after N instructions" checkpoint with no `until` at all.
+- `--nodisplay`'s help text in `Robotron.py` now states what it actually implies: no keyboard, no pause/resume, a registered checkpoint is the only way execution stops.
+- `make run` unaffected for the windowed path; `make test` all green.
+
 ## 2026-09-11 -- M2.5
 
-- Split `Emulator.event_loop` into the emulator core and the window/pygame layer, across four slices: headless construction (`self.screen` removed, `Display.show_status`/`clear_status` guarded, `time.monotonic()` replaces `pygame.time.get_ticks()`); `src/papple2/Window.py` extracted (`PygameWindow`/`NoWindow`, sharing `poll()`/`present()`/`status()`); the loop split into `run(until=None)`/`event_loop()` with `after_instructions`/`at_address` checkpoint helpers and `Emulator.press_key`; `EmulatorStates` now composes a `StateMachine` instead of subclassing one, with states renamed `Running`/`Stopped` and checkpoints dispatching a `breakpoint` event instead of hard-returning from `run`.
+- Split `Emulator.event_loop` into the emulator core and the window/pygame layer, across four slices: headless construction (`self.screen` removed, `Display.show_status`/`clear_status` guarded, `time.monotonic()` replaces `pygame.time.get_ticks()`); `src/papple2/Window.py` extracted (`PygameWindow`/`NoWindow`, sharing `poll()`/`present()`/`status()`); the loop split into `run(until=None)`/`event_loop()` with `after_instructions`/`at_address` checkpoint helpers and `Emulator.press_key`; `EmulatorStates` now composing a `StateMachine` instead of subclassing one, with states renamed `Running`/`Stopped` and checkpoints dispatching a `breakpoint` event instead of hard-returning from `run`.
 - `make run` behaves exactly as before with the window open; `make test` green (68 tests, four new in `tests/test_emulator_silent.py`).
 
 ## 2026-09-06 -- Imports untangled

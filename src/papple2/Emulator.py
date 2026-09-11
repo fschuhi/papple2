@@ -309,6 +309,11 @@ class Emulator:
                         (continue_active, execute) = func(self)
                         if not execute:
                             self.states.dispatch(Event('breakpoint'))
+                            if isinstance(self.window, NoWindow):
+                                # no window means no keyboard: nothing can ever
+                                # send ctrlx or halt, so a checkpoint-requested
+                                # stop has to be a real halt here, not a pause
+                                exit_while = True
                         else:
                             if not continue_active:
                                 self.checkpoints[index] = False, func

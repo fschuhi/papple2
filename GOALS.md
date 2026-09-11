@@ -8,9 +8,9 @@
 
 ## 📍 Current Session Pointer
 
-**Where we are:** M2.5 is done -- `Emulator.event_loop` has been split into the emulator core and the window/pygame layer: `src/papple2/Window.py` (`PygameWindow`/`NoWindow`), `run(until=None)`/`event_loop()` with `after_instructions`/`at_address` checkpoints, and `EmulatorStates` now composing a `StateMachine` (states `Running`/`Stopped`) instead of subclassing one. `Emulator(no_display=True)` works end-to-end. `make run` behaves exactly as before with the window open; `make test` is green (68 tests).
+**Where we are:** M3 (silent mode) is done -- `KeyScript` (instruction-count-driven scripted keypresses) in `Checkpoints.py`, the first code-only walkthrough test (`test_keypress_reaches_program`), and a fix so a headless run actually returns control when a checkpoint requests a stop (previously it could hang forever with no window to resume from; covered by `test_checkpoint_stop_halts_headless_run`). `--nodisplay`'s help text in `Robotron.py` now matches its actual behavior. `make test` is green.
 
-**What's next:** M3 -- silent mode (no pygame window, programmatic keypresses, one pytest exercising it end-to-end). Concrete tasks are in `TODO.md`.
+**What's next:** M4 -- split into core, debugging tools, and Robotron showcase. Concrete tasks are in `TODO.md`.
 
 ---
 

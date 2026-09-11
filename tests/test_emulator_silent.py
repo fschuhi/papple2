@@ -79,3 +79,22 @@ class TestEmulatorSilent(unittest.TestCase):
         emulator.run(until=at_address(asm.labels['HALT']))
 
         self.assertEqual(emulator.mem[0x0300], ord('A') | 0x80)
+
+    def test_checkpoint_stop_halts_headless_run(self):
+        """
+        A checkpoint-requested stop (execute=False) has to act like a real
+        halt when there's no window to resume it from -- otherwise `run()`
+        never returns. This exercises that path directly, with no `until`
+        involved at all: the checkpoint below is the only thing stopping it.
+        """
+        emulator = Emulator(no_display=True)
+        emulator.load_image(0x2dfd, 'data/bin/ROBOTRON.BIN')
+
+        def stop_after_10(e):
+            return (True, e.instructions < 10)  # (active, execute)
+
+        emulator.add_checkpoint(stop_after_10)
+        emulator.run()  # no `until` -- only the checkpoint can stop this
+
+        self.assertEqual(emulator.instructions, 10)
+        self.assertEqual(emulator.states.leaf_state.name, 'Stopped')

@@ -214,7 +214,7 @@ def get_arguments():
     parser.add_argument('--format', help='dot output format', default='png', choices=['png','jpg','pdf','svg'])
     parser.add_argument('--showtrace', help='automatically show the call tree after generation', action='store_true')
     parser.add_argument('--noresults', help='suppress writing asm/map/dot', action='store_true')
-    parser.add_argument('--nodisplay', help='do not show pygame display', action='store_true')
+    parser.add_argument('--nodisplay', help='run silently, no pygame display or keyboard; a registered checkpoint is the only way execution stops', action='store_true')
     parser.add_argument('--simulate', help='simulate execution', action='store_true')
 
     return parser.parse_args()
