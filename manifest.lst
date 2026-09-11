@@ -36,7 +36,7 @@ papple2.example.toml
 #papple2.toml
 
 ### --- DevOps tools ---
-# tools/concat_files.py
+#tools/concat_files.py
 
 ### --- Source ---
 src/papple2/Annotations.py
@@ -44,9 +44,9 @@ src/papple2/Apple.py
 src/papple2/Assembler.py
 src/papple2/Checkpoints.py
 src/papple2/CPU.py
-src/papple2/Disassembler.py
+#src/papple2/Disassembler.py
 src/papple2/Emulator.py
-src/papple2/Excel.py
+#src/papple2/Excel.py
 src/papple2/Hooks.py
 src/papple2/Labels.py
 src/papple2/MemLogDlg.py
@@ -54,27 +54,27 @@ src/papple2/Memory.py
 src/papple2/MemoryMap.py
 src/papple2/Papple2.py
 src/papple2/Robotron.py
-src/papple2/RobotronXl.py
+#src/papple2/RobotronXl.py
 #src/papple2/Statemachines_example.py
 src/papple2/Tiles.py
 src/papple2/util.py
 src/papple2/Workbench.py
 
 ### --- Tests and fixtures data ---
-tests/test_assembler.py
-tests/test_cpu_arithmetic.py
-tests/test_cpu_branch.py
-tests/test_cpu_bugs.py
-tests/test_cpu_inc_dec.py
-tests/test_cpu_jump_call.py
-tests/test_cpu_load_store.py
-tests/test_cpu_logical.py
-tests/test_cpu_register_transfer.py
-tests/test_cpu_shift.py
-tests/test_cpu_status_flags.py
-tests/test_cpu_system.py
-tests/test_cpu_stack.py
-tests/test_memory.py
+#tests/test_assembler.py
+#tests/test_cpu_arithmetic.py
+#tests/test_cpu_branch.py
+#tests/test_cpu_bugs.py
+#tests/test_cpu_inc_dec.py
+#tests/test_cpu_jump_call.py
+#tests/test_cpu_load_store.py
+#tests/test_cpu_logical.py
+#tests/test_cpu_register_transfer.py
+#tests/test_cpu_shift.py
+#tests/test_cpu_status_flags.py
+#tests/test_cpu_system.py
+#tests/test_cpu_stack.py
+#tests/test_memory.py
 tests/test_robotron_waves.py
 
 ### --- Data ---

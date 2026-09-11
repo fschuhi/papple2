@@ -25,10 +25,12 @@
 
 ## M3 -- Silent mode
 
-- Give `Emulator.event_loop` a way to run without polling pygame events: a step count, a stop address, or a callback.
 - Add a programmatic keypress path (write to `softswitches.kbd` the way `on_key` does).
-- One pytest that boots silently, runs the Apple II ROM or a small assembled program, presses a key, and asserts on memory.
-- _Already done, no new work needed:_ `pygame.init()` is already conditional on `no_display` (fixed during M1) -- `ACTION_PLAN.md`'s M3 item about this is stale.
+- Give `Emulator.event_loop` a way to run without polling pygame events: a step count, a stop address, or a callback. Discuss alternatives: maybe `pygame.event` allow programmatically firing events (like keys) instead of actual keyboard polling; maybe have an abstract class or interface, with an implementation that either wraps `pygame` or a programmable "mocked" `pygame`.
+- Any refactoring (which might also include `EmulatorStates`) could mean we have an "M2.5" refactoring session first. This is not a problem, as long as it doesn't lead to a huge refactoring involving significant portions of the code base.
+- Write pytests that boot silently, runs the Apple II ROM or a small assembled program, including writing to hires memory, presses a key, and asserts on memory.
+- We don't have docs on how to use the emulator yet, so the tests for running the emulator in a headless fashion are should be not only seen as insuring against regression but as a documentation feature of `papple2`.  
+- _Already done, no new work needed:_ `pygame.init()` is already conditional on `no_display` (fixed during M1) -- `ACTION_PLAN.md`'s M3 item about this is stale. 
 
 **Done when:** the emulator can run to a breakpoint or for N instructions without opening a window, and a test can feed keypresses from code and check memory afterwards.
 

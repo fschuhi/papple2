@@ -25,7 +25,6 @@ from papple2.Apple import Apple2, determine_states_from_kmods
 from papple2.CPU import JMP_indirect, JMP_absolute, RTS, JSR
 from papple2.MemoryMap import MemoryMap
 from papple2.Hooks import TimeMachine, MemAccessCollector
-# from papple2.Checkpoints import *
 import io
 import pygame
 import sys

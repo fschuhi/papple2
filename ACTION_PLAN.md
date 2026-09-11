@@ -67,6 +67,10 @@ This list moved here from `GOALS.md`. It is preliminary; more constraints will b
 
 ### M3 -- Silent mode
 
+**NOTE:** It's possible that, instead of this milestone, we might be able to do a small refactoring project first.
+
+_In any case, this is a good moment to analyze control flow and display it as charts, to help me understand what I did years ago, at a point where I had just started to learn Python._
+
 **Done when:** the emulator can run to a breakpoint or for N instructions without opening a window, and a test can feed keypresses from code and check memory afterwards.
 
 **Work items:**
