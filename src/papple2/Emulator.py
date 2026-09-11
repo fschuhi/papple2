@@ -22,12 +22,12 @@
 
 import time
 from papple2.util import hexaddr, hexbyte, Ascii2Apple2Ascii, Apple2Ascii2Ascii
-from papple2.Apple import Apple2, determine_states_from_kmods
+from papple2.Apple import Apple2
 from papple2.CPU import JMP_indirect, JMP_absolute, RTS, JSR
 from papple2.MemoryMap import MemoryMap
 from papple2.Hooks import TimeMachine, MemAccessCollector
+from papple2.Window import PygameWindow, NoWindow
 import io
-import pygame
 import sys
 from pysm import State, StateMachine, Event
 
@@ -38,7 +38,7 @@ class EmulatorExecutingState( StateMachine ):
         self.emulator = self.emulator_states.emulator
         self.apple2 = self.emulator.apple2
         self.cpu = self.emulator.cpu
-        self.display = self.emulator.display
+        self.window = self.emulator.window
 
     def register_handlers(self):
         self.handlers = {
@@ -55,7 +55,7 @@ class EmulatorExecutingState( StateMachine ):
         self.emulator.executing = False
 
     def on_breakpoint( self, state, event ):
-        self.display.show_status("execution stopped (breakpoint), %s" % str(self.cpu))
+        self.window.status("execution stopped (breakpoint), %s" % str(self.cpu))
 
     def action(self, state, event):
         print("action!!!! we are in state '%s', handling event '%s'" % (state.name, event.name))
@@ -73,7 +73,7 @@ class EmulatorNotExecutingState( StateMachine ):
         super().__init__('NotExecuting')
         self.emulator_states = emulator_states  # type: EmulatorStates
         self.emulator = self.emulator_states.emulator
-        self.display = self.emulator_states.display
+        self.window = self.emulator.window
         self.cpu = self.emulator_states.cpu
         self.mem = self.emulator_states.mem
 
@@ -91,7 +91,7 @@ class EmulatorNotExecutingState( StateMachine ):
         # formerly known as suspend_execution()
         self.emulator.executing = False
         print("on_exit")
-        self.display.show_status("execution stopped, %s" % str(self.cpu))
+        self.window.status("execution stopped, %s" % str(self.cpu))
         self.emulator.time_machine.enable_restoring( )
 
     def on_exit(self, state, event):
@@ -99,19 +99,19 @@ class EmulatorNotExecutingState( StateMachine ):
         self.emulator.executing = True
         print("on_enter")
         self.emulator.time_machine.disable_restoring( )
-        self.display.show_status("execution resumed, %s" % str(self.cpu))
+        self.window.status("execution resumed, %s" % str(self.cpu))
 
     def on_left(self, state, event):
-        kbd_states = determine_states_from_kmods()
+        kbd_states = event.cargo['kbd_states']
         print("restore")
         self.emulator.time_machine.restore_prev_state(kbd_states)
 
     def on_right(self, state, event):
-        kdb_states = determine_states_from_kmods()
-        self.emulator.time_machine.restore_next_state(kdb_states)
+        kbd_states = event.cargo['kbd_states']
+        self.emulator.time_machine.restore_next_state(kbd_states)
 
     def on_d(self, state, event):
-        self.display.show_status(str(self.cpu))
+        self.window.status(str(self.cpu))
 
     def on_l(self, state, event):
         print("$00=%s" % hexbyte(self.mem[0x00]))
@@ -174,6 +174,7 @@ class Emulator:
         self.cpu = self.apple2.cpu  # type: CPU
         self.mem = self.apple2.memory._mem   # type: [int]
         self.map = MemoryMap( self.cpu.memory )  # type: MemoryMap
+        self.window = NoWindow() if no_display else PygameWindow( self )
 
         self.states = EmulatorStates( self )
 
@@ -205,9 +206,6 @@ class Emulator:
         self.executing = False
         self.instructions = 0
         self.stepsize = 10000
-
-        # TODO: change logic of no_display (to show_window)
-        self.show_window = not no_display
 
 
     def pickle(self, pickler):
@@ -265,17 +263,6 @@ class Emulator:
         self.checkpoints.append( (active, func) )
 
 
-    def update_display(self):
-        elapsed_time = time.monotonic() - self.last_ticks
-        if elapsed_time > self.elapsed_frame:
-            if self.show_window:
-                self.apple2.display.flash( )
-                pygame.display.flip()
-            # if self.speaker:
-            #    self.speaker.update(cycle)  # wo kommt das cycle her? check ApplePy
-            self.last_ticks = time.monotonic()
-
-
     def is_executing(self):
         return self.states.leaf_state.name == 'Executing'
 
@@ -317,45 +304,16 @@ class Emulator:
                     if self.cpu.PC == 0x4066:
                         self.mem[0x1407] = 20
 
-            # empty pygame event queue
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    return
-
-                if event.type == pygame.KEYDOWN:
-                    key = ord(event.unicode.upper()) if event.unicode != '' else 0
-
-                    if event.key == pygame.K_x and (pygame.key.get_mods() & pygame.KMOD_CTRL):
-                        self.states.dispatch(Event('ctrlx'))
-                        continue
-
-                    elif event.key == pygame.K_LEFT:  # A2 0x08
-                        self.states.dispatch(Event('left'))
-                        continue
-
-                    elif event.key == pygame.K_RIGHT:  # A2 0x15
-                        self.states.dispatch(Event('right'))
-                        continue
-
-                    elif event.key == pygame.K_PRINT:
-                        self.states.dispatch(Event('halt'))
-                        exit_while = True
-                        break
-
-                    elif event.key == pygame.K_d:
-                        self.states.dispatch(Event('d'))
-                        continue
-
-                    elif event.key == pygame.K_l:
-                        self.states.dispatch(Event('l'))
-                        continue
-
-                    if key != 0:
-                        self.states.dispatch(Event('key', key=key ))
-                        continue
+            # empty the window's pending events
+            for event in self.window.poll():
+                if event.name == 'halt':
+                    self.states.dispatch(event)
+                    exit_while = True
+                    break
+                self.states.dispatch(event)
 
             # after we've emptied the event queue we can update the screen
-            self.update_display()
+            self.window.present()
 
         # do some cleanup here
         print(self.states.leaf_state.name)
