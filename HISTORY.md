@@ -9,6 +9,15 @@
 
 ---
 
+## 2026-09-12 -- M5
+
+- `Robotron.py` moved to `examples/Robotron/`; `make run`/PyCharm's run config repointed to `-m examples.Robotron.Robotron` (running it from `src/papple2` only ever worked because `-m` happened to put the repo root on `sys.path`).
+- Added tests for the four areas from `GOALS.md`: soft switches and hi-res memory (`test_softswitches.py`, `test_display_memory.py` -- the hires pages are a scriptable buffer under `no_display=True`, independent of pygame rendering); `TimeMachine`/`MemAccessCollector` (`test_time_machine.py`, `test_mem_access_collector.py`, deliberately skipping the Excel/Graphviz-feeding views); confirmed the existing `test_cpu_*.py` suite already had full per-opcode coverage and closed the one gap found (`test_TSX`'s missing N/Z check).
+- Decided the with-window half stays manual, via `make run` + Robotron; documented in `README.md`'s new "Testing strategy" section.
+- Started converting the suite from `unittest` to native `pytest` (`conftest.py`, `test_cpu_stack.py` as the template); rest tracked in `TODO.md`.
+- Two findings parked in `TODO.md`, not fixed: an off-by-one in `Memory.write_byte`'s hi-res range check, and a boundary quirk in `TimeMachine.restore_prev_state`.
+- `make test` all green (100 tests).
+
 ## 2026-09-12 -- M4
 
 - Removed Robotron-specific code from the core (`on_l`, two `Memory.write_byte` guard ranges, `handle_rts`'s crash-on-empty-stack assertion -- the last one was a real bug, not just a Robotron assumption). Also removed dead code found along the way: `write_byte2`, a `sys.exit(0)` trap in `CPU.write_byte`.

@@ -1,3 +1,4 @@
+
 # papple2
 
 **A small Apple II emulator written in Python, built as a debugging instrument rather than a player.**
@@ -34,7 +35,7 @@ graph TD
     DEBUG --> CORE
 ```
 
-The showcase depends on the debugging tools, which depend on the core -- never the other way around. `Robotron.py` itself is the one file not yet moved into `examples/Robotron/` alongside the rest of the showcase (next session's first task); everything else in the diagram reflects the actual tree.
+The showcase depends on the debugging tools, which depend on the core -- never the other way around.
 
 `Hooks` lives in `papple2.core`, not `papple2.debug` as an earlier version of this diagram had it: `Emulator.__init__` unconditionally constructs `TimeMachine`/`MemAccessCollector` (the `time_machine`/`mem_access` flags only control whether they're activated, not whether they exist), so `Emulator` cannot run at all without `Hooks` importable. The split follows that real coupling.
 
@@ -84,6 +85,15 @@ This section is more useful to an LLM picking this project back up than to me --
 **`load-runner`:** a private educational project porting an Apple II game to Godot. `papple2` can help two ways: cycle counting, if timing fidelity turns out to matter for the port; and level extraction, by letting the original code load a level into memory and then reading the filled buffers instead of reverse-engineering the disk format by hand. Not started yet.
 
 **`a2-hires-lab`:** a standalone Excel/VBA lab exploring Apple II hi-res graphics mechanics, built around Chapter 3 of the `load-runner` disassembly. No shared code or repo with `papple2`. Its NTSC color decision table, once fully verified by hand against the chapter's worked examples, is meant to become test fixtures for `papple2`'s `Display.update_hires`, which currently uses a simplified per-pixel color model with no neighbor-adjacency rules. That handoff hasn't happened yet.
+
+---
+
+## Testing strategy
+
+`papple2` is verified at two tiers, deliberately:
+
+- **Automated (`make test`).** The pytest suite covers 6502 instruction semantics and the classic hardware quirks, Apple II specifics (soft switches, the hi-res memory buffer), running headless with and without checkpoints/breakpoints, and the debugging hooks (`TimeMachine`, `MemAccessCollector`). All of it runs with `no_display=True` -- no pygame window involved, and none of it can be, meaningfully: a headless run has no way to assert "does this look right on screen."
+- **Manual (`make run`).** The pygame window itself -- actual rendering, real keyboard input, the full event loop -- is verified by hand instead: booting the Robotron showcase and confirming it displays and responds to input the way it should. This makes the Robotron example in `examples/Robotron/` not just a demonstration of how to use `papple2`, but the manual test for the with-window half of the emulator. It gets run this way whenever `Apple2`, `Display`, `Window`, or the with-window parts of `Emulator`/`EmulatorStates` change (done for M2, and again after M4's split).
 
 ---
 

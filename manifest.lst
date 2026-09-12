@@ -67,6 +67,7 @@ examples/Robotron/workbench.py
 examples/Robotron/workbench.py
 
 ### --- Tests and fixtures data ---
+tests/conftest.py
 #tests/test_assembler.py
 #tests/test_cpu_arithmetic.py
 #tests/test_cpu_branch.py

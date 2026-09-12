@@ -1,62 +1,55 @@
-import unittest
-from papple2.core.memory import Memory
-from papple2.core.cpu import CPU
+import pytest
 
 
-class TestStackOperations(unittest.TestCase):
+@pytest.mark.parametrize("sp, expected_x, expected_sign, expected_zero", [
+    (0x00, 0x00, 0, 1),
+    (0x01, 0x01, 0, 0),
+    (0xFF, 0xFF, 1, 0),
+])
+def test_TSX(cpu, sp, expected_x, expected_sign, expected_zero):
+    cpu.SP = sp
+    cpu.TSX()
+    assert cpu.X == expected_x
+    assert cpu.sign_flag == expected_sign
+    assert cpu.zero_flag == expected_zero
 
-    def setUp(self):
-        self.memory = Memory()
-        self.cpu = CPU(self.memory, None)
 
-    def test_TSX(self):
-        self.cpu.SP = 0x00
-        self.cpu.TSX()
-        self.assertEqual( self.cpu.X, 0x00 )
-        self.assertEqual(self.cpu.sign_flag, 0)
-        self.assertEqual(self.cpu.zero_flag, 1)
-        self.cpu.SP = 0x01
-        self.cpu.TSX()
-        self.assertEqual( self.cpu.X, 0x01 )
-        self.assertEqual(self.cpu.sign_flag, 0)
-        self.assertEqual(self.cpu.zero_flag, 0)
-        self.cpu.SP = 0xFF
-        self.cpu.TSX()
-        self.assertEqual( self.cpu.X, 0xFF )
-        self.assertEqual(self.cpu.sign_flag, 1)
-        self.assertEqual(self.cpu.zero_flag, 0)
+def test_TXS(cpu):
+    x = cpu.X
+    cpu.TXS()
+    assert cpu.SP == x
 
-    def test_TXS(self):
-        x = self.cpu.X
-        self.cpu.TXS()
-        self.assertEqual( self.cpu.SP, x )
 
-    def test_PHA_and_PLA(self):
-        self.cpu.A = 0x00
-        self.cpu.PHA()
-        self.cpu.A = 0x01
-        self.cpu.PHA()
-        self.cpu.A = 0xFF
-        self.cpu.PHA()
-        self.assertEqual( self.cpu.A, 0xFF )
-        self.assertEqual(self.cpu.zero_flag, 0)
-        self.assertEqual(self.cpu.sign_flag, 0)
-        self.cpu.PLA()
-        self.assertEqual( self.cpu.A, 0xFF )
-        self.assertEqual(self.cpu.zero_flag, 0)
-        self.assertEqual(self.cpu.sign_flag, 1)
-        self.cpu.PLA()
-        self.assertEqual( self.cpu.A, 0x01 )
-        self.assertEqual(self.cpu.zero_flag, 0)
-        self.assertEqual(self.cpu.sign_flag, 0)
-        self.cpu.PLA()
-        self.assertEqual( self.cpu.A, 0x00 )
-        self.assertEqual(self.cpu.zero_flag, 1)
-        self.assertEqual(self.cpu.sign_flag, 0)
+def test_PHA_and_PLA(cpu):
+    cpu.A = 0x00
+    cpu.PHA()
+    cpu.A = 0x01
+    cpu.PHA()
+    cpu.A = 0xFF
+    cpu.PHA()
+    assert cpu.A == 0xFF
+    assert cpu.zero_flag == 0
+    assert cpu.sign_flag == 0
 
-    def test_PHP_and_PLP(self):
-        p = self.cpu.status_as_byte()
-        self.cpu.PHP()
-        self.cpu.status_from_byte(0xFF)
-        self.cpu.PLP()
-        self.assertEqual(self.cpu.status_as_byte(), p)
+    cpu.PLA()
+    assert cpu.A == 0xFF
+    assert cpu.zero_flag == 0
+    assert cpu.sign_flag == 1
+
+    cpu.PLA()
+    assert cpu.A == 0x01
+    assert cpu.zero_flag == 0
+    assert cpu.sign_flag == 0
+
+    cpu.PLA()
+    assert cpu.A == 0x00
+    assert cpu.zero_flag == 1
+    assert cpu.sign_flag == 0
+
+
+def test_PHP_and_PLP(cpu):
+    p = cpu.status_as_byte()
+    cpu.PHP()
+    cpu.status_from_byte(0xFF)
+    cpu.PLP()
+    assert cpu.status_as_byte() == p

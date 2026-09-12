@@ -8,9 +8,9 @@
 
 ## 📍 Current Session Pointer
 
-**Where we are:** M4 (split into core, debugging tools, and Robotron showcase) is done -- Robotron-specific code out of the core, modules lower-cased and split into `papple2.core`/`papple2.debug`, showcase moved to `examples/Robotron/`. `Robotron.py` itself still needs moving there, as the first task of the next session. `make test` is green, `make run` verified. See `HISTORY.md` for the full account.
++**Where we are:** M5 (pytest coverage) is done -- `Robotron.py` moved to `examples/Robotron/`; soft-switch, hi-res-memory-buffer, `TimeMachine`, and `MemAccessCollector` tests added; confirmed full per-opcode 6502 coverage and closed the one gap found (`test_TSX`); the with-window half settled as manual verification via the Robotron showcase, documented in `README.md`. `make test` is green (100 tests). Also underway, not required for M5's Done-when: converting the test suite from `unittest` to native `pytest` style (`conftest.py` + `test_cpu_stack.py` done as the template, rest in `TODO.md`). See `HISTORY.md` for the full account.
 
-**What's next:** M5 -- pytest coverage. Concrete tasks are in `TODO.md`.
++**What's next:** M6 -- tiles and stretches. Concrete tasks are in `TODO.md`.
 
 ---
 
