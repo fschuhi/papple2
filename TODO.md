@@ -12,21 +12,18 @@
 
 ---
 
-## M3 -- Silent mode (done 2026-09-12)
+## M4 -- Split into core, debugging tools, and Robotron showcase (done 2026-09-12)
 
-~~`KeyScript` checkpoint class (instruction-count-driven scripted keypresses) in `Checkpoints.py`; first code-only test with a walkthrough docstring (`test_keypress_reaches_program`); fixed a real hang where a checkpoint-requested stop during a headless run never actually returned control (no window to resume or halt it from); `--nodisplay`'s help text in `Robotron.py` updated to match.~~ **Done when:** ~~the emulator can run to a breakpoint or for N instructions without opening a window, and a test can feed keypresses from code and check memory afterwards.~~ See `HISTORY.md` for the full account.
+~~Robotron-specific code (`on_l`, `Memory.write_byte`'s guard ranges, `handle_rts`'s crash-on-empty-stack assertion) removed from the core; `write_byte2` and a dead `CPU.write_byte` trap removed; modules renamed to lower case and split into `papple2.core`/`papple2.debug`; showcase moved to `examples/Robotron/`; `Statemachines_example.py` removed.~~ **Done when:** ~~three clearly named parts exist, the core has no Robotron-specific lines, and `pysm` is only used in the debugging or showcase part.~~ See `HISTORY.md` for the full account. **Not done:** `Robotron.py` itself is still in `src/papple2/`, not yet moved to `examples/Robotron/`.
 
-## M4 -- Split into core, debugging tools, and Robotron showcase
+## M5 -- pytest coverage
 
-- **Robotron-specific code baked into the core emulator, found while working on M3:** `EmulatorStoppedState.on_l` in `Emulator.py` prints a fixed set of Robotron memory addresses (`$00`-`$05`, `$150a`, `$150b`, `$150c`, `$1407`); `Memory.write_byte`'s protected ranges (`0x2dfd`-`0x2dff`, `0x4000`-`0x4100`) are Robotron-specific write guards; `Emulator.handle_rts`'s assertion ("no address on the stack... possible but not happening in Robotron") assumes Robotron's call structure. Move all three out of the core, into Robotron-specific hooks or into `Robotron.py`/`RobotronXl.py`.
-- **Decide module names and rename in one approved step** (lower case per PEP 8, e.g. `emulator.py`, `memory.py`) -- one step, not scattered across the other M4 work.
-- **`Statemachines_example.py` and `Papple2.py`:** move to `examples/` or remove -- decide which, per file.
-- **Package layout:** land on the actual split, e.g. `papple2.core`, `papple2.debug`, and an `examples/robotron/` directory (names open for discussion). `pysm` staying in the project is already decided; still open is whether the run/stop state machine (`EmulatorStates`) lives in `core` or `debug`.
-- **`Memory.write_byte2`** looks like an older version of `write_byte`. Check whether anything still calls it; remove if not (carried over from the M3 scratchpad).
+- **First, before anything else:** move `Robotron.py` from `src/papple2/` to `examples/Robotron/`, alongside the rest of the showcase; fix up its imports (PyCharm's move/rename refactor).
+- Add tests for the four areas from `GOALS.md`: (1) 6502 instructions and known bugs, (2) Apple II specifics (soft switches, display memory), (3) running a binary or disk image with and without the window, (4) breakpoints, time machine, memory access log.
 
-**Done when:** three clearly named parts exist, the core has no Robotron-specific lines, and `pysm` is only used in the debugging or showcase part.
+**Done when:** tests exist for all four areas.
 
-**Look at first:** the import graph (documented in the first session), `Emulator.__init__`.
+**Work items:** decided per area when we get there; each area is its own approved step.
 
 ## Scratchpad
 
@@ -35,3 +32,4 @@
 - _Needs investigation_: pygame doesn't yet support Python 3.14 properly as of this session (open upstream issue). Revisit the Python-version pin in `README.md`/`Makefile` once pygame catches up.
 - Pin the installed `pysm` version in `requirements.txt`, left over from M3 (the `manifest.lst` note this came from, about `Assembler` being commented out, turned out to be stale -- `Assembler` was already active).
 - _Needs investigation, optional, carried over from M3:_ a second silent test that boots `A2ROM.BIN` (reset vector at `$FFFC`), runs for N instructions, presses a key, and asserts the ROM stored it in the input buffer at `$0200`. Not required for M3's Done-when, parked here in case it's still wanted.
+- A write-protect hook (`WriteProtectHook` in `tests/test_emulator_debug_keys.py`) vetoes a write before `TimeMachine`/`MemAccessCollector` ever see it -- fine while nothing happens on a vetoed write, but worth a real decision once a write guard and one of those two are ever active at the same time.

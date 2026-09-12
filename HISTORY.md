@@ -9,6 +9,13 @@
 
 ---
 
+## 2026-09-12 -- M4
+
+- Removed Robotron-specific code from the core (`on_l`, two `Memory.write_byte` guard ranges, `handle_rts`'s crash-on-empty-stack assertion -- the last one was a real bug, not just a Robotron assumption). Also removed dead code found along the way: `write_byte2`, a `sys.exit(0)` trap in `CPU.write_byte`.
+- New extension points replace what was removed: `EmulatorStates.stopped_state`/`running_state` let external code attach debug-key handlers (`pysm`'s own `handlers` dict) and write guards (a `CPUHook` subclass) without touching the core. Demonstrated in `tests/test_emulator_debug_keys.py`.
+- Modules renamed to lower case and split into `papple2.core`/`papple2.debug` (PyCharm refactor); showcase moved to `examples/Robotron/`; `Statemachines_example.py` and the dead `Papple2.py` stub removed. `Robotron.py` itself still needs moving -- next session's first task.
+- `make test` green, `make run` verified.
+
 ## 2026-09-12 -- M3
 
 - Added `KeyScript` to `Checkpoints.py`: a checkpoint driven by `emulator.instructions` rather than `cpu.cycles`, so any assembled program can have keys scripted onto it, not just Robotron.

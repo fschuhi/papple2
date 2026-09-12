@@ -8,9 +8,9 @@
 
 ## 📍 Current Session Pointer
 
-**Where we are:** M3 (silent mode) is done -- `KeyScript` (instruction-count-driven scripted keypresses) in `Checkpoints.py`, the first code-only walkthrough test (`test_keypress_reaches_program`), and a fix so a headless run actually returns control when a checkpoint requests a stop (previously it could hang forever with no window to resume from; covered by `test_checkpoint_stop_halts_headless_run`). `--nodisplay`'s help text in `Robotron.py` now matches its actual behavior. `make test` is green.
+**Where we are:** M4 (split into core, debugging tools, and Robotron showcase) is done -- Robotron-specific code out of the core, modules lower-cased and split into `papple2.core`/`papple2.debug`, showcase moved to `examples/Robotron/`. `Robotron.py` itself still needs moving there, as the first task of the next session. `make test` is green, `make run` verified. See `HISTORY.md` for the full account.
 
-**What's next:** M4 -- split into core, debugging tools, and Robotron showcase. Concrete tasks are in `TODO.md`.
+**What's next:** M5 -- pytest coverage. Concrete tasks are in `TODO.md`.
 
 ---
 

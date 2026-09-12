@@ -20,21 +20,23 @@ The core comes from ApplePy by James Tauber, ported to Python 3 and stripped of 
 
 ## Architecture
 
-### Target package split (M4, not yet done)
+### Package split (M4, done 2026-09-12)
 
-Today `papple2` contains core emulator, debugging tools, and Robotron-specific code all mixed together in one package. The plan is a clean three-layer split:
+`papple2` is split into three layers:
 
 ```mermaid
 graph TD
-    SHOW["Robotron showcase<br/>Workbench, RobotronXl, Excel bridge"]
-    DEBUG["Debugging tools<br/>Assembler, breakpoints/hooks,<br/>TimeMachine, MemoryMap"]
-    CORE["Core emulator<br/>CPU, Memory, Apple II hardware"]
+    SHOW["Robotron showcase<br/>examples/Robotron/: workbench, robotron_xl, excel bridge"]
+    DEBUG["papple2.debug<br/>assembler, disassembler,<br/>memory_map, checkpoints, tiles, labels, annotations"]
+    CORE["papple2.core<br/>cpu, memory, apple, window, emulator, hooks"]
 
     SHOW --> DEBUG
     DEBUG --> CORE
 ```
 
-The showcase depends on the debugging tools, which depend on the core -- never the other way around. This is what makes `papple2` reusable outside the Robotron project. Not yet built; see `GOALS.md` for where this sits in the roadmap.
+The showcase depends on the debugging tools, which depend on the core -- never the other way around. `Robotron.py` itself is the one file not yet moved into `examples/Robotron/` alongside the rest of the showcase (next session's first task); everything else in the diagram reflects the actual tree.
+
+`Hooks` lives in `papple2.core`, not `papple2.debug` as an earlier version of this diagram had it: `Emulator.__init__` unconditionally constructs `TimeMachine`/`MemAccessCollector` (the `time_machine`/`mem_access` flags only control whether they're activated, not whether they exist), so `Emulator` cannot run at all without `Hooks` importable. The split follows that real coupling.
 
 ### Emulator / Window / States (current, as of M2.5)
 
@@ -65,11 +67,12 @@ graph TD
 
 This section is more useful to an LLM picking this project back up than to me -- which is exactly why it's here: `README.md` rides along in every session's `filesdump.txt` by default.
 
-- **`papple2` is a real, installable Python package** (`src/papple2/`, `pyproject.toml`, editable install via `make setup`). Internal imports are prefixed (`from papple2.X import Y`); star-imports (`from papple2.X import *`) are kept as-is on purpose for now -- converting to explicit names is M4 work.
+- **`papple2` is a real, installable Python package** (`src/papple2/`, `pyproject.toml`, editable install via `make setup`), split into `papple2.core` and `papple2.debug` sub-packages (M4, 2026-09-12); the Robotron showcase lives in `examples/Robotron/`, outside the installed package (`Robotron.py` itself still needs moving there). Internal imports are explicit (`from papple2.core.X import Y` / `from papple2.debug.X import Y`) -- star-imports were replaced project-wide back on 2026-09-06, earlier than this file previously said.
 - **Python 3.12 for the venv, not whatever `python3` resolves to.** `pygame` 2.6.1 doesn't build or run correctly under Python 3.14 as of this writing (open upstream issue).
 - **Paths come from `papple2.toml`** (local, gitignored; `papple2.example.toml` committed), not hardcoded Windows strings, and not `os.chdir`.
 - **`EmulatorStates` composes a `StateMachine` rather than subclassing one.** It's the root of its own state tree and is never handed to code that expects a plain `StateMachine` -- the case for composition over inheritance. The individual states (`EmulatorRunningState`, `EmulatorStoppedState`) do legitimately subclass `StateMachine`, since they're genuinely registered as states via `add_state`.
-- **The window (pygame) is a separate, swappable layer, not baked into `Emulator`.** `src/papple2/Window.py`'s `PygameWindow`/`NoWindow` share `poll() -> list`, `present()`, `status(text)`; `Emulator.__init__` picks one based on `no_display`. `Emulator.run`/`event_loop` and the state handlers contain no pygame reference.
+- **Debug behavior attaches from outside the core; it isn't added by editing the core.** `EmulatorStates` exposes `running_state`/`stopped_state`, so external code can add a key handler via `pysm`'s own `state.handlers[...]` dict -- no subclassing, no core edits. This is what replaced the old Robotron-specific `on_l`. The same pattern covers write protection: a `CPUHook` subclass can veto a write before it reaches memory, the same chaining mechanism `TimeMachine`/`MemAccessCollector` already use. Both are demonstrated in `tests/test_emulator_debug_keys.py`.
+- **The window (pygame) is a separate, swappable layer, not baked into `Emulator`.** `PygameWindow`/`NoWindow` share `poll() -> list`, `present()`, `status(text)`; `Emulator.__init__` picks one based on `no_display`. `Emulator.run`/`event_loop` and the state handlers contain no pygame reference.
 - **A watcher firing dispatches `Event('breakpoint')` into the state machine, rather than hard-returning out of `run`.** Separately, `run(until=...)` returns to its caller once execution stops for any reason; a plain `run()`/`event_loop()` call (no `until`) keeps looping through pauses as before, and only stops on `halt`.
 - **`time.monotonic()`, not `pygame.time.get_ticks()`, for frame pacing** -- works identically whether or not a window exists.
 - **`QUIT` (closing the window) and the Print key both map to the same `halt` event.** There's no separate hard-exit path. Print exists mainly for the Windows heritage of this code; on macOS, closing the window is the primary way to trigger it.
