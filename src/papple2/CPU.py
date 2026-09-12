@@ -390,9 +390,6 @@ class CPU:
         return self.read_word( self.get_and_inc_pc( 2 ), hook=False )
 
     def write_byte( self, address, value ):
-        if 0x8600 <= address <= 0x8fff:
-            print(hexaddr(self.PC))
-            sys.exit(0)
         if self.write_hook:
             if self.write_hook(address, value):
                 self.memory.write_byte( address, value )

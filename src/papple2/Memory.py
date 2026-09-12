@@ -51,29 +51,10 @@ class Memory:
         else:
             return self.read_word(address)
 
-    def write_byte2(self, address, value):
-        # we don't restrict access to softswitch page $C0
-        # note that we will never be able to access a value on $C0 if it is masked by the softswitches
-
-        # TODO: protect certain ram ranges
-        if not 0x4000 <= address <= 0x4100:
-            self._mem[address] = value
-
-        # special handling for Apple ][ hardware
-        if self.use_apple_softswitches:
-            if 0xC000 <= address <= 0xCFFF:
-                self.apple2.softswitches.write_byte( address, value )
-        if self.use_apple_display:
-            if 0x400 <= address < 0x800 or 0x2000 <= address < 0x5FFF:
-                self.apple2.display.update( address, value )
-
     def write_byte(self, address, value):
         # we don't restrict access to softswitch page $C0
         # note that we will never be able to access a value on $C0 if it is masked by the softswitches
-
-        # TODO: protect certain ram ranges
-        if not (0x2dfd <= address <= 0x2dff) and not (0x4000 <= address <= 0x4100):
-            self._mem[address] = value
+        self._mem[address] = value
 
         # special handling for Apple ][ hardware
         if 0xC000 <= address <= 0xCFFF:
