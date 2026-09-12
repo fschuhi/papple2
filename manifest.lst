@@ -88,6 +88,7 @@ tests/test_mem_access_collector.py
 #tests/test_memory.py
 #tests/test_robotron_waves.py
 tests/test_softswitches.py
+tests/test_tiles.py
 tests/test_time_machine.py
 
 ### --- Data ---

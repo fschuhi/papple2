@@ -8,9 +8,9 @@
 
 ## 📍 Current Session Pointer
 
-+**Where we are:** M5 (pytest coverage) is done -- `Robotron.py` moved to `examples/Robotron/`; soft-switch, hi-res-memory-buffer, `TimeMachine`, and `MemAccessCollector` tests added; confirmed full per-opcode 6502 coverage and closed the one gap found (`test_TSX`); the with-window half settled as manual verification via the Robotron showcase, documented in `README.md`. `make test` is green (100 tests). Also underway, not required for M5's Done-when: converting the test suite from `unittest` to native `pytest` style (`conftest.py` + `test_cpu_stack.py` done as the template, rest in `TODO.md`). See `HISTORY.md` for the full account.
+**Where we are:** M6 (tiles and stretches) is done -- `tiles.py` has a plain-language docstring covering tile/stretch/call tree, is confirmed living in `papple2.debug`, and `tests/test_tiles.py` builds tiles from a small assembled program with a branch. Two findings parked, not fixed (`TODO.md` scratchpad): whether "stretch" earns its keep as a concept beyond the compact JSR/RTS case, and a tail-flag quirk in `update_heads_and_tails` for standalone tiles. `make test` is green (102 tests), `make run` verified. See `HISTORY.md` for the full account.
 
-+**What's next:** M6 -- tiles and stretches. Concrete tasks are in `TODO.md`.
+**What's next:** M7 -- Excel bridge via PyXll. Concrete tasks are in `TODO.md`.
 
 ---
 
@@ -41,3 +41,4 @@ Python is slow for emulation, but that never mattered for the debugging use. Wha
 ### What I want to learn along the way
 
 This project taught me Python the first time. This time it should teach me how a Python project is shaped when it is meant to be reused: package layout, pytest, and separating a library from the programs that use it. I am also fascinated by state machines; `pysm` stays in the project for that reason, even where a simpler mechanism would do.
+

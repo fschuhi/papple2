@@ -1,5 +1,51 @@
 #!/usr/bin/env python3
 
+"""
+Tiles, stretches, and call trees -- the building blocks the Robotron
+disassembly work uses to turn raw instruction data into a Graphviz
+call-flow graph.
+
+Tile
+    A "tile" is a basic block: a run of instructions that always
+    execute one after another, with nothing jumping into the middle
+    of it. `TileFactory.create_tiles` starts a new tile whenever an
+    instruction is a "leap" (a branch, jump, call, or return -- see
+    `OpInfo.is_leap`) or whenever some other instruction can jump
+    *to* this one.
+
+Stretch
+    A "stretch" is a chain of tiles linked end-to-end because control
+    flow moves between them in a fixed, predictable way: falling
+    straight through to the next tile (`TYPE_SEQUENTIAL`), an
+    always-taken branch (`TYPE_BRANCH_ALWAYS`), or a `JSR` that
+    always returns to the very next instruction (`TYPE_STRAIGHT_JSR`).
+    A stretch is "compact" if it is only ever entered via `JSR` and
+    ends in a plain `RTS` -- i.e. it looks like a clean subroutine
+    body. NOTE: unlike the tile concept (which maps cleanly onto the
+    standard "basic block" idea), it is an open question whether
+    "stretch" is pulling its own weight as a concept, or whether it
+    should be reworked or folded into something else -- revisit
+    before extending this further.
+
+    `TYPE_BRANCH_OVER_RTS`, `TYPE_BRANCH_OVER_JMP`, and
+    `TYPE_SHOWTEXT` are not produced by the automatic linker above --
+    they are tags for `link_tiles_manually`, the escape hatch used by
+    the Robotron showcase (`examples/Robotron/workbench.py`) to bridge
+    control-flow patterns (a branch that jumps *over* an `RTS`/`JMP`,
+    and one Robotron-specific case near `showText`) that the automatic
+    rules don't catch. Whether Robotron-specific tags like
+    `TYPE_SHOWTEXT` belong in this general-purpose module, or should
+    move out to the showcase, is an open question for the M4/M7
+    core-vs-showcase split -- not resolved here.
+
+Call tree
+    `DotCallTree` turns stretches into a Graphviz graph: each stretch
+    becomes one node (drawn as a box if compact, an ellipse
+    otherwise), and arrows are drawn for branches, `JSR` calls,
+    `JMP`, and unmatched `RTS`s -- giving a visual map of how the
+    disassembled program's control flow actually moves.
+"""
+
 from papple2.util import hexaddr, pairwise, dot_RGB
 from papple2.core.cpu import JSR, RTS, JMP_absolute
 from papple2.debug.memory_map import MemoryMap, OpInfo
@@ -17,7 +63,6 @@ class Tile:
     def __init__( self, infos ):
         assert infos is not None and len( infos ) > 0
         self.infos = infos  # type: [OpInfo]
-        self.link_prev_type = None
         self.link_next_type = None
         self.link_prev = None  # type: Tile
         self.link_next = None  # type: Tile
@@ -494,4 +539,5 @@ class DotCallTree:
         from graphviz import render
         fnRendered = render('dot', format, fnDot )
         return fnRendered
+
 

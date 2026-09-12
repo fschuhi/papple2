@@ -9,6 +9,13 @@
 
 ---
 
+## 2026-09-12 -- M6
+
+- Added a plain-language docstring to `tiles.py` (tile/stretch/call tree), plus `tests/test_tiles.py` building tiles from a small assembled program with a branch.
+- Two findings surfaced along the way, deliberately not fixed (M6 excludes redesigning tiles/stretches): "stretch" as a concept is doubtful outside the compact JSR/RTS case; `update_heads_and_tails` only marks a tile `is_tail` if it already has a `link_prev`, so a fully standalone tile is head-only.
+- One real slip mid-session: removed `TYPE_BRANCH_OVER_RTS`/`TYPE_BRANCH_OVER_JMP`/`TYPE_SHOWTEXT` as apparently unused, which broke `make run` -- they're tags `workbench.py` needs for manual tile-bridging. Restored.
+- `make test` green (102 tests), `make run` verified.
+
 ## 2026-09-12 -- M5
 
 - `Robotron.py` moved to `examples/Robotron/`; `make run`/PyCharm's run config repointed to `-m examples.Robotron.Robotron` (running it from `src/papple2` only ever worked because `-m` happened to put the repo root on `sys.path`).
@@ -60,3 +67,4 @@
 ## 2026-09-03 -- Inaugural papple2 session
 
 Revival of the emulator after the Robotron 2084 project went dormant. Full read-through of the code base with Claude (Fable 5.1). Result: `ACTION_PLAN.md` with milestones M1 (tests green on macOS) to M8 (documentation), ordered by cheapest visible value. The target-state list moved from `GOALS.md` to `ACTION_PLAN.md`; `GOALS.md` now holds only the vision and the session pointer; `TODO.md` holds the M1 tasks. Main findings: Windows-only paths, `pytest` missing from requirements, two identical `tests.py`, `from X import *` throughout, Robotron-specific behaviour inside `Memory.write_byte`. No code changed.
+
