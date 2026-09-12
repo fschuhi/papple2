@@ -1,8 +1,8 @@
 import unittest
 from papple2.util import hexaddr
-from papple2.debug.Assembler import *
-from papple2.core.CPU import CPU
-from papple2.core.Apple import Apple2
+from papple2.debug.assembler import *
+from papple2.core.cpu import CPU
+from papple2.core.apple import Apple2
 
 
 class TestAssembler(unittest.TestCase):

@@ -8,11 +8,11 @@ import os
 import xlwings as xw
 
 from papple2.util import hex2int, hexaddr
-from papple2.debug.MemoryMap import MEM_UNKNOWN
-from examples.Robotron.Excel import raise_error, ExcelContext
-from examples.Robotron.Workbench import Workbench
-from papple2.core.Emulator import Emulator
-from examples.Robotron.MemLogDlg import MemLogDialog
+from papple2.debug.memory_map import MEM_UNKNOWN
+from examples.Robotron.excel import raise_error, ExcelContext
+from examples.Robotron.workbench import Workbench
+from papple2.core.emulator import Emulator
+from examples.Robotron.mem_log_dlg import MemLogDialog
 
 workbench = None  # type: Workbench
 emulator = None  # type: Emulator

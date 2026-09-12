@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from papple2.util import signed, hexbyte, chunks, hexaddr
-from papple2.debug.Labels import Labels
+from papple2.debug.labels import Labels
 
 class Disassembler:
     def __init__(self, cpu, map, labels):

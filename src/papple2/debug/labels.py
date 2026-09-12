@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from papple2.util import hexaddr
-from papple2.core.CPU import JSR, RTS, JMP_absolute, JMP_indirect
+from papple2.core.cpu import JSR, RTS, JMP_absolute, JMP_indirect
 
 class Labels:
     def __init__(self):

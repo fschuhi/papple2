@@ -2,7 +2,7 @@ import contextlib
 import io
 import unittest
 from pysm import Event
-from papple2.core.Emulator import Emulator
+from papple2.core.emulator import Emulator
 from papple2.util import hexaddr, hexbyte
 
 

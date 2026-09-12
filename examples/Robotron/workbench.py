@@ -3,15 +3,15 @@
 import sys
 from pathlib import Path
 
-from papple2.debug.Labels import Labels
-from papple2.core.CPU import JSR, RTS, JMP_indirect, JMP_absolute
+from papple2.debug.labels import Labels
+from papple2.core.cpu import JSR, RTS, JMP_indirect, JMP_absolute
 from papple2.util import hexaddr
-from papple2.debug.MemoryMap import OpInfo, MEM_DATA, MEM_OPCODE, MEM_OPERAND, MEM_UNKNOWN
-from papple2.debug.Disassembler import Disassembler
-from papple2.core.Emulator import Emulator
-from papple2.debug.Annotations import Annotations
-from papple2.debug.Tiles import TileFactory, Stretch, DotCallTree, TYPE_SHOWTEXT, TYPE_BRANCH_OVER_RTS, TYPE_BRANCH_OVER_JMP
-from examples.Robotron.MemLogDlg import MemLogDialog
+from papple2.debug.memory_map import OpInfo, MEM_DATA, MEM_OPCODE, MEM_OPERAND, MEM_UNKNOWN
+from papple2.debug.disassembler import Disassembler
+from papple2.core.emulator import Emulator
+from papple2.debug.annotations import Annotations
+from papple2.debug.tiles import TileFactory, Stretch, DotCallTree, TYPE_SHOWTEXT, TYPE_BRANCH_OVER_RTS, TYPE_BRANCH_OVER_JMP
+from examples.Robotron.mem_log_dlg import MemLogDialog
 
 
 class Workbench:

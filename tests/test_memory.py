@@ -1,5 +1,5 @@
 import unittest
-from papple2.core.Memory import Memory
+from papple2.core.memory import Memory
 
 
 class TestMemory(unittest.TestCase):

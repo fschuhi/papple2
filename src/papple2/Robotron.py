@@ -5,11 +5,11 @@ import tomllib
 from pathlib import Path
 
 from papple2.util import hexaddr, hexbytes
-from papple2.core.Apple import Apple2
-from examples.Robotron.Workbench import Workbench
+from papple2.core.apple import Apple2
+from examples.Robotron.workbench import Workbench
 from examples.Robotron.RobotronXl import start_emulator, load_state, continue_robotron, save_results, save_state
-from papple2.debug.Tiles import Stretch
-from papple2.debug.Assembler import Assembler
+from papple2.debug.tiles import Stretch
+from papple2.debug.assembler import Assembler
 import pickle
 
 

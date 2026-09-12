@@ -5,10 +5,10 @@ from papple2.util import hexaddr, hexbyte, lerp_rgb, chunks
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from papple2.core.Emulator import Emulator
+    from papple2.core.emulator import Emulator
 
-from papple2.core.Apple import Apple2
-from papple2.core.CPU import CPU
+from papple2.core.apple import Apple2
+from papple2.core.cpu import CPU
 import math
 
 
