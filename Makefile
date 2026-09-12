@@ -44,7 +44,7 @@ test-verbose: $(SETUP_STAMP) ## Run tests with verbose output
 
 # --- Run Target ---
 run: $(SETUP_STAMP) ## Run the Robotron emulator with the pygame window
-	$(RUN) -m papple2.Robotron
+	$(RUN) -m examples.Robotron.Robotron
 
 # --- Utility Targets ---
 clean: ## Remove venv, cache, and tmp files

@@ -32,4 +32,4 @@ class TestJumpCallOperations(unittest.TestCase):
         self.cpu.JSR(0x2000)
         self.assertEqual( self.cpu.PC, 0x2000 )
         self.cpu.RTS()
-        self.assertEqual( self.cpu.PC, 0x1000 )  # @@@
+        self.assertEqual( self.cpu.PC, 0x1000 )

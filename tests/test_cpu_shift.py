@@ -62,21 +62,21 @@ class TestShiftOperations(unittest.TestCase):
         self.cpu.ROL()
         self.assertEqual( self.cpu.A, 0x01 )
         self.assertEqual(self.cpu.sign_flag, 0)
-        self.assertEqual(self.cpu.zero_flag, 0)  # @@@
+        self.assertEqual(self.cpu.zero_flag, 0)
         self.assertEqual(self.cpu.carry_flag, 1)
         self.cpu.carry_flag = 0
         self.memory.write_byte(0x1000, 0x80)
         self.cpu.ROL(0x1000)
         self.assertEqual(self.memory.read_byte(0x1000), 0x00)
         self.assertEqual(self.cpu.sign_flag, 0)
-        self.assertEqual(self.cpu.zero_flag, 1)  # @@@
+        self.assertEqual(self.cpu.zero_flag, 1)
         self.assertEqual(self.cpu.carry_flag, 1)
         self.cpu.carry_flag = 1
         self.memory.write_byte(0x1000, 0x80)
         self.cpu.ROL(0x1000)
         self.assertEqual(self.memory.read_byte(0x1000), 0x01)
         self.assertEqual(self.cpu.sign_flag, 0)
-        self.assertEqual(self.cpu.zero_flag, 0)  # @@@
+        self.assertEqual(self.cpu.zero_flag, 0)
         self.assertEqual(self.cpu.carry_flag, 1)
 
     def test_ROR(self):
@@ -85,26 +85,26 @@ class TestShiftOperations(unittest.TestCase):
         self.cpu.ROR()
         self.assertEqual( self.cpu.A, 0x00 )
         self.assertEqual(self.cpu.sign_flag, 0)
-        self.assertEqual(self.cpu.zero_flag, 1)  # @@@
+        self.assertEqual(self.cpu.zero_flag, 1)
         self.assertEqual(self.cpu.carry_flag, 1)
         self.cpu.carry_flag = 1
         self.cpu.A = 0x01
         self.cpu.ROR()
         self.assertEqual( self.cpu.A, 0x80 )
-        self.assertEqual(self.cpu.sign_flag, 1)  # @@@
-        self.assertEqual(self.cpu.zero_flag, 0)  # @@@
+        self.assertEqual(self.cpu.sign_flag, 1)
+        self.assertEqual(self.cpu.zero_flag, 0)
         self.assertEqual(self.cpu.carry_flag, 1)
         self.cpu.carry_flag = 0
         self.memory.write_byte(0x1000, 0x01)
         self.cpu.ROR(0x1000)
         self.assertEqual(self.memory.read_byte(0x1000), 0x00)
         self.assertEqual(self.cpu.sign_flag, 0)
-        self.assertEqual(self.cpu.zero_flag, 1)  # @@@
+        self.assertEqual(self.cpu.zero_flag, 1)
         self.assertEqual(self.cpu.carry_flag, 1)
         self.cpu.carry_flag = 1
         self.memory.write_byte(0x1000, 0x01)
         self.cpu.ROR(0x1000)
         self.assertEqual(self.memory.read_byte(0x1000), 0x80)
-        self.assertEqual(self.cpu.sign_flag, 1)  # @@@
-        self.assertEqual(self.cpu.zero_flag, 0)  # @@@
+        self.assertEqual(self.cpu.sign_flag, 1)
+        self.assertEqual(self.cpu.zero_flag, 0)
         self.assertEqual(self.cpu.carry_flag, 1)

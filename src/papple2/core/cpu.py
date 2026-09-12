@@ -722,7 +722,7 @@ class CPU:
     # ARITHMETIC
 
     def ADC( self, operand_address ):
-        # @@@ doesn't handle BCD yet
+        # TODO: doesn't handle BCD yet
         assert not self.decimal_mode_flag
 
         a2 = self.A
@@ -742,7 +742,7 @@ class CPU:
         self.overflow_flag = [0, 1][(result1 > 127) | (result1 < -128)]
 
     def SBC( self, operand_address ):
-        # @@@ doesn't handle BCD yet
+        # TODO: doesn't handle BCD yet
         assert not self.decimal_mode_flag
 
         a2 = self.A
@@ -804,5 +804,5 @@ class CPU:
         self.status_from_byte( self.pull_byte( ) )
         self.PC = self.pull_word( )
 
-        # @@@ IRQ
-        # @@@ NMI
+        # TODO: IRQ missing (or N/A?)
+        # TODO: NMI missing (or N/A?)

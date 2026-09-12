@@ -39,9 +39,6 @@ papple2.example.toml
 #tools/concat_files.py
 
 ### --- Source ---
-## wrong folder, needs to go into `examples/Robotron`, but that wrecks `make run`
-src/papple2/Robotron.py
-
 src/papple2/util.py
 
 ## core
@@ -64,6 +61,7 @@ src/papple2/debug/tiles.py
 ## Robotron example
 examples/Robotron/excel.py
 examples/Robotron/mem_log_dlg.py
+examples/Robotron/Robotron.py
 examples/Robotron/RobotronXl.py
 examples/Robotron/workbench.py
 examples/Robotron/workbench.py
@@ -82,10 +80,14 @@ examples/Robotron/workbench.py
 #tests/test_cpu_status_flags.py
 #tests/test_cpu_system.py
 #tests/test_cpu_stack.py
+tests/test_display_memory.py
 tests/test_emulator_debug_keys.py
 tests/test_emulator_silent.py
+tests/test_mem_access_collector.py
 #tests/test_memory.py
-tests/test_robotron_waves.py
+#tests/test_robotron_waves.py
+tests/test_softswitches.py
+tests/test_time_machine.py
 
 ### --- Data ---
 #data/bin/A2ROM.BIN

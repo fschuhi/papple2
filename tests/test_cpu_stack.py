@@ -10,10 +10,21 @@ class TestStackOperations(unittest.TestCase):
         self.cpu = CPU(self.memory, None)
 
     def test_TSX(self):
-        s = self.cpu.SP
+        self.cpu.SP = 0x00
         self.cpu.TSX()
-        self.assertEqual( self.cpu.X, s )
-        # @@@ check NZ?
+        self.assertEqual( self.cpu.X, 0x00 )
+        self.assertEqual(self.cpu.sign_flag, 0)
+        self.assertEqual(self.cpu.zero_flag, 1)
+        self.cpu.SP = 0x01
+        self.cpu.TSX()
+        self.assertEqual( self.cpu.X, 0x01 )
+        self.assertEqual(self.cpu.sign_flag, 0)
+        self.assertEqual(self.cpu.zero_flag, 0)
+        self.cpu.SP = 0xFF
+        self.cpu.TSX()
+        self.assertEqual( self.cpu.X, 0xFF )
+        self.assertEqual(self.cpu.sign_flag, 1)
+        self.assertEqual(self.cpu.zero_flag, 0)
 
     def test_TXS(self):
         x = self.cpu.X
