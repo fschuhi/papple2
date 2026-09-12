@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 
 # http://rogerdudler.github.io/git-guide/
@@ -418,16 +417,17 @@ class Emulator:
         pc = self.cpu.PC
         assumed_jsr = pc - 3
 
-        # we need an address on the stack
-        # no address would happen if we had an RTS w/o having a pending JSR on the stack
-        # this is possible but not happening in Robotron - possible but not happening in Robotron
-        assert len(self.jsr_stack) > 0
-
-        jsr_on_stack = self.jsr_stack[-1]
-        if assumed_jsr == jsr_on_stack:
-            # normal case: return to calling JSR (i.e. op after it)
-            matched_jsr = jsr_on_stack
-            self.jsr_stack.pop()
+        # an empty jsr_stack here is not a bug: e.g. tail-call-style code, or the
+        # classic PHA/PHA + RTS "computed jump" trick, does an RTS without a
+        # matching JSR we tracked. Treat it as an unmatched return, don't crash.
+        if len(self.jsr_stack) > 0:
+            jsr_on_stack = self.jsr_stack[-1]
+            if assumed_jsr == jsr_on_stack:
+                # normal case: return to calling JSR (i.e. op after it)
+                matched_jsr = jsr_on_stack
+                self.jsr_stack.pop()
+            else:
+                matched_jsr = None
         else:
             matched_jsr = None
         self.map.register_rts( leap_from_info, self.cpu.PC, matched_jsr )  # caller can be None

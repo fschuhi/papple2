@@ -98,3 +98,36 @@ class TestEmulatorSilent(unittest.TestCase):
 
         self.assertEqual(emulator.instructions, 10)
         self.assertEqual(emulator.states.leaf_state.name, 'Stopped')
+
+    def test_rts_without_matching_jsr_does_not_crash(self):
+        """
+        Regression test for a real bug (not a Robotron assumption): `handle_rts`
+        used to assert that `jsr_stack` was non-empty on every RTS. That's false
+        in general -- the classic 6502 "computed jump" trick pushes a target
+        address by hand (PHA/PHA) and uses RTS to jump to it, with no JSR
+        involved at all. This program does exactly that: it never executes a
+        JSR, only two PHAs and an RTS, and should land at `landed` without
+        `handle_rts` raising.
+        """
+        asm = Assembler()
+        tokens = asm.tokenize("""
+                *=$6000
+
+        start:  LDA #$60       ; high byte of (landed - 1)
+                PHA
+                LDA #$06       ; low byte of (landed - 1)
+                PHA
+                RTS             ; "jumps" to landed via the stack, no JSR involved
+        landed: JMP landed
+        """)
+        code = asm.generate_code(tokens)
+        byte_array = asm.to_byte_array(code)
+
+        emulator = Emulator(no_display=True)
+        emulator.apple2.memory.load_test_data(0x6000, byte_array)
+        emulator.cpu.PC = 0x6000
+
+        emulator.run(until=at_address(asm.labels['LANDED']))
+
+        self.assertEqual(emulator.cpu.PC, asm.labels['LANDED'])
+        self.assertEqual(len(emulator.jsr_stack), 0)
