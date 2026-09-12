@@ -1,9 +1,9 @@
 import unittest
 from pysm import Event
-from papple2.Assembler import Assembler
-from papple2.Checkpoints import KeyScript
-from papple2.Emulator import Emulator, after_instructions, at_address
-from papple2.Hooks import CPUHook
+from papple2.debug.Assembler import Assembler
+from papple2.debug.Checkpoints import KeyScript
+from papple2.core.Emulator import Emulator, after_instructions, at_address
+from papple2.core.Hooks import CPUHook
 
 
 class WriteProtectHook(CPUHook):

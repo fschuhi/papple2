@@ -3,15 +3,15 @@
 import sys
 from pathlib import Path
 
-from papple2.Labels import Labels
-from papple2.CPU import JSR, RTS, JMP_indirect, JMP_absolute
+from papple2.debug.Labels import Labels
+from papple2.core.CPU import JSR, RTS, JMP_indirect, JMP_absolute
 from papple2.util import hexaddr
-from papple2.MemoryMap import OpInfo, MEM_DATA, MEM_OPCODE, MEM_OPERAND, MEM_UNKNOWN
-from papple2.Disassembler import Disassembler
-from papple2.Emulator import Emulator
-from papple2.Annotations import Annotations
-from papple2.Tiles import TileFactory, Stretch, DotCallTree, TYPE_SHOWTEXT, TYPE_BRANCH_OVER_RTS, TYPE_BRANCH_OVER_JMP
-from papple2.MemLogDlg import MemLogDialog
+from papple2.debug.MemoryMap import OpInfo, MEM_DATA, MEM_OPCODE, MEM_OPERAND, MEM_UNKNOWN
+from papple2.debug.Disassembler import Disassembler
+from papple2.core.Emulator import Emulator
+from papple2.debug.Annotations import Annotations
+from papple2.debug.Tiles import TileFactory, Stretch, DotCallTree, TYPE_SHOWTEXT, TYPE_BRANCH_OVER_RTS, TYPE_BRANCH_OVER_JMP
+from examples.Robotron.MemLogDlg import MemLogDialog
 
 
 class Workbench:
@@ -20,7 +20,7 @@ class Workbench:
         sys.setrecursionlimit( 3000 )
 
         self.emulator = Emulator( no_display=not show_window, quiet=True, time_machine=time_machine, mem_access=mem_access )
-        rom_dir = Path(data_dir) if data_dir is not None else Path(".")
+        rom_dir = Path(data_dir) if data_dir is not None else Path("../../src/papple2")
         self.emulator.load_image( 0x2dfd, str(rom_dir / "bin" / "ROBOTRON.BIN") )
         # self.emulator.load_image( 0x2dfd, r"tmp\ROBOTRON#062DFD.BIN" )
 

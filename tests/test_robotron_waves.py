@@ -1,8 +1,8 @@
 import unittest
 import re
-from papple2.Assembler import *
-from papple2.Disassembler import *
-from papple2.Apple import *
+from papple2.debug.Assembler import *
+from papple2.debug.Disassembler import *
+from papple2.core.Apple import *
 
 
 class TestWaves(unittest.TestCase):

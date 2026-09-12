@@ -5,13 +5,13 @@ import tomllib
 from pathlib import Path
 
 from papple2.util import hexaddr, hexbytes
-from papple2.Apple import Apple2
-from papple2.Workbench import Workbench
-from papple2.RobotronXl import start_emulator, load_state, continue_robotron, save_results, save_state
-from papple2.Tiles import Stretch
-from papple2.Assembler import Assembler
+from papple2.core.Apple import Apple2
+from examples.Robotron.Workbench import Workbench
+from examples.Robotron.RobotronXl import start_emulator, load_state, continue_robotron, save_results, save_state
+from papple2.debug.Tiles import Stretch
+from papple2.debug.Assembler import Assembler
 import pickle
-from pysm import State, StateMachine, Event
+
 
 def dump_stretches( workbench: Workbench ):
 
@@ -236,7 +236,7 @@ if __name__ == "__main__":
 
     start_emulator( data_dir, trace_dir, show_window, time_machine=time_machine, mem_access=mem_access )
 
-    from papple2.RobotronXl import workbench, emulator
+    from examples.Robotron.RobotronXl import workbench, emulator
 
     if args.load:
         load_state(str(Path(trace_dir) / "Robotron.dat"))

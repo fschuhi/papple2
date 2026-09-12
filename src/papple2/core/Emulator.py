@@ -21,13 +21,11 @@
 
 import time
 from papple2.util import hexaddr, hexbyte, Ascii2Apple2Ascii, Apple2Ascii2Ascii
-from papple2.Apple import Apple2
-from papple2.CPU import JMP_indirect, JMP_absolute, RTS, JSR
-from papple2.MemoryMap import MemoryMap
-from papple2.Hooks import TimeMachine, MemAccessCollector
-from papple2.Window import PygameWindow, NoWindow
-import io
-import sys
+from papple2.core.Apple import Apple2
+from papple2.core.CPU import JMP_indirect, JMP_absolute, RTS, JSR
+from papple2.debug.MemoryMap import MemoryMap
+from papple2.core.Hooks import TimeMachine, MemAccessCollector
+from papple2.core.Window import PygameWindow, NoWindow
 from pysm import State, StateMachine, Event
 
 class EmulatorRunningState( StateMachine ):

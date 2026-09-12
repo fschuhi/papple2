@@ -14,8 +14,8 @@ with contextlib.redirect_stdout(None):
 import time
 
 import numpy
-from papple2.CPU import CPU
-from papple2.Memory import Memory
+from papple2.core.CPU import CPU
+from papple2.core.Memory import Memory
 
 class Display:
 
