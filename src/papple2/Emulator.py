@@ -80,7 +80,6 @@ class EmulatorStoppedState( StateMachine ):
             'left': self.on_left,
             'right': self.on_right,
             'd': self.on_d,
-            'l': self.on_l,
         }
 
     def on_enter(self, state, event):
@@ -109,18 +108,6 @@ class EmulatorStoppedState( StateMachine ):
     def on_d(self, state, event):
         self.window.status(str(self.cpu))
 
-    def on_l(self, state, event):
-        print("$00=%s" % hexbyte(self.mem[0x00]))
-        print("$01=%s" % hexbyte(self.mem[0x01]))
-        print("$02=%s" % hexbyte(self.mem[0x02]))
-        print("$03=%s" % hexbyte(self.mem[0x03]))
-        print("$04=%s" % hexbyte(self.mem[0x04]))
-        print("$05=%s" % hexbyte(self.mem[0x05]))
-        print("$150a=%s" % hexbyte(self.mem[0x150a]))
-        print("$150b=%s" % hexbyte(self.mem[0x150b]))
-        print("$150c=%s" % hexbyte(self.mem[0x150c]))
-        print("$1407=%s" % hexbyte(self.mem[0x1407]))
-
 
 class EmulatorStates:
 
@@ -136,6 +123,11 @@ class EmulatorStates:
 
         running = EmulatorRunningState(self)
         stopped = EmulatorStoppedState(self)
+
+        # kept around so code outside EmulatorStates can attach its own
+        # handlers, e.g. `emulator.states.stopped_state.handlers['l'] = ...`
+        self.running_state = running
+        self.stopped_state = stopped
 
         self.sm.add_state(running, initial=True)
         self.sm.add_state(stopped)
