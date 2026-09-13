@@ -9,6 +9,16 @@
 
 ---
 
+## 2026-09-13 -- M7 (continued)
+
+- Converted the remaining `@xw.func` functions in `RobotronXl.py` to PyXLL's `@xl_func`, in four batches, each followed by a green `make test` run: the plain read/query functions (`get_disassembly`, `get_memory_map`, `get_annotations`, `max_cycles`, `count_mem_accesses`); the functions taking cycle/byte-range arguments (`get_mem_access_log`, `get_mem_access_counts`, `get_screen_read_counts`, `get_screen_write_counts`, `get_access_colors`, `get_bytes`); the memlog-dialog functions (`create_memlog_dialog`, `send_memlog_dialog_event`, `get_memlog_lines`, `get_memlog_cursor_pos`, `find_pc_forward`, `find_pc_backward`); and the three `ndim=2`/transpose functions (`get_touch_count`, `get_first_cycles`, `get_last_cycles`), which PyXLL expresses as `var[][]`/`var[]` array types plus the `@xl_func` decorator's own `transpose=True` option, instead of xlwings' separate `@xw.arg`/`@xw.ret` decorators. `RobotronXl.py` no longer has a single `@xw.func` left. The now-dead `import xlwings as xw` was removed from both `RobotronXl.py` and `excel.py` (the latter's import was already unused before today); `xlwings` was already absent from `requirements.txt`.
+- Added `tests/test_robotronxl.py`, the first test coverage this bridge layer has ever had: parametrized guard-path and smoke tests for every converted function, built on a module-scoped `running_workbench` fixture (and a `memlog_dialog_ready` fixture on top of it for the dialog-dependent functions).
+- The new tests found three real, pre-existing bugs, all fixed: `MemAccessCollector.max_cycles()` crashed (`IndexError`) with no recorded memory accesses, now returns `0` like its sibling `count_mem_accesses()` always did; `RobotronXl.get_memlog_lines()` crashed the same way when the memlog dialog's `total_lines` is `0`, now returns `[]`; `RobotronXl.get_attribute_from_info()` (and the unused, dead `safe_get_info()`) called `emulator.memory_map`, an attribute that doesn't exist on `Emulator` (the real one is `.map`) -- meaning `get_touch_count`/`get_first_cycles`/`get_last_cycles` likely never worked, in the xlwings version either. Also fixed in passing: a missing closing parenthesis in `create_memlog_dialog`'s "reused" status string, and `validate_workbench()` added to the three array functions, which were missing it while every other converted function already had it.
+- Parked in `TODO.md`, not fixed: `RobotronXl.validate_memlog_dialog()`'s auto-create-if-missing fallback is commented out, so calling most of the memlog functions before `create_memlog_dialog` has run crashes with a raw `AttributeError` instead of a clean Excel error.
+- Not yet done: confirming any of this from a real Excel workbook (only `start_emulator` has been so far), and deciding whether `ExcelContext`/`raise_error` is still worth keeping now that everything's converted.
+
+---
+
 ## 2026-09-12 -- M6
 
 - Added a plain-language docstring to `tiles.py` (tile/stretch/call tree), plus `tests/test_tiles.py` building tiles from a small assembled program with a branch.
@@ -67,4 +77,3 @@
 ## 2026-09-03 -- Inaugural papple2 session
 
 Revival of the emulator after the Robotron 2084 project went dormant. Full read-through of the code base with Claude (Fable 5.1). Result: `ACTION_PLAN.md` with milestones M1 (tests green on macOS) to M8 (documentation), ordered by cheapest visible value. The target-state list moved from `GOALS.md` to `ACTION_PLAN.md`; `GOALS.md` now holds only the vision and the session pointer; `TODO.md` holds the M1 tasks. Main findings: Windows-only paths, `pytest` missing from requirements, two identical `tests.py`, `from X import *` throughout, Robotron-specific behaviour inside `Memory.write_byte`. No code changed.
-

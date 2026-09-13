@@ -5,7 +5,6 @@ from pathlib import Path
 import pickle
 import os
 
-import xlwings as xw
 from pyxll import xl_func
 
 from papple2.util import hex2int, hexaddr
@@ -98,7 +97,7 @@ def safe_get_info(address):
     global emulator  # type: Emulator
     validate_workbench( )
     address = hex2int(address)
-    info = emulator.memory_map.get_info(address)
+    info = emulator.map.get_info(address)
     if info is None:
         raise_error("cannot find address %s" % hexaddr(address))
     return info
@@ -115,7 +114,7 @@ def get_attribute_from_info(address, attribute):
             address = hex2int(address)
 
             # get descriptor object for the memory location (or None, if none found for address)
-            info = emulator.memory_map.get_info(address)
+            info = emulator.map.get_info(address)
 
             #  built-in reflection
             return getattr(info, attribute) if info is not None else '?'
@@ -132,31 +131,28 @@ def get_attribute_from_info(address, attribute):
         return result
 
 
-@xw.func
-@xw.arg('address', ndim=2)   # force 2dim input
-@xw.ret(transpose=True)      # input is oriented top-down, not left-right
+@xl_func("var[][] address: var[]", transpose=True)
 def get_touch_count(address):
 
     # some magic for exception handling
     with ExcelContext() as XL:
+        validate_workbench( )
         XL.result = get_attribute_from_info(address, 'touch_count')
     return XL.result
 
 
-@xw.func
-@xw.arg('address', ndim=2)
-@xw.ret(transpose=True)
+@xl_func("var[][] address: var[]", transpose=True)
 def get_first_cycles(address):
     with ExcelContext() as XL:
+        validate_workbench( )
         XL.result = get_attribute_from_info(address, 'first_cycles')
     return XL.result
 
 
-@xw.func
-@xw.arg('address', ndim=2)
-@xw.ret(transpose=True)
+@xl_func("var[][] address: var[]", transpose=True)
 def get_last_cycles(address):
     with ExcelContext() as XL:
+        validate_workbench( )
         XL.result = get_attribute_from_info(address, 'last_cycles')
     return XL.result
 

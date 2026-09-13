@@ -8,9 +8,9 @@
 
 ## 📍 Current Session Pointer
 
-**Where we are:** M7 (Excel bridge via PyXll) is under way, not done. PyXLL itself now runs for `papple2` on the Windows VM: a per-project `pyxll.cfg`/`pyxll.example.cfg` pair selected via `PYXLL_CONFIG_FILE`, a `make excel` target that launches Excel with it set, `pygame` swapped for `pygame-ce` in `requirements.txt` (plain `pygame` has no Windows-ARM64 wheel), and `data_dir` now threaded through `Emulator`/`Apple2` (not just `Workbench`) so `A2ROM.BIN` no longer silently depends on the process's working directory -- fixed the same way `ROBOTRON.BIN` already was, not via `os.chdir`. 5 of the ~20 `@xw.func` functions in `RobotronXl.py` are converted to PyXLL's `@xl_func` (`start_emulator`, `continue_robotron`, `save_results`, `save_state`, `load_state`); `start_emulator` is confirmed working from Excel itself, the other four only verified via `make run` so far. `make test` has not been re-run since the `data_dir` change -- do that first next session, before anything else.
+**Where we are:** M7 (Excel bridge via PyXll)'s code and test work is done: every function in `RobotronXl.py` now uses PyXLL's `@xl_func`, `xlwings` is gone from the code entirely, and `tests/test_robotronxl.py` covers all of them -- which turned up and fixed three real, pre-existing bugs along the way (see `HISTORY.md`). Not yet done: confirming from a real Excel workbook that everything actually works there (only `start_emulator` has been so far, next session), and deciding whether to keep or retire `ExcelContext`/`raise_error`.
 
-**What's next:** finish M7. Concrete remaining tasks are in `TODO.md`.
+**What's next:** not M8. The backlog in `TODO.md` has grown enough this session (a new memlog-dialog guard gap, a type-hints sweep, plus several older parked items, none of them acted on yet) that the next session should start by triaging and prioritizing the whole list, rather than defaulting to the next milestone. `unittest` -> `pytest` (the M5 carryover) is the leading candidate to start with, but that's for the triage to decide, not a fixed choice.
 
 ---
 
@@ -41,5 +41,3 @@ Python is slow for emulation, but that never mattered for the debugging use. Wha
 ### What I want to learn along the way
 
 This project taught me Python the first time. This time it should teach me how a Python project is shaped when it is meant to be reused: package layout, pytest, and separating a library from the programs that use it. I am also fascinated by state machines; `pysm` stays in the project for that reason, even where a simpler mechanism would do.
-
-

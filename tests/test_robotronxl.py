@@ -56,13 +56,27 @@ MEMLOG_FUNCTIONS = [
 ]
 MEMLOG_FUNCTION_IDS = [func.__name__ for func, _, _ in MEMLOG_FUNCTIONS]
 
+# The three ndim=2/transpose functions: each takes a forced 2D list of
+# addresses (mirroring PyXLL's var[][] argument type) and returns a flat
+# list, one entry per address. get_attribute_from_info's own '?' marker
+# (used when memory_map has no OpInfo recorded for an address) is what we
+# expect here, since running_workbench never executes any instructions.
+ARRAY_FUNCTIONS = [
+    robotron_xl.get_touch_count,
+    robotron_xl.get_first_cycles,
+    robotron_xl.get_last_cycles,
+]
+ARRAY_FUNCTION_IDS = [func.__name__ for func in ARRAY_FUNCTIONS]
+
 # For the guard-path test only: every function above, plus create_memlog_dialog
 # itself (it only calls validate_workbench(), not validate_memlog_dialog(), so
-# it belongs in the guard check but not in the memlog smoke-test group).
+# it belongs in the guard check but not in the memlog smoke-test group), plus
+# the three array functions with a single dummy address each.
 GUARD_PATH_FUNCTIONS = (
     FUNCTIONS
     + MEMLOG_FUNCTIONS
     + [(robotron_xl.create_memlog_dialog, (3,), str)]
+    + [(func, ([['$2dfd']],), list) for func in ARRAY_FUNCTIONS]
 )
 GUARD_PATH_IDS = [func.__name__ for func, _, _ in GUARD_PATH_FUNCTIONS]
 
@@ -147,3 +161,14 @@ def test_create_memlog_dialog_creates_then_reuses(running_workbench):
     has already run (and left a window_lines=3 dialog behind) or not."""
     assert robotron_xl.create_memlog_dialog(5) == "ok (created)"
     assert robotron_xl.create_memlog_dialog(5) == "ok (reused)"
+
+
+@pytest.mark.parametrize("func", ARRAY_FUNCTIONS, ids=ARRAY_FUNCTION_IDS)
+def test_array_function_returns_unknown_marker_for_untouched_address(
+    func, running_workbench
+):
+    """With nothing ever executed, memory_map has no OpInfo recorded for any
+    address, so each of these three should come back with the forced 2D
+    input flattened to a 1-item list containing get_attribute_from_info's
+    own '?' marker for "no info at this address"."""
+    assert func([['$2dfd']]) == ['?']

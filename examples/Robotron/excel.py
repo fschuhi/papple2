@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-import xlwings as xw
-
 def raise_error(s):
     raise ExcelException(s)
 
@@ -31,5 +29,3 @@ class ExcelContext:
             if exc_type == ExcelException:
                 self.result = "#" + str(exc_val)
                 return True
-
-
