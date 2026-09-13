@@ -12,6 +12,7 @@ with contextlib.redirect_stdout(None):
     import pygame
 
 import time
+from pathlib import Path
 
 import numpy
 from papple2.core.cpu import CPU
@@ -499,7 +500,7 @@ class SoftSwitches:
 
 class Apple2:
 
-    def __init__(self, no_display=False, quiet=True, frame_rate=20):
+    def __init__(self, no_display=False, quiet=True, frame_rate=20, data_dir=None):
         if not no_display:
             if not quiet:
                 pygame.mixer.pre_init(11025, -16, 1)
@@ -510,7 +511,8 @@ class Apple2:
         self.softswitches = SoftSwitches(self.display, self.speaker)
 
         self.memory = Memory(self)
-        self.memory.load_image(0xD000, 'data/bin/A2ROM.BIN')
+        rom_path = str(Path(data_dir) / "bin" / "A2ROM.BIN") if data_dir is not None else 'data/bin/A2ROM.BIN'
+        self.memory.load_image(0xD000, rom_path)
         self.cpu = CPU(self.memory, program_counter=None)
 
     def pickle(self, pickler):
@@ -539,3 +541,4 @@ def determine_states_from_kmods():
     else:
         states = 2000
     return states
+

@@ -6,6 +6,7 @@ import pickle
 import os
 
 import xlwings as xw
+from pyxll import xl_func
 
 from papple2.util import hex2int, hexaddr
 from papple2.debug.memory_map import MEM_UNKNOWN
@@ -27,7 +28,7 @@ def validate_memlog_dialog():
     #    create_memlog_dialog(15)
 
 
-@xw.func
+@xl_func("str data_dir, str trace_dir, bool show_window, bool time_machine, bool mem_access: str")
 def start_emulator( data_dir, trace_dir, show_window=True, time_machine=False, mem_access=False ):
     global emulator
     global workbench
@@ -41,7 +42,7 @@ def start_emulator( data_dir, trace_dir, show_window=True, time_machine=False, m
     return "started"
 
 
-@xw.func
+@xl_func("bool event_loop, bool simulate_execution, bool determine_stretches")
 def continue_robotron(event_loop=True, simulate_execution=False, determine_stretches=True):
     global emulator # type: Emulator
     with ExcelContext() as XL:
@@ -55,7 +56,7 @@ def continue_robotron(event_loop=True, simulate_execution=False, determine_stret
     return XL.result
 
 
-@xw.func
+@xl_func("str trace_dir, str format, bool cycles_ruler, bool show_trace")
 def save_results( trace_dir, format='png', cycles_ruler=True, show_trace=False ):
     global emulator
     with ExcelContext() as XL:
@@ -68,7 +69,7 @@ def save_results( trace_dir, format='png', cycles_ruler=True, show_trace=False )
     return XL.result
 
 
-@xw.func
+@xl_func("str fn")
 def save_state(fn):
     global emulator  # type: Emulator
     with ExcelContext() as XL:
@@ -79,7 +80,7 @@ def save_state(fn):
     return XL.result
 
 
-@xw.func
+@xl_func("str fn")
 def load_state(fn):
     global emulator
     with ExcelContext() as XL:

@@ -8,9 +8,9 @@
 
 ## 📍 Current Session Pointer
 
-**Where we are:** M6 (tiles and stretches) is done -- `tiles.py` has a plain-language docstring covering tile/stretch/call tree, is confirmed living in `papple2.debug`, and `tests/test_tiles.py` builds tiles from a small assembled program with a branch. Two findings parked, not fixed (`TODO.md` scratchpad): whether "stretch" earns its keep as a concept beyond the compact JSR/RTS case, and a tail-flag quirk in `update_heads_and_tails` for standalone tiles. `make test` is green (102 tests), `make run` verified. See `HISTORY.md` for the full account.
+**Where we are:** M7 (Excel bridge via PyXll) is under way, not done. PyXLL itself now runs for `papple2` on the Windows VM: a per-project `pyxll.cfg`/`pyxll.example.cfg` pair selected via `PYXLL_CONFIG_FILE`, a `make excel` target that launches Excel with it set, `pygame` swapped for `pygame-ce` in `requirements.txt` (plain `pygame` has no Windows-ARM64 wheel), and `data_dir` now threaded through `Emulator`/`Apple2` (not just `Workbench`) so `A2ROM.BIN` no longer silently depends on the process's working directory -- fixed the same way `ROBOTRON.BIN` already was, not via `os.chdir`. 5 of the ~20 `@xw.func` functions in `RobotronXl.py` are converted to PyXLL's `@xl_func` (`start_emulator`, `continue_robotron`, `save_results`, `save_state`, `load_state`); `start_emulator` is confirmed working from Excel itself, the other four only verified via `make run` so far. `make test` has not been re-run since the `data_dir` change -- do that first next session, before anything else.
 
-**What's next:** M7 -- Excel bridge via PyXll. Concrete tasks are in `TODO.md`.
+**What's next:** finish M7. Concrete remaining tasks are in `TODO.md`.
 
 ---
 
@@ -41,4 +41,5 @@ Python is slow for emulation, but that never mattered for the debugging use. Wha
 ### What I want to learn along the way
 
 This project taught me Python the first time. This time it should teach me how a Python project is shaped when it is meant to be reused: package layout, pytest, and separating a library from the programs that use it. I am also fascinated by state machines; `pysm` stays in the project for that reason, even where a simpler mechanism would do.
+
 

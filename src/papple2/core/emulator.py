@@ -165,8 +165,8 @@ def at_address(address):
 
 class Emulator:
 
-    def __init__(self, no_display=False, quiet=True, frame_rate=20, time_machine=False, mem_access=False):
-        self.apple2 = Apple2( no_display, quiet, frame_rate )  # type: Apple2
+    def __init__(self, no_display=False, quiet=True, frame_rate=20, time_machine=False, mem_access=False, data_dir=None):
+        self.apple2 = Apple2( no_display, quiet, frame_rate, data_dir )  # type: Apple2
         self.display = self.apple2.display
         self.cpu = self.apple2.cpu  # type: CPU
         self.mem = self.apple2.memory._mem   # type: [int]
@@ -421,3 +421,4 @@ class Emulator:
         else:
             matched_jsr = None
         self.map.register_rts( leap_from_info, self.cpu.PC, matched_jsr )  # caller can be None
+

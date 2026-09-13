@@ -19,7 +19,7 @@ class Workbench:
 
         sys.setrecursionlimit( 3000 )
 
-        self.emulator = Emulator( no_display=not show_window, quiet=True, time_machine=time_machine, mem_access=mem_access )
+        self.emulator = Emulator( no_display=not show_window, quiet=True, time_machine=time_machine, mem_access=mem_access, data_dir=data_dir )
         rom_dir = Path(data_dir) if data_dir is not None else Path("../../src/papple2")
         self.emulator.load_image( 0x2dfd, str(rom_dir / "bin" / "ROBOTRON.BIN") )
         # self.emulator.load_image( 0x2dfd, r"tmp\ROBOTRON#062DFD.BIN" )
@@ -358,3 +358,4 @@ class Workbench:
                     #     [address, bytes, mnemonic, operand] = line
                     #     print( hexaddr( address ), hexbytes( bytes ), mnemonic, operand )
                     # print( )
+

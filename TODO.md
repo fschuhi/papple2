@@ -13,17 +13,23 @@
 
 ---
 
-## M6 -- Tiles and stretches (done 2026-09-12)
+## M7 -- Excel bridge via PyXll (in progress)
 
-~~Docstring added to `tiles.py` explaining tile/stretch/call tree in plain words; confirmed the module already lives in `papple2.debug`; added `tests/test_tiles.py`, building tiles from a small assembled program with a branch.~~ **Done when:** ~~`Tiles.py` lives in `papple2.debug`, has the docstring, and has at least one test building tiles from an assembled program.~~ See `HISTORY.md` for the full account.
+**Where this stands:** PyXLL itself now runs for `papple2` on the Windows VM -- a per-project `pyxll.cfg`/`pyxll.example.cfg` pair (gitignored/committed, machine paths relative to the cfg's own location) selected via `PYXLL_CONFIG_FILE`, a `make excel` target that launches Excel with it set, and `pygame` swapped for `pygame-ce` in `requirements.txt` (plain `pygame` has no Windows-ARM64 wheel, which this VM needs). `data_dir` is now threaded through `Emulator`/`Apple2`, not just `Workbench`, so `A2ROM.BIN`'s load no longer silently depends on the process's working directory -- fixed the same way `ROBOTRON.BIN` already was, not via `os.chdir` (see `README.md`'s settled decisions).
 
-## M7 -- Excel bridge via PyXll
+5 of the ~20 `@xw.func` functions in `RobotronXl.py` are converted to PyXLL's `@xl_func`: `start_emulator`, `continue_robotron`, `save_results`, `save_state`, `load_state`. `start_emulator` is confirmed working end-to-end from Excel (returns `"started"`); the other four have only been exercised via `make run`, not called from Excel directly yet.
 
-- Replace `xlwings` with PyXll in `examples/Robotron/excel.py` and `examples/Robotron/RobotronXl.py`: swap `import xlwings as xw` / the `@xw.func` decorator for PyXll's own import and `@xl_func` decorator (PyXll wants explicit arg/return type strings, unlike xlwings).
-- Update the Excel-side calls to match the M2 signature change: `start_emulator` and `save_results` now take `data_dir` + `trace_dir`, not the old single `path`. As of M2 these fail with a clear `TypeError`, not silently -- carried forward from a scratchpad note made at the time.
-- Verify the functions in `RobotronXl.py` are callable from Excel through PyXll, on the Windows VM -- this milestone can't be verified from macOS; PyXll needs an actual Excel install.
+**Remaining work:**
 
-**Look at first:** `examples/Robotron/excel.py` (small `ExcelContext`/`ExcelException` wrapper, its only xlwings touchpoint is the import), `examples/Robotron/RobotronXl.py` (`start_emulator`, `continue_robotron`, `save_results`, `save_state`, `load_state` -- all currently `@xw.func`).
+- Run `make test` -- not yet re-run since the `data_dir` threading change. Should still be 102 green (the new parameter defaults to `None` everywhere it isn't explicitly passed), but confirm rather than assume.
+- Try `continue_robotron`, `save_results`, `save_state`, `load_state` from Excel directly, not just via `make run`.
+- Convert the ~15 remaining read/query functions to `@xl_func`: `get_disassembly`, `get_memory_map`, `get_annotations`, `max_cycles`, `count_mem_accesses`, `get_mem_access_log`, `get_mem_access_counts`, `get_screen_read_counts`, `get_screen_write_counts`, `get_access_colors`, `get_bytes`, `create_memlog_dialog`, `send_memlog_dialog_event`, `get_memlog_lines`, `get_memlog_cursor_pos`, `find_pc_forward`, `find_pc_backward`. Same mechanical pattern as the five already done.
+- Convert `get_touch_count`, `get_first_cycles`, `get_last_cycles` -- these use xlwings' `@xw.arg(ndim=2)`/`@xw.ret(transpose=True)`, which PyXLL expresses differently (explicit type strings in the signature). Saved for last on purpose.
+- Once everything's converted: decide whether `ExcelContext`/`raise_error` (kept as-is through this round of conversion, deliberately) is still worth keeping given PyXLL's own built-in exception-to-Excel-error handling, or whether to retire it -- easier to judge with the whole file converted and visible at once.
+- Remove `xlwings` from `requirements.txt` once nothing in `RobotronXl.py`/`excel.py` still imports it.
+- Graphviz (the actual `dot` binary, not just the `graphviz` pip package) isn't installed on the Windows VM -- blocks `save_results` under `make run` specifically (calling individual Excel functions isn't affected). Either install Graphviz for Windows properly (e.g. `winget install Graphviz.Graphviz`) or keep using `--noresults` to skip it for now.
+
+**Look at first:** the five already-converted functions in `RobotronXl.py`, as the template for the rest.
 
 **Decision already made (`GOALS.md`):** the bridge moves from `xlwings` to PyXll; not something to re-open here.
 

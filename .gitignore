@@ -25,3 +25,6 @@ logs/
 !papple2.example.toml
 !pyproject.toml
 pyxll.cfg
+
+# Excel files
+*.xlsm

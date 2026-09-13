@@ -32,6 +32,10 @@ requirements.txt
 ### --- Project-specific Configuration ---
 papple2.example.toml
 
+# PyXLL configuration
+#pyxll/pyxll.cfg  # has license -> DO NOT INCLUDE THIS in the `filesdump.txt`
+#pyxll/pyxll.example.cfg
+
 # treat the actually used toml as secret; we don't include it in the filesdump, and it's .gitignore'd
 #papple2.toml
 
@@ -63,7 +67,6 @@ examples/Robotron/excel.py
 examples/Robotron/mem_log_dlg.py
 examples/Robotron/Robotron.py
 examples/Robotron/RobotronXl.py
-examples/Robotron/workbench.py
 examples/Robotron/workbench.py
 
 ### --- Tests and fixtures data ---
