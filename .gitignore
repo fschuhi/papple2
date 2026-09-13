@@ -11,6 +11,7 @@ build/
 tmp/
 ~$*
 bak/
+logs/
 
 # macOS
 .DS_Store
@@ -23,3 +24,4 @@ bak/
 *.toml
 !papple2.example.toml
 !pyproject.toml
+pyxll.cfg

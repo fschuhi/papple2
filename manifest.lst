@@ -26,8 +26,8 @@ HISTORY.md
 Makefile
 pyproject.toml
 requirements.txt
-# .gitignore
-# .gitattributes
+#.gitignore
+#.gitattributes
 
 ### --- Project-specific Configuration ---
 papple2.example.toml

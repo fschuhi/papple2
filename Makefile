@@ -46,6 +46,13 @@ test-verbose: $(SETUP_STAMP) ## Run tests with verbose output
 run: $(SETUP_STAMP) ## Run the Robotron emulator with the pygame window
 	$(RUN) -m examples.Robotron.Robotron
 
+excel: $(SETUP_STAMP) ## Launch Excel with this project's PyXLL config (Windows only)
+ifeq ($(OS),Windows_NT)
+	PYXLL_CONFIG_FILE='\\Mac\home\Projects\papple2\pyxll\pyxll.cfg' cmd //c start "" excel
+else
+	@echo "excel: Windows-only target (PyXLL/Excel run in the Windows VM)"
+endif
+
 # --- Utility Targets ---
 clean: ## Remove venv, cache, and tmp files
 	rm -rf $(VENV_DIR) .pytest_cache tmp
