@@ -161,7 +161,7 @@ def get_last_cycles(address):
     return XL.result
 
 
-@xw.func
+@xl_func("")
 def get_disassembly():
     with ExcelContext() as XL:
         validate_workbench( )
@@ -182,14 +182,14 @@ def get_disassembly():
         XL.result = lines
     return XL.result
 
-@xw.func
+@xl_func("")
 def get_memory_map():
     with ExcelContext() as XL:
         validate_workbench( )
         XL.result = workbench.collect_map_infos()
     return XL.result
 
-@xw.func
+@xl_func("")
 def get_annotations():
     with ExcelContext() as XL:
         validate_workbench( )
@@ -197,42 +197,42 @@ def get_annotations():
     return XL.result
 
 
-@xw.func
+@xl_func("")
 def max_cycles():
     with ExcelContext() as XL:
         validate_workbench( )
         XL.result = workbench.emulator.mem_access.max_cycles()
     return XL.result
 
-@xw.func
+@xl_func("")
 def count_mem_accesses():
     with ExcelContext() as XL:
         validate_workbench( )
         XL.result = workbench.emulator.mem_access.count_mem_accesses()
     return XL.result
 
-@xw.func
+@xl_func("int first_cycle, int last_cycle")
 def get_mem_access_log(first_cycle, last_cycle):
     with ExcelContext() as XL:
         validate_workbench( )
         XL.result = workbench.emulator.mem_access.mem_access_log(first_cycle, last_cycle)
     return XL.result
 
-@xw.func
+@xl_func("")
 def get_mem_access_counts():
     with ExcelContext() as XL:
         validate_workbench( )
         XL.result = workbench.emulator.mem_access.access_counts_as_table()
     return XL.result
 
-@xw.func
+@xl_func("int first_cycle, int last_cycle")
 def get_screen_read_counts(first_cycle, last_cycle):
     with ExcelContext() as XL:
         validate_workbench( )
         XL.result = workbench.emulator.mem_access.screen_reads_as_table(first_cycle, last_cycle)
     return XL.result
 
-@xw.func
+@xl_func("int first_cycle, int last_cycle, bool ignore_zero")
 def get_screen_write_counts(first_cycle, last_cycle, ignore_zero):
     with ExcelContext() as XL:
         validate_workbench( )
@@ -240,7 +240,7 @@ def get_screen_write_counts(first_cycle, last_cycle, ignore_zero):
     return XL.result
 
 
-@xw.func
+@xl_func("str access_type, int first_cycle, int last_cycle, bool include_stack, bool only_indirect")
 def get_access_colors(access_type, first_cycle, last_cycle, include_stack, only_indirect):
     with ExcelContext() as XL:
         validate_workbench( )
@@ -249,7 +249,7 @@ def get_access_colors(access_type, first_cycle, last_cycle, include_stack, only_
         XL.result = workbench.emulator.mem_access.mem_access_colors(access_type, first_cycle, last_cycle, include_stack, only_indirect)
     return XL.result
 
-@xw.func
+@xl_func("int first_byte, int last_byte")
 def get_bytes(first_byte, last_byte):
     with ExcelContext() as XL:
         validate_workbench( )
@@ -259,7 +259,7 @@ def get_bytes(first_byte, last_byte):
         XL.result = bytes
     return XL.result
 
-@xw.func
+@xl_func("int window_lines")
 def create_memlog_dialog(window_lines):
     with ExcelContext() as XL:
         validate_workbench( )
@@ -269,10 +269,10 @@ def create_memlog_dialog(window_lines):
             workbench.memlog_dialog = MemLogDialog(total_lines, window_lines)
             XL.result = "ok (created)"
         else:
-            XL.result = "ok (reused"
+            XL.result = "ok (reused)"
     return XL.result
 
-@xw.func
+@xl_func("str dlg_event")
 def send_memlog_dialog_event(dlg_event):
     with ExcelContext() as XL:
         validate_workbench( )
@@ -283,21 +283,24 @@ def send_memlog_dialog_event(dlg_event):
     return XL.result
 
 
-@xw.func
+@xl_func("")
 def get_memlog_lines():
     with ExcelContext() as XL:
         validate_workbench( )
         validate_memlog_dialog()
         dlg = workbench.memlog_dialog
-        states = workbench.emulator.mem_access.memory_states
-        top_cpu_state, _, _ = states[dlg.total_at_top_pos]
-        top_cycles, _ = top_cpu_state
-        bottom_cpu_state, _, _ = states[dlg.total_at_bottom_pos]
-        bottom_cycles, _ = bottom_cpu_state
-        XL.result = get_mem_access_log(top_cycles, bottom_cycles)
+        if dlg.total_lines == 0:
+            XL.result = []
+        else:
+            states = workbench.emulator.mem_access.memory_states
+            top_cpu_state, _, _ = states[dlg.total_at_top_pos]
+            top_cycles, _ = top_cpu_state
+            bottom_cpu_state, _, _ = states[dlg.total_at_bottom_pos]
+            bottom_cycles, _ = bottom_cpu_state
+            XL.result = get_mem_access_log(top_cycles, bottom_cycles)
     return XL.result
 
-@xw.func
+@xl_func("")
 def get_memlog_cursor_pos():
     with ExcelContext() as XL:
         validate_workbench( )
@@ -306,7 +309,7 @@ def get_memlog_cursor_pos():
         XL.result = dlg.window_cursor_pos
     return XL.result
 
-@xw.func
+@xl_func("int pc")
 def find_pc_forward( pc ):
     with ExcelContext() as XL:
         validate_workbench( )
@@ -324,7 +327,7 @@ def find_pc_forward( pc ):
         XL.result = "not found"
     return XL.result
 
-@xw.func
+@xl_func("int pc")
 def find_pc_backward( pc ):
     with ExcelContext() as XL:
         validate_workbench( )

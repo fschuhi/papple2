@@ -230,6 +230,8 @@ class MemAccessCollector( CPUHook ):
         return lines
 
     def max_cycles(self):
+        if not self.memory_states:
+            return 0
         last = self.memory_states[-1]
         cpu_state, reads, write = last
         cycles, last_PC = cpu_state
