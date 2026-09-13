@@ -33,7 +33,11 @@ requirements.txt
 papple2.example.toml
 
 # PyXLL configuration
+# executable = ../.venv-win/Scripts/python.exe
+# pythonpath = ..
 #pyxll/pyxll.cfg  # has license -> DO NOT INCLUDE THIS in the `filesdump.txt`
+
+# in VCS
 #pyxll/pyxll.example.cfg
 
 # treat the actually used toml as secret; we don't include it in the filesdump, and it's .gitignore'd
