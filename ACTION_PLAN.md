@@ -34,6 +34,8 @@ This list moved here from `GOALS.md`. It is preliminary; more constraints will b
 - The Excel bridge uses PyXll instead of xlwings.
 - `README.md`, `GOALS.md`, `TODO.md`, and `ACTION_PLAN.md` are complete and current.
 
+**2026-09-14 note:** the Robotron showcase and Excel bridge no longer stay *in* the project (see M7.5) -- "it can be, as an example" above is superseded by the decision to carve both out into their own repo, which `papple2` depends on being usable *from*, same as `load-runner` would.
+
 ## 3. Milestones
 
 ### M1 -- Tests run and are green on macOS
@@ -111,13 +113,27 @@ _In any case, this is a good moment to analyze control flow and display it as ch
 
 ### M7 -- Excel bridge via PyXll
 
-**Done when:** the functions in `RobotronXl.py` are callable from Excel through PyXll on the Windows VM.
+~~**Done when:** the functions in `RobotronXl.py` are callable from Excel through PyXll on the Windows VM.~~
 
-**Note:** lowest priority, but not no priority. The Excel bridge is part of the Robotron showcase for `papple2`.
+**2026-09-14 superseded:** the Excel bridge is leaving `papple2` entirely, along with the rest of the Robotron showcase, into its own repo (M7.5). Finishing it is that repo's concern from here on, not `papple2`'s.
+
+**Note:** lowest priority, but not no priority. ~~The Excel bridge is part of the Robotron showcase for `papple2`.~~
+
+### M7.5 -- Migrate Robotron + Excel bridge to their own repo
+
+**Done when:** `examples/Robotron/`, the PyXLL/Excel bridge, and Robotron-specific data/docs live in a separate repo that depends on `papple2` as an installed package; `papple2` itself is back to macOS-only (no `pyxll`, no Windows branch in the `Makefile`); `tests/test_robotron.py` remains as `papple2`'s own manual smoke test of the with-window path.
+
+**Work items:** see `MIGRATE_ROBOTRON.md` for the full plan -- what moves, what stays, what's already done, and what's still open.
+
+**Look at first:** `MIGRATE_ROBOTRON.md`.
+
+**Decision already made:** the near-term interest is the Lode Runner disassembly, not finishing the Excel bridge -- this milestone exists to remove that from `papple2`'s critical path, not to finish it in place.
 
 ### M8 -- Documentation
 
 Runs alongside all milestones, not after them: `README.md` is rewritten once M4 has settled the structure; `GOALS.md` and `TODO.md` are kept current every session.
+
+**Depends on M7.5:** the parts of `README.md` describing the Robotron showcase and the package split can't be finalized until the carve-out has actually happened -- documenting the current, mixed surface would just need redoing. Postponed until M7.5 is done.
 
 ## 4. Open questions
 

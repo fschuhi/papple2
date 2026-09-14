@@ -43,8 +43,8 @@ test-verbose: $(SETUP_STAMP) ## Run tests with verbose output
 	$(RUN) -m pytest -v -s
 
 # --- Run Target ---
-run: $(SETUP_STAMP) ## Run the Robotron emulator with the pygame window
-	$(RUN) -m examples.Robotron.Robotron
+run: $(SETUP_STAMP) ## Boot Robotron with the pygame window (manual test, not part of `make test`)
+	$(RUN) -m pytest tests/test_robotron.py -m manual -s -v
 
 excel: $(SETUP_STAMP) ## Launch Excel with this project's PyXLL config (Windows only)
 ifeq ($(OS),Windows_NT)
