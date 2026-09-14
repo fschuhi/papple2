@@ -13,6 +13,9 @@ LLM_INSTRUCTIONS.md
 manifest.lst
 tmp/project_tree.txt
 
+# Plan to migrate Robotron workbench and Excel/PyXLL functionality and config
+MIGRATE_ROBOTRON.md
+
 # Current action plan to turn this project into a reusable module
 ACTION_PLAN.md
 
@@ -29,7 +32,12 @@ requirements.txt
 #.gitignore
 #.gitattributes
 
+# ApplePy (c) James Tauber and contributors
+#LICENSE
+
 ### --- Project-specific Configuration ---
+# treat the actually used toml as secret; we don't include it in the filesdump, and it's .gitignore'd
+#papple2.toml
 papple2.example.toml
 
 # PyXLL configuration
@@ -38,10 +46,7 @@ papple2.example.toml
 #pyxll/pyxll.cfg  # has license -> DO NOT INCLUDE THIS in the `filesdump.txt`
 
 # in VCS
-#pyxll/pyxll.example.cfg
-
-# treat the actually used toml as secret; we don't include it in the filesdump, and it's .gitignore'd
-#papple2.toml
+pyxll/pyxll.example.cfg
 
 ### --- DevOps tools ---
 #tools/concat_files.py
@@ -74,39 +79,34 @@ examples/Robotron/RobotronXl.py
 examples/Robotron/workbench.py
 
 ### --- Tests and fixtures data ---
-tests/conftest.py
-tests/test_assembler.py
-tests/test_cpu_arithmetic.py
-tests/test_cpu_branch.py
-tests/test_cpu_bugs.py
-tests/test_cpu_inc_dec.py
-tests/test_cpu_jump_call.py
-tests/test_cpu_load_store.py
-tests/test_cpu_logical.py
-tests/test_cpu_register_transfer.py
-tests/test_cpu_shift.py
-tests/test_cpu_stack.py
-tests/test_cpu_status_flags.py
-tests/test_cpu_system.py
-tests/test_display_memory.py
-tests/test_emulator_debug_keys.py
-tests/test_emulator_silent.py
-tests/test_mem_access_collector.py
-tests/test_memory.py
+#tests/conftest.py
+#tests/test_assembler.py
+#tests/test_cpu_arithmetic.py
+#tests/test_cpu_branch.py
+#tests/test_cpu_bugs.py
+#tests/test_cpu_inc_dec.py
+#tests/test_cpu_jump_call.py
+#tests/test_cpu_load_store.py
+#tests/test_cpu_logical.py
+#tests/test_cpu_register_transfer.py
+#tests/test_cpu_shift.py
+#tests/test_cpu_stack.py
+#tests/test_cpu_status_flags.py
+#tests/test_cpu_system.py
+#tests/test_display_memory.py
+#tests/test_emulator_debug_keys.py
+#tests/test_emulator_silent.py
+#tests/test_mem_access_collector.py
+#tests/test_memory.py
+#tests/test_robotron.py
 tests/test_robotronxl.py
-tests/test_softswitches.py
-tests/test_tiles.py
-tests/test_time_machine.py
+#tests/test_softswitches.py
+#tests/test_tiles.py
+#tests/test_time_machine.py
 
 ### --- Data ---
 #data/bin/A2ROM.BIN
-#data/bin/ROBOTRON#062dfd.bin
 #data/bin/ROBOTRON.BIN
-
-#data/do/Robotron 2084 (1983)(Atari).do
-
-#data/img/Robotron_2084_AP2_box.jpg
-#data/img/Robotron_2084_Atari_box.jpg
 
 ### --- Docs ---
 #docs/advice_from_6502org.md
@@ -120,8 +120,3 @@ tests/test_time_machine.py
 #docs/Apple/Apple II Computer Graphics (Williams 1983).pdf
 #docs/Apple/Apple II Monitors Peeled.pdf
 #docs/Apple/Apple IIe Reference Manual - memory organization.pdf
-
-#docs/Robotron/Robotron.dis65
-#docs/Robotron/Robotron (Apple).asm
-#docs/Robotron/Robotron sprites.xlsb
-#docs/Robotron/spirte_tables.md
