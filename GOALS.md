@@ -8,9 +8,9 @@
 
 ## 📍 Current Session Pointer
 
-**Where we are:** Theme 1 (the `unittest` -> `pytest` conversion) is done. This session finished it: shared `Emulator`/`Assembler` factory fixtures in `conftest.py`, `test_time_machine.py`/`test_mem_access_collector.py`/`test_emulator_debug_keys.py`/`test_tiles.py`/`test_emulator_silent.py` converted on top of them, `test_softswitches.py`/`test_display_memory.py` given their own smaller local fixtures, and `test_robotron_waves.py` deleted outright (dead WIP, never a working test). Along the way, the session took a real turn: instead of moving on to finish M7 (the Excel bridge) in place, we decided to carve Robotron and the Excel/PyXLL bridge out of `papple2` into their own repo entirely -- `papple2`'s near-term interest is the Lode Runner disassembly, not Excel tooling. `papple2` keeps a minimal, license-safe manual pygame smoke test instead (`tests/test_robotron.py`, done). The full carve-out plan is written up in `MIGRATE_ROBOTRON.md` for a dedicated future session; `ACTION_PLAN.md` now has M7.5 for it.
+**Where we are:** M7.5 (the Robotron + Excel carve-out) is done. `probotron` exists as its own repo, pushed to GitHub -- the workbench, the PyXLL/Excel bridge, and their supporting data/docs now live there, depending on `papple2` as an editable local package; the Excel bridge is verified working from Excel via PyXLL. `papple2`'s own side of the split -- deleting the now-migrated files from this repo, dropping `pyxll`/the Windows branch from `requirements.txt`/`Makefile`/`manifest.lst` -- is in progress. `MIGRATE_ROBOTRON.md` has been deleted now that the migration it planned is complete; see `HISTORY.md` if its reasoning is needed again.
 
-**What's next:** the migration itself (`ACTION_PLAN.md`'s M7.5) -- work through `MIGRATE_ROBOTRON.md` in a clean session. Documentation (M8) is postponed until after that, since it needs to describe `papple2`'s post-carve-out surface, not the current mixed one. The type-hints gap surfaced across today's conversions also needs its own session -- see `TODO.md`'s new "Type hints sweep" section for the concrete inventory and the open scope question.
+**What's next:** M8 (documentation), now unblocked. First items: remove/reword the references to the in-repo Robotron showcase across `README.md` (the "Package split" diagram, the "Testing strategy" section), this file's own strategic vision (items 2 and 4 below), and `ACTION_PLAN.md`'s M7 description -- concrete list in `TODO.md`.
 
 ---
 
@@ -28,7 +28,7 @@ Python is slow for emulation, but that never mattered for the debugging use. Wha
 
 ### Where it is going
 
-1. **A macOS-native library.** The code was written on a Windows machine. It moves to the MacBook and becomes a proper Python package that other projects can import. (Note that 4. below means that we should still be able to use the library from Windows as well, possibly via a bridge layer between PyXll and a server on macOS, even though that would be only second-best.) 
+1. **A macOS-native library.** The code was written on a Windows machine. It moves to the MacBook and becomes a proper Python package that other projects can import. (Note that 4. below means that we should still be able to use the library from Windows as well, possibly via a bridge layer between PyXll and a server on macOS, even though that would be only second-best.)
 
 2. **A clean split into three layers.** The core emulator (6502, memory, Apple II hardware), the debugging tools built on top of it, and the Robotron 2084 disassembly project as the worked example of how to use both. Today these are mixed; separating them is what makes `papple2` reusable.
 

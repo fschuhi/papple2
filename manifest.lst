@@ -13,9 +13,6 @@ LLM_INSTRUCTIONS.md
 manifest.lst
 tmp/project_tree.txt
 
-# Plan to migrate Robotron workbench and Excel/PyXLL functionality and config
-MIGRATE_ROBOTRON.md
-
 # Current action plan to turn this project into a reusable module
 ACTION_PLAN.md
 
@@ -40,14 +37,6 @@ requirements.txt
 #papple2.toml
 papple2.example.toml
 
-# PyXLL configuration
-# executable = ../.venv-win/Scripts/python.exe
-# pythonpath = ..
-#pyxll/pyxll.cfg  # has license -> DO NOT INCLUDE THIS in the `filesdump.txt`
-
-# in VCS
-pyxll/pyxll.example.cfg
-
 ### --- DevOps tools ---
 #tools/concat_files.py
 
@@ -71,13 +60,6 @@ src/papple2/debug/labels.py
 src/papple2/debug/memory_map.py
 src/papple2/debug/tiles.py
 
-## Robotron example
-examples/Robotron/excel.py
-examples/Robotron/mem_log_dlg.py
-examples/Robotron/Robotron.py
-examples/Robotron/RobotronXl.py
-examples/Robotron/workbench.py
-
 ### --- Tests and fixtures data ---
 #tests/conftest.py
 #tests/test_assembler.py
@@ -99,7 +81,6 @@ examples/Robotron/workbench.py
 #tests/test_mem_access_collector.py
 #tests/test_memory.py
 #tests/test_robotron.py
-tests/test_robotronxl.py
 #tests/test_softswitches.py
 #tests/test_tiles.py
 #tests/test_time_machine.py

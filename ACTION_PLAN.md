@@ -115,25 +115,25 @@ _In any case, this is a good moment to analyze control flow and display it as ch
 
 ~~**Done when:** the functions in `RobotronXl.py` are callable from Excel through PyXll on the Windows VM.~~
 
-**2026-09-14 superseded:** the Excel bridge is leaving `papple2` entirely, along with the rest of the Robotron showcase, into its own repo (M7.5). Finishing it is that repo's concern from here on, not `papple2`'s.
+**2026-09-14 superseded:** the Excel bridge left `papple2` entirely, along with the rest of the Robotron showcase, into its own repo (M7.5).
 
-**Note:** lowest priority, but not no priority. ~~The Excel bridge is part of the Robotron showcase for `papple2`.~~
+**Note:** lowest priority, but not no priority. ~~The Excel bridge is part of the Robotron showcase for `papple2`.~~ (superseded by M7.5 -- the showcase is `probotron` now, a separate project, not part of `papple2`.)
 
 ### M7.5 -- Migrate Robotron + Excel bridge to their own repo
 
-**Done when:** `examples/Robotron/`, the PyXLL/Excel bridge, and Robotron-specific data/docs live in a separate repo that depends on `papple2` as an installed package; `papple2` itself is back to macOS-only (no `pyxll`, no Windows branch in the `Makefile`); `tests/test_robotron.py` remains as `papple2`'s own manual smoke test of the with-window path.
+~~**Done when:** `examples/Robotron/`, the PyXLL/Excel bridge, and Robotron-specific data/docs live in a separate repo that depends on `papple2` as an installed package; `papple2` itself is back to macOS-only (no `pyxll`, no Windows branch in the `Makefile`); `tests/test_robotron.py` remains as `papple2`'s own manual smoke test of the with-window path.~~
 
-**Work items:** see `MIGRATE_ROBOTRON.md` for the full plan -- what moves, what stays, what's already done, and what's still open.
+**2026-09-14 done:** `probotron` exists as its own repo (pushed to GitHub), depending on `papple2` as an editable local package (`pip install -e ../papple2`); the Excel bridge is verified working from Excel through PyXLL. `tests/test_robotron.py` remains in `papple2` as its manual smoke test of the with-window path, as planned. `papple2`'s own side of the split -- deleting the now-migrated files, dropping `pyxll`/the Windows branch from `requirements.txt`/`Makefile`/`manifest.lst` -- is in progress. The plan this milestone pointed to, `MIGRATE_ROBOTRON.md`, has been deleted now that it's carried out; see `HISTORY.md` for the reasoning if needed again.
 
-**Look at first:** `MIGRATE_ROBOTRON.md`.
-
-**Decision already made:** the near-term interest is the Lode Runner disassembly, not finishing the Excel bridge -- this milestone exists to remove that from `papple2`'s critical path, not to finish it in place.
+**Decision already made:** the near-term interest is the Lode Runner disassembly, not finishing the Excel bridge -- this milestone existed to remove that from `papple2`'s critical path, not to finish it in place.
 
 ### M8 -- Documentation
 
 Runs alongside all milestones, not after them: `README.md` is rewritten once M4 has settled the structure; `GOALS.md` and `TODO.md` are kept current every session.
 
-**Depends on M7.5:** the parts of `README.md` describing the Robotron showcase and the package split can't be finalized until the carve-out has actually happened -- documenting the current, mixed surface would just need redoing. Postponed until M7.5 is done.
+~~**Depends on M7.5:** the parts of `README.md` describing the Robotron showcase and the package split can't be finalized until the carve-out has actually happened -- documenting the current, mixed surface would just need redoing. Postponed until M7.5 is done.~~
+
+**2026-09-14: unblocked.** M7.5 is done. First concrete items: reword `README.md`'s "Package split" diagram and "Testing strategy" section, `GOALS.md`'s strategic vision (items 2 and 4), and this file's own M7 description above -- all still describe Robotron as living in this repo. See `TODO.md` for the checklist.
 
 ## 4. Open questions
 

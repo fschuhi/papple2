@@ -1,6 +1,5 @@
 pygame-ce
 pysm
-pyxll
 numpy
 pytest
 graphviz

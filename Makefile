@@ -1,15 +1,9 @@
-# --- OS-specific variables ---
-ifeq ($(OS),Windows_NT)
-    VENV_DIR = .venv-win
-    VENV_BIN = $(VENV_DIR)/Scripts
-    PYTHON   = py -3
-else
-    VENV_DIR = .venv
-    VENV_BIN = $(VENV_DIR)/bin
-    PYTHON   = python3
-endif
+# --- Variables (macOS-only: Windows/PyXLL support now lives in probotron) ---
+VENV_DIR = .venv
+VENV_BIN = $(VENV_DIR)/bin
+PYTHON   = python3
 
-# --- Derived variables (shared) ---
+# --- Derived variables ---
 VENV_ACTIVATE = $(VENV_BIN)/activate
 ACTIVATE      = . $(VENV_ACTIVATE)
 PIP           = $(ACTIVATE) && pip
@@ -53,11 +47,11 @@ clean: ## Remove venv, cache, and tmp files
 	find . -name "*.egg-info" -type d -prune -exec rm -rf {} +
 
 showtree: ## Show project directory structure
-	tree -I ".venv|.venv-win|__pycache__|.idea|.pytest_cache|*egg-info|tmp"
+	tree -I ".venv|__pycache__|.idea|.pytest_cache|*egg-info|tmp"
 
 gentree: ## Save tree structure to file
 	mkdir -p tmp
-	tree -I ".venv|.venv-win|__pycache__|.idea|.pytest_cache|*egg-info|tmp" > tmp/project_tree.txt
+	tree -I ".venv|__pycache__|.idea|.pytest_cache|*egg-info|tmp" > tmp/project_tree.txt
 
 filesdump: $(SETUP_STAMP) gentree ## Create context dump for LLMs
 	@if [ -f manifest.lst ]; then \
