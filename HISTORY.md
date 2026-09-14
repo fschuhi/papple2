@@ -9,6 +9,15 @@
 
 ---
 
+## 2026-09-14 -- pytest carryover (Theme 1, partial)
+
+- Converted the remaining 11 `test_cpu_*.py` files (`test_cpu_jump_call.py`, `test_cpu_system.py`, `test_cpu_status_flags.py`, `test_cpu_bugs.py`, `test_cpu_branch.py`, `test_cpu_register_transfer.py`, `test_cpu_logical.py`, `test_cpu_load_store.py`, `test_cpu_inc_dec.py`, `test_cpu_shift.py`, `test_cpu_arithmetic.py`) from `unittest.TestCase` to native `pytest`, using the `memory`/`cpu` fixtures from `conftest.py` (the M5 template). Done across four batches, each followed by a green `make test` run.
+- Parametrized wherever a clean shared table existed across the ops in a file: `test_cpu_status_flags.py` (`CLC`/`CLD`/`CLI`/`CLV`/`SEC`/`SED`/`SEI`), `test_cpu_branch.py` (all 8 branch ops), `test_cpu_register_transfer.py` (`TAX`/`TAY`/`TXA`/`TYA`), `test_cpu_inc_dec.py` (`INC`/`DEC` share one table, `INX`/`INY`/`DEX`/`DEY` another), and in `test_cpu_arithmetic.py`, `CMP`/`CPX`/`CPY` (one shared table) plus `ADC`/`SBC` (each parametrized on its own, since their cases don't reduce to one table). `test_cpu_logical.py` and `test_cpu_shift.py` left as plain functions -- their ops don't share a uniform table.
+- Added a file-local `loaded_memory` fixture in `test_cpu_load_store.py` for the pre-loaded 5-byte test block, rather than adding it to the shared `conftest.py`.
+- Found and fixed a real bug while parametrizing `test_SBC_without_BCD`: the original test's second case never set `carry_flag` explicitly, silently relying on the value left over from the first case -- broke when pulled out as an independent row; fixed by making the inherited `carry_flag = 1` explicit in that row.
+- Not done: `conftest.py`'s `Emulator`/`Assembler` fixture (needed by `test_emulator_silent.py`, `test_time_machine.py`, `test_mem_access_collector.py`, `test_emulator_debug_keys.py`, `test_tiles.py`); `test_softswitches.py` and `test_display_memory.py` (need their own smaller local fixtures); `test_robotron_waves.py` (separate, loads the real `ROBOTRON.BIN`). Type-hints sweep also still open.
+- `TODO.md` reorganized into five groups (test infrastructure, finishing M7, parked decisions, environment housekeeping, optional coverage) instead of a flat scratchpad; `GOALS.md`'s Current Session Pointer updated accordingly.
+
 ## 2026-09-13 -- M7 (continued)
 
 - Converted the remaining `@xw.func` functions in `RobotronXl.py` to PyXLL's `@xl_func`, in four batches, each followed by a green `make test` run: the plain read/query functions (`get_disassembly`, `get_memory_map`, `get_annotations`, `max_cycles`, `count_mem_accesses`); the functions taking cycle/byte-range arguments (`get_mem_access_log`, `get_mem_access_counts`, `get_screen_read_counts`, `get_screen_write_counts`, `get_access_colors`, `get_bytes`); the memlog-dialog functions (`create_memlog_dialog`, `send_memlog_dialog_event`, `get_memlog_lines`, `get_memlog_cursor_pos`, `find_pc_forward`, `find_pc_backward`); and the three `ndim=2`/transpose functions (`get_touch_count`, `get_first_cycles`, `get_last_cycles`), which PyXLL expresses as `var[][]`/`var[]` array types plus the `@xl_func` decorator's own `transpose=True` option, instead of xlwings' separate `@xw.arg`/`@xw.ret` decorators. `RobotronXl.py` no longer has a single `@xw.func` left. The now-dead `import xlwings as xw` was removed from both `RobotronXl.py` and `excel.py` (the latter's import was already unused before today); `xlwings` was already absent from `requirements.txt`.
@@ -16,8 +25,6 @@
 - The new tests found three real, pre-existing bugs, all fixed: `MemAccessCollector.max_cycles()` crashed (`IndexError`) with no recorded memory accesses, now returns `0` like its sibling `count_mem_accesses()` always did; `RobotronXl.get_memlog_lines()` crashed the same way when the memlog dialog's `total_lines` is `0`, now returns `[]`; `RobotronXl.get_attribute_from_info()` (and the unused, dead `safe_get_info()`) called `emulator.memory_map`, an attribute that doesn't exist on `Emulator` (the real one is `.map`) -- meaning `get_touch_count`/`get_first_cycles`/`get_last_cycles` likely never worked, in the xlwings version either. Also fixed in passing: a missing closing parenthesis in `create_memlog_dialog`'s "reused" status string, and `validate_workbench()` added to the three array functions, which were missing it while every other converted function already had it.
 - Parked in `TODO.md`, not fixed: `RobotronXl.validate_memlog_dialog()`'s auto-create-if-missing fallback is commented out, so calling most of the memlog functions before `create_memlog_dialog` has run crashes with a raw `AttributeError` instead of a clean Excel error.
 - Not yet done: confirming any of this from a real Excel workbook (only `start_emulator` has been so far), and deciding whether `ExcelContext`/`raise_error` is still worth keeping now that everything's converted.
-
----
 
 ## 2026-09-12 -- M6
 

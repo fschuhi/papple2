@@ -1,92 +1,37 @@
-import unittest
-from papple2.core.memory import Memory
-from papple2.core.cpu import CPU
+import pytest
 
 
-class TestLoadStoreOperations(unittest.TestCase):
+@pytest.fixture
+def loaded_memory(memory):
+    memory.load_test_data(0x1000, [0x00, 0x01, 0x7F, 0x80, 0xFF])
+    return memory
 
-    def setUp(self):
-        self.memory = Memory()
-        self.cpu = CPU( self.memory, program_counter=0 )
-        self.memory.load_test_data(0x1000, [0x00, 0x01, 0x7F, 0x80, 0xFF])
 
-    def test_LDA(self):
-        self.cpu.LDA(0x1000)
-        self.assertEqual( self.cpu.A, 0x00 )
-        self.assertEqual(self.cpu.sign_flag, 0)
-        self.assertEqual(self.cpu.zero_flag, 1)
-        self.cpu.LDA(0x1001)
-        self.assertEqual( self.cpu.A, 0x01 )
-        self.assertEqual(self.cpu.sign_flag, 0)
-        self.assertEqual(self.cpu.zero_flag, 0)
-        self.cpu.LDA(0x1002)
-        self.assertEqual( self.cpu.A, 0x7F )
-        self.assertEqual(self.cpu.sign_flag, 0)
-        self.assertEqual(self.cpu.zero_flag, 0)
-        self.cpu.LDA(0x1003)
-        self.assertEqual( self.cpu.A, 0x80 )
-        self.assertEqual(self.cpu.sign_flag, 1)
-        self.assertEqual(self.cpu.zero_flag, 0)
-        self.cpu.LDA(0x1004)
-        self.assertEqual( self.cpu.A, 0xFF )
-        self.assertEqual(self.cpu.sign_flag, 1)
-        self.assertEqual(self.cpu.zero_flag, 0)
+@pytest.mark.parametrize("op, reg_attr", [
+    ("LDA", "A"),
+    ("LDX", "X"),
+    ("LDY", "Y"),
+])
+def test_load_instruction(cpu, loaded_memory, op, reg_attr):
+    for addr, value, sign, zero in [
+        (0x1000, 0x00, 0, 1),
+        (0x1001, 0x01, 0, 0),
+        (0x1002, 0x7F, 0, 0),
+        (0x1003, 0x80, 1, 0),
+        (0x1004, 0xFF, 1, 0),
+    ]:
+        getattr(cpu, op)(addr)
+        assert getattr(cpu, reg_attr) == value
+        assert cpu.sign_flag == sign
+        assert cpu.zero_flag == zero
 
-    def test_LDX(self):
-        self.cpu.LDX(0x1000)
-        self.assertEqual( self.cpu.X, 0x00 )
-        self.assertEqual(self.cpu.sign_flag, 0)
-        self.assertEqual(self.cpu.zero_flag, 1)
-        self.cpu.LDX(0x1001)
-        self.assertEqual( self.cpu.X, 0x01 )
-        self.assertEqual(self.cpu.sign_flag, 0)
-        self.assertEqual(self.cpu.zero_flag, 0)
-        self.cpu.LDX(0x1002)
-        self.assertEqual( self.cpu.X, 0x7F )
-        self.assertEqual(self.cpu.sign_flag, 0)
-        self.assertEqual(self.cpu.zero_flag, 0)
-        self.cpu.LDX(0x1003)
-        self.assertEqual( self.cpu.X, 0x80 )
-        self.assertEqual(self.cpu.sign_flag, 1)
-        self.assertEqual(self.cpu.zero_flag, 0)
-        self.cpu.LDX(0x1004)
-        self.assertEqual( self.cpu.X, 0xFF )
-        self.assertEqual(self.cpu.sign_flag, 1)
-        self.assertEqual(self.cpu.zero_flag, 0)
 
-    def test_LDY(self):
-        self.cpu.LDY(0x1000)
-        self.assertEqual( self.cpu.Y, 0x00 )
-        self.assertEqual(self.cpu.sign_flag, 0)
-        self.assertEqual(self.cpu.zero_flag, 1)
-        self.cpu.LDY(0x1001)
-        self.assertEqual( self.cpu.Y, 0x01 )
-        self.assertEqual(self.cpu.sign_flag, 0)
-        self.assertEqual(self.cpu.zero_flag, 0)
-        self.cpu.LDY(0x1002)
-        self.assertEqual( self.cpu.Y, 0x7F )
-        self.assertEqual(self.cpu.sign_flag, 0)
-        self.assertEqual(self.cpu.zero_flag, 0)
-        self.cpu.LDY(0x1003)
-        self.assertEqual( self.cpu.Y, 0x80 )
-        self.assertEqual(self.cpu.sign_flag, 1)
-        self.assertEqual(self.cpu.zero_flag, 0)
-        self.cpu.LDY(0x1004)
-        self.assertEqual( self.cpu.Y, 0xFF )
-        self.assertEqual(self.cpu.sign_flag, 1)
-        self.assertEqual(self.cpu.zero_flag, 0)
-
-    def test_STA(self):
-        self.cpu.A = 0x37
-        self.cpu.STA(0x2000)
-        self.assertEqual(self.memory.read_byte(0x2000), 0x37)
-
-    def test_STX(self):
-        self.cpu.X = 0x38
-        self.cpu.STX(0x2000)
-        self.assertEqual(self.memory.read_byte(0x2000), 0x38)
-
-    def test_STY(self):
-        self.cpu.Y = 0x39
-        self.cpu.STY(0x2000)
-        self.assertEqual(self.memory.read_byte(0x2000), 0x39)
+@pytest.mark.parametrize("op, reg_attr, value", [
+    ("STA", "A", 0x37),
+    ("STX", "X", 0x38),
+    ("STY", "Y", 0x39),
+])
+def test_store_instruction(cpu, memory, op, reg_attr, value):
+    setattr(cpu, reg_attr, value)
+    getattr(cpu, op)(0x2000)
+    assert memory.read_byte(0x2000) == value

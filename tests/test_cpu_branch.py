@@ -1,90 +1,23 @@
-import unittest
-from papple2.core.memory import Memory
-from papple2.core.cpu import CPU
+import pytest
 
 
-class TestBranchOperations(unittest.TestCase):
+@pytest.mark.parametrize("op, flag_attr, non_branching_value, branching_value", [
+    ("BCC", "carry_flag", 1, 0),
+    ("BCS", "carry_flag", 0, 1),
+    ("BEQ", "zero_flag", 0, 1),
+    ("BMI", "sign_flag", 0, 1),
+    ("BNE", "zero_flag", 1, 0),
+    ("BPL", "sign_flag", 1, 0),
+    ("BVC", "overflow_flag", 1, 0),
+    ("BVS", "overflow_flag", 0, 1),
+])
+def test_branch_instruction(cpu, op, flag_attr, non_branching_value, branching_value):
+    cpu.PC = 0x1000
+    setattr(cpu, flag_attr, non_branching_value)
+    getattr(cpu, op)(0x2000)
+    assert cpu.PC == 0x1000
 
-    def setUp(self):
-        self.memory = Memory()
-        self.cpu = CPU(self.memory, None)
-
-    def test_BCC(self):
-        self.cpu.PC = 0x1000
-        self.cpu.carry_flag = 1
-        self.cpu.BCC(0x2000)
-        self.assertEqual( self.cpu.PC, 0x1000 )
-        self.cpu.PC = 0x1000
-        self.cpu.carry_flag = 0
-        self.cpu.BCC(0x2000)
-        self.assertEqual( self.cpu.PC, 0x2000 )
-
-    def test_BCS(self):
-        self.cpu.PC = 0x1000
-        self.cpu.carry_flag = 0
-        self.cpu.BCS(0x2000)
-        self.assertEqual( self.cpu.PC, 0x1000 )
-        self.cpu.PC = 0x1000
-        self.cpu.carry_flag = 1
-        self.cpu.BCS(0x2000)
-        self.assertEqual( self.cpu.PC, 0x2000 )
-
-    def test_BEQ(self):
-        self.cpu.PC = 0x1000
-        self.cpu.zero_flag = 0
-        self.cpu.BEQ(0x2000)
-        self.assertEqual( self.cpu.PC, 0x1000 )
-        self.cpu.PC = 0x1000
-        self.cpu.zero_flag = 1
-        self.cpu.BEQ(0x2000)
-        self.assertEqual( self.cpu.PC, 0x2000 )
-
-    def test_BMI(self):
-        self.cpu.PC = 0x1000
-        self.cpu.sign_flag = 0
-        self.cpu.BMI(0x2000)
-        self.assertEqual( self.cpu.PC, 0x1000 )
-        self.cpu.PC = 0x1000
-        self.cpu.sign_flag = 1
-        self.cpu.BMI(0x2000)
-        self.assertEqual( self.cpu.PC, 0x2000 )
-
-    def test_BNE(self):
-        self.cpu.PC = 0x1000
-        self.cpu.zero_flag = 1
-        self.cpu.BNE(0x2000)
-        self.assertEqual( self.cpu.PC, 0x1000 )
-        self.cpu.PC = 0x1000
-        self.cpu.zero_flag = 0
-        self.cpu.BNE(0x2000)
-        self.assertEqual( self.cpu.PC, 0x2000 )
-
-    def test_BPL(self):
-        self.cpu.PC = 0x1000
-        self.cpu.sign_flag = 1
-        self.cpu.BPL(0x2000)
-        self.assertEqual( self.cpu.PC, 0x1000 )
-        self.cpu.PC = 0x1000
-        self.cpu.sign_flag = 0
-        self.cpu.BPL(0x2000)
-        self.assertEqual( self.cpu.PC, 0x2000 )
-
-    def test_BVC(self):
-        self.cpu.PC = 0x1000
-        self.cpu.overflow_flag = 1
-        self.cpu.BVC(0x2000)
-        self.assertEqual( self.cpu.PC, 0x1000 )
-        self.cpu.PC = 0x1000
-        self.cpu.overflow_flag = 0
-        self.cpu.BVC(0x2000)
-        self.assertEqual( self.cpu.PC, 0x2000 )
-
-    def test_BVS(self):
-        self.cpu.PC = 0x1000
-        self.cpu.overflow_flag = 0
-        self.cpu.BVS(0x2000)
-        self.assertEqual( self.cpu.PC, 0x1000 )
-        self.cpu.PC = 0x1000
-        self.cpu.overflow_flag = 1
-        self.cpu.BVS(0x2000)
-        self.assertEqual( self.cpu.PC, 0x2000 )
+    cpu.PC = 0x1000
+    setattr(cpu, flag_attr, branching_value)
+    getattr(cpu, op)(0x2000)
+    assert cpu.PC == 0x2000

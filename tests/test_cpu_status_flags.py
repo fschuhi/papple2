@@ -1,45 +1,16 @@
-import unittest
-from papple2.core.memory import Memory
-from papple2.core.cpu import CPU
+import pytest
 
 
-class TestStatusFlagOperations(unittest.TestCase):
-
-    def setUp(self):
-        self.memory = Memory()
-        self.cpu = CPU(self.memory, None)
-
-    def test_CLC(self):
-        self.cpu.carry_flag = 1
-        self.cpu.CLC()
-        self.assertEqual(self.cpu.carry_flag, 0)
-
-    def test_CLD(self):
-        self.cpu.decimal_mode_flag = 1
-        self.cpu.CLD()
-        self.assertEqual(self.cpu.decimal_mode_flag, 0)
-
-    def test_CLI(self):
-        self.cpu.interrupt_disable_flag = 1
-        self.cpu.CLI()
-        self.assertEqual(self.cpu.interrupt_disable_flag, 0)
-
-    def test_CLV(self):
-        self.cpu.overflow_flag = 1
-        self.cpu.CLV()
-        self.assertEqual(self.cpu.overflow_flag, 0)
-
-    def test_SEC(self):
-        self.cpu.carry_flag = 0
-        self.cpu.SEC()
-        self.assertEqual(self.cpu.carry_flag, 1)
-
-    def test_SED(self):
-        self.cpu.decimal_mode_flag = 0
-        self.cpu.SED()
-        self.assertEqual(self.cpu.decimal_mode_flag, 1)
-
-    def test_SEI(self):
-        self.cpu.interrupt_disable_flag = 0
-        self.cpu.SEI()
-        self.assertEqual(self.cpu.interrupt_disable_flag, 1)
+@pytest.mark.parametrize("op, flag_attr, before, after", [
+    ("CLC", "carry_flag", 1, 0),
+    ("CLD", "decimal_mode_flag", 1, 0),
+    ("CLI", "interrupt_disable_flag", 1, 0),
+    ("CLV", "overflow_flag", 1, 0),
+    ("SEC", "carry_flag", 0, 1),
+    ("SED", "decimal_mode_flag", 0, 1),
+    ("SEI", "interrupt_disable_flag", 0, 1),
+])
+def test_flag_instruction(cpu, op, flag_attr, before, after):
+    setattr(cpu, flag_attr, before)
+    getattr(cpu, op)()
+    assert getattr(cpu, flag_attr) == after
