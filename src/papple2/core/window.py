@@ -1,4 +1,3 @@
-
 import time
 import pygame
 from pysm import Event
@@ -31,6 +30,14 @@ class PygameWindow:
 
             elif event.type == pygame.KEYDOWN:
                 key = ord(event.unicode.upper()) if event.unicode != '' else 0
+                # D and L are debug hotkeys (EmulatorStoppedState.on_d, and
+                # whatever gets externally attached to 'l' -- see
+                # tests/test_emulator_debug_keys.py). They only take over
+                # the key while execution is Stopped; while Running, D and
+                # L must reach press_key() like any other letter, or typing
+                # LIST, LOAD, DEL, or a variable name containing D/L into
+                # the Monitor or BASIC silently loses those letters.
+                debug_hotkeys_active = not self.emulator.is_executing()
 
                 if event.key == pygame.K_x and (pygame.key.get_mods() & pygame.KMOD_CTRL):
                     events.append(Event('ctrlx'))
@@ -44,10 +51,10 @@ class PygameWindow:
                 elif event.key == pygame.K_PRINT:
                     events.append(Event('halt'))
 
-                elif event.key == pygame.K_d:
+                elif event.key == pygame.K_d and debug_hotkeys_active:
                     events.append(Event('d'))
 
-                elif event.key == pygame.K_l:
+                elif event.key == pygame.K_l and debug_hotkeys_active:
                     events.append(Event('l'))
 
                 elif key != 0:
