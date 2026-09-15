@@ -18,7 +18,6 @@ _Unblocked now that M7.5 (the Robotron + Excel carve-out) is done. Specifics bel
 
 - `README.md`'s "Package split" diagram and "Testing strategy" section both still describe the Robotron showcase as living inside this repo -- reword now that it's an external consumer instead (the "Testing strategy" manual-check gap is already closed by `tests/test_robotron.py`, so that part just needs describing, not fixing).
 - `GOALS.md`'s strategic vision: item 2 ("a clean split into three layers... the Robotron 2084 disassembly project as the worked example") and item 4 ("Reviving the Robotron work... it gets a second life in the project as a worked-through showcase") both assume Robotron stays in-repo. Reword now that it's `probotron`.
-- `ACTION_PLAN.md`'s M7 milestone description ("The Excel bridge is part of the Robotron showcase for `papple2`") -- same assumption, same fix.
 
 ## 2. Test infrastructure
 

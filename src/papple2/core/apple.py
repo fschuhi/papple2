@@ -247,7 +247,7 @@ class Display:
             if row_group == 3:
                 return
 
-            if self.text or not self.mix or not row < 20:
+            if self.text or (self.mix and row >= 20):
                 mode, ch = divmod(value, 0x40)
 
                 if mode == 0:
@@ -541,4 +541,3 @@ def determine_states_from_kmods():
     else:
         states = 2000
     return states
-

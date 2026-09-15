@@ -1,7 +1,9 @@
 import contextlib
 import io
+import pygame
 from pysm import Event
 from papple2.core.emulator import Emulator
+from papple2.core.window import PygameWindow
 from papple2.util import hexaddr, hexbyte
 
 
@@ -45,3 +47,30 @@ def test_zeropage_dump_handler_reports_given_addresses():
         emulator.states.dispatch(Event('l'))
 
     assert captured.getvalue() == "$0000=42\n$150a=ff\n"
+
+
+def test_debug_hotkey_event_only_fires_while_stopped():
+    """
+    PygameWindow.debug_hotkey_event() is the piece of window.py that
+    decides whether a D or L keypress becomes a debug Event('d')/Event('l'),
+    or is left alone to reach the emulator as an ordinary keystroke. It
+    takes plain values (a pygame key constant, a bool), not a pygame event
+    or a live window, so this gating -- the reason typing LIST, LOAD, DEL,
+    or a variable name containing D/L works again while Running -- can be
+    checked without opening a pygame window. See README.md's testing
+    strategy for why the window path itself stays manual-only.
+    """
+    stopped = True
+    running = False
+
+    d_event = PygameWindow.debug_hotkey_event(pygame.K_d, stopped)
+    l_event = PygameWindow.debug_hotkey_event(pygame.K_l, stopped)
+    assert d_event.name == 'd'
+    assert l_event.name == 'l'
+
+    assert PygameWindow.debug_hotkey_event(pygame.K_d, running) is None
+    assert PygameWindow.debug_hotkey_event(pygame.K_l, running) is None
+
+    # a key that was never part of this gating stays None either way
+    assert PygameWindow.debug_hotkey_event(pygame.K_a, stopped) is None
+    assert PygameWindow.debug_hotkey_event(pygame.K_a, running) is None

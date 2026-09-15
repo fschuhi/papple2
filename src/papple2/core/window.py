@@ -30,14 +30,9 @@ class PygameWindow:
 
             elif event.type == pygame.KEYDOWN:
                 key = ord(event.unicode.upper()) if event.unicode != '' else 0
-                # D and L are debug hotkeys (EmulatorStoppedState.on_d, and
-                # whatever gets externally attached to 'l' -- see
-                # tests/test_emulator_debug_keys.py). They only take over
-                # the key while execution is Stopped; while Running, D and
-                # L must reach press_key() like any other letter, or typing
-                # LIST, LOAD, DEL, or a variable name containing D/L into
-                # the Monitor or BASIC silently loses those letters.
-                debug_hotkeys_active = not self.emulator.is_executing()
+                debug_event = self.debug_hotkey_event(
+                    event.key, not self.emulator.is_executing()
+                )
 
                 if event.key == pygame.K_x and (pygame.key.get_mods() & pygame.KMOD_CTRL):
                     events.append(Event('ctrlx'))
@@ -51,15 +46,35 @@ class PygameWindow:
                 elif event.key == pygame.K_PRINT:
                     events.append(Event('halt'))
 
-                elif event.key == pygame.K_d and debug_hotkeys_active:
-                    events.append(Event('d'))
-
-                elif event.key == pygame.K_l and debug_hotkeys_active:
-                    events.append(Event('l'))
+                elif debug_event is not None:
+                    events.append(debug_event)
 
                 elif key != 0:
                     events.append(Event('key', key=key))
         return events
+
+    @staticmethod
+    def debug_hotkey_event(pygame_key: int, debug_hotkeys_active: bool) -> Event | None:
+        # D and L are debug hotkeys (EmulatorStoppedState.on_d, and
+        # whatever gets externally attached to 'l' -- see
+        # tests/test_emulator_debug_keys.py). They only take over the key
+        # while execution is Stopped; while Running, D and L must reach
+        # press_key() like any other letter, or typing LIST, LOAD, DEL, or
+        # a variable name containing D/L into the Monitor or BASIC
+        # silently loses those letters.
+        #
+        # Kept as a plain method (pygame.K_* constants and a bool in,
+        # an Event or None out -- no pygame.event/pygame.display touched)
+        # so this gating can be tested without opening a pygame window.
+        # See README.md's testing strategy for why the window path itself
+        # stays manual-only.
+        if not debug_hotkeys_active:
+            return None
+        if pygame_key == pygame.K_d:
+            return Event('d')
+        if pygame_key == pygame.K_l:
+            return Event('l')
+        return None
 
     def present(self):
         elapsed_time = time.monotonic() - self.emulator.last_ticks

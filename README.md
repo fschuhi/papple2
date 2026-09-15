@@ -73,6 +73,7 @@ This section is more useful to an LLM picking this project back up than to me --
 - **Paths come from `papple2.toml`** (local, gitignored; `papple2.example.toml` committed), not hardcoded Windows strings, and not `os.chdir`.
 - **`EmulatorStates` composes a `StateMachine` rather than subclassing one.** It's the root of its own state tree and is never handed to code that expects a plain `StateMachine` -- the case for composition over inheritance. The individual states (`EmulatorRunningState`, `EmulatorStoppedState`) do legitimately subclass `StateMachine`, since they're genuinely registered as states via `add_state`.
 - **`L` and `D` are reserved for debug hooks, and only while execution is `Stopped`.** `PygameWindow.poll()` turns those two keys into `Event('l')`/`Event('d')` instead of ordinary keystrokes -- but only in the `Stopped` state; while `Running`, they pass through like any other key, so typing them into the Monitor or BASIC works normally. `D`'s built-in use is `EmulatorStoppedState.on_d`, a generic CPU-register dump -- genuinely core behavior, not Robotron-specific. `L` has no built-in behavior at all; it's a bare hook slot, meaningful only once something external attaches to it (see `tests/test_emulator_debug_keys.py`).
+- **`Display.update_text()` only draws a glyph in full `text` mode, or in `mix` mode on rows 20-23.** Outside those cases (plain hires/lores, `mix` off) a text-page write must stay invisible, matching real hardware, where the text page isn't scanned out at all in that mode. Had this backwards for a long time (`not self.mix` instead of `self.mix and row >= 20`) -- harmless while `update_text()` itself was commented out, but corrupts hires output the moment it's turned on.
 - **The window (pygame) is a separate, swappable layer, not baked into `Emulator`.** `PygameWindow`/`NoWindow` share `poll() -> list`, `present()`, `status(text)`; `Emulator.__init__` picks one based on `no_display`. `Emulator.run`/`event_loop` and the state handlers contain no pygame reference.
 - **A watcher firing dispatches `Event('breakpoint')` into the state machine, rather than hard-returning out of `run`.** Separately, `run(until=...)` returns to its caller once execution stops for any reason; a plain `run()`/`event_loop()` call (no `until`) keeps looping through pauses as before, and only stops on `halt`.
 - **`time.monotonic()`, not `pygame.time.get_ticks()`, for frame pacing** -- works identically whether or not a window exists.
@@ -93,16 +94,17 @@ This section is more useful to an LLM picking this project back up than to me --
 `papple2` is verified at two tiers, deliberately:
 
 - **Automated (`make test`).** The pytest suite covers 6502 instruction semantics and the classic hardware quirks, Apple II specifics (soft switches, the hi-res memory buffer), running headless with and without checkpoints/breakpoints, and the debugging hooks (`TimeMachine`, `MemAccessCollector`). All of it runs with `no_display=True` -- no pygame window involved, and none of it can be, meaningfully: a headless run has no way to assert "does this look right on screen."
-- **Manual (`make run`).** The pygame window itself -- actual rendering, real keyboard input, the full event loop -- is verified by hand instead: booting the Robotron showcase and confirming it displays and responds to input the way it should. This makes the Robotron example in `examples/Robotron/` not just a demonstration of how to use `papple2`, but the manual test for the with-window half of the emulator. It gets run this way whenever `Apple2`, `Display`, `Window`, or the with-window parts of `Emulator`/`EmulatorStates` change (done for M2, and again after M4's split).
+- **Manual (`make run-text`).** Boots the Monitor and, on `Ctrl-B`, Integer BASIC -- the same real ROM path as `make run`, but through the text page instead of hires. Catches display and keyboard bugs specific to `Display.update_text()` that a hires-only Robotron run never would.
 
 ---
 
 ## Running
 
 ```bash
-make setup   # create the venv (Python 3.12), install dependencies in editable mode
-make test    # run the pytest suite
-make run     # boot Robotron with the pygame window open
+make setup    # create the venv (Python 3.12), install dependencies in editable mode
+make test     # run the pytest suite
+make run      # boot Robotron with the pygame window open
+make run-text # boot Apple II text mode and manually enter Integer BASIC
 ```
 
 `make setup` will happily produce a broken install if your default `python3` resolves to 3.14. If needed: `rm -rf .venv && python3.12 -m venv .venv && make setup`.
