@@ -12,18 +12,32 @@
 
 ---
 
-## 1. M8 -- Documentation cleanup
+## 1. Type hints sweep
 
-_Unblocked now that M7.5 (the Robotron + Excel carve-out) is done. Specifics below carried over from `MIGRATE_ROBOTRON.md`'s "Open, not decided" list before that file was deleted._
+**Decided (2026-09-15):** production code first -- `src/papple2/` -- not test files/fixtures for now; test-file typing stays optional, revisit later if the core/debug gap being closed doesn't already take care of the itch. Sequenced core before debug, since `debug` already imports from `core` and should get real types to point at rather than untyped guesses:
 
-- `README.md`'s "Package split" diagram and "Testing strategy" section both still describe the Robotron showcase as living inside this repo -- reword now that it's an external consumer instead (the "Testing strategy" manual-check gap is already closed by `tests/test_robotron.py`, so that part just needs describing, not fixing).
-- `GOALS.md`'s strategic vision: item 2 ("a clean split into three layers... the Robotron 2084 disassembly project as the worked example") and item 4 ("Reviving the Robotron work... it gets a second life in the project as a worked-through showcase") both assume Robotron stays in-repo. Reword now that it's `probotron`.
+1. `util.py`
+2. `core/apple.py`
+3. `core/cpu.py`
+4. `core/memory.py`
+5. `core/window.py`
+6. `core/emulator.py`
+7. `core/hooks.py`
+8. `debug/` package (file order to be decided when we get there)
 
-## 2. Test infrastructure
+Each file its own approved step, `make test` green after each -- same rhythm as the pytest conversion work.
 
-- ~~Convert the remaining 11 `test_cpu_*.py` files from `unittest` to `pytest`.~~ **2026-09-14:** done, across four batches -- see `HISTORY.md`. `test_cpu_status_flags.py`, `test_cpu_branch.py`, `test_cpu_register_transfer.py`, `test_cpu_inc_dec.py`, and `test_cpu_arithmetic.py`'s `CMP`/`CPX`/`CPY`/`ADC`/`SBC` are now parametrized; `test_cpu_logical.py` and `test_cpu_shift.py` stay as plain functions since their ops don't share a uniform table. One bug found and fixed along the way: an `SBC` case that silently inherited `carry_flag` from the previous case broke when pulled out as an independent parametrized row.
-- ~~Remaining: add an `Emulator`/`Assembler` fixture to `conftest.py`, needed before `test_emulator_silent.py`, `test_time_machine.py`, `test_mem_access_collector.py`, `test_emulator_debug_keys.py`, and `test_tiles.py` can convert. `test_softswitches.py` and `test_display_memory.py` need their own smaller local fixtures (`Display`/`Speaker`/`SoftSwitches`, and `Apple2` respectively). `test_robotron_waves.py` stays separate -- it loads the real `ROBOTRON.BIN`.~~ **2026-09-14:** done -- see `HISTORY.md`. `test_robotron_waves.py` was deleted outright rather than converted (dead WIP: its one test was already `@unittest.skip`'d and contained an unconditional `sys.exit(0)` mid-test). Still open: the per-address parametrize candidate in `test_softswitches.py`.
-- `CPU.verbose_branch` has a copy-paste slip: the `BCS` case checks `opcode == BVS`. Harmless today (only used for printing), fix when we touch `CPU.py`.
+`LLM_INSTRUCTIONS.md` requires type hints on every function signature. First surfaced when `tests/test_robotronxl.py` (added in the M7 session) turned out to be written without them; the Theme-1 conversion work made the gap bigger and, worse, inconsistent with itself.
+
+- Concrete inventory of what's inconsistent as of today, so this doesn't have to be re-derived:
+  - `conftest.py`: the three new factory fixtures (`assemble`, `make_emulator`, `run_steps`) have type hints; the original `memory`/`cpu` fixtures, pre-dating today, don't.
+  - Today's own new local fixtures are inconsistent with each other: `test_time_machine.py`'s `emulator_with_three_writes` has a return type hint, but `test_tiles.py`'s `tile_factory`, `test_mem_access_collector.py`'s `make_mem_access_emulator`, `test_softswitches.py`'s `display`/`speaker`/`switches`, and `test_display_memory.py`'s `apple2` don't.
+  - No `test_*` function anywhere -- old (`test_cpu_*.py`) or new -- has type-hinted fixture parameters. Consistent with today's decision to leave test files out of scope for now, not a gap that needs re-deciding.
+  - `tests/test_robotronxl.py`: the original trigger for this item, moved to `probotron` along with the rest of the Excel bridge -- no longer this repo's concern.
+
+## 2. M8 -- Documentation cleanup
+
+~~`README.md`'s "Package split" diagram and "Testing strategy" section, plus `GOALS.md`'s strategic vision items 2 and 4, all still described the Robotron showcase as living inside this repo.~~ **2026-09-15:** done, and expanded well beyond the reword -- see `HISTORY.md`.
 
 ## 3. Parked decisions
 
@@ -32,6 +46,7 @@ _Unblocked now that M7.5 (the Robotron + Excel carve-out) is done. Specifics bel
 - `Memory.write_byte`'s hi-res render-trigger range check is `0x2000 <= address < 0x5FFF`, so a write to `0x5FFF` itself -- the last byte of real hi-res page 2 -- never calls `display.update`. Harmless for headless scriptable-buffer use (the byte still lands in `_mem` either way), but it's a pre-existing off-by-one in the render-trigger range. Fix if/when it ever matters for actual rendering.
 - `TileFactory.update_heads_and_tails` (`tiles.py`) only ever sets `is_tail = True` for a tile that already has a `link_prev` -- a fully standalone tile (no links at all) comes out `is_head=True`, `is_tail=False`. Found and documented, not fixed (M6's `ACTION_PLAN.md` decision excludes redesigning tiles/stretches) -- see `tests/test_tiles.py::test_tiles_are_unlinked_given_the_non_adjacent_layout`.
 - `a2-hires-lab`'s VBA work on NTSC hi-res color rules surfaced that `Display.update_hires`'s pixel-by-pixel color logic (no neighbor rules) isn't NTSC-accurate. Not a `papple2` blocker today -- headless write/read access to the hires pages bypasses rendering entirely (see `test_display_memory.py`). Revisit if/when NTSC-accurate hi-res color becomes a real requirement; `a2-hires-lab`'s findings would inform the fix.
+- `CPU.verbose_branch` has a copy-paste slip: the `BCS` case checks `opcode == BVS`. Harmless today (only used for printing), fix when we touch `CPU.py`.
 
 ## 4. Environment / packaging housekeeping
 
@@ -42,14 +57,3 @@ _Unblocked now that M7.5 (the Robotron + Excel carve-out) is done. Specifics bel
 ## 5. Optional coverage
 
 - _Needs investigation, optional, carried over from M3:_ a second silent test that boots `A2ROM.BIN` (reset vector at `$FFFC`), runs for N instructions, presses a key, and asserts the ROM stored it in the input buffer at `$0200`. Not required for M3's Done-when, parked here in case it's still wanted.
-
-## 6. Type hints sweep
-
-`LLM_INSTRUCTIONS.md` requires type hints on every function signature. First surfaced when `tests/test_robotronxl.py` (added in the M7 session) turned out to be written without them; the Theme-1 conversion work made the gap bigger and, worse, inconsistent with itself. Needs a dedicated session, not a quick pass -- the scope question below has to be settled first, since it changes how big the actual work is.
-
-- _Needs investigation:_ does the type-hints mandate apply to test files/fixtures at all, or was it written with `src/papple2/` production code in mind? Nothing in `LLM_INSTRUCTIONS.md` currently scopes it either way. This decides everything below -- if tests are in scope, the list is long; if not, it shrinks to `conftest.py` and production code only.
-- Concrete inventory of what's inconsistent as of today, so the dedicated session doesn't have to re-derive it:
-  - `conftest.py`: the three new factory fixtures (`assemble`, `make_emulator`, `run_steps`) have type hints; the original `memory`/`cpu` fixtures, pre-dating today, don't.
-  - Today's own new local fixtures are inconsistent with each other: `test_time_machine.py`'s `emulator_with_three_writes` has a return type hint, but `test_tiles.py`'s `tile_factory`, `test_mem_access_collector.py`'s `make_mem_access_emulator`, `test_softswitches.py`'s `display`/`speaker`/`switches`, and `test_display_memory.py`'s `apple2` don't.
-  - No `test_*` function anywhere -- old (`test_cpu_*.py`) or new -- has type-hinted fixture parameters (e.g. `def test_no_recording_before_hook_enabled(make_emulator, run_steps):`). This is either evidence the mandate was never meant to reach test functions, or a project-wide gap; see the scope question above.
-  - `tests/test_robotronxl.py`: the original trigger for this item, moved to `probotron` along with the rest of the Excel bridge -- no longer this repo's concern.

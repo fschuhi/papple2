@@ -28,3 +28,6 @@ pyxll.cfg
 
 # Excel files
 *.xlsm
+
+# BIN
+data/bin/*.BIN
