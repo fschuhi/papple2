@@ -1,4 +1,3 @@
-
 # papple2
 
 **A small Apple II emulator written in Python, built as a debugging instrument rather than a player.**
@@ -23,19 +22,17 @@ The core comes from ApplePy by James Tauber, ported to Python 3 and stripped of 
 
 ### Package split (M4, done 2026-09-12)
 
-`papple2` is split into three layers:
+`papple2` is split into two layers:
 
 ```mermaid
 graph TD
-    SHOW["Robotron showcase<br/>examples/Robotron/: workbench, robotron_xl, excel bridge"]
     DEBUG["papple2.debug<br/>assembler, disassembler,<br/>memory_map, checkpoints, tiles, labels, annotations"]
     CORE["papple2.core<br/>cpu, memory, apple, window, emulator, hooks"]
 
-    SHOW --> DEBUG
     DEBUG --> CORE
 ```
 
-The showcase depends on the debugging tools, which depend on the core -- never the other way around.
+`papple2` has no in-repo showcase anymore. `probotron` (the Robotron 2084 disassembly) depends on `papple2` as an installed package from outside this diagram, the same way `load-runner` or `a2-hires-lab` could.
 
 `Hooks` lives in `papple2.core`, not `papple2.debug` as an earlier version of this diagram had it: `Emulator.__init__` unconditionally constructs `TimeMachine`/`MemAccessCollector` (the `time_machine`/`mem_access` flags only control whether they're activated, not whether they exist), so `Emulator` cannot run at all without `Hooks` importable. The split follows that real coupling.
 
@@ -94,7 +91,10 @@ This section is more useful to an LLM picking this project back up than to me --
 `papple2` is verified at two tiers, deliberately:
 
 - **Automated (`make test`).** The pytest suite covers 6502 instruction semantics and the classic hardware quirks, Apple II specifics (soft switches, the hi-res memory buffer), running headless with and without checkpoints/breakpoints, and the debugging hooks (`TimeMachine`, `MemAccessCollector`). All of it runs with `no_display=True` -- no pygame window involved, and none of it can be, meaningfully: a headless run has no way to assert "does this look right on screen."
-- **Manual (`make run-text`).** Boots the Monitor and, on `Ctrl-B`, Integer BASIC -- the same real ROM path as `make run`, but through the text page instead of hires. Catches display and keyboard bugs specific to `Display.update_text()` that a hires-only Robotron run never would.
+- **Manual, with-window (`make run`).** Runs `tests/test_robotron.py`, a single `@pytest.mark.manual` test that boots `Emulator(no_display=False)` with the real `ROBOTRON.BIN` and calls `run()` with no `until` -- the same path the old in-repo Robotron showcase exercised, but with zero dependency on `probotron`'s workbench or Excel bridge.
+- **Manual, with-window, text mode (`make run-text`).** Runs `tests/test_text.py`, also `@pytest.mark.manual`. Boots the Monitor and, on `Ctrl-B`, Integer BASIC -- the same real ROM path as `make run`, but through the text page instead of hires. Catches display and keyboard bugs specific to `Display.update_text()` that a hires-only Robotron run never would.
+
+Both manual tests are excluded from `make test` by default (`pyproject.toml`'s `addopts = "-m 'not manual'"`) and run explicitly via their own `make` targets.
 
 ---
 

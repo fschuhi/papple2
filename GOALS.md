@@ -30,11 +30,11 @@ Python is slow for emulation, but that never mattered for the debugging use. Wha
 
 1. **A macOS-native library.** The code was written on a Windows machine. It moves to the MacBook and becomes a proper Python package that other projects can import. (Note that 4. below means that we should still be able to use the library from Windows as well, possibly via a bridge layer between PyXll and a server on macOS, even though that would be only second-best.)
 
-2. **A clean split into three layers.** The core emulator (6502, memory, Apple II hardware), the debugging tools built on top of it, and the Robotron 2084 disassembly project as the worked example of how to use both. Today these are mixed; separating them is what makes `papple2` reusable.
+2. **A clean split between core and debugging tools, reusable from outside.** The core emulator (6502, memory, Apple II hardware) and the debugging tools built on top of it are split into `papple2.core` and `papple2.debug`. Now that M7.5 is done, that split is exercised for real: `probotron`, the Robotron 2084 disassembly, depends on `papple2` as an installed package rather than living inside it -- proof the split actually makes `papple2` reusable, not just organized.
 
 3. **Runs with and without a screen.** With the pygame window for watching and interacting, and silently for tests and for scripted analysis: boot, run to a point, press keys from code, read the buffers, done.
 
-4. **Reviving the Robotron work.** The Robotron 2084 disassembly was hibernated, but its workbench (call trees from tiles and stretches, the Excel front end) is the proof that the debugging tools work on a real program. It gets a second life in the project as a worked-through showcase. The Excel bridge moves from xlwings to PyXll.
+4. **Robotron 2084 lives on, just not here.** The Robotron 2084 disassembly was hibernated, then revived as `probotron`, its own repo depending on `papple2`. Its workbench (call trees from tiles and stretches) and Excel front end -- now on PyXLL instead of xlwings -- are the proof that the debugging tools work on a real program. `papple2` keeps only a minimal manual smoke test (`tests/test_robotron.py`) of the with-window path.
 
 5. **Serving `load-runner`.** My private educational project ports an Apple II game to Godot. `papple2` can help in two ways: cycle counting, if I decide that timing fidelity matters for the port; and level extraction, by letting the original code load a level into memory and then reading the filled buffers instead of reverse-engineering the disk format by hand.
 
