@@ -91,6 +91,10 @@ tests/test_time_machine.py
 #data/bin/ROBOTRON.BIN
 
 ### --- Docs ---
+#docs/images/basic-demo.jpg
+#docs/images/robotron-splash.jpg
+#docs/images/robotron-stopped.jpg
+
 #docs/advice_from_6502org.md
 #docs/link_list.md
 
