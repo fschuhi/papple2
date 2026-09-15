@@ -19,6 +19,7 @@ The core comes from ApplePy by James Tauber, ported to Python 3 and stripped of 
 - **Understandability over speed.** Python is slow for emulation, but that never mattered for the debugging use. What mattered was that the whole emulator is a few thousand lines I can read, change, and extend in an afternoon, and that the debugging tools can be written in the same language as the emulator, with no bridge in between.
 - **A debugging instrument, not a player.** The point isn't to run Apple II software well -- it's to run it *observably*: stoppable, inspectable, rewindable, scriptable.
 - **Runs with and without a screen.** The pygame window is for watching and interacting. Silent mode (`Emulator(no_display=True)`) is for tests and scripted analysis: boot, run to a point, press keys from code, read the buffers, done.
+- **A second course in Python, this time on shape.** This project taught me Python the first time. This round it's teaching me how a Python project is shaped when it's meant to be reused: package layout, pytest, and separating a library from the programs that use it. `pysm` stays in the project for the same reason, even where a simpler mechanism would do -- state machines are part of what I want practice with.
 
 ---
 
@@ -63,9 +64,82 @@ graph TD
 
 `PygameWindow` and `NoWindow` share the same three methods (`poll`, `present`, `status`), so `Emulator` doesn't know or care whether a window exists. A watcher firing -- a real breakpoint, or an `until` condition passed to `run` -- dispatches the same `breakpoint` event that `ctrlx` uses, so `Running` -> `Stopped` always goes through the state machine, never around it.
 
+### Extension points
+
+`papple2` has four genuinely different ways to attach behavior to a running program, at different points in the per-instruction and per-frame loop. They tend to get lumped together in conversation as "hooks," but they're not the same mechanism, and flattening them into one diagram would teach something wrong:
+
+- **Checkpoints** (`add_checkpoint(func)`) run once per instruction, *before* it executes, and can stop execution (`execute=False`). This is how breakpoints and `KeyScript` work.
+- **`CPU` read/write hooks** (`cpu.read_hook`/`cpu.write_hook`) fire mid-instruction, on every actual memory access. `CPUHook` and its subclasses `TimeMachine`/`MemAccessCollector` chain rather than replace each other here.
+- **`MemoryMap`** isn't pluggable at all -- `Emulator.post_op()` feeds it unconditionally, once per instruction, after execution. This is what tiles and stretches are built from.
+- **Debug-key handlers** (`EmulatorStates.stopped_state`/`running_state`) are keyed to pygame frames and the `D`/`L` keys, not instructions -- the M4 extension points `tests/test_emulator_debug_keys.py` demonstrates.
+
+```mermaid
+graph TD
+    subgraph INSTR["Once per instruction, inside Emulator.run()"]
+        CP["Checkpoints<br/>add_checkpoint(func)<br/>checked before execution"]
+        EXEC["cpu.do_next_step()"]
+        RW["cpu.read_hook / write_hook<br/>CPUHook chain -- fires on every memory access"]
+        POST["Emulator.post_op()"]
+        MAP["MemoryMap.post_op()<br/>always on -- feeds tiles/stretches"]
+        HPOST["hook.post_op()<br/>TimeMachine / MemAccessCollector, if enabled"]
+
+        CP -- "execute=True" --> EXEC
+        CP -- "execute=False" --> BRK["dispatch Event('breakpoint')"]
+        EXEC -- "memory access" --> RW
+        EXEC --> POST
+        POST --> MAP
+        POST --> HPOST
+    end
+
+    subgraph FRAME["Once per frame, via the pygame window"]
+        POLL["PygameWindow.poll()"]
+        KEYS["EmulatorStates handlers<br/>D / L debug keys (M4 extension points)"]
+        POLL -- "Stopped state only" --> KEYS
+    end
+```
+
+The `CPUHook` chain from the diagram above, in detail: `enable_write_hook` always stashes whatever was already installed on `cpu.write_hook` as `other_write_hook`, then installs its own -- so which hook ends up outer or inner depends on enable order, not a fixed rule.
+
+```mermaid
+graph LR
+    A["cpu.write_hook(addr, val)"] --> B["outer hook's write_hook<br/>e.g. TimeMachine: records (addr, old, new)"]
+    B -- "other_write_hook(...)" --> C["inner hook's write_hook<br/>e.g. MemAccessCollector: records this instruction's access"]
+    C --> D["write proceeds"]
+```
+
+### Tiles, stretches, and call trees
+
+`papple2.debug.tiles` turns raw instruction data into a Graphviz call-flow graph, the way `probotron`'s workbench visualizes disassembled control flow. Three concepts, in increasing order of how settled they are:
+
+- **Tile** -- a basic block: a run of instructions that always execute one after another. A tile always ends at a leap (branch, jump, call, or return) and always starts where something else jumps to. This maps cleanly onto the standard "basic block" idea and isn't in question.
+- **Stretch** -- a chain of tiles linked end-to-end because control flow between them is fixed and predictable (falls straight through, an always-taken branch, or a `JSR` that always returns to the next instruction). Still an open question, in the code's own words: "whether 'stretch' is pulling its own weight as a concept, or whether it should be reworked or folded into something else -- revisit before extending this further."
+- **Call tree** -- `DotCallTree` turns stretches into the actual Graphviz graph: one node per stretch (a box if "compact" -- entered only via `JSR`, ends in `RTS` -- an ellipse otherwise), with arrows for branches, calls, jumps, and unmatched returns.
+
+The two tiles below are `test_tiles.py`'s real `BRANCH_PROGRAM` -- a genuine, if deliberately unlinked, example (a dead byte keeps the branch and its target physically apart, so the automatic linker's "consecutive" check never fires). The three-tile stretch to its right is illustrative, showing what a chain looks like when tiles *do* link up:
+
+```mermaid
+graph TD
+    T1["Tile: start<br/>LDA #$00 / STA $0300 / BEQ target<br/>ends in a leap (the branch)"]
+    T2["Tile: target<br/>LDA #$11 / STA $0301 / JMP done<br/>starts here because something jumps to it"]
+
+    T1 -.->|"not linked here -- dead LDA #$FF<br/>keeps them non-adjacent, see test_tiles.py"| T2
+
+    T3["Tile A"] -->|"TYPE_SEQUENTIAL<br/>falls straight through"| T4["Tile B"]
+    T4 -->|"TYPE_STRAIGHT_JSR<br/>JSR that always returns to the next op"| T5["Tile C"]
+
+    S["Stretch<br/>A-B-C chained end-to-end<br/>'compact' only if entered via JSR, ends in RTS"]
+    T3 -.-> S
+    T4 -.-> S
+    T5 -.-> S
+
+    S --> CT["Call tree node (DotCallTree)<br/>box if compact, ellipse otherwise"]
+```
+
 ---
 
 ## Relation to sibling projects
+
+**`probotron`:** the Robotron 2084 disassembly and its Excel/PyXLL workbench, carved out of `papple2` in M7.5. Depends on `papple2` as an installed package rather than living inside it -- the `papple2.core`/`papple2.debug` split exists to serve exactly this kind of outside consumer. `tests/test_robotron.py` remains here as `papple2`'s own manual smoke test of the with-window path.
 
 **`load-runner`:** a private educational project porting an Apple II game to Godot. `papple2` can help two ways: cycle counting, if timing fidelity turns out to matter for the port; and level extraction, by letting the original code load a level into memory and then reading the filled buffers instead of reverse-engineering the disk format by hand. Not started yet.
 
