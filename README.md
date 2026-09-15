@@ -4,6 +4,22 @@
 
 ---
 
+## Contents
+
+- [Vision](#vision)
+- [Architecture](#architecture)
+  - [Package split](#package-split-m4-done-2026-09-12)
+  - [Emulator / Window / States](#emulator--window--states-current-as-of-m25)
+  - [Extension points](#extension-points)
+  - [Tiles, stretches, and call trees](#tiles-stretches-and-call-trees)
+- [Relation to sibling projects](#relation-to-sibling-projects)
+- [Testing strategy](#testing-strategy)
+- [Data files](#data-files)
+- [Running](#running)
+- [Settled decisions](#settled-decisions)
+
+---
+
 ## Vision
 
 `papple2` is a small Apple II emulator written in Python. It is not meant to compete with full emulators on speed or completeness. Its purpose is to be a debugging instrument: a machine I can stop, inspect, rewind, and script from Python while it runs Apple II code.
@@ -160,6 +176,21 @@ Both manual tests are excluded from `make test` by default (`pyproject.toml`'s `
 ![Robotron 2084 gameplay stopped mid-run via Ctrl-X, status bar showing PC, A, X, Y, SP, and flags](docs/images/robotron-stopped.jpg)
 
 *Execution stopped mid-game via `Ctrl-X` -- the status bar shows the halted CPU state, the same inspect point `Emulator.run(until=...)` and breakpoints stop at.*
+
+---
+
+## Data files
+
+`papple2` needs two Apple II binaries that can't be distributed in this repo -- both are still under copyright. `data/bin/` (pointed to by `data_dir` in `papple2.toml`) ships with a `.gitkeep` and nothing else; get the two files yourself:
+
+- **`A2ROM.BIN`** -- the Apple II ROM. Available from [Reactive Micro's downloads](https://downloads.reactivemicro.com/Users/Grant_Stockley/), Grant Stockley's page -- also a good source of hard-to-find Apple II documentation and software generally, worth knowing about on its own.
+- **`ROBOTRON.BIN`** -- a raw memory image of Robotron 2084. Not distributed as a standalone binary anywhere; has to be produced from the original DOS 3.3 disk image:
+  1. Download `Robotron 2084 (1983)(Atari).do` from [myabandonware](https://www.myabandonware.com/game/robotron-2084-2t#download).
+  2. Open it in [CiderPress II](https://github.com/fadden/CiderPress2), an open-source Apple II disk/file archive tool.
+  3. Right-click on the `ROBOTRON` entry (Type `B`, binary) and extract it.
+  4. Check the extracted file's size: 25088 bytes, matching the Data Len CiderPress II shows for the entry, and `ROBOTRON.BIN`'s expected size. If it doesn't match, something went wrong in the extraction.
+
+Place both files in `data/bin/` (or wherever `data_dir` in your `papple2.toml` points).
 
 ---
 
