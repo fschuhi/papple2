@@ -142,6 +142,8 @@ class Display:
         self.status_font = pygame.font.SysFont("Source Code Pro", 12)
         self.clear_status()
 
+        self.init_chars()
+
         pygame.display.set_caption("Apple ][")
 
         # TODO: turn on text
@@ -333,10 +335,8 @@ class Display:
         if self.no_display:
             return
 
-        # ACHTUNG: momentan text komplett ausgeschaltet
-        # if start_text <= address <= start_text + 0x3FF:
-        # TODO: turn on text
-        # update_text()
+        if start_text <= address <= start_text + 0x3FF:
+            update_text()
 
         if start_hires <= address <= start_hires + 0x1FFF and self.high_res:
             update_hires()

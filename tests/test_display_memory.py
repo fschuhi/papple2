@@ -35,3 +35,20 @@ def test_write_outside_hires_range_does_not_call_display_update(apple2):
 def test_no_display_write_across_full_hires_span_does_not_raise(apple2):
     for address in range(0x2000, 0x6000):
         apple2.memory.write_byte(address, address & 0xFF)
+
+def test_text_page1_write_calls_display_update(apple2):
+    calls = []
+    apple2.display.update = lambda address, value: calls.append((address, value))
+
+    apple2.memory.write_byte(0x0400, 0xA0)
+
+    assert calls == [(0x0400, 0xA0)]
+
+
+def test_text_page2_write_calls_display_update(apple2):
+    calls = []
+    apple2.display.update = lambda address, value: calls.append((address, value))
+
+    apple2.memory.write_byte(0x0800, 0xA0)
+
+    assert calls == [(0x0800, 0xA0)]

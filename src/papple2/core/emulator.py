@@ -360,8 +360,6 @@ class Emulator:
             info.execution_count += 1
 
         opcode = info.opcode
-        if opcode == JMP_indirect:
-            print("yes", hexaddr(op_address))
         if info.is_leap():
             if info.is_branch():
                 self.handle_branching(info)
@@ -395,8 +393,6 @@ class Emulator:
         self.map.register_branch( leap_from_info, self.cpu.PC, branched )
 
     def handle_jmp(self, leap_from_info):
-        # TODO: add indirect JMP
-        assert self.cpu.last_opcode != JMP_indirect
         self.map.register_jmp( leap_from_info, self.cpu.PC )
 
     def handle_jsr(self, leap_from_info):
@@ -421,4 +417,3 @@ class Emulator:
         else:
             matched_jsr = None
         self.map.register_rts( leap_from_info, self.cpu.PC, matched_jsr )  # caller can be None
-

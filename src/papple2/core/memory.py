@@ -2,8 +2,9 @@
 
 import pickle
 
+
 class Memory:
-    def __init__( self, apple2 = None ):
+    def __init__(self, apple2=None):
         self.apple2 = apple2
         self.use_apple_softswitches = apple2 is not None
         self.use_apple_display = apple2 is not None
@@ -12,14 +13,16 @@ class Memory:
     def load_image(self, first_address, fn):
         with open(fn, "rb") as f:
             for offset, data in enumerate(f.read()):
-                self._mem[first_address + offset] = data.to_bytes(1, 'little')[0]  # ord(datum)
+                self._mem[first_address + offset] = data.to_bytes(1, "little")[0]
 
     def save_image(self, first_address, last_address, fn):
         import struct
-        mem = self._mem[first_address:last_address+1]
-        bytes = struct.pack("{}B".format(len(mem)), *mem)
+
+        mem = self._mem[first_address : last_address + 1]
+        bytes_data = struct.pack("{}B".format(len(mem)), *mem)
+
         with open(fn, "wb") as f:
-            f.write(bytes)
+            f.write(bytes_data)
 
     def load_test_data(self, address, data):
         for offset, datum in enumerate(data):
@@ -36,11 +39,16 @@ class Memory:
         self.use_apple_softswitches = unpickler.load()
 
     def read_byte(self, address):
-        # access to $C0 pages w/ softswitches might be masked by softswitches mechanism
+        # Access to the $C0xx pages with soft switches might be masked by
+        # the soft-switch mechanism.
         if 0xC000 <= address <= 0xCFFF:
-            return self.apple2.softswitches.read_byte( address ) if self.use_apple_softswitches else self._mem[address]
-        else:
-            return self._mem[address]
+            return (
+                self.apple2.softswitches.read_byte(address)
+                if self.use_apple_softswitches
+                else self._mem[address]
+            )
+
+        return self._mem[address]
 
     def read_word(self, address):
         return self.read_byte(address) + (self.read_byte(address + 1) << 8)
@@ -52,14 +60,19 @@ class Memory:
             return self.read_word(address)
 
     def write_byte(self, address, value):
-        # we don't restrict access to softswitch page $C0
-        # note that we will never be able to access a value on $C0 if it is masked by the softswitches
+        # We do not restrict access to the soft-switch page $C0.
+        # Note that we will never be able to access a value on $C0 if it is
+        # masked by the soft switches.
         self._mem[address] = value
 
-        # special handling for Apple ][ hardware
+        # Special handling for Apple II hardware.
         if 0xC000 <= address <= 0xCFFF:
             if self.use_apple_softswitches:
-                self.apple2.softswitches.write_byte( address, value )
-        elif 0x400 <= address < 0x800 or 0x2000 <= address < 0x5FFF:
+                self.apple2.softswitches.write_byte(address, value)
+
+        elif (
+            0x0400 <= address < 0x0C00
+            or 0x2000 <= address < 0x5FFF
+        ):
             if self.use_apple_display:
-                self.apple2.display.update( address, value )
+                self.apple2.display.update(address, value)

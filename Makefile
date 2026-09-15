@@ -11,7 +11,7 @@ RUN           = $(ACTIVATE) && python
 SETUP_STAMP   = $(VENV_DIR)/.setup_stamp
 
 # --- Phony targets ---
-.PHONY: all setup test test-verbose run clean showtree gentree filesdump filesdump-detailed help
+.PHONY: all setup test test-verbose run run-text clean showtree gentree filesdump filesdump-detailed help
 
 all: setup
 
@@ -36,9 +36,12 @@ test: $(SETUP_STAMP) ## Run all tests (quiet mode)
 test-verbose: $(SETUP_STAMP) ## Run tests with verbose output
 	$(RUN) -m pytest -v -s
 
-# --- Run Target ---
+# --- Run Targets ---
 run: $(SETUP_STAMP) ## Boot Robotron with the pygame window (manual test, not part of `make test`)
 	$(RUN) -m pytest tests/test_robotron.py -m manual -s -v
+
+run-text: $(SETUP_STAMP) ## Boot Apple II text mode and manually enter Integer BASIC
+	$(RUN) -m pytest tests/test_text.py -m manual -s -v
 
 # --- Utility Targets ---
 clean: ## Remove venv, cache, and tmp files
