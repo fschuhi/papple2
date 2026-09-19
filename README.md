@@ -30,6 +30,8 @@ The core comes from ApplePy by James Tauber, ported to Python 3 and stripped of 
 
 *The Robotron 2084 splash screen, running through `make run` -- `papple2`'s original and still hardest test case.*
 
+Apart from Robotron, I intend to use `papple2` to research Doug Smith's _Lode Runner_. The work will be based on XekriRedmane's fantastic disassembly project published at https://github.com/XekriRedmane/lode_runner_reveng. 
+
 **Core philosophy:**
 
 - **Understandability over speed.** Python is slow for emulation, but that never mattered for the debugging use. What mattered was that the whole emulator is a few thousand lines I can read, change, and extend in an afternoon, and that the debugging tools can be written in the same language as the emulator, with no bridge in between.
