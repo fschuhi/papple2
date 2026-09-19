@@ -30,7 +30,7 @@ The core comes from ApplePy by James Tauber, ported to Python 3 and stripped of 
 
 *The Robotron 2084 splash screen, running through `make run` -- `papple2`'s original and still hardest test case.*
 
-Apart from Robotron, I intend to use `papple2` to research Doug Smith's _Lode Runner_. I will base that work on XekriRedmane's fantastic disassembly project published at https://github.com/XekriRedmane/lode_runner_reveng. 
+Apart from Robotron, I intend to use `papple2` to research Doug Smith's _Lode Runner_. I will base that work on XekriRedmane's fantastic disassembly project published at https://github.com/XekriRedmane/lode_runner_reveng.
 
 **Core philosophy:**
 
@@ -159,7 +159,7 @@ graph TD
 
 **`probotron`:** the Robotron 2084 disassembly and its Excel/PyXLL workbench, carved out of `papple2` in M7.5. Depends on `papple2` as an installed package rather than living inside it -- the `papple2.core`/`papple2.debug` split exists to serve exactly this kind of outside consumer. `tests/test_robotron.py` remains here as `papple2`'s own manual smoke test of the with-window path.
 
-**`load-runner`:** a private educational project porting an Apple II game to Godot. `papple2` can help two ways: cycle counting, if timing fidelity turns out to matter for the port; and level extraction, by letting the original code load a level into memory and then reading the filled buffers instead of reverse-engineering the disk format by hand. Not started yet.
+**`load-runner`:** a private educational project porting an Apple II game to Godot. `papple2` can help two ways: cycle counting, if timing fidelity turns out to matter for the port; and level extraction, by letting the original code load a level into memory and then reading the filled buffers instead of reverse-engineering the disk format by hand. Not started yet. The project will be based on XekriRedmane's literate-source disassembly project published at https://github.com/XekriRedmane/lode_runner_reveng. 
 
 **`a2-hires-lab`:** a standalone Excel/VBA lab exploring Apple II hi-res graphics mechanics, built around Chapter 3 of the `load-runner` disassembly. No shared code or repo with `papple2`. Its NTSC color decision table, once fully verified by hand against the chapter's worked examples, is meant to become test fixtures for `papple2`'s `Display.update_hires`, which currently uses a simplified per-pixel color model with no neighbor-adjacency rules. That handoff hasn't happened yet.
 
