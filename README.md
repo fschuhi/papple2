@@ -157,7 +157,7 @@ graph TD
 
 ## Relation to sibling projects
 
-**`a2-lode-runner`:** a private educational project to understand the Apple II game thoroughly, to make it feasible to port the game Godot. `papple2` can help two ways: cycle counting, if timing fidelity turns out to matter for the port; and level extraction, by letting the original code load a level into memory and then reading the filled buffers instead of reverse-engineering the disk format by hand. Not started yet. The project is bebased on XekriRedmane's literate-source disassembly project published at https://github.com/XekriRedmane/lode_runner_reveng. 
+**`a2-lode-runner`:** a private educational project to understand the Apple II game thoroughly. `papple2` can help two ways: cycle counting, if timing fidelity turns out to matter for the port; and level extraction, by letting the original code load a level into memory and then reading the filled buffers instead of reverse-engineering the disk format by hand. Not started yet. The project is based on XekriRedmane's literate-source disassembly project published at https://github.com/XekriRedmane/lode_runner_reveng. 
 
 **`a2-hires-lab`:** a standalone Excel/VBA lab exploring Apple II hi-res graphics mechanics, built around Chapter 3 of the `a2-lode-runner` disassembly. No shared code or repo with `papple2`. Its NTSC color decision table, once fully verified by hand against the chapter's worked examples, is meant to become test fixtures for `papple2`'s `Display.update_hires`, which currently uses a simplified per-pixel color model with no neighbor-adjacency rules. That handoff hasn't happened yet.
 
