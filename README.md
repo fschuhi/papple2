@@ -55,7 +55,7 @@ graph TD
     DEBUG --> CORE
 ```
 
-`papple2` has no in-repo showcase anymore. `probotron` (the Robotron 2084 disassembly) depends on `papple2` as an installed package from outside this diagram, the same way `load-runner` or `a2-hires-lab` could.
+`papple2` has no in-repo showcase anymore. `probotron` (the Robotron 2084 disassembly) depends on `papple2` as an installed package from outside this diagram, the same way `a2-lode-runner` or `a2-hires-lab` could.
 
 `Hooks` lives in `papple2.core`, not `papple2.debug` as an earlier version of this diagram had it: `Emulator.__init__` unconditionally constructs `TimeMachine`/`MemAccessCollector` (the `time_machine`/`mem_access` flags only control whether they're activated, not whether they exist), so `Emulator` cannot run at all without `Hooks` importable. The split follows that real coupling.
 
@@ -157,11 +157,11 @@ graph TD
 
 ## Relation to sibling projects
 
+**`a2-lode-runner`:** a private educational project to understand the Apple II game thoroughly, to make it feasible to port the game Godot. `papple2` can help two ways: cycle counting, if timing fidelity turns out to matter for the port; and level extraction, by letting the original code load a level into memory and then reading the filled buffers instead of reverse-engineering the disk format by hand. Not started yet. The project is bebased on XekriRedmane's literate-source disassembly project published at https://github.com/XekriRedmane/lode_runner_reveng. 
+
+**`a2-hires-lab`:** a standalone Excel/VBA lab exploring Apple II hi-res graphics mechanics, built around Chapter 3 of the `a2-lode-runner` disassembly. No shared code or repo with `papple2`. Its NTSC color decision table, once fully verified by hand against the chapter's worked examples, is meant to become test fixtures for `papple2`'s `Display.update_hires`, which currently uses a simplified per-pixel color model with no neighbor-adjacency rules. That handoff hasn't happened yet.
+
 **`probotron`:** the Robotron 2084 disassembly and its Excel/PyXLL workbench, carved out of `papple2` in M7.5. Depends on `papple2` as an installed package rather than living inside it -- the `papple2.core`/`papple2.debug` split exists to serve exactly this kind of outside consumer. `tests/test_robotron.py` remains here as `papple2`'s own manual smoke test of the with-window path.
-
-**`load-runner`:** a private educational project porting an Apple II game to Godot. `papple2` can help two ways: cycle counting, if timing fidelity turns out to matter for the port; and level extraction, by letting the original code load a level into memory and then reading the filled buffers instead of reverse-engineering the disk format by hand. Not started yet. The project will be based on XekriRedmane's literate-source disassembly project published at https://github.com/XekriRedmane/lode_runner_reveng. 
-
-**`a2-hires-lab`:** a standalone Excel/VBA lab exploring Apple II hi-res graphics mechanics, built around Chapter 3 of the `load-runner` disassembly. No shared code or repo with `papple2`. Its NTSC color decision table, once fully verified by hand against the chapter's worked examples, is meant to become test fixtures for `papple2`'s `Display.update_hires`, which currently uses a simplified per-pixel color model with no neighbor-adjacency rules. That handoff hasn't happened yet.
 
 ---
 
