@@ -31,3 +31,8 @@ pyxll.cfg
 
 # BIN
 data/bin/*.BIN
+
+# LLM collaboration files, managed by stencil
+CRITICAL_RULES.md
+LLM_INSTRUCTIONS.md
+FIRST_PROMPT.md
