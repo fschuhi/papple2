@@ -35,9 +35,18 @@ Each file its own approved step, `make test` green after each -- same rhythm as 
   - No `test_*` function anywhere -- old (`test_cpu_*.py`) or new -- has type-hinted fixture parameters. Consistent with today's decision to leave test files out of scope for now, not a gap that needs re-deciding.
   - `tests/test_robotronxl.py`: the original trigger for this item, moved to `probotron` along with the rest of the Excel bridge -- no longer this repo's concern.
 
-## 2. M8 -- Documentation cleanup
+## 2. Direction follow-ups (from 2026-09-23)
 
-~~`README.md`'s "Package split" diagram and "Testing strategy" section, plus `GOALS.md`'s strategic vision items 2 and 4, all still described the Robotron showcase as living inside this repo.~~ **2026-09-15:** done, and expanded well beyond the reword -- see `HISTORY.md`.
+See `DIRECTION_DRAFT.md` for the context of each item.
+
+- _Needs investigation:_ stretches -- should the concept survive? What do other tools use as a container for basic blocks (traces, superblocks, IDA's function chunks, QEMU's translation block chaining, plain functions)?
+- _Needs investigation:_ is there an Apple II tool that saves per-byte code/data marks to a file (like FCEUX's Code/Data Logger), or tracks data provenance? microM8's heat map comes close.
+- Jupyter primer, for a conscious decision on the monitor: Joel Grus's talk "I Don't Like Notebooks" (JupyterCon 2018), marimo's "why marimo", then a small hands-on notebook with `papple2` booting Lode Runner.
+- `boot_lode_runner.py`: decide where it lives in the repo, if at all. Its windowed mode is untried.
+- Lode Runner, real play: the game loads levels through its own disk routine; option: a checkpoint at that routine's entry fills memory from the `.dsk` file in Python and skips the routine.
+- Robotron de-emphasis: `README.md` (Vision, screenshots, "hardest test case"), `make run`, and the three tests in `tests/test_emulator_silent.py` that load `data/bin/ROBOTRON.BIN` by hard-coded path -- replace with Lode Runner, skip when missing, or keep?
+- Move the tests in `tests/test_cpu.py` into the existing `test_cpu_stack.py` (stack wrap) and `test_cpu_arithmetic.py` (decimal mode, replacing its BCD TODO), then delete `test_cpu.py`. Prepared as `2026-09-23-cpu-tests-into-existing-files.patch`, not yet applied.
+- Glossary into the documentation; then compare each tool with its closest established counterpart and borrow what has proven itself.
 
 ## 3. Parked decisions
 

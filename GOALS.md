@@ -8,6 +8,6 @@
 
 ## 📍 Current Session Pointer
 
-**Where we are:** M8 (documentation) is done. `README.md` was rewritten for the public, post-carve-out state of the project -- reworded architecture diagrams, three new ones (extension points, the `CPUHook` chain, tiles/stretches/call trees), three screenshots, a "Data files" section, a Contents TOC -- and absorbed `GOALS.md`'s old "Strategic vision" (now removed from this file, see `HISTORY.md`). `ACTION_PLAN.md`, fully executed across M1 through M8, has been deleted from the repo (a copy kept in `tmp/` locally).
+**Where we are:** direction-finding. `papple2` is to become a system to disassemble and understand Apple II and II+ games by running them, with Lode Runner as the worked example: Xekri's `main.nw` gives both the runnable binary and an answer key to grade every tool against. The session's collected thinking -- landscape, glossary, vision, critique, open questions -- is in `DIRECTION_DRAFT.md`, a working draft. Lode Runner boots in `papple2` (headless, demo mode) after two CPU fixes, stack wrap and decimal mode; see `HISTORY.md`. `make patch` is in place.
 
-**What's next:** the type hints sweep (`TODO.md` section 1). Production code in `src/papple2/` only, test files/fixtures out of scope for now. Core before debug, one file per approved step: `util.py`, then `core/apple.py`/`cpu.py`/`memory.py`/`window.py`/`emulator.py`/`hooks.py`, then the `debug/` package.
+**What's next:** open. I'm reconsidering the direction and doing research away from the keyboard; the next session starts from `DIRECTION_DRAFT.md` and my findings. Candidates are in `TODO.md` section 2, plus the type hints sweep (section 1), which gained weight now that `make patch` makes many-file changes cheap.

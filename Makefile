@@ -11,7 +11,7 @@ RUN           = $(ACTIVATE) && python
 SETUP_STAMP   = $(VENV_DIR)/.setup_stamp
 
 # --- Phony targets ---
-.PHONY: all setup test test-verbose run run-text clean showtree gentree filesdump filesdump-detailed help
+.PHONY: all setup test test-verbose run run-text run-boot-lode-runner run-boot-lode-runner-headless clean showtree gentree patch filesdump filesdump-detailed help
 
 all: setup
 
@@ -43,6 +43,12 @@ run: $(SETUP_STAMP) ## Boot Robotron with the pygame window (manual test, not pa
 run-text: $(SETUP_STAMP) ## Boot Apple II text mode and manually enter Integer BASIC
 	$(RUN) -m pytest tests/test_text.py -m manual -s -v
 
+run-boot-lode-runner: $(SETUP_STAMP) ## Boot Lode Runner with the pygame window
+	$(RUN) scripts/boot_lode_runner.py data/bin/golden_source.bin
+
+run-boot-lode-runner-headless: $(SETUP_STAMP) ## Boot Lode Runner with the pygame window
+	$(RUN) scripts/boot_lode_runner.py data/bin/golden_source.bin --headless
+
 # --- Utility Targets ---
 clean: ## Remove venv, cache, and tmp files
 	rm -rf $(VENV_DIR) .pytest_cache tmp
@@ -55,6 +61,13 @@ showtree: ## Show project directory structure
 gentree: ## Save tree structure to file
 	mkdir -p tmp
 	tree -I ".venv|__pycache__|.idea|.pytest_cache|*egg-info|tmp" > tmp/project_tree.txt
+
+patch: ## apply all *.patch files in the repo root, then move them to tmp/applied-patches/
+	@ls *.patch >/dev/null 2>&1 || (echo "No *.patch files in the repo root" && exit 1)
+	git apply --check *.patch
+	git apply *.patch
+	mkdir -p tmp/applied-patches
+	mv *.patch tmp/applied-patches/
 
 filesdump: $(SETUP_STAMP) gentree ## Create context dump for LLMs
 	@if [ -f manifest.lst ]; then \

@@ -9,6 +9,13 @@
 
 ---
 
+## 2026-09-23 -- Direction session; make patch; Lode Runner boots after two CPU fixes
+
+- Housekeeping: `make patch` added, copied from `a2-lode-runner` (applies every `*.patch` in the repo root with `git apply`, then moves them to `tmp/applied-patches/`); `*.patch` added to `.gitignore`.
+- Direction session in collection mode: `papple2` as a system to disassemble and understand Apple II and II+ games by running them, with Lode Runner as the worked example (Xekri's `main.nw` assembles byte-identically, so it is both a runnable binary and an answer key). Robotron steps back; `probotron` stays hibernated and private. Decided: macOS native, no Excel workbench or PyXLL bridge, MAME not a base, `dasm` for byte-perfect reassembly, static HTML pages for reports. Everything else -- landscape (static vs. dynamic, knowledge thrown away vs. accumulated; microM8 the most advanced Apple II debugger found; NES/C64 tools such as FCEUX's Code/Data Logger and Mesen as the closest paradigms), glossary, vision, critique, open questions -- collected in `DIRECTION_DRAFT.md` as a working draft.
+- Lode Runner booted in `papple2`, headless, by loading Xekri's `golden_source.bin` (the `LODE RUNNER` B file, auxtype `$0800`, which begins with `JMP $2800` into the relocation routine) at `$0800`. It reaches the demo mode on level 1 without disk access and without ever entering ROM; watched through a checkpoint function counting executions per address. Claude did this alone in its sandbox, ahead of me. The script is `boot_lode_runner.py`.
+- Two CPU bugs found on the way, both fixed with tests: `pull_word()` (used by `RTS` and `RTI`) did not wrap the stack pointer within page 1 -- with `SP=$FF` it read `$0200`/`$0201` instead of `$0100`/`$0101`, and Lode Runner keeps its stack at the bottom of page 1; and `ADC`/`SBC` asserted on decimal mode, which `ADD_AND_UPDATE_SCORE` uses (`SED`). Decimal mode sets N and Z from the final BCD result, not from the NMOS intermediate value (a comment in `cpu.py` explains why). The tests are in a new `tests/test_cpu.py`; they belong in the existing `test_cpu_stack.py` and `test_cpu_arithmetic.py`, which Claude had not looked at because they are commented out in `manifest.lst` (see `TODO.md`).
+
 ## 2026-09-15 -- M8: README rewritten for GitHub; ACTION_PLAN.md complete
 
 - `ACTION_PLAN.md` executed in full, M1 through M8. Deleted from the repo (a copy kept in `tmp/` locally, outside the repo, for reference); `manifest.lst` updated to drop its entry.

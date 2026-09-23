@@ -1,14 +1,14 @@
-# papple2 -- Direction (working draft, 2026-09-23)
+# papple2 -- Direction (working draft)
 
 (Note: "I" in the following paragraphs refer to the user, "you" to the AI model.)
 
-**Status:** first draft from a collection-mode session. Nothing here is decided unless it sits under "Decided". Where this content finally lands (`GOALS.md`, `README.md`, `TODO.md`, or a document of its own) is an open question at the end.
+**Status:** working draft from the collection-mode session of 2026-09-23. Nothing here is decided unless it sits under "Decided". Where this content finally lands (`GOALS.md`, `README.md`, `TODO.md`, or this document for good) is an open question at the end.
 
 ---
 
 ## 1. Direction in one paragraph
 
-`papple2` becomes a system to disassemble and understand Apple II and II+ games (48k, hi-res, no aux or language card memory) by *running* them. It is not general disassembly software but a kit of fairly generic parts, put together per game. Its place in the landscape is the corner that is still mostly empty: dynamic analysis whose results accumulate into documentation, instead of evaporating when the debugger session ends. It complements static and agent-driven approaches rather than competing with them.
+`papple2` becomes a system to disassemble and understand Apple II and II+ games (48k, hi-res, no aux or language card memory) by *running* them. It is not general disassembly software but a kit of fairly generic parts, put together per game. Its place in the landscape is the corner that is still mostly empty: dynamic analysis whose results accumulate into documentation, instead of evaporating when the debugger session ends. The central problem is **knowledge accumulation**, and the form it takes is **storytelling**: the path from first suspicion to understood routine should be recorded as it happens, the way Quinn Dunki's Choplifter article reads -- a sequence of experiments, each answering one question. `papple2` complements static and agent-driven approaches rather than competing with them.
 
 ## 2. Worked example and targets
 
@@ -29,13 +29,19 @@
 
 Two axes: static (reads the bytes) vs. dynamic (runs the game), and knowledge thrown away vs. knowledge accumulated.
 
+|  | **Static: reads the bytes** | **Dynamic: runs the game** |
+|---|---|---|
+| **Knowledge accumulates** | SourceGen (project file); Xekri's agent (`main.nw`, byte-perfect) | _mostly empty -- `papple2`'s target_ |
+| **Knowledge is thrown away** | monitor listing (read once, not kept) | AppleWin, microM8, MAME, Virtual II (break, step, inspect) |
+
 - **Static, accumulating:** SourceGen (Windows, WPF; Wine reported to work), Ghidra, IDA, `da65`; Xekri's `reveng.md` process, an autonomous LLM agent that produces a byte-perfect `main.nw` from a disk image and deliberately uses no emulator.
 - **Dynamic, thrown away:** AppleWin debugger, Virtual II (macOS; Quinn Dunki's main tool for Choplifter), MAME debugger.
+  - **microM8** is the most advanced Apple II example found so far: a web-based debugger (browser as interface, buttons send actions to the emulator), a variety of breakpoints, stepping, memory editing, recording with rewind and playback, and a memory access heat map. Xekri's `main.nw` screenshots come from microM8. Its limits for us: no visible way to store findings (chunks, basic blocks, labels) -- the session's knowledge stays in the user's head. Not intuitive to use, no visible ongoing development.
 - **Dynamic, accumulating -- the closest existing paradigms, mostly from other scenes:**
   - NES: FCEUX's Code/Data Logger (marks every byte as executed, read as data, or both, while the game runs); Mesen (trace logger, event viewer, memory access highlighting, sprite viewers, Lua scripting).
   - C64: C64 Debugger (live memory map colored by reads and writes).
   - General: omniscient debugging (record once, query any moment later; e.g. Pernosco on top of `rr`); shadow memory (Valgrind); dynamic taint tracking and data provenance (security research).
-- _Needs investigation:_ is there an Apple II emulator with a Code/Data Logger or provenance tracking? Not known to us yet.
+- _Needs investigation:_ microM8's heat map comes close to a Code/Data Logger. Is there an Apple II tool that saves per-byte code/data marks to a file for a disassembler to use, or that tracks provenance? Not known to us yet.
 - The Robotron workbench independently arrived at two of these ideas: the memory heatmap (a Code/Data Logger) and "record everything, step through the recording" (omniscient debugging). "Mem of interest" corresponds to logging filters / trace conditions.
 
 ## 5. Vision (curated brain dump, grouped)
@@ -57,7 +63,9 @@ Nothing here is prioritized yet. Established terms in parentheses.
 - Infer table semantics from the Apple II memory layout (e.g. hi-res row base address tables).
 - Hypotheses about the game loop.
 
-**Record**
+**Record and tell**
+- Storytelling: record the path of discovery (question, experiment, result) as it happens, not only the final result. Two layers: the lab journal (how we found out, like Dunki's article) and `main.nw` (what the code does, like Xekri's document).
+- Findings attach to lasting artefacts: noweb chunks, basic blocks, labels, runs.
 - Snippets held lightly, so knowledge coagulates around them (stubs, provisional labels, hypotheses).
 - Generate noweb Markdown for tangling and weaving.
 
@@ -70,6 +78,12 @@ Nothing here is prioritized yet. Established terms in parentheses.
 **Report**
 - Static HTML reports per named run, side by side, collapsible.
 
+**Lessons from the Robotron workbench's heat map and time machine** (nice to look at, disappointing for learning; raw counts differed by orders of magnitude, and the display showed frequency, not evidence):
+- Binary marks instead of counts: a Code/Data Logger only records *whether* a byte was executed or read.
+- Log scale or rank coloring when counts are shown at all.
+- Differential runs (coverage diffing): record a run with and without an action (e.g. digging a hole), show only the difference -- evidence is change relative to a baseline.
+- Scrubbing for the time machine: drag a cursor along a timeline; jump from a line of code to each moment it ran, or from a value to the moment it was written (as in omniscient debuggers).
+
 ## 6. Glossary (first pass)
 
 "Close" = same concept. "Related" = overlapping, forcing the standard name would mislead.
@@ -77,7 +91,7 @@ Nothing here is prioritized yet. Established terms in parentheses.
 | `papple2` term | Established term | Match |
 |---|---|---|
 | tile | basic block | close |
-| stretch | trace; extended basic block / superblock | related -- a JIT trace is a hot path, a stretch is a chain of fixed transitions |
+| stretch | trace; extended basic block / superblock; function chunk (IDA); translation block chaining (QEMU) | under review -- a container for tiles; may not survive, see section 9 |
 | call tree | call graph; control-flow graph at block level | close |
 | collect tiles while executing | dynamic CFG recovery; code coverage | close |
 | heatmap of loads/saves/executions | Code/Data Logger; memory access heatmap | close |
@@ -90,6 +104,7 @@ Nothing here is prioritized yet. Established terms in parentheses.
 | JMP instead of JSR + RTS | tail call | close |
 | lo/hi tables | split address tables; "RTS trick" for jump tables | close |
 | snippet held lightly | stub; provisional label | related |
+| _(none yet)_ | chunk (noweb / literate programming): a named piece of code or text that tangling assembles into the source | -- `papple2` has no concept that links findings to chunks yet |
 
 ## 7. First concrete question (candidate)
 
@@ -110,6 +125,9 @@ Could-extension: run over a whole frame, every byte that ever flows to the scree
 
 ## 9. Open questions
 
+- **Stretches:** should the concept survive? Research what other software uses as a container for basic blocks (candidates: traces, superblocks, IDA's function chunks, QEMU's translation block chaining, plain functions / call graph nodes).
+- **Monitor form:** a web monitor in microM8's style (local web server, HTML pages, buttons), or Jupyter notebooks (cells to run, break, inspect; Markdown cells as lab journal; rich HTML output inline)? Or both: notebook as the working place, exported HTML as reports. Concerns: hidden state when cells run out of order (the Mathematica experience), JSON files in git (`jupytext`), a running emulator blocks its cell. marimo, a reactive notebook stored as plain `.py`, answers the first two -- but it tracks which cell defines a variable, not which cell changes an object like the emulator. Primer planned, see `TODO.md`.
+
 - Where does this content land: `GOALS.md` (strategy), `README.md` (vision, glossary), `TODO.md` (startable items), or a document of its own?
 - Do run reports live next to `a2-lode-runner`'s HTML research browser, or in their own site?
 - Levels: the game loads them through its own disk routine. Option: a checkpoint at that routine's entry fills memory from the `.dsk` file in Python and skips the routine -- no floppy emulation needed.
@@ -117,9 +135,9 @@ Could-extension: run over a whole frame, every byte that ever flows to the scree
 
 ## 10. Candidate next steps (unordered)
 
-- Boot Lode Runner in `papple2` (`LODE RUNNER` is a `B` file at `$0800`, 33024 bytes; `load_image` should handle it).
+- ~~Boot Lode Runner in `papple2`~~ -- done 2026-09-23, headless, demo mode on level 1; needed the stack wrap and decimal mode fixes in `cpu.py`. Real play (levels from disk) still open.
 - Interactive monitor mode.
 - Provenance prototype for the question in section 7.
-- Glossary into the documentation; polish existing tools by proximity to established ones.
+- Glossary into the documentation. Then compare each existing tool with its closest established counterpart and borrow what has proven itself (features, names, file formats) -- e.g. does `MemAccessCollector` have filter conditions like a trace logger?
 - Robotron de-emphasis in `README.md` and the `Makefile` (`make run`), plus the test decision above.
-- Type hints sweep (postponed, still wanted).
+- Type hints sweep: postponed, but gained weight now that `make patch` makes many-file changes cheap.

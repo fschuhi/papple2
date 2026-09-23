@@ -23,7 +23,7 @@ TODO.md
 HISTORY.md
 
 # working document for finding the direction `papple2` wants to take
-DIRECTION_DRAFT
+DIRECTION.md
 
 ### --- Build & Python Configuration ---
 Makefile
@@ -42,6 +42,9 @@ papple2.example.toml
 
 ### --- DevOps tools ---
 #tools/concat_files.py
+
+### --- Scripts, outside of the controlled package src ---
+scripts/boot_lode_runner.py
 
 ### --- Source ---
 src/papple2/util.py
