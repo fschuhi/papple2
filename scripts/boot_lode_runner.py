@@ -68,6 +68,8 @@ def save_hires_png(emulator: Emulator, page_base: int, filename: str) -> None:
                 if byte >> bit & 1:
                     x = column * 7 + bit
                     surface.fill(colour, (x * 2, y * 2, 2, 2))
+    # the folder may not exist yet, e.g. on a fresh clone or after `make clean`
+    Path(filename).parent.mkdir(parents=True, exist_ok=True)
     pygame.image.save(surface, filename)
     print("saved", filename)
 
