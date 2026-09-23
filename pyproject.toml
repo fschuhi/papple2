@@ -11,9 +11,3 @@ dependencies = []
 
 [tool.setuptools.packages.find]
 where = ["src"]
-
-[tool.pytest.ini_options]
-markers = [
-    "manual: opens a pygame window; excluded from the default `pytest` run, run explicitly with `-m manual`",
-]
-addopts = "-m 'not manual'"
