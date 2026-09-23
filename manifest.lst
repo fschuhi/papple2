@@ -13,9 +13,6 @@ LLM_INSTRUCTIONS.md
 manifest.lst
 tmp/project_tree.txt
 
-# Current action plan to turn this project into a reusable module
-ACTION_PLAN.md
-
 # standard project documentation -- work in progress
 README.md
 GOALS.md
