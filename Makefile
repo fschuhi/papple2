@@ -11,7 +11,7 @@ RUN           = $(ACTIVATE) && python
 SETUP_STAMP   = $(VENV_DIR)/.setup_stamp
 
 # --- Phony targets ---
-.PHONY: all setup test test-verbose run run-text run-boot-lode-runner run-boot-lode-runner-headless clean showtree gentree patch filesdump filesdump-detailed help
+.PHONY: all setup test test-verbose run-text boot-robotron boot-lode-runner boot-lode-runner-headless clean showtree gentree patch filesdump filesdump-detailed help
 
 all: setup
 
@@ -37,16 +37,17 @@ test-verbose: $(SETUP_STAMP) ## Run tests with verbose output
 	$(RUN) -m pytest -v -s
 
 # --- Run Targets ---
-run: $(SETUP_STAMP) ## Boot Robotron with the pygame window (manual test, not part of `make test`)
-	$(RUN) -m pytest tests/test_robotron.py -m manual -s -v
-
 run-text: $(SETUP_STAMP) ## Boot Apple II text mode and manually enter Integer BASIC
 	$(RUN) -m pytest tests/test_text.py -m manual -s -v
 
-run-boot-lode-runner: $(SETUP_STAMP) ## Boot Lode Runner with the pygame window
+# --- Boot Targets (scripts in scripts/, not part of `make test`) ---
+boot-robotron: $(SETUP_STAMP) ## Boot Robotron with the pygame window
+	$(RUN) scripts/boot_robotron.py
+
+boot-lode-runner: $(SETUP_STAMP) ## Boot Lode Runner with the pygame window
 	$(RUN) scripts/boot_lode_runner.py data/bin/LOAD_RUNNER.BIN
 
-run-boot-lode-runner-headless: $(SETUP_STAMP) ## Boot Lode Runner with the pygame window
+boot-lode-runner-headless: $(SETUP_STAMP) ## Boot Lode Runner headless: print statistics, save both hi-res pages as PNG
 	$(RUN) scripts/boot_lode_runner.py data/bin/LOAD_RUNNER.BIN --headless
 
 # --- Utility Targets ---
