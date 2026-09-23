@@ -8,9 +8,8 @@
 
 ## 📍 Current Session Pointer
 
-**Where we are:** direction-finding. `papple2` is to become a system to disassemble and understand Apple II and II+ games by running them, with Lode Runner as the worked example: Xekri's `main.nw` gives both the runnable binary and an answer key to grade every tool against. The session's collected thinking -- landscape, glossary, vision, critique, open questions -- is in `DIRECTION_DRAFT.md`, a working draft. Lode Runner boots in `papple2` (headless, demo mode) after two CPU fixes, stack wrap and decimal mode; see `HISTORY.md`. `make patch` is in place.
+**Where we are:** `papple2` is to become a system to disassemble and understand Apple II and II+ games by running them, with Lode Runner as the worked example (`DIRECTION.md`). Lode Runner now runs in the pygame window faster than on a real Apple II, after the window-polling fix. A key press in attract mode hangs in the game's RWTS, since `papple2` has no disk drive. The manual with-window checks are scripts (`make boot-*`); see `HISTORY.md`, 2026-09-23.
 
 **What's next:**
-- Review location and running of `boot_lode_runner.py`. For `Makefile`, should we run it from a test, like `test_robotron.py`?
-- Quicm review of `README.md`; add `LOAD_RUNNER.BIN` reference. See `HISTORY.md` entry for 2026-09-23: anything to add right away in `README.md`? Else postpone to end-of-session work on the artefacts, as usual.  
-- I'm reconsidering the direction and doing research away from the keyboard; we start from `DIRECTION_DRAFT.md` and my findings. Candidates are in `TODO.md` section 2, plus the type hints sweep (section 1), which gained weight now that `make patch` makes many-file changes cheap.
+- Type hints sweep, `TODO.md` section 1, one file per step. `make patch` makes the many-file steps cheap.
+- Then: my research away from the keyboard, and `DIRECTION.md`. Candidates are in `TODO.md` section 2, among them Lode Runner real play via an RWTS hook and the level extraction for `a2-lode-runner`.
