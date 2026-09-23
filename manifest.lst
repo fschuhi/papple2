@@ -19,6 +19,9 @@ GOALS.md
 TODO.md
 HISTORY.md
 
+# working document for finding the direction `papple2` wants to take
+DIRECTION_DRAFT
+
 ### --- Build & Python Configuration ---
 Makefile
 pyproject.toml
