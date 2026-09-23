@@ -11,7 +11,7 @@ RUN           = $(ACTIVATE) && python
 SETUP_STAMP   = $(VENV_DIR)/.setup_stamp
 
 # --- Phony targets ---
-.PHONY: all setup test test-verbose run-text boot-robotron boot-lode-runner boot-lode-runner-headless clean showtree gentree patch filesdump filesdump-detailed help
+.PHONY: all setup test test-verbose boot-basic boot-robotron boot-lode-runner boot-lode-runner-headless clean showtree gentree patch filesdump filesdump-detailed help
 
 all: setup
 
@@ -36,11 +36,10 @@ test: $(SETUP_STAMP) ## Run all tests (quiet mode)
 test-verbose: $(SETUP_STAMP) ## Run tests with verbose output
 	$(RUN) -m pytest -v -s
 
-# --- Run Targets ---
-run-text: $(SETUP_STAMP) ## Boot Apple II text mode and manually enter Integer BASIC
-	$(RUN) -m pytest tests/test_text.py -m manual -s -v
-
 # --- Boot Targets (scripts in scripts/, not part of `make test`) ---
+boot-basic: $(SETUP_STAMP) ## Boot Apple II into the Monitor; Ctrl-B enters Integer BASIC
+	$(RUN) scripts/boot_basic.py
+
 boot-robotron: $(SETUP_STAMP) ## Boot Robotron with the pygame window
 	$(RUN) scripts/boot_robotron.py
 
