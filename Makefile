@@ -44,10 +44,10 @@ boot-robotron: $(SETUP_STAMP) ## Boot Robotron with the pygame window
 	$(RUN) scripts/boot_robotron.py
 
 boot-lode-runner: $(SETUP_STAMP) ## Boot Lode Runner with the pygame window
-	$(RUN) scripts/boot_lode_runner.py data/bin/LOAD_RUNNER.BIN
+	$(RUN) scripts/boot_lode_runner.py data/bin/LODE_RUNNER.BIN
 
 boot-lode-runner-headless: $(SETUP_STAMP) ## Boot Lode Runner headless: print statistics, save both hi-res pages as PNG
-	$(RUN) scripts/boot_lode_runner.py data/bin/LOAD_RUNNER.BIN --headless
+	$(RUN) scripts/boot_lode_runner.py data/bin/LODE_RUNNER.BIN --headless
 
 # --- Utility Targets ---
 clean: ## Remove venv, cache, and tmp files

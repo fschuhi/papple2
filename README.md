@@ -183,7 +183,7 @@ The manual checks are plain scripts in `scripts/`, not pytest tests: they assert
 
 ## Data files
 
-`papple2` needs two Apple II binaries that can't be distributed in this repo -- both are still under copyright. `data/bin/` (pointed to by `data_dir` in `papple2.toml`) ships with a `.gitkeep` and nothing else; get the two files yourself:
+`papple2` needs three Apple II binaries that can't be distributed in this repo -- all three are still under copyright. `data/bin/` (pointed to by `data_dir` in `papple2.toml`) ships with a `.gitkeep` and nothing else; get the three files yourself:
 
 - **`A2ROM.BIN`** -- the Apple II ROM. Available from [Reactive Micro's downloads](https://downloads.reactivemicro.com/Users/Grant_Stockley/), Grant Stockley's page -- also a good source of hard-to-find Apple II documentation and software generally, worth knowing about on its own.
 - **`ROBOTRON.BIN`** -- a raw memory image of Robotron 2084. Not distributed as a standalone binary anywhere; has to be produced from the original DOS 3.3 disk image:
@@ -191,8 +191,13 @@ The manual checks are plain scripts in `scripts/`, not pytest tests: they assert
   2. Open it in [CiderPress II](https://github.com/fadden/CiderPress2), an open-source Apple II disk/file archive tool.
   3. Right-click on the `ROBOTRON` entry (Type `B`, binary) and extract it.
   4. Check the extracted file's size: 25088 bytes, matching the Data Len CiderPress II shows for the entry, and `ROBOTRON.BIN`'s expected size. If it doesn't match, something went wrong in the extraction.
+- **`LODE_RUNNER.BIN`** -- the main program of Lode Runner (Broderbund, 1983), for `make boot-lode-runner`. Also produced from a disk image:
+  1. Download the disk image from [archive.org](https://archive.org/details/a2_Lode_Runner_1983_Broderbund_cr_Reset_Vector) (the release cracked by Reset Vector).
+  2. Open it in CiderPress II.
+  3. Right-click on the `LODE RUNNER` entry (Type `B`, binary) and extract it. Its auxiliary type is `$0800`, the address DOS loads it to, which is also where `scripts/boot_lode_runner.py` loads it.
+  4. Check the extracted file's size: 33024 bytes, matching the Data Len CiderPress II shows for the entry. Rename it to `LODE_RUNNER.BIN`.
 
-Place both files in `data/bin/` (or wherever `data_dir` in your `papple2.toml` points).
+Place all three files in `data/bin/` (or wherever `data_dir` in your `papple2.toml` points).
 
 ---
 
@@ -203,6 +208,8 @@ make setup    # create the venv (Python 3.12), install dependencies in editable 
 make test     # run the pytest suite
 make boot-robotron  # boot Robotron with the pygame window open
 make boot-basic     # boot Apple II into the Monitor; Ctrl-B enters Integer BASIC
+make boot-lode-runner           # boot Lode Runner with the pygame window open
+make boot-lode-runner-headless  # run Lode Runner headless; print statistics, save both hi-res pages as PNG
 ```
 
 `make setup` will happily produce a broken install if your default `python3` resolves to 3.14. If needed: `rm -rf .venv && python3.12 -m venv .venv && make setup`.
