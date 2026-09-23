@@ -27,22 +27,9 @@ and pygame presentation.
 
 import sys
 from pathlib import Path
-import tomllib
 
 from papple2.core.emulator import Emulator
-
-
-def load_data_dir() -> str:
-    """Return the configured data directory, or the project default."""
-    config_path = Path("papple2.toml")
-
-    if config_path.exists():
-        with config_path.open("rb") as config_file:
-            config = tomllib.load(config_file)
-    else:
-        config = {}
-
-    return config.get("data_dir", "data")
+from papple2.util import load_data_dir
 
 
 def main() -> None:

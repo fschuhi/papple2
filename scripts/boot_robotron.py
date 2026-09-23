@@ -12,22 +12,10 @@ README.md's "Data files" for how to get one.
 """
 
 import sys
-import tomllib
 from pathlib import Path
 
 from papple2.core.emulator import Emulator
-
-
-def load_data_dir() -> str:
-    # papple2.toml is read relative to the current working directory
-    # (the repo root, when run via `make boot-robotron`).
-    config_path = Path("papple2.toml")
-    if config_path.exists():
-        with open(config_path, "rb") as f:
-            config = tomllib.load(f)
-    else:
-        config = {}
-    return config.get("data_dir", "data")
+from papple2.util import load_data_dir
 
 
 def main() -> None:

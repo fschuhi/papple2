@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "papple2"
 version = "0.1.0"
 description = "A small Apple II emulator, used as a debugging instrument"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = []
 
 [tool.setuptools.packages.find]

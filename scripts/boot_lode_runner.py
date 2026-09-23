@@ -26,20 +26,12 @@ Needs the stack wrap and decimal mode fixes in cpu.py (2026-09-23 patch).
 import argparse
 import collections
 import time
-import tomllib
 from pathlib import Path
 
 from papple2.core.emulator import Emulator, after_instructions
+from papple2.util import load_data_dir
 
 LOAD_ADDRESS = 0x0800
-
-
-def load_data_dir() -> str:
-    config_path = Path("papple2.toml")
-    if config_path.exists():
-        with open(config_path, "rb") as f:
-            return tomllib.load(f).get("data_dir", "data")
-    return "data"
 
 
 def boot(binary: str, headless: bool) -> Emulator:

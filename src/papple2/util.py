@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 import itertools
+import tomllib
+from pathlib import Path
 
 def chunks(l, n):
     """Yield successive n-sized chunks from l."""
@@ -85,3 +87,17 @@ def lerp_rgb(a, b, t):
         a[1] + (b[1] - a[1]) * t,
         a[2] + (b[2] - a[2]) * t,
     )
+
+def load_data_dir() -> str:
+    """Return data_dir from papple2.toml, or the project default "data".
+
+    papple2.toml is read relative to the current working directory -- the
+    repo root, when run via make. See README.md's "Settled decisions".
+    """
+    config_path = Path("papple2.toml")
+    if config_path.exists():
+        with open(config_path, "rb") as f:
+            config = tomllib.load(f)
+    else:
+        config = {}
+    return config.get("data_dir", "data")
