@@ -12,4 +12,5 @@
 
 **What's next:**
 - Review location and running of `boot_lode_runner.py`. For `Makefile`, should we run it from a test, like `test_robotron.py`?
+- Quicm review of `README.md`; add `LOAD_RUNNER.BIN` reference. See `HISTORY.md` entry for 2026-09-23: anything to add right away in `README.md`? Else postpone to end-of-session work on the artefacts, as usual.  
 - I'm reconsidering the direction and doing research away from the keyboard; we start from `DIRECTION_DRAFT.md` and my findings. Candidates are in `TODO.md` section 2, plus the type hints sweep (section 1), which gained weight now that `make patch` makes many-file changes cheap.
