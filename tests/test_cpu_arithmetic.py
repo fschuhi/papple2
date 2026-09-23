@@ -71,3 +71,54 @@ def test_compare_instruction(cpu, memory, op, reg_attr):
         assert cpu.sign_flag == sign
         assert cpu.zero_flag == zero
         assert cpu.carry_flag == carry
+
+
+# -- decimal mode -------------------------------------------------------------
+
+OPERAND = 0x0300
+
+
+def _arith(cpu, memory, op, a, operand, carry, decimal=1):
+    memory.load_test_data(OPERAND, [operand])
+    cpu.A = a
+    cpu.carry_flag = carry
+    cpu.decimal_mode_flag = decimal
+    getattr(cpu, op)(OPERAND)
+    return cpu.A, cpu.carry_flag
+
+
+@pytest.mark.parametrize(
+    "a, operand, carry_in, expected, carry_out",
+    [
+        (0x19, 0x01, 0, 0x20, 0),  # digit carry into the tens
+        (0x99, 0x01, 0, 0x00, 1),  # overflow past 99 sets carry
+        (0x45, 0x55, 1, 0x01, 1),  # 45 + 55 + 1 = 101
+        (0x12, 0x34, 0, 0x46, 0),  # no carries at all
+    ],
+)
+def test_adc_decimal(cpu, memory, a, operand, carry_in, expected, carry_out):
+    assert _arith(cpu, memory, "ADC", a, operand, carry_in) == (expected, carry_out)
+
+
+@pytest.mark.parametrize(
+    "a, operand, carry_in, expected, carry_out",
+    [
+        (0x20, 0x01, 1, 0x19, 1),  # borrow from the tens
+        (0x00, 0x01, 1, 0x99, 0),  # underflow wraps to 99, carry clear = borrow
+        (0x50, 0x25, 0, 0x24, 1),  # carry clear subtracts one more
+        (0x46, 0x34, 1, 0x12, 1),  # no borrows at all
+    ],
+)
+def test_sbc_decimal(cpu, memory, a, operand, carry_in, expected, carry_out):
+    assert _arith(cpu, memory, "SBC", a, operand, carry_in) == (expected, carry_out)
+
+
+def test_decimal_sets_zero_flag_from_result(cpu, memory):
+    _arith(cpu, memory, "ADC", 0x99, 0x01, 0)
+
+    assert cpu.zero_flag == 1
+
+
+def test_binary_mode_unchanged(cpu, memory):
+    # same operands as the first decimal case, but without SED
+    assert _arith(cpu, memory, "ADC", 0x19, 0x01, 0, decimal=0) == (0x1A, 0)

@@ -426,9 +426,11 @@ class CPU:
         self.push_byte( lo )
 
     def pull_word( self ):
-        s = self.STACK_PAGE + self.SP + 1
-        self.SP += 2
-        return self.read_word( s )
+        # two single pulls, so the stack pointer wraps within page 1 like on
+        # the real 6502: with SP=$FF the word comes from $0100/$0101
+        lo = self.pull_byte( )
+        hi = self.pull_byte( )
+        return hi * 0x100 + lo
 
     ####
 
@@ -722,8 +724,9 @@ class CPU:
     # ARITHMETIC
 
     def ADC( self, operand_address ):
-        # TODO: doesn't handle BCD yet
-        assert not self.decimal_mode_flag
+        if self.decimal_mode_flag:
+            self.A = self.update_nz( self.decimal_add( self.read_byte( operand_address ) ) )
+            return
 
         a2 = self.A
         a1 = signed( a2 )
@@ -742,8 +745,9 @@ class CPU:
         self.overflow_flag = [0, 1][(result1 > 127) | (result1 < -128)]
 
     def SBC( self, operand_address ):
-        # TODO: doesn't handle BCD yet
-        assert not self.decimal_mode_flag
+        if self.decimal_mode_flag:
+            self.A = self.update_nz( self.decimal_subtract( self.read_byte( operand_address ) ) )
+            return
 
         a2 = self.A
         a1 = signed( a2 )
@@ -761,6 +765,35 @@ class CPU:
 
         # perhaps this could be calculated from result2 but result1 is more intuitive
         self.overflow_flag = [0, 1][(result1 > 127) | (result1 < -128)]
+
+    # BCD (decimal mode, after SED)
+    #
+    # Each byte holds two decimal digits, one per nibble. N and Z are set from
+    # the final BCD result. The original NMOS 6502 derives them from an
+    # intermediate value instead; games rely on the carry and the result, not
+    # on that quirk, so it is not reproduced. V is left unchanged.
+
+    def decimal_add( self, operand ):
+        lo = (self.A & 0x0F) + (operand & 0x0F) + self.carry_flag
+        hi = (self.A >> 4) + (operand >> 4)
+        if lo > 9:
+            lo -= 10
+            hi += 1
+        self.carry_flag = [0, 1][hi > 9]
+        if hi > 9:
+            hi -= 10
+        return ((hi << 4) | lo) & 0xFF
+
+    def decimal_subtract( self, operand ):
+        lo = (self.A & 0x0F) - (operand & 0x0F) - [1, 0][self.carry_flag]
+        hi = (self.A >> 4) - (operand >> 4)
+        if lo < 0:
+            lo += 10
+            hi -= 1
+        self.carry_flag = [0, 1][hi >= 0]
+        if hi < 0:
+            hi += 10
+        return ((hi << 4) | lo) & 0xFF
 
     # BIT
 
