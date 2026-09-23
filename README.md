@@ -28,7 +28,7 @@ The core comes from ApplePy by James Tauber, ported to Python 3 and stripped of 
 
 ![Robotron 2084 splash screen running under papple2](docs/images/robotron-splash.jpg)
 
-*The Robotron 2084 splash screen, running through `make run` -- `papple2`'s original and still hardest test case.*
+*The Robotron 2084 splash screen, running through `make boot-robotron` -- `papple2`'s original and still hardest test case.*
 
 Apart from Robotron, I intend to use `papple2` to research Doug Smith's _Lode Runner_. I will base that work on XekriRedmane's fantastic disassembly project published at https://github.com/XekriRedmane/lode_runner_reveng.
 
@@ -161,7 +161,7 @@ graph TD
 
 **`a2-hires-lab`:** a standalone Excel/VBA lab exploring Apple II hi-res graphics mechanics, built around Chapter 3 of the `a2-lode-runner` disassembly. No shared code or repo with `papple2`. Its NTSC color decision table, once fully verified by hand against the chapter's worked examples, is meant to become test fixtures for `papple2`'s `Display.update_hires`, which currently uses a simplified per-pixel color model with no neighbor-adjacency rules. That handoff hasn't happened yet.
 
-**`probotron`:** the Robotron 2084 disassembly and its Excel/PyXLL workbench, carved out of `papple2` in M7.5. Depends on `papple2` as an installed package rather than living inside it -- the `papple2.core`/`papple2.debug` split exists to serve exactly this kind of outside consumer. `tests/test_robotron.py` remains here as `papple2`'s own manual smoke test of the with-window path.
+**`probotron`:** the Robotron 2084 disassembly and its Excel/PyXLL workbench, carved out of `papple2` in M7.5. Depends on `papple2` as an installed package rather than living inside it -- the `papple2.core`/`papple2.debug` split exists to serve exactly this kind of outside consumer. `scripts/boot_robotron.py` remains here as `papple2`'s own manual check of the with-window path.
 
 ---
 
@@ -170,10 +170,10 @@ graph TD
 `papple2` is verified at two tiers, deliberately:
 
 - **Automated (`make test`).** The pytest suite covers 6502 instruction semantics and the classic hardware quirks, Apple II specifics (soft switches, the hi-res memory buffer), running headless with and without checkpoints/breakpoints, and the debugging hooks (`TimeMachine`, `MemAccessCollector`). All of it runs with `no_display=True` -- no pygame window involved, and none of it can be, meaningfully: a headless run has no way to assert "does this look right on screen."
-- **Manual, with-window (`make run`).** Runs `tests/test_robotron.py`, a single `@pytest.mark.manual` test that boots `Emulator(no_display=False)` with the real `ROBOTRON.BIN` and calls `run()` with no `until` -- the same path the old in-repo Robotron showcase exercised, but with zero dependency on `probotron`'s workbench or Excel bridge.
-- **Manual, with-window, text mode (`make run-text`).** Runs `tests/test_text.py`, also `@pytest.mark.manual`. Boots the Monitor and, on `Ctrl-B`, Integer BASIC -- the same real ROM path as `make run`, but through the text page instead of hires. Catches display and keyboard bugs specific to `Display.update_text()` that a hires-only Robotron run never would.
+- **Manual, with-window (`make boot-robotron`).** Runs `scripts/boot_robotron.py`, a plain script that boots `Emulator(no_display=False)` with the real `ROBOTRON.BIN` and calls `run()` with no `until` -- the same path the old in-repo Robotron showcase exercised, but with zero dependency on `probotron`'s workbench or Excel bridge.
+- **Manual, with-window, text mode (`make boot-basic`).** Runs `scripts/boot_basic.py`. Boots the Monitor and, on `Ctrl-B`, Integer BASIC -- the same real ROM path as `make boot-robotron`, but through the text page instead of hires. Catches display and keyboard bugs specific to `Display.update_text()` that a hires-only Robotron run never would.
 
-Both manual tests are excluded from `make test` by default (`pyproject.toml`'s `addopts = "-m 'not manual'"`) and run explicitly via their own `make` targets.
+The manual checks are plain scripts in `scripts/`, not pytest tests: they assert nothing, and the point is a human watching the window. So `make test` never opens a window, and each script runs via its own `make` target.
 
 ![Robotron 2084 gameplay stopped mid-run via Ctrl-X, status bar showing PC, A, X, Y, SP, and flags](docs/images/robotron-stopped.jpg)
 
@@ -201,15 +201,15 @@ Place both files in `data/bin/` (or wherever `data_dir` in your `papple2.toml` p
 ```bash
 make setup    # create the venv (Python 3.12), install dependencies in editable mode
 make test     # run the pytest suite
-make run      # boot Robotron with the pygame window open
-make run-text # boot Apple II text mode and manually enter Integer BASIC
+make boot-robotron  # boot Robotron with the pygame window open
+make boot-basic     # boot Apple II into the Monitor; Ctrl-B enters Integer BASIC
 ```
 
 `make setup` will happily produce a broken install if your default `python3` resolves to 3.14. If needed: `rm -rf .venv && python3.12 -m venv .venv && make setup`.
 
-![A small Integer BASIC program entered and run via make run-text](docs/images/basic-demo.jpg)
+![A small Integer BASIC program entered and run via make boot-basic](docs/images/basic-demo.jpg)
 
-*`make run-text`, then `Ctrl-B` into Integer BASIC, running a small hand-typed program -- the real ROM, not a simulation of it.*
+*`make boot-basic`, then `Ctrl-B` into Integer BASIC, running a small hand-typed program -- the real ROM, not a simulation of it.*
 
 ---
 
