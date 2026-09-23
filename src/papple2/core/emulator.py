@@ -163,6 +163,14 @@ def at_address(address):
     return until
 
 
+# Emulator.run() asks the window for keyboard/window events and redraws only
+# every WINDOW_POLL_INTERVAL loop passes, not on every instruction: calling
+# pygame.event.get() once per instruction took about a third of the windowed
+# run time (cProfile, Lode Runner, 2026-09-23). Checkpoints still run on
+# every instruction, so breakpoints and `until` stop exactly where they did.
+WINDOW_POLL_INTERVAL = 1000
+
+
 class Emulator:
 
     def __init__(self, no_display=False, quiet=True, frame_rate=20, time_machine=False, mem_access=False, data_dir=None):
@@ -290,6 +298,10 @@ class Emulator:
 
         # exit event loop via setting exit_while, to do cleanup afterwards
         exit_while = False
+        # counts loop passes, not instructions: while Stopped no instruction
+        # runs, but the window must still be polled, or Ctrl-X could never
+        # resume execution
+        passes = 0
         while not exit_while:
 
             if self.is_executing():
@@ -324,16 +336,18 @@ class Emulator:
                     if self.cpu.PC == 0x4066:
                         self.mem[0x1407] = 20
 
-            # empty the window's pending events
-            for event in self.window.poll():
-                if event.name == 'halt':
+            passes += 1
+            if passes % WINDOW_POLL_INTERVAL == 0:
+                # empty the window's pending events
+                for event in self.window.poll():
+                    if event.name == 'halt':
+                        self.states.dispatch(event)
+                        exit_while = True
+                        break
                     self.states.dispatch(event)
-                    exit_while = True
-                    break
-                self.states.dispatch(event)
 
-            # after we've emptied the event queue we can update the screen
-            self.window.present()
+                # after we've emptied the event queue we can update the screen
+                self.window.present()
 
             if until is not None and not self.is_executing():
                 exit_while = True

@@ -9,6 +9,15 @@
 
 ---
 
+## 2026-09-23 -- Performance: window polled every 1000 loop passes
+
+- Trigger: Lode Runner in the pygame window ran visibly slower than the original game.
+- Baseline, headless, no profiler: 4,000,000 instructions in 7.7 s, about 520,000 instructions per second. A real Apple II runs very roughly 250,000 to 300,000 (about 1 MHz, 3 to 4 cycles per instruction; an estimate, not measured). Headless was never the problem.
+- Profiled both modes with `cProfile`. The profiler slows this code down about four times, so its percentages are useful, its seconds are not. Headless: the 6502 emulation itself (`do_next_step`) is only about a third of the time; the rest is bookkeeping around it (`post_op`, `MemoryMap.post_op`, `is_executing()` called three times per instruction, `post_op` of the disabled `TimeMachine`/`MemAccessCollector`). Windowed: `pygame.event.get()`, called once per instruction via `PygameWindow.poll()`, took about a third of all time; drawing (`update_hires`, `pygame.display.flip`) was cheap.
+- Fix: `Emulator.run()` calls `window.poll()` and `window.present()` only every `WINDOW_POLL_INTERVAL` (1000) loop passes. The counter counts loop passes, not instructions: while Stopped no instruction runs, and `Ctrl-X` must still be able to resume. Checkpoints still run on every instruction, so breakpoints and `until` stop where they did. `make test` all green; `Ctrl-X` stop and resume verified in the window.
+- Result: the windowed game now runs faster than on a real Apple II. The emulator core in Python is fast enough for this project.
+- Deliberately not done, parked in `TODO.md`: caching `is_executing()` (about 8% headless; if ever, via a flag set in the Running state's entry and exit handlers, not a local copy in `run()`), skipping the disabled hooks' `post_op`, making `MemoryMap.post_op` cheaper. No speed limit in `papple2`: the game slows itself down on repeated left-arrow presses (manual, confirmed in AppleWin), and future hooks will cost speed anyway.
+
 ## 2026-09-23 -- Direction session; make patch; Lode Runner boots after two CPU fixes
 
 - Housekeeping: `make patch` added, copied from `a2-lode-runner` (applies every `*.patch` in the repo root with `git apply`, then moves them to `tmp/applied-patches/`); `*.patch` added to `.gitignore`.
