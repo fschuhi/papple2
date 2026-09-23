@@ -10,4 +10,6 @@
 
 **Where we are:** direction-finding. `papple2` is to become a system to disassemble and understand Apple II and II+ games by running them, with Lode Runner as the worked example: Xekri's `main.nw` gives both the runnable binary and an answer key to grade every tool against. The session's collected thinking -- landscape, glossary, vision, critique, open questions -- is in `DIRECTION_DRAFT.md`, a working draft. Lode Runner boots in `papple2` (headless, demo mode) after two CPU fixes, stack wrap and decimal mode; see `HISTORY.md`. `make patch` is in place.
 
-**What's next:** open. I'm reconsidering the direction and doing research away from the keyboard; the next session starts from `DIRECTION_DRAFT.md` and my findings. Candidates are in `TODO.md` section 2, plus the type hints sweep (section 1), which gained weight now that `make patch` makes many-file changes cheap.
+**What's next:**
+- Review location and running of `boot_lode_runner.py`. For `Makefile`, should we run it from a test, like `test_robotron.py`?
+- I'm reconsidering the direction and doing research away from the keyboard; we start from `DIRECTION_DRAFT.md` and my findings. Candidates are in `TODO.md` section 2, plus the type hints sweep (section 1), which gained weight now that `make patch` makes many-file changes cheap.

@@ -44,10 +44,10 @@ run-text: $(SETUP_STAMP) ## Boot Apple II text mode and manually enter Integer B
 	$(RUN) -m pytest tests/test_text.py -m manual -s -v
 
 run-boot-lode-runner: $(SETUP_STAMP) ## Boot Lode Runner with the pygame window
-	$(RUN) scripts/boot_lode_runner.py data/bin/golden_source.bin
+	$(RUN) scripts/boot_lode_runner.py data/bin/LOAD_RUNNER.BIN
 
 run-boot-lode-runner-headless: $(SETUP_STAMP) ## Boot Lode Runner with the pygame window
-	$(RUN) scripts/boot_lode_runner.py data/bin/golden_source.bin --headless
+	$(RUN) scripts/boot_lode_runner.py data/bin/LOAD_RUNNER.BIN --headless
 
 # --- Utility Targets ---
 clean: ## Remove venv, cache, and tmp files
