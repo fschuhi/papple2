@@ -41,7 +41,9 @@ papple2.example.toml
 #tools/concat_files.py
 
 ### --- Scripts, outside of the controlled package src ---
+scripts/boot_basic.py
 scripts/boot_lode_runner.py
+scripts/boot_robotron.py
 
 ### --- Source ---
 src/papple2/util.py
@@ -83,16 +85,15 @@ tests/conftest.py
 #tests/test_emulator_silent.py
 #tests/test_mem_access_collector.py
 #tests/test_memory.py
-#tests/test_robotron.py
 #tests/test_softswitches.py
-#tests/test_text.py
 #tests/test_tiles.py
 #tests/test_time_machine.py
+#tests/test_util.py
 
 ### --- Data ---
 # `*.BIN` are not in VCS
 #data/bin/A2ROM.BIN
-#data/bin/LOAD_RUNNER.bin
+#data/bin/LODE_RUNNER.BIN
 #data/bin/ROBOTRON.BIN
 
 ### --- Docs ---
