@@ -9,6 +9,16 @@
 
 ---
 
+## 2026-09-23 -- Manual checks become scripts; Lode Runner documented; shared load_data_dir()
+
+- Between sessions: `tests/test_cpu.py` folded into `test_cpu_stack.py` and `test_cpu_arithmetic.py`; `DIRECTION_DRAFT.md` renamed to `DIRECTION.md`.
+- Lode Runner's windowed mode tried for the first time: the attract mode runs, and `Ctrl-X` stops and resumes. A key press starts a real game, which then hangs in the game's own RWTS copy at `$B600`-`$BFFF` (PC `$B94F`): `papple2` has no disk drive (`main.nw` chapter 10). The hottest loop, `$86B7`/`$86B8`, is `SOUND_DELAY` (`main.nw` 61a) -- the first time the answer key named something `papple2` found.
+- `test_robotron.py` and `test_text.py` became `scripts/boot_robotron.py` and `scripts/boot_basic.py`: they asserted nothing. The `manual` pytest marker is gone; the `make` targets are now `boot-*`, in their own section.
+- `LOAD_RUNNER.BIN` renamed to `LODE_RUNNER.BIN`; `README.md` explains the CiderPress II extraction from the archive.org image.
+- `load_data_dir()` existed three times; now `papple2.util.load_data_dir()`, with `tests/test_util.py`. `requires-python` is `>=3.12`, since the package now imports `tomllib`.
+- `boot_lode_runner.py`: docstring no longer in Claude's voice; creates `tmp/` before saving the PNGs.
+- Learned: `filesdump.txt` adds a trailing newline to each document, which matters when a patch touches a file's end.
+
 ## 2026-09-23 -- Performance: window polled every 1000 loop passes
 
 - Trigger: Lode Runner in the pygame window ran visibly slower than the original game.
