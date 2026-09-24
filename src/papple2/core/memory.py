@@ -1,21 +1,32 @@
 #!/usr/bin/env python3
 
-import pickle
+from collections.abc import Iterable
+from pickle import Pickler, Unpickler
+from typing import TYPE_CHECKING
+
+from papple2.util import hexaddr
+
+if TYPE_CHECKING:
+    from papple2.core.apple import Apple2
 
 
 class Memory:
-    def __init__(self, apple2=None):
+    def __init__(self, apple2: "Apple2 | None" = None) -> None:
         self.apple2 = apple2
         self.use_apple_softswitches = apple2 is not None
         self.use_apple_display = apple2 is not None
         self._mem = [0x00] * 0x10000
 
-    def load_image(self, first_address, fn):
+    def load_image(self, first_address: int, fn: str) -> None:
         with open(fn, "rb") as f:
-            for offset, data in enumerate(f.read()):
-                self._mem[first_address + offset] = data.to_bytes(1, "little")[0]
+            content = f.read()
+            # A slice assignment past the end would silently grow _mem beyond
+            # 64K instead of failing, so refuse images that do not fit.
+            if first_address + len(content) > len(self._mem):
+                raise ValueError(f"image {fn} does not fit at {hexaddr(first_address)}")
+            self._mem[first_address : first_address + len(content)] = content
 
-    def save_image(self, first_address, last_address, fn):
+    def save_image(self, first_address: int, last_address: int, fn: str) -> None:
         import struct
 
         mem = self._mem[first_address : last_address + 1]
@@ -24,21 +35,21 @@ class Memory:
         with open(fn, "wb") as f:
             f.write(bytes_data)
 
-    def load_test_data(self, address, data):
+    def load_test_data(self, address: int, data: Iterable[int]) -> None:
         for offset, datum in enumerate(data):
             self._mem[address + offset] = datum
 
-    def pickle(self, pickler):
+    def pickle(self, pickler: Pickler) -> None:
         pickler.dump(self._mem)
         pickler.dump(self.use_apple_display)
         pickler.dump(self.use_apple_softswitches)
 
-    def unpickle(self, unpickler):
+    def unpickle(self, unpickler: Unpickler) -> None:
         self._mem = unpickler.load()
         self.use_apple_display = unpickler.load()
         self.use_apple_softswitches = unpickler.load()
 
-    def read_byte(self, address):
+    def read_byte(self, address: int) -> int:
         # Access to the $C0xx pages with soft switches might be masked by
         # the soft-switch mechanism.
         if 0xC000 <= address <= 0xCFFF:
@@ -50,16 +61,16 @@ class Memory:
 
         return self._mem[address]
 
-    def read_word(self, address):
+    def read_word(self, address: int) -> int:
         return self.read_byte(address) + (self.read_byte(address + 1) << 8)
 
-    def read_word_bug(self, address):
+    def read_word_bug(self, address: int) -> int:
         if address % 0x100 == 0xFF:
             return self.read_byte(address) + (self.read_byte(address & 0xFF00) << 8)
         else:
             return self.read_word(address)
 
-    def write_byte(self, address, value):
+    def write_byte(self, address: int, value: int) -> None:
         # We do not restrict access to the soft-switch page $C0.
         # Note that we will never be able to access a value on $C0 if it is
         # masked by the soft switches.
