@@ -72,6 +72,7 @@ See `DIRECTION.md` for the context of each item.
 
 ## 5. Optional coverage
 
+- Finish the `unittest` -> `pytest` conversion: `tests/test_memory.py` and `tests/test_assembler.py` were never picked up by the 2026-09-12/14 conversion (see `HISTORY.md`). `test_memory.py` already has two `pytest` functions next to its old class (2026-09-24). In `test_assembler.py`, `test_dump` is a printing helper, not a test, but its `test_` name makes the runner collect and run it -- rename it during the conversion.
 - _Needs investigation, optional, carried over from M3:_ a second silent test that boots `A2ROM.BIN` (reset vector at `$FFFC`), runs for N instructions, presses a key, and asserts the ROM stored it in the input buffer at `$0200`. Not required for M3's Done-when, parked here in case it's still wanted.
 
 ## 6. Performance (parked, 2026-09-23)
