@@ -25,11 +25,10 @@ def test_write_outside_hires_range_does_not_call_display_update(apple2):
     calls = []
     apple2.display.update = lambda address, value: calls.append((address, value))
 
-    apple2.memory.write_byte(0x5fff, 0x11)  # just above Memory's checked range
-    assert calls == []
+    apple2.memory.write_byte(0x6000, 0x11)  # just above the Memory's checked range
 
-    apple2.memory.write_byte(0x5ffe, 0x11)  # last address inside it
-    assert calls == [(0x5ffe, 0x11)]
+    apple2.memory.write_byte(0x5fff, 0x11)  # just on the Memory's checked range
+    assert calls == [(0x5fff, 0x11)]
 
 
 def test_no_display_write_across_full_hires_span_does_not_raise(apple2):

@@ -83,7 +83,7 @@ class Memory:
 
         elif (
             0x0400 <= address < 0x0C00
-            or 0x2000 <= address < 0x5FFF
+            or 0x2000 <= address < 0x6000
         ):
             if self.use_apple_display:
                 self.apple2.display.update(address, value)
