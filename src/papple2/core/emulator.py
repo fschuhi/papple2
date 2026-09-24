@@ -184,7 +184,7 @@ WINDOW_POLL_INTERVAL = 1000
 class Emulator:
 
     def __init__(self, no_display: bool = False, quiet: bool = True, frame_rate: int = 20, time_machine: bool = False, mem_access: bool = False, data_dir: str | None = None) -> None:
-        self.apple2: Apple2 = Apple2( no_display, quiet, frame_rate, data_dir )
+        self.apple2: Apple2 = Apple2( no_display, quiet, data_dir )
         self.display = self.apple2.display
         self.cpu: CPU = self.apple2.cpu
         self.mem: list[int] = self.apple2.memory._mem

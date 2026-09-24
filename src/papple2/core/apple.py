@@ -501,7 +501,7 @@ class SoftSwitches:
 
 class Apple2:
 
-    def __init__(self, no_display: bool = False, quiet: bool = True, frame_rate: int = 20, data_dir: str | None = None) -> None:
+    def __init__(self, no_display: bool = False, quiet: bool = True, data_dir: str | None = None) -> None:
         if not no_display:
             if not quiet:
                 pygame.mixer.pre_init(11025, -16, 1)
