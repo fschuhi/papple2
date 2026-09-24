@@ -233,7 +233,7 @@ class Disassembler:
         }
 
     def relative_mode(self, pc: int) -> OperandInfo:
-        a = pc + signed(self.cpu.read_byte(pc + 1) + 2)
+        a = pc + 2 + signed(self.cpu.read_byte(pc + 1))
         return {
             "operand": "$%04x" % a,
             "operand_address": a,
@@ -286,7 +286,7 @@ class Disassembler:
             specific_instruction_data = op_info[2](pc)
             r.update(specific_instruction_data)
 
-        # self.memory.use_apple_softswitches = using_softswitches
+        self.memory.use_apple_softswitches = using_softswitches
 
         # returned size of instruction
         return r, op_info[0]
