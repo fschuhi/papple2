@@ -118,7 +118,7 @@ class Display:
         self.mix = False
         self.flash_time = time.time()
         self.flash_on = False
-        self.flash_chars = [[0] * 0x400] * 2
+        self.flash_chars = [[0] * 0x400 for _ in range(2)]
 
         self.page = 1
         self.text = False
