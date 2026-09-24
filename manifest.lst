@@ -98,13 +98,15 @@ tests/test_util.py
 
 ### --- Docs ---
 ## Main catalogue for NES/C64/other reveng platforms
-docs/reveng_catalogue.md
+docs/reveng-catalogue.md
 
-## Snippets from a long discussion of the Robotron disassembly project on 6502.org
-docs/advice_from_6502org.md
+## Robotron disassembly project thread on 6502.org
+#docs/advice_from_6502org.md
+#docs/Robotron-thread-6502.org_compressed.pdf
+#docs/Robotron-thread-6502.org.pdf
 
 ## List of interesting links on Apple II HGR and Robotron -- outdated
-#link_list.md
+#docs/link_list.md
 
 ## Images for the `README.md`
 #docs/images/basic-demo.jpg
