@@ -8,8 +8,8 @@
 
 ## 📍 Current Session Pointer
 
-**Where we are:** `papple2` is to become a system to disassemble and understand Apple II and II+ games by running them, with Lode Runner as the worked example (`DIRECTION.md`). Lode Runner now runs in the pygame window faster than on a real Apple II, after the window-polling fix. A key press in attract mode hangs in the game's RWTS, since `papple2` has no disk drive. The manual with-window checks are scripts (`make boot-*`); see `HISTORY.md`, 2026-09-23.
+**Where we are:** `papple2` is to become a system to disassemble and understand Apple II and II+ games by running them, with Lode Runner as the worked example (`DIRECTION.md`). Lode Runner runs in the pygame window faster than on a real Apple II; a key press in attract mode hangs in the game's RWTS, since `papple2` has no disk drive. The type hints sweep is done: every function signature in `src/papple2/` is hinted, and three bugs found on the way are fixed with tests (`HISTORY.md` 2026-09-24).
 
 **What's next:**
-- Type hints sweep, `TODO.md` section 1, one file per step. `make patch` makes the many-file steps cheap.
-- Then: my research away from the keyboard, and `DIRECTION.md`. Candidates are in `TODO.md` section 2, among them Lode Runner real play via an RWTS hook and the level extraction for `a2-lode-runner`.
+- Something fun first: my research away from the keyboard, and `DIRECTION.md`. Candidates are in `TODO.md` section 2, among them Lode Runner real play via an RWTS hook and the level extraction for `a2-lode-runner`.
+- The sweep's findings in `TODO.md` section 3 are a map, not a queue: pick them up when the fun work passes by them. For mechanical work, group files into bigger patches.

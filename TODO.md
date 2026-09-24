@@ -16,16 +16,7 @@
 
 **Decided (2026-09-15):** production code first -- `src/papple2/` -- not test files/fixtures for now; test-file typing stays optional, revisit later if the core/debug gap being closed doesn't already take care of the itch. Sequenced core before debug, since `debug` already imports from `core` and should get real types to point at rather than untyped guesses:
 
-1. `util.py`
-2. `core/apple.py`
-3. `core/cpu.py`
-4. `core/memory.py`
-5. `core/window.py`
-6. `core/emulator.py`
-7. `core/hooks.py`
-8. `debug/` package (file order to be decided when we get there)
-
-Each file its own approved step, `make test` green after each -- same rhythm as the pytest conversion work.
+~~1. `util.py` ... 8. `debug/` package, each file its own approved step, `make test` green after each.~~ -- Done 2026-09-24: every function signature in `src/papple2/` has type hints; `debug/` went annotations+labels, checkpoints, disassembler, memory_map, tiles, assembler. See `HISTORY.md` 2026-09-24. Still open below: the attribute follow-up, and the test files (optional).
 
 Follow-up, after the signatures are done: annotate attributes where `mypy` cannot infer their type from the first value. Found in `core/cpu.py` (2026-09-24): `self.ops_dispatch = [None] * 0x100` makes `mypy` believe the list only holds `None` (151 errors, one per stored lambda) -- fix with `self.ops_dispatch: list[Callable[[], None] | None]`; `self.PC` starts as `None`, `self.branched` starts as `False` but later gets an int. Same kind in `core/memory.py`: `self.apple2` is `Apple2 | None`, and `mypy` cannot see that the `use_apple_*` flags guard it (3 errors). PyCharm does not flag these.
 
@@ -44,11 +35,9 @@ See `DIRECTION.md` for the context of each item.
 - _Needs investigation:_ stretches -- should the concept survive? What do other tools use as a container for basic blocks (traces, superblocks, IDA's function chunks, QEMU's translation block chaining, plain functions)?
 - _Needs investigation:_ is there an Apple II tool that saves per-byte code/data marks to a file (like FCEUX's Code/Data Logger), or tracks data provenance? microM8's heat map comes close.
 - Jupyter primer, for a conscious decision on the monitor: Joel Grus's talk "I Don't Like Notebooks" (JupyterCon 2018), marimo's "why marimo", then a small hands-on notebook with `papple2` booting Lode Runner.
-- ~~`boot_lode_runner.py`: decide where it lives in the repo, if at all. Its windowed mode is untried.~~ -- Stays in `scripts/`; windowed mode works (`make boot-lode-runner`). All manual with-window checks are scripts now, see `HISTORY.md` 2026-09-23.
 - Lode Runner, real play: a key press in attract mode starts a real game, which hangs in the game's own copy of DOS 3.3's RWTS at `$B600`-`$BFFF` (PC `$B94F`) -- `papple2` has no disk drive. The game reads sectors only, through the standard IOB and DCT (`main.nw` chapter 10). Plan: a checkpoint at the RWTS entry reads the IOB (track, sector, buffer, command), copies that sector from a disk image into the buffer, reports success, and returns as RWTS would -- no drive emulation. Confirm first: where the RWTS entry and the IOB sit (`main.nw`), and the format of Xekri's disk files (https://github.com/XekriRedmane/lode_runner_reveng/tree/main/disk): nibbles or 256-byte sectors, physical or DOS logical sector order.
 - Level extraction for `a2-lode-runner`, depends on real play above: let the game's own code load each level, then read the filled memory -- all levels into the `a2-lode-runner` documentation. Expect its HTML to grow; the table of 103 sprites is already large.
 - Robotron de-emphasis, partly done: `make run` is now `make boot-robotron`, and the script stays. Open: `README.md` (Vision, screenshots, "hardest test case") and the three tests in `tests/test_emulator_silent.py` that load `data/bin/ROBOTRON.BIN` by hard-coded path -- replace with Lode Runner, skip when missing, or keep?
-- ~~Move the tests in `tests/test_cpu.py` into the existing `test_cpu_stack.py` (stack wrap) and `test_cpu_arithmetic.py` (decimal mode, replacing its BCD TODO), then delete `test_cpu.py`. Prepared as `2026-09-23-cpu-tests-into-existing-files.patch`, not yet applied.~~ -- Done between sessions.
 - Glossary into the documentation; then compare each tool with its closest established counterpart and borrow what has proven itself.
 
 ## 3. Parked decisions

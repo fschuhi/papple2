@@ -9,6 +9,18 @@
 
 ---
 
+## 2026-09-24 -- Type hints sweep: every function signature in src/papple2/ hinted
+
+- All twelve modules, in `TODO.md` section 1's order; `debug/` went annotations+labels, checkpoints, disassembler, memory_map, tiles, assembler (dependencies first). One patch per file via `make patch`, `make test` green after each: 129 -> 137 tests.
+- Scope was signatures only. Attribute annotations are parked (`mypy` cannot infer e.g. `self.ops_dispatch = [None] * 0x100`). Old `# type:` comments were converted where they carried information, dropped where the new signature hints already say it; several were wrong (`[int]`, `-> {}`, `-> (bool, bool)`, `-> [OpInfo]` on a generator).
+- New in the code: the type aliases `Checkpoint` and `Until` in `core/emulator.py` (the checkpoint contract, written down once), `OperandInfo` in `debug/disassembler.py`; `TYPE_CHECKING` imports where a plain import would be circular (`memory.py` <-> `apple.py`, `window.py` <-> `emulator.py`, `memory_map.py` <-> `disassembler.py`).
+- Bugs fixed, each with a test that failed first: `Memory.load_image` copies the image as one slice and refuses images that do not fit below `$FFFF` (the slice would silently grow memory past 64K); the disassembler showed the branch targets for offsets `$7E`/`$7F` as backward jumps; the disassembler switched the softswitches off for good (the restoring line was commented out). `tests/test_disassembler.py` is the first disassembler test.
+- Smaller fixes along the way: `Display.update` hinted `-> bool` but returned nothing; `show_status` reused `text` for the rendered surface; a regex without `r` prefix (`SyntaxWarning` in 3.12); `EmulatorStoppedState` printed `on_enter`/`on_exit` the wrong way round; `press_key` converted the key twice; methods that fell off the end with `None` now `return False` explicitly.
+- Removed, each grepped across `~/Projects` first: `util.py`'s `group`, `verbose_info`, `verbose_enum`, `verbose_address_set`, `verbose_address_list`; `CPU.verbose_branch` (its BCS slip with it); unused `import sys`/`import collections`; the duplicate `determine_states_from_kmods` in `apple.py`; `Leaps.has_only_leaps_from_branchings`.
+- Renamed where a name shadowed a built-in or was misspelled: `hexbyte(byte)`, `hex2int(text)`, `hexbytes(values)`, `mem_access_colors(kind)`, `Disassembler(memory_map)`, `save_dot(file_format)`, `add_standard_labels`, plus local `bytes` variables.
+- Found and parked in `TODO.md`: the `TimeMachine` never records in `make boot-lode-runner` (the script does not pass `time_machine=True`; confirmed), plus no key repeat and a stale status line; `save_hires_bytes`/`load_hires_bytes` would crash; `flash_chars` aliasing; three tile slips; `sys.exit` in the assembler; the Robotron code still in `papple2`; the tail-call question; `black`; the unfinished `unittest` -> `pytest` conversion; nested tuples and dicts that want to become `dataclass`es.
+- Learned (process): one file per patch was too slow and too narrow for mechanical work like this -- it cost the fun. Next time group mechanical files into bigger patches, and when a clearly nicer way (e.g. a `dataclass`) comes up, ask whether to take it now instead of always parking it.
+
 ## 2026-09-23 -- Manual checks become scripts; Lode Runner documented; shared load_data_dir()
 
 - Between sessions: `tests/test_cpu.py` folded into `test_cpu_stack.py` and `test_cpu_arithmetic.py`; `DIRECTION_DRAFT.md` renamed to `DIRECTION.md`.
