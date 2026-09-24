@@ -13,10 +13,10 @@ import math
 
 
 class CPUHook:
-    def __init__( self, emulator ):
-        self.emulator = emulator  # type: Emulator
-        self.apple2 = emulator.apple2  # type: Apple2
-        self.cpu = emulator.cpu  # type: CPU
+    def __init__( self, emulator: "Emulator" ) -> None:
+        self.emulator = emulator
+        self.apple2: Apple2 = emulator.apple2
+        self.cpu: CPU = emulator.cpu
         self.mem = emulator.mem
 
         self.other_write_hook = None
@@ -25,30 +25,30 @@ class CPUHook:
         self.read_hooked = False
         self.hooked = False
 
-    def reset( self ):
+    def reset( self ) -> None:
         pass
 
-    def post_op( self ):
+    def post_op( self ) -> None:
         pass
 
-    def write_hook( self, address, newvalue ):
+    def write_hook( self, address: int, newvalue: int ) -> bool:
         # make sure the other hook receives the write
         return self.other_write_hook( address, newvalue ) if self.other_write_hook else True
 
-    def read_hook( self, address, value ):
+    def read_hook( self, address: int, value: int ) -> bool:
         # make sure the other hook receives the write
         return self.other_read_hook( address, value ) if self.other_read_hook else True
 
-    def enable_hooks( self ):
+    def enable_hooks( self ) -> None:
         self.enable_write_hook( )
         self.enable_read_hook( )
 
-    def disable_hooks( self ):
+    def disable_hooks( self ) -> None:
         self.disable_write_hook( )
         self.disable_read_hook( )
         self.hooked = False
 
-    def enable_write_hook( self ):
+    def enable_write_hook( self ) -> None:
         # reinstall write hook we encountered when hooking
         if not self.write_hooked:
             self.other_write_hook = self.cpu.write_hook
@@ -57,7 +57,7 @@ class CPUHook:
             self.hooked = True
             self.reset( )
 
-    def enable_read_hook( self ):
+    def enable_read_hook( self ) -> None:
         # reinstall write hook we encountered when hooking
         if not self.read_hooked:
             self.other_read_hook = self.cpu.read_hook
@@ -66,14 +66,14 @@ class CPUHook:
             self.hooked = True
             self.reset( )
 
-    def disable_write_hook( self ):
+    def disable_write_hook( self ) -> None:
         if self.write_hooked:
             self.cpu.write_hook = self.other_write_hook
             self.other_write_hook = None
             self.write_hooked = False
             self.hooked = self.read_hooked
 
-    def disable_read_hook( self ):
+    def disable_read_hook( self ) -> None:
         if self.read_hooked:
             self.cpu.read_hook = self.other_read_hook
             self.other_read_hook = None
@@ -82,31 +82,31 @@ class CPUHook:
 
 
 class TimeMachine( CPUHook ):
-    def __init__( self, emulator ):
+    def __init__( self, emulator: "Emulator" ) -> None:
         super( ).__init__( emulator )
         self.last_write = None
         self.state_index = 0
         self.write_states = []
         self.cpu_states = []
 
-    def reset( self ):
+    def reset( self ) -> None:
         self.last_write = None
         self.state_index = 0
         self.write_states = []
         self.cpu_states = []
 
-    def post_op( self ):
+    def post_op( self ) -> None:
         self.store_write_data( )
         super( ).post_op( )
 
-    def write_hook( self, address, newvalue ):
+    def write_hook( self, address: int, newvalue: int ) -> bool:
         # IMPORTANT: we must not add to writes[] and cpus[] in the hook method.
         # This method is called somewhere during execution. instruction has not yet run to completion in the CPU.
         oldvalue = self.mem[address]
         self.last_write = (address, oldvalue, newvalue)
         return super( ).write_hook( address, newvalue )
 
-    def store_write_data( self ):
+    def store_write_data( self ) -> None:
         if not self.write_hooked: return
         if not self.last_write: return
         self.write_states.append( self.last_write )
@@ -114,23 +114,23 @@ class TimeMachine( CPUHook ):
         self.cpu_states.append( pickled_cpu )
         self.last_write = None
 
-    def enable_restoring( self ):
+    def enable_restoring( self ) -> None:
         if not self.write_hooked: return
         assert len( self.write_states ) == len( self.cpu_states )
         self.state_index = len( self.write_states ) - 2
         self.restore_next_state( 1 )
 
-    def disable_restoring( self ):
+    def disable_restoring( self ) -> None:
         if not self.write_hooked: return
         del self.write_states[self.state_index:]
         del self.cpu_states[self.state_index:]
 
-    def restore_cpu( self ):
+    def restore_cpu( self ) -> None:
         if not self.write_hooked: return
         pickled_cpu = self.cpu_states[self.state_index]
         self.cpu.unpickle_from_variable( pickled_cpu )
 
-    def restore_next_state( self, states ):
+    def restore_next_state( self, states: int ) -> int:
         if not self.write_hooked: return 0
         restored_states = 0
         while self.state_index < len( self.write_states ) - 1:
@@ -144,7 +144,7 @@ class TimeMachine( CPUHook ):
         self.apple2.display.refresh_hires( )
         return restored_states
 
-    def restore_prev_state( self, states ):
+    def restore_prev_state( self, states: int ) -> int:
         if not self.write_hooked: return 0
         restored_states = 0
         while self.state_index > 1:
@@ -160,7 +160,7 @@ class TimeMachine( CPUHook ):
 
 
 class MemAccessCollector( CPUHook ):
-    def __init__( self, emulator ):
+    def __init__( self, emulator: "Emulator" ) -> None:
         super( ).__init__( emulator )
 
         self.last_write = None
@@ -168,16 +168,16 @@ class MemAccessCollector( CPUHook ):
 
         self.memory_states = []
 
-    def reset( self ):
+    def reset( self ) -> None:
         self.last_write = None
         self.last_reads = None
         # do not clear the memory states
         super( ).reset( )
 
-    def post_op( self ):
+    def post_op( self ) -> None:
         self.store_data( )
 
-    def store_data( self ):
+    def store_data( self ) -> None:
         if not self.hooked: return
         if (not self.last_write) and (not self.last_reads): return
         cpu_state = (self.cpu.cycles, self.cpu.last_PC)
@@ -189,13 +189,13 @@ class MemAccessCollector( CPUHook ):
         self.last_write = None
         self.last_reads = None
 
-    def write_hook( self, address, newvalue ):
+    def write_hook( self, address: int, newvalue: int ) -> bool:
         # This method is called somewhere during execution. instruction has not yet run to completion in the CPU.
         oldvalue = self.mem[address]
         self.last_write = (address, oldvalue, newvalue)
         return super( ).write_hook( address, newvalue )
 
-    def read_hook( self, address, value ):
+    def read_hook( self, address: int, value: int ) -> bool:
         # This method is called somewhere during execution. instruction has not yet run to completion in the CPU.
         if self.last_reads:
             self.last_reads.append( (address, value) )
@@ -203,7 +203,7 @@ class MemAccessCollector( CPUHook ):
             self.last_reads = [(address, value)]
         return super( ).read_hook( address, value )
 
-    def access_counts_as_table(self):
+    def access_counts_as_table(self) -> list[list[str | int]]:
         write_accesses = [0] * 0xD000
         read_accesses = [0] * 0xD000
         pc_accesses = [0] * 0xD000
@@ -229,7 +229,7 @@ class MemAccessCollector( CPUHook ):
 
         return lines
 
-    def max_cycles(self):
+    def max_cycles(self) -> int:
         if not self.memory_states:
             return 0
         last = self.memory_states[-1]
@@ -237,10 +237,10 @@ class MemAccessCollector( CPUHook ):
         cycles, last_PC = cpu_state
         return cycles
 
-    def count_mem_accesses(self):
+    def count_mem_accesses(self) -> int:
         return len(self.memory_states)
 
-    def mem_access_log(self, first_cycle, last_cycle):
+    def mem_access_log(self, first_cycle: int | None, last_cycle: int | None) -> list[list[str | int]]:
         log = [['cycles', 'last_PC', 'ind_addr', 'ind_value', 'read', 'read_value', 'write', 'old_value', 'new_value']]
         for (cpu_state, reads, write) in self.memory_states:
 
@@ -270,9 +270,9 @@ class MemAccessCollector( CPUHook ):
                 log.append(line)
         return log
 
-    def mem_access_colors(self, type, first_cycle=None, last_cycle=None, include_stack=True, only_indirect=False):
+    def mem_access_colors(self, kind: str, first_cycle: int | None = None, last_cycle: int | None = None, include_stack: bool = True, only_indirect: bool = False) -> list[list[int]]:
 
-        def convert_to_colors(accesses):
+        def convert_to_colors(accesses: list[int]) -> list[int]:
             color_low = (146, 206, 147)
             color_medium = (255,235,132)
             color_high = (248,105,107)
@@ -298,7 +298,7 @@ class MemAccessCollector( CPUHook ):
                 colors.append(color)
             return colors
 
-        def include_address(address):
+        def include_address(address: int) -> bool:
             if not include_stack:
                 if 0x100 <= address <= 0x1ff:
                     return False
@@ -307,8 +307,8 @@ class MemAccessCollector( CPUHook ):
         if only_indirect:
             include_stack = False
 
-        type = type.lower()
-        assert type in ['reads', 'writes', 'pcs']
+        kind = kind.lower()
+        assert kind in ['reads', 'writes', 'pcs']
         accesses = [0] * 0xD000
         for (cpu_state, reads, write) in self.memory_states:
             cycles, last_PC = cpu_state
@@ -317,7 +317,7 @@ class MemAccessCollector( CPUHook ):
                 if reads is None and only_indirect:
                     continue
 
-                if type == 'reads':
+                if kind == 'reads':
                     if only_indirect and len(reads) == 1:
                         continue
                     if reads is not None:
@@ -326,7 +326,7 @@ class MemAccessCollector( CPUHook ):
                             if include_address(address):
                                 accesses[address] += 1
 
-                elif type == 'writes':
+                elif kind == 'writes':
                     if write is not None:
                         address, oldvalue, newvalue = write
                         if include_address(address):
@@ -354,7 +354,7 @@ class MemAccessCollector( CPUHook ):
         return list(chunks(colors, 256))
 
 
-    def update_hires(self, pixels, start_hires, address, value, ignore_zero):
+    def update_hires(self, pixels: list[list[int]], start_hires: int, address: int, value: int, ignore_zero: bool) -> None:
         base = address - start_hires
         row8, b = divmod(base, 0x400)
         hi, lo = divmod(b, 0x80)
@@ -371,7 +371,7 @@ class MemAccessCollector( CPUHook ):
                 y = row
                 pixels[y][x] += 1
 
-    def screen_writes_as_table(self, first_cycle=None, last_cycle=None, ignore_zero=False):
+    def screen_writes_as_table(self, first_cycle: int | None = None, last_cycle: int | None = None, ignore_zero: bool = False) -> list[list[int]]:
         apple_width = 280
         apple_height = 192
         pixels = [[0 for x in range(apple_width)] for y in range(apple_height)]
@@ -386,7 +386,7 @@ class MemAccessCollector( CPUHook ):
                         self.update_hires(pixels, start_hires, address, newvalue, ignore_zero)
         return pixels
 
-    def screen_reads_as_table(self, first_cycle=None, last_cycle=None):
+    def screen_reads_as_table(self, first_cycle: int | None = None, last_cycle: int | None = None) -> list[list[int]]:
         apple_width = 280
         apple_height = 192
         pixels = [[0 for x in range(apple_width)] for y in range(apple_height)]
