@@ -71,6 +71,8 @@ See `DIRECTION.md` for the context of each item.
 
 - Remove the Robotron-specific code from `papple2` (decided 2026-09-24): `Labels.add_standard_labels` in `debug/labels.py` hard-codes about 50 Robotron labels (`atariPresents`, `roboNoises`, ...), and `debug/checkpoints.py` has three Robotron classes nobody uses -- `RecordedKeys` (cycle counts from one Robotron run, and the only caller of the broken `save_hires_bytes`), `PrintCharTester` and `RandomTesterCheckpoint` (Robotron addresses; only mentioned in a commented-out line in `core/emulator.py`). Move what `probotron` still needs over there, delete the rest. Note along the way: the label table has `waitKbd` twice (`$4242` and `$453d`), so a disassembly cannot tell them apart.
 
+- Check whether our model of registering leaps (`MemoryMap.register_*`, `Emulator.handle_*`, the `jsr_stack`) handles tail calls: a `JMP` at the end of a subroutine instead of `JSR` + `RTS`, so the jumped-to routine's `RTS` returns straight to the original caller. Watch `has_matched_JSR` and the RTS-to-JSR matching. Terminology for reference: what we call leaps, Ghidra calls references (classified by flow type: call, jump, conditional jump, computed jump), IDA calls code cross-references (xrefs). Raised 2026-09-24.
+
 ## 4. Environment / packaging housekeeping
 
 - Bring in automated `black` formatting, as in some of my other projects: decide how it runs (a `make` target, PyCharm on save, or both), then reformat the whole codebase in one separate commit, so that later diffs show only real changes. Surfaced during the type hints sweep, 2026-09-24 (e.g. the `( self, x )` spacing in `core/cpu.py`).
