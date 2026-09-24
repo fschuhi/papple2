@@ -182,45 +182,45 @@ class MemoryMap:
 
         info = self.__safe_get_info( op_address )
 
-        def update_types() -> None:
-            # do not allow calling into an operand
-            # we only add info objects for memory locations which contain an opcode or which are accessed from opcodes
-            # http://forum.6502.org/viewtopic.php?f=3&t=5517
-            assert self.types[op_address] != MEM_OPERAND
-            assert 0 <= operand_length <= 2
-            self.types[op_address] = MEM_OPCODE
-            if operand_length >= 1:
-                self.types[op_address + 1] = MEM_OPERAND
-                if operand_length == 2:
-                    self.types[op_address + 2] = MEM_OPERAND
-
-        def update_cycles() -> None:
-            info.last_cycles = cycles
-            if info.first_cycles is None:
-                info.first_cycles = cycles
-
-        def link_with_prev() -> None:
-            if prev_info is not None:
-                # we do not allow jumps to self (inifite loop)
-                assert prev_info.address != op_address
-
-                is_next_in_memory = info.address == prev_info.address + prev_info.operand_length + 1
-                if is_next_in_memory:
-                    # OpInfo is adjacent to the prev OpInfo
-                    # sequential execution is "unique" (i.e. 2 OpInfo are either sequential or not)
-                    # TODO: think about if we really need info about sequential *execution*
-                    # if being sequential is enough then we can put this into a function and check it statically
-                    info.prev_sequential_info = prev_info
-                    prev_info.next_sequential_info = info
-
-        update_types()
-        update_cycles()
+        self._update_types( op_address, operand_length )
+        self._update_cycles( info, cycles )
         info.operand_length = operand_length
 
         # TODO: cannot MemoryMap.link_with_prev() when using the TimeMachine
-        link_with_prev()
+        self._link_with_prev( info, prev_info )
 
         return info
+
+    def _update_types( self, op_address: int, operand_length: int ) -> None:
+        # do not allow calling into an operand
+        # we only add info objects for memory locations which contain an opcode or which are accessed from opcodes
+        # http://forum.6502.org/viewtopic.php?f=3&t=5517
+        assert self.types[op_address] != MEM_OPERAND
+        assert 0 <= operand_length <= 2
+        self.types[op_address] = MEM_OPCODE
+        if operand_length >= 1:
+            self.types[op_address + 1] = MEM_OPERAND
+            if operand_length == 2:
+                self.types[op_address + 2] = MEM_OPERAND
+
+    def _update_cycles( self, info: OpInfo, cycles: int ) -> None:
+        info.last_cycles = cycles
+        if info.first_cycles is None:
+            info.first_cycles = cycles
+
+    def _link_with_prev( self, info: OpInfo, prev_info: OpInfo | None ) -> None:
+        if prev_info is not None:
+            # we do not allow jumps to self (inifite loop)
+            assert prev_info.address != info.address
+
+            is_next_in_memory = info.address == prev_info.address + prev_info.operand_length + 1
+            if is_next_in_memory:
+                # OpInfo is adjacent to the prev OpInfo
+                # sequential execution is "unique" (i.e. 2 OpInfo are either sequential or not)
+                # TODO: think about if we really need info about sequential *execution*
+                # if being sequential is enough then we can put this into a function and check it statically
+                info.prev_sequential_info = prev_info
+                prev_info.next_sequential_info = info
 
 
     def register_leap( self, leap_from_info: OpInfo, leap_to_address: int | None ) -> OpInfo | None:
