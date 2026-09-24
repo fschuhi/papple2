@@ -13,6 +13,7 @@ with contextlib.redirect_stdout(None):
 
 import time
 from pathlib import Path
+from pickle import Pickler, Unpickler
 
 import numpy
 from papple2.core.cpu import CPU
@@ -106,7 +107,7 @@ class Display:
         (255, 255, 255),  # white
     ]
 
-    def __init__( self, apple2, no_display ):
+    def __init__( self, apple2: "Apple2", no_display: bool ) -> None:
         self.apple2 = apple2
         self.no_display = no_display
 
@@ -150,7 +151,7 @@ class Display:
         if False:
             self.init_chars()
 
-    def clear_status(self, flip=True):
+    def clear_status(self, flip: bool = True) -> None:
         if self.no_display:
             return
 
@@ -159,17 +160,17 @@ class Display:
         if flip:
             pygame.display.flip()
 
-    def show_status(self, text, flip=True):
+    def show_status(self, text: str, flip: bool = True) -> None:
         if self.no_display:
             return
 
         self.clear_status()
-        text = self.status_font.render(text, True, (255,255,255))
-        self.screen.blit(text, (0,384))
+        surface = self.status_font.render(text, True, (255,255,255))
+        self.screen.blit(surface, (0,384))
         if flip:
             pygame.display.flip()
 
-    def init_chars(self):
+    def init_chars(self) -> None:
         self.chargen = []
         for c in self.characters:
             chars = [[pygame.Surface((14, 16)), pygame.Surface((14, 16))],
@@ -190,7 +191,7 @@ class Display:
             self.chargen.append(chars)
 
 
-    def pickle(self, pickler):
+    def pickle(self, pickler: Pickler) -> None:
         pickler.dump(self.mix)
         pickler.dump(self.flash_time)
         pickler.dump(self.flash_on)
@@ -199,7 +200,7 @@ class Display:
         pickler.dump(self.colour)
         pickler.dump(self.high_res)
 
-    def unpickle(self, unpickler):
+    def unpickle(self, unpickler: Unpickler) -> None:
         self.mix = unpickler.load()
         self.flash_time = unpickler.load()
         self.flash_on = unpickler.load()
@@ -209,35 +210,35 @@ class Display:
         self.high_res = unpickler.load()
 
 
-    def txtclr(self):
+    def txtclr(self) -> None:
         self.text = False
 
-    def txtset(self):
+    def txtset(self) -> None:
         self.text = True
         self.colour = False
 
-    def mixclr(self):
+    def mixclr(self) -> None:
         self.mix = False
 
-    def mixset(self):
+    def mixset(self) -> None:
         self.mix = True
         self.colour = True
 
-    def lowscr(self):
+    def lowscr(self) -> None:
         self.page = 1
 
-    def hiscr(self):
+    def hiscr(self) -> None:
         self.page = 2
 
-    def lores(self):
+    def lores(self) -> None:
         self.high_res = False
 
-    def hires(self):
+    def hires(self) -> None:
         self.high_res = True
 
-    def update(self, address, value) -> bool:
+    def update(self, address: int, value: int) -> None:
 
-        def update_text():
+        def update_text() -> None:
             base = address - start_text
             self.flash_chars[self.page - 1][base] = value
             hi, lo = divmod(base, 0x80)
@@ -274,7 +275,7 @@ class Display:
                             pixels[x][y] = self.lores_colours[lower]
                 del pixels
 
-        def update_hires():
+        def update_hires() -> None:
             base = address - start_hires
             row8, b = divmod(base, 0x400)
             hi, lo = divmod(b, 0x80)
@@ -342,7 +343,7 @@ class Display:
             update_hires()
 
 
-    def refresh_hires(self):
+    def refresh_hires(self) -> None:
         if self.no_display:
             return
 
@@ -353,7 +354,7 @@ class Display:
         pygame.display.flip()
 
 
-    def flash(self):
+    def flash(self) -> None:
         if self.no_display:
             return
 
@@ -365,14 +366,14 @@ class Display:
             self.flash_time = time.time()
 
 
-    def save_hires_bytes( self, fn ):
+    def save_hires_bytes( self, fn: str ) -> None:
         with open(fn, 'wb') as f:
             start_hires = 0x2000 if self.page == 1 else 0x4000
             end_hires = start_hires + 0x2000
             bytes = self.apple2.memory._mem[start_hires:end_hires]
             self.pickle.dump(bytes, f)
 
-    def load_hires_bytes( self, fn ):
+    def load_hires_bytes( self, fn: str ) -> None:
         with open(fn, 'rb') as f:
             start_hires = 0x2000 if self.page == 1 else 0x4000
             end_hires = start_hires + 0x2000
@@ -380,15 +381,15 @@ class Display:
             self.apple2.memory._mem[start_hires:end_hires] = bytes
         self.refresh_hires()
 
-    def save_hires_image(self, fn):
+    def save_hires_image(self, fn: str) -> None:
         self.refresh_hires()
         import re
-        if not re.search('\.(png|jpg) *$', fn.lower()):
+        if not re.search(r'\.(png|jpg) *$', fn.lower()):
             fn = fn.strip() + '.png'
         print(fn)
         pygame.image.save(self.screen, fn)
 
-    def clear_hires(self):
+    def clear_hires(self) -> None:
         start_hires = 0x2000 if self.page == 1 else 0x4000
         end_hires = start_hires + 0x2000
         self.apple2.memory._mem[start_hires:end_hires] = 0x2000 * [0x00]
@@ -399,26 +400,26 @@ class Speaker:
     CPU_CYCLES_PER_SAMPLE = 60
     CHECK_INTERVAL = 1000
 
-    def __init__(self, quiet):
+    def __init__(self, quiet: bool) -> None:
         self.quiet = quiet
         self.last_toggle = None
         self.buffer = []
         self.polarity = False
         self.reset()
 
-    def pickle(self, pickler):
+    def pickle(self, pickler: Pickler) -> None:
         pickler.dump(self.quiet)
         pickler.dump(self.last_toggle)
         pickler.dump(self.buffer)
         pickler.dump(self.polarity)
 
-    def unpickle(self, unpickler):
+    def unpickle(self, unpickler: Unpickler) -> None:
         self.quiet = unpickler.load()
         self.last_toggle = unpickler.load()
         self.buffer = unpickler.load()
         self.polarity = unpickler.load()
 
-    def toggle(self, cycle):
+    def toggle(self, cycle: int) -> None:
         if not self.quiet:
             if self.last_toggle is not None:
                 l = (cycle - self.last_toggle) / Speaker.CPU_CYCLES_PER_SAMPLE
@@ -429,37 +430,37 @@ class Speaker:
                 self.polarity = not self.polarity
             self.last_toggle = cycle
 
-    def reset(self):
+    def reset(self) -> None:
         self.last_toggle = None
         self.buffer = []
         self.polarity = False
 
-    def play(self):
+    def play(self) -> None:
         if not self.quiet:
             sample_array = numpy.int16(self.buffer)
             sound = pygame.sndarray.make_sound(sample_array)
             sound.play()
             self.reset()
 
-    def update(self, cycle):
+    def update(self, cycle: int) -> None:
         if self.buffer and (cycle - self.last_toggle) > self.CHECK_INTERVAL:
             self.play()
 
 
 class SoftSwitches:
 
-    def __init__(self, display: Display, speaker: Speaker):
+    def __init__(self, display: Display, speaker: Speaker) -> None:
         self.kbd = 0x00
         self.display = display
         self.speaker = speaker
 
-    def pickle(self, pickler):
+    def pickle(self, pickler: Pickler) -> None:
         pickler.dump(self.kbd)
 
-    def unpickle(self, unpickler):
+    def unpickle(self, unpickler: Unpickler) -> None:
         self.kbd = unpickler.load()
 
-    def read_byte(self, address):
+    def read_byte(self, address: int) -> int:
         assert 0xC000 <= address <= 0xCFFF
         if address == 0xC000:
             return self.kbd
@@ -493,14 +494,14 @@ class SoftSwitches:
             pass  # print "%04X" % address
         return 0x00
 
-    def write_byte(self, address, value):
+    def write_byte(self, address: int, value: int) -> None:
         # disregard value - - softswitches is ROM
         self.read_byte(address)
 
 
 class Apple2:
 
-    def __init__(self, no_display=False, quiet=True, frame_rate=20, data_dir=None):
+    def __init__(self, no_display: bool = False, quiet: bool = True, frame_rate: int = 20, data_dir: str | None = None) -> None:
         if not no_display:
             if not quiet:
                 pygame.mixer.pre_init(11025, -16, 1)
@@ -515,14 +516,14 @@ class Apple2:
         self.memory.load_image(0xD000, rom_path)
         self.cpu = CPU(self.memory, program_counter=None)
 
-    def pickle(self, pickler):
+    def pickle(self, pickler: Pickler) -> None:
         self.memory.pickle(pickler)
         self.cpu.pickle(pickler)
         self.display.pickle(pickler)
         self.speaker.pickle(pickler)
         self.softswitches.pickle(pickler)
 
-    def unpickle(self, unpickler):
+    def unpickle(self, unpickler: Unpickler) -> None:
         self.memory.unpickle(unpickler)
         self.cpu.unpickle(unpickler)
         self.display.unpickle(unpickler)
@@ -530,7 +531,7 @@ class Apple2:
         self.softswitches.unpickle(unpickler)
 
 
-def determine_states_from_kmods():
+def determine_states_from_kmods() -> int:
     mods = pygame.key.get_mods()
     if mods & pygame.KMOD_SHIFT:
         states = 200

@@ -57,6 +57,9 @@ See `DIRECTION.md` for the context of each item.
 - `TileFactory.update_heads_and_tails` (`tiles.py`) only ever sets `is_tail = True` for a tile that already has a `link_prev` -- a fully standalone tile (no links at all) comes out `is_head=True`, `is_tail=False`. Found and documented, not fixed (M6's `ACTION_PLAN.md` decision excludes redesigning tiles/stretches) -- see `tests/test_tiles.py::test_tiles_are_unlinked_given_the_non_adjacent_layout`.
 - `a2-hires-lab`'s VBA work on NTSC hi-res color rules surfaced that `Display.update_hires`'s pixel-by-pixel color logic (no neighbor rules) isn't NTSC-accurate. Not a `papple2` blocker today -- headless write/read access to the hires pages bypasses rendering entirely (see `test_display_memory.py`). Revisit if/when NTSC-accurate hi-res color becomes a real requirement; `a2-hires-lab`'s findings would inform the fix.
 - `CPU.verbose_branch` has a copy-paste slip: the `BCS` case checks `opcode == BVS`. Harmless today (only used for printing), fix when we touch `CPU.py`.
+- `Display.save_hires_bytes`/`load_hires_bytes` (`core/apple.py`) call `self.pickle.dump(...)`/`self.pickle.load(...)`, but `self.pickle` is the class's own `pickle(pickler)` method, so both would crash with `AttributeError`. Not dead code: `KeyScript` in `debug/checkpoints.py` calls `save_hires_bytes`, in a branch the tests never reach. Decide: fix (use the `pickle` module), or remove both together with the `KeyScript` call. Found during the type hints sweep, 2026-09-24.
+- `Display.__init__` sets `self.flash_chars = [[0] * 0x400] * 2`, which is one list referenced twice, not two lists: text pages 1 and 2 share their flash state. Fix: `[[0] * 0x400 for _ in range(2)]`. Found during the type hints sweep, 2026-09-24.
+- `Apple2.__init__` accepts `frame_rate` and never uses it; `Emulator` passes it through. Remove, or give it a job? Found during the type hints sweep, 2026-09-24.
 
 ## 4. Environment / packaging housekeeping
 
