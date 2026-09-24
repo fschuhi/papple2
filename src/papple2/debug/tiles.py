@@ -46,6 +46,8 @@ Call tree
     disassembled program's control flow actually moves.
 """
 
+from collections.abc import Callable, Iterator
+
 from papple2.util import hexaddr, pairwise, dot_RGB
 from papple2.core.cpu import JSR, RTS, JMP_absolute
 from papple2.debug.memory_map import MemoryMap, OpInfo
@@ -60,17 +62,17 @@ TYPE_SHOWTEXT = 10
 
 
 class Tile:
-    def __init__( self, infos ):
+    def __init__( self, infos: list[OpInfo] ) -> None:
         assert infos is not None and len( infos ) > 0
-        self.infos = infos  # type: [OpInfo]
+        self.infos = infos
         self.link_next_type = None
-        self.link_prev = None  # type: Tile
-        self.link_next = None  # type: Tile
+        self.link_prev: Tile | None = None
+        self.link_next: Tile | None = None
         self.is_head = False
         self.is_body = False
         self.is_tail = False
 
-    def verbose( self ):
+    def verbose( self ) -> str:
         return '%s -> %s' % (hexaddr( self.first_info( ).address ), hexaddr( self.last_info( ).address ))
 
     def first_info( self ) -> OpInfo:
@@ -79,25 +81,25 @@ class Tile:
     def last_info( self ) -> OpInfo:
         return self.infos[-1]
 
-    def index_of( self, address ):
-        for index, info in enumerate( self.infos ):  # type: OpInfo
+    def index_of( self, address: int ) -> int | None:
+        for index, info in enumerate( self.infos ):
             if info.address == address:
                 return index
         return None
 
 
 class TileFactory:
-    def __init__( self, memory_map: MemoryMap ):
-        self.memory_map = memory_map  # type: MemoryMap
+    def __init__( self, memory_map: MemoryMap ) -> None:
+        self.memory_map = memory_map
 
         # build double-linked list of all tiles
-        self.all_tiles = []  # type: [Tile]
+        self.all_tiles: list[Tile] = []
 
         # each instruction (i.e. a MemInfo) is contained in exactly one tile
-        self.infos = {}  # type: {int, Tile}
+        self.infos: dict[int, Tile] = {}
 
 
-    def init(self, start_address, end_address ):
+    def init(self, start_address: int, end_address: int ) -> None:
         self.all_tiles.clear()
         self.infos.clear()
 
@@ -119,12 +121,12 @@ class TileFactory:
         self.update_heads_and_tails()
 
 
-    def create_tiles( self, start_address, end_address ):
+    def create_tiles( self, start_address: int, end_address: int ) -> None:
         address = start_address
-        current_tile = []  # type: [OpInfo]
+        current_tile: list[OpInfo] = []
         while address <= end_address:
 
-            info = self.memory_map.get_info( address )  # type: OpInfo
+            info = self.memory_map.get_info( address )
 
             if info is None:
                 # no instruction
@@ -167,8 +169,8 @@ class TileFactory:
             address += info.operand_length + 1
 
 
-    def init_infos_dictionary(self):
-        for tile in self.all_tiles:  # type: Tile
+    def init_infos_dictionary(self) -> None:
+        for tile in self.all_tiles:
             for info in tile.infos:
                 self.infos[info.address] = tile
 
@@ -176,24 +178,24 @@ class TileFactory:
     ### helpers
     ###
 
-    def get_tile( self, address ):
+    def get_tile( self, address: int ) -> Tile | None:
         return self.infos[address] if address in self.infos else None
 
     # TODO: think about dumping towards html, makes more sense for bigger collections (like all Tiles in the TileFactory)
-    def dump( self ):
+    def dump( self ) -> None:
         for tile in self.all_tiles:
-            first_info = tile.infos[0]  # type: OpInfo
-            last_info = tile.infos[-1]  # type: OpInfo
+            first_info = tile.infos[0]
+            last_info = tile.infos[-1]
             print( '%s -> %s' % (hexaddr( first_info.address ), hexaddr( last_info.address )) )
 
     ###
     ### linking tiles
     ###
 
-    def link_tiles( self, condition, link_type ):
-        for (prev_tile, next_tile) in pairwise( self.all_tiles ):  # type: Tile
-            prev_info = prev_tile.last_info()  # type: OpInfo
-            next_info = next_tile.first_info()  # type: OpInfo
+    def link_tiles( self, condition: Callable[[Tile, Tile, OpInfo, OpInfo], bool], link_type: int ) -> None:
+        for (prev_tile, next_tile) in pairwise( self.all_tiles ):
+            prev_info = prev_tile.last_info()
+            next_info = next_tile.first_info()
             consecutive = prev_info.address + prev_info.operand_length + 1 == next_info.address
             if consecutive:
                 if condition(prev_tile, next_tile, prev_info, next_info ):
@@ -201,12 +203,12 @@ class TileFactory:
                     self.link_consecutive_tiles( prev_tile, next_tile, prev_info, next_info, link_type )
 
     @staticmethod
-    def is_sequential_tile( prev_tile, next_tile, prev_info, next_info ):
+    def is_sequential_tile( prev_tile: Tile, next_tile: Tile, prev_info: OpInfo, next_info: OpInfo ) -> bool:
         # next tile was sequentially executed from this tile
         return prev_info.next_sequential_info is not None
 
     @staticmethod
-    def is_branch_always_tile( prev_tile, next_tile, prev_info, next_info ):
+    def is_branch_always_tile( prev_tile: Tile, next_tile: Tile, prev_info: OpInfo, next_info: OpInfo ) -> bool:
         if prev_info.is_branch():
             # this is an '+' branch
             # it it were a '0' or '-' branch, it would have been already in the tile
@@ -215,18 +217,20 @@ class TileFactory:
             # 0x51b6: SEC/BCS combo
             # 0x5171 is SEC/BCS but it is branched over by 0x5161->0x5173
             return prev_info.address not in [0x51b6]
+        return False
 
     @staticmethod
-    def is_straight_jsr_tile( prev_tile, next_tile, prev_info, next_info ):
+    def is_straight_jsr_tile( prev_tile: Tile, next_tile: Tile, prev_info: OpInfo, next_info: OpInfo ) -> bool:
         if prev_info.opcode == JSR:
-            for leap_from in next_info.leaps_from.infos:  # type: OpInfo
+            for leap_from in next_info.leaps_from.infos:
                 if leap_from.opcode == RTS:
                     # intentionally split the double condition
                     # we might have multiple leaps_from, not all of them RTS
-                    return leap_from.has_matched_JSR
+                    return bool(leap_from.has_matched_JSR)
+        return False
 
     @staticmethod
-    def link_consecutive_tiles( prev_tile: Tile, next_tile: Tile, prev_info: OpInfo, next_info: OpInfo, link_type ):
+    def link_consecutive_tiles( prev_tile: Tile, next_tile: Tile, prev_info: OpInfo, next_info: OpInfo, link_type: int ) -> None:
         prev_tile.link_next = next_tile
         next_tile.link_prev = prev_tile
 
@@ -235,7 +239,7 @@ class TileFactory:
         prev_tile.link_type = the_link_type
         next_tile.link_type = the_link_type
 
-    def link_tiles_manually( self, prev_address, next_address, link_type ):
+    def link_tiles_manually( self, prev_address: int, next_address: int, link_type: int ) -> None:
         prev_tile = self.get_tile(prev_address)
         next_tile = self.get_tile(next_address)
         if prev_tile is not None and next_tile is not None:
@@ -243,8 +247,8 @@ class TileFactory:
             next_info = next_tile.first_info()
             self.link_consecutive_tiles( prev_tile, next_tile, prev_info, next_info, link_type )
 
-    def update_heads_and_tails(self):
-        for tile in self.all_tiles:  # type: Tile
+    def update_heads_and_tails(self) -> None:
+        for tile in self.all_tiles:
             # if tile.link_prev is None and tile.link_next is not None:
             if tile.link_prev is None:
                 tile.is_head = True
@@ -263,17 +267,17 @@ class TileFactory:
     ### collect tiles
     ###
 
-    def collect(self, func):  # type: [Tile]
+    def collect(self, func: Callable[[Tile], bool]) -> list[Tile]:
         return list( filter( func, self.all_tiles ) )
 
-    def collect_heads( self ):  # type: [Tile]
+    def collect_heads( self ) -> list[Tile]:
         return self.collect( lambda tile: tile.is_head )
 
-    def collect_tails( self ):  # type: [Tile]
+    def collect_tails( self ) -> list[Tile]:
         return self.collect( lambda tile: tile.is_tail )
 
     @staticmethod
-    def pull_tiles( anchor_tile: Tile ):
+    def pull_tiles( anchor_tile: Tile ) -> list[Tile]:
         assert anchor_tile is not None
 
         # pull a chain of linked tiles from the factory, using any of the tiles (anchor)
@@ -295,57 +299,57 @@ class TileFactory:
 
         return tiles
 
-    def pull_address_tiles(self, anchor_address):
-        anchor_tile = self.get_tile(anchor_address)  # type: Tile
+    def pull_address_tiles(self, anchor_address: int) -> list[Tile]:
+        anchor_tile = self.get_tile(anchor_address)
         assert anchor_tile is not None
         return self.pull_tiles(anchor_tile)
 
 
 class Stretch:
-    def __init__( self, tile_factory, tiles ):
+    def __init__( self, tile_factory: TileFactory, tiles: list[Tile] ) -> None:
         self.tile_factory = tile_factory
         self.memory_map = self.tile_factory.memory_map
         self.tiles = tiles
 
-    def verbose_tiles( self ):
+    def verbose_tiles( self ) -> list[str]:
         return list( map( lambda tile: tile.verbose( ), self.tiles ) )
 
-    def first_tile( self ) -> Tile:
+    def first_tile( self ) -> Tile | None:
         return self.tiles[0] if len( self.tiles ) > 0 else None
 
-    def last_tile( self ) -> Tile:
+    def last_tile( self ) -> Tile | None:
         return self.tiles[-1] if len( self.tiles ) > 0 else None
 
-    def first_info(self) -> OpInfo:
+    def first_info(self) -> OpInfo | None:
         return self.first_tile( ).first_info( ) if len( self.tiles ) > 0 else None
 
     def first_address(self) -> int:
         return self.first_info().address
 
-    def last_info(self) -> OpInfo:
+    def last_info(self) -> OpInfo | None:
         return self.last_tile( ).last_info( ) if len( self.tiles ) > 0 else None
 
-    def all_infos(self) -> [OpInfo]:
+    def all_infos(self) -> Iterator[OpInfo]:
         for tile in self.tiles:
             for info in tile.infos:
                 yield info
 
-    def all_leaps(self) -> {OpInfo}:
+    def all_leaps(self) -> Iterator[OpInfo]:
         for tile in self.tiles:
             for info in tile.infos:
                 if info.is_leap():
                     yield info
 
-    def filter_opcode( self, opcode ) -> [OpInfo]:
+    def filter_opcode( self, opcode: int ) -> list[OpInfo]:
         infos = self.all_infos()
         return list( filter( lambda info: info.opcode == opcode, infos ) )
 
-    def filter_branches( self ) -> [OpInfo]:
+    def filter_branches( self ) -> list[OpInfo]:
         infos = self.all_infos()
         return list( filter( lambda info: info.is_branch(), infos ) )
 
 
-    def is_compact( self):
+    def is_compact( self) -> bool:
         # "compact" means ending w/ a regular RTS
         if self.last_info().opcode != RTS:
             return False
@@ -366,7 +370,7 @@ class Stretch:
 
         return True
 
-    def is_shallow( self):
+    def is_shallow( self) -> bool:
         # compactness is necessary condition for shallowness
         if not self.is_compact():
             return False
@@ -380,26 +384,26 @@ class Stretch:
 
 
 class DotCallTree:
-    def __init__(self, tile_factory: TileFactory):
+    def __init__(self, tile_factory: TileFactory) -> None:
         self.tile_factory = tile_factory
 
         # node_stretches contains all stretches which are shown in the dot
-        self.node_stretches = {}
+        self.node_stretches: dict[int, Stretch] = {}
 
-    def add_node_stretch( self, address ) -> Stretch:
-        stretch = self.node_stretches.get( address )  # type: Stretch
+    def add_node_stretch( self, address: int ) -> Stretch:
+        stretch = self.node_stretches.get( address )
         if stretch is None:
             stretch = Stretch( self.tile_factory, self.tile_factory.pull_address_tiles( address ) )
             self.node_stretches[address] = stretch
         return stretch
 
     # represent a MemInfo in a Graphviz node
-    def info_to_node( self, info: OpInfo ):
+    def info_to_node( self, info: OpInfo ) -> str:
         # TODO: info_to_node doesn't have labels anymore (came via OpInfo)
         return info.label if info.has_label() else info.verbose_node( )
 
 
-    def collect_arrows_dot( self, stretch: Stretch ):
+    def collect_arrows_dot( self, stretch: Stretch ) -> list[str]:
 
         arrows = []
 
@@ -410,7 +414,7 @@ class DotCallTree:
         from_stretch_info = stretch.first_info( )
         from_node = self.info_to_node( from_stretch_info )
 
-        for leap_in_stretch_info in stretch.all_leaps():  # type: OpInfo
+        for leap_in_stretch_info in stretch.all_leaps():
 
             if leap_in_stretch_info.is_branch():
                 color = dot_RGB( 83, 141, 213 )
@@ -436,13 +440,13 @@ class DotCallTree:
                 # for this case that RTS cannot trigger an arrow, because the target stretch is unknown
                 # this is a slightly degenerate case where the op is a leap but doesn't show any actual leaps
                 # TODO: same situation will arise w/ indirect JMP
-                for leap_to_info in leap_in_stretch_info.leaps_to.infos:  # type: OpInfo
+                for leap_to_info in leap_in_stretch_info.leaps_to.infos:
                     if leap_to_info.prev_sequential_info == leap_in_stretch_info:
                         # do not show branches not taken
                         pass
                     else:
                         # arrow goes from one stretch (from_node) to stretch which contains the info leaped to (to_node)
-                        leap_to_stretch = self.add_node_stretch( leap_to_info.address )  # type: Stretch
+                        leap_to_stretch = self.add_node_stretch( leap_to_info.address )
                         leap_to_stretch_first_info = leap_to_stretch.first_info( )
                         to_node = self.info_to_node( leap_to_stretch_first_info )
                         arrows.append( '"%s" -> "%s" [color=%s]' % (from_node, to_node, color) )
@@ -450,10 +454,10 @@ class DotCallTree:
         return arrows
 
 
-    def collect_nodes_dot(self):
+    def collect_nodes_dot(self) -> list[str]:
         nodes = []
         # change the node shapes etc. depending on stretch conditions
-        for _, node_stretch in self.node_stretches.items():  # type: Stretch
+        for _, node_stretch in self.node_stretches.items():
             node_first_info = node_stretch.first_info( )
             node = self.info_to_node( node_first_info )
             params = 'shape=box' if node_stretch.is_compact() else 'shape=ellipse'
@@ -461,7 +465,7 @@ class DotCallTree:
         return nodes
 
 
-    def collect_cycles_ruler( self ):
+    def collect_cycles_ruler( self ) -> list[str]:
         # https://stackoverflow.com/questions/15762014/graphviz-keep-node-position-with-dot
         ruler = [
             '{',
@@ -494,7 +498,7 @@ class DotCallTree:
         return ruler
 
 
-    def generate_dot( self, heads: [Tile], cycles_ruler ):
+    def generate_dot( self, heads: list[Tile], cycles_ruler: bool ) -> list[str]:
         dot = [
             'digraph G {',
             'nodesep=0.1',
@@ -526,7 +530,7 @@ class DotCallTree:
         return dot
 
 
-    def save_dot( self, heads: [Tile], fnDot, format, cycles_ruler ):
+    def save_dot( self, heads: list[Tile], fnDot: str, file_format: str, cycles_ruler: bool ) -> str:
         dot_lines = self.generate_dot( heads, cycles_ruler )
 
         with open( fnDot, "w" ) as text_file:
@@ -537,7 +541,7 @@ class DotCallTree:
         # os.environ["PATH"] += os.pathsep + r's:\shared\Graphviz\bin'
 
         from graphviz import render
-        fnRendered = render('dot', format, fnDot )
+        fnRendered = render('dot', file_format, fnDot )
         return fnRendered
 
 
