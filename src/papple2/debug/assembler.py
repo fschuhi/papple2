@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 import sys
+from collections.abc import Mapping
+from typing import Any
 
 from papple2.util import hexbyte
 
@@ -15,7 +17,7 @@ RESOLVE     = 8
 WORD        = 9
 
 
-def ParseHex(hexstr):
+def ParseHex(hexstr: str) -> int:
     h = hexstr.strip()
     if h.startswith('$'):
         hint = int(h[1:],16)
@@ -32,21 +34,21 @@ def ParseHex(hexstr):
         hint = int(h,16)
     return hint
 
-def Is2ByteBranch(op):
+def Is2ByteBranch(op: str) -> bool:
     return op in ["BCC","BCS","BEQ","BMI","BNE","BPL","BVC","BVS","BRA"]
 
-def Is3ByteBranch(op):
+def Is3ByteBranch(op: str) -> bool:
     return op in ["JMP","JMP","JMP","JSR","BBR0","BBR1","BBR2","BBR3","BBR4","BBR5","BBR6","BBR7","BBS0","BBS1","BBS2","BBS3","BBS4","BBS5","BBS6","BBS7"]
 
 
 class Assembler:
-    def __init__(self):
+    def __init__(self) -> None:
         self.instinfo = {}
         self.instructions = set()
         self.load_ops()
         self.labels = None
 
-    def load_ops(self):
+    def load_ops(self) -> None:
         ops = [
             (0x69,'ADC','IMM',2,2),
             (0x65,'ADC','ZP',2,3),
@@ -229,11 +231,11 @@ class Assembler:
 
         ]
 
-        for (opcode, mnemonic, addressing, bytes, cycles) in ops:
-            self.instinfo[opcode] = [mnemonic, addressing, bytes, cycles, 'CZidbVN']
+        for (opcode, mnemonic, addressing, size, cycles) in ops:
+            self.instinfo[opcode] = [mnemonic, addressing, size, cycles, 'CZidbVN']
             self.instructions.add(mnemonic)
 
-    def tokenize( self, program_string, verbose=False ):
+    def tokenize( self, program_string: str, verbose: bool = False ) -> list[Any]:
         """program is a list of the source of a program broken up into
             a list, like will be returned from readlines() of a file
 
@@ -342,7 +344,7 @@ class Assembler:
                 i = i + 1
         return programtokens
 
-    def find_info( self, mnemonic, addressmode, operand ):
+    def find_info( self, mnemonic: str, addressmode: str, operand: str | None ) -> list[Any] | None:
         """Figure out which opcode to use for this instruction based on
         addressing mode.  The text doesn't definitively determine the addressing
         mode, so use the text along with what is available for that mnemonic to
@@ -390,7 +392,7 @@ class Assembler:
                     return ret
         return None
 
-    def handle_operation( self, s, defines ):
+    def handle_operation( self, s: str, defines: Mapping[str, str | int] ) -> str:
         """
         This is here mostly to handle special cases like using symbols
         with offsets "value+16".
@@ -440,7 +442,7 @@ class Assembler:
                 return "$%x%s" % (base+offset,suffix)
 
 
-    def generate_code( self, lexed_program, verbose=False ):
+    def generate_code( self, lexed_program: list[Any], verbose: bool = False ) -> list[list[Any]]:
         """Transforms the token list from Tokenize into a list that contains
         the machine code for each line.
         Grammar recognizes the following lines
@@ -668,7 +670,7 @@ class Assembler:
 
         return ir
 
-    def resolve_branches( self, ir ):
+    def resolve_branches( self, ir: dict[str, Any] ) -> None:
         #each line is
         # PC, irLineNumber, [RESOLVE,INSTRUCTION], instruction bytes, optional Target Label
         for line in ir["ir"]:
@@ -697,7 +699,7 @@ class Assembler:
                         del line[3][0]
 
     @staticmethod
-    def to_byte_array( code ):
+    def to_byte_array( code: list[list[Any]] ) -> list[int]:
         pc = code[0][0]
         byte_array = []
         for line in code:
@@ -711,13 +713,13 @@ class Assembler:
         return byte_array
 
     @staticmethod
-    def byte_array_to_text(byte_array):
+    def byte_array_to_text(byte_array: list[int]) -> str:
         text = ""
         for index, b in enumerate(byte_array):
             text += hexbyte(b)
             text += '\n' if (index+1) % 16 == 0 else ' '
         return text.strip()
 
-    def dump_byte_array(self, byte_array):
+    def dump_byte_array(self, byte_array: list[int]) -> None:
         print(self.byte_array_to_text(byte_array))
 

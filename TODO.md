@@ -73,6 +73,9 @@ See `DIRECTION.md` for the context of each item.
 
 - Check whether our model of registering leaps (`MemoryMap.register_*`, `Emulator.handle_*`, the `jsr_stack`) handles tail calls: a `JMP` at the end of a subroutine instead of `JSR` + `RTS`, so the jumped-to routine's `RTS` returns straight to the original caller. Watch `has_matched_JSR` and the RTS-to-JSR matching. Terminology for reference: what we call leaps, Ghidra calls references (classified by flow type: call, jump, conditional jump, computed jump), IDA calls code cross-references (xrefs). Raised 2026-09-24.
 
+- `debug/assembler.py` calls `sys.exit(1)` when it meets an error in the source it assembles -- inside a test run, that ends the whole `pytest` process instead of failing one test. Raise an exception instead (e.g. `ValueError` with the line number)? Its tokens and IR lines are nested lists of mixed values, typed as `Any` for now; the `dataclass` refactoring would give them names too. Found during the type hints sweep, 2026-09-24.
+- Run `probotron` once against the finished type hints sweep (2026-09-24). Everything renamed during the sweep is passed by position there (`Disassembler`'s `memory_map`, `mem_access_colors`' `kind`, `save_dot`'s `file_format`), and every removed function was grepped across `~/Projects` first, so nothing should break -- but nobody has run it yet. Also re-check `probotron`'s own `# type:` comments while there.
+
 ## 4. Environment / packaging housekeeping
 
 - Bring in automated `black` formatting, as in some of my other projects: decide how it runs (a `make` target, PyCharm on save, or both), then reformat the whole codebase in one separate commit, so that later diffs show only real changes. Surfaced during the type hints sweep, 2026-09-24 (e.g. the `( self, x )` spacing in `core/cpu.py`).
