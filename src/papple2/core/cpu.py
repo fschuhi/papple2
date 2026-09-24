@@ -10,14 +10,8 @@ import logging
 import io
 from pickle import Pickler, Unpickler
 
-from papple2.util import hexaddr, hexbyte
+from papple2.util import hexaddr, hexbyte, signed
 from papple2.core.memory import Memory
-
-
-def signed( x: int ) -> int:
-    if x > 0x7F:
-        x -= 0x100
-    return x
 
 
 RTS = 0x60
