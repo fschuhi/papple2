@@ -382,10 +382,10 @@ class Emulator:
         # TODO: maybe store prev_info in timemachine state, so that we can do tiling even if using the timemachine
         self.prev_info = info
 
-        if self.time_machine:
+        if self.time_machine.hooked:
             self.time_machine.post_op()
 
-        if self.mem_access:
+        if self.mem_access.hooked:
             self.mem_access.post_op()
 
         return info
