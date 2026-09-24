@@ -1,19 +1,26 @@
 #!/usr/bin/env python3
 
 from papple2.util import signed, hexbyte, chunks, hexaddr
+from papple2.core.cpu import CPU
 from papple2.debug.labels import Labels
+from papple2.debug.memory_map import MemoryMap
+
+# What an addressing mode reports about an operand: keys "operand" (the text),
+# "operand_address" / "operand_value" (int), "memory" ([address, size, value]).
+# collect_op_info adds "address" (int), "bytes" (list[int]) and "mnemonic" (str).
+type OperandInfo = dict[str, str | int | list[int]]
 
 class Disassembler:
-    def __init__(self, cpu, map, labels):
-        self.cpu = cpu  # type: CPU
-        self.memory_map = map  # type: MemoryMap
-        self.memory = self.cpu.memory  # type: Memory
-        self.labels = labels  # type: Labels
+    def __init__(self, cpu: CPU, memory_map: MemoryMap, labels: Labels) -> None:
+        self.cpu = cpu
+        self.memory_map = memory_map
+        self.memory = self.cpu.memory
+        self.labels = labels
 
         self.ops = [(1, "???")] * 0x100
         self.setup_ops()
 
-    def setup_ops(self):
+    def setup_ops(self) -> None:
         self.ops[0x00] = (1, "BRK", None)
         self.ops[0x01] = (2, "ORA", self.indirect_x_mode)
         self.ops[0x05] = (2, "ORA", self.zero_page_mode)
@@ -166,7 +173,7 @@ class Disassembler:
         self.ops[0xFD] = (3, "SBC", self.absolute_x_mode)
         self.ops[0xFE] = (3, "INC", self.absolute_x_mode)
 
-    def absolute_mode(self, pc):
+    def absolute_mode(self, pc: int) -> OperandInfo:
         a = self.cpu.read_word(pc + 1)
         return {
             "operand": "$%04x" % a,
@@ -174,7 +181,7 @@ class Disassembler:
             "memory": [a, 2, self.cpu.read_word(a)],
         }
 
-    def absolute_x_mode(self, pc):
+    def absolute_x_mode(self, pc: int) -> OperandInfo:
         a = self.cpu.read_word(pc + 1)
         e = a + self.cpu.X
         return {
@@ -183,7 +190,7 @@ class Disassembler:
             "memory": [e, 1, self.cpu.read_byte(e)],
         }
 
-    def absolute_y_mode(self, pc):
+    def absolute_y_mode(self, pc: int) -> OperandInfo:
         a = self.cpu.read_word(pc + 1)
         e = a + self.cpu.Y
         return {
@@ -192,14 +199,14 @@ class Disassembler:
             "memory": [e, 1, self.cpu.read_byte(e)],
         }
 
-    def immediate_mode(self, pc):
+    def immediate_mode(self, pc: int) -> OperandInfo:
         v = self.cpu.read_byte(pc + 1)
         return {
             "operand": "#$%02x" % (v),
             "operand_value": v,
         }
 
-    def indirect_mode(self, pc):
+    def indirect_mode(self, pc: int) -> OperandInfo:
         a = self.cpu.read_word(pc + 1)
         return {
             "operand": "($%04x)" % a,
@@ -207,7 +214,7 @@ class Disassembler:
             "memory": [a, 2, self.cpu.read_word(a)],
         }
 
-    def indirect_x_mode(self, pc):
+    def indirect_x_mode(self, pc: int) -> OperandInfo:
         z = self.cpu.read_byte(pc + 1)
         a = self.cpu.read_word( (z + self.cpu.X) % 0x100 )
         return {
@@ -216,7 +223,7 @@ class Disassembler:
             "memory": [a, 1, self.cpu.read_byte(a)],
         }
 
-    def indirect_y_mode(self, pc):
+    def indirect_y_mode(self, pc: int) -> OperandInfo:
         z = self.cpu.read_byte(pc + 1)
         a = self.cpu.read_word(z) + self.cpu.Y
         return {
@@ -225,14 +232,14 @@ class Disassembler:
             "memory": [a, 1, self.cpu.read_byte(a)],
         }
 
-    def relative_mode(self, pc):
+    def relative_mode(self, pc: int) -> OperandInfo:
         a = pc + signed(self.cpu.read_byte(pc + 1) + 2)
         return {
             "operand": "$%04x" % a,
             "operand_address": a,
         }
 
-    def zero_page_mode(self, pc):
+    def zero_page_mode(self, pc: int) -> OperandInfo:
         a = self.cpu.read_byte(pc + 1)
         return {
             "operand": "$%02x" % a,
@@ -240,7 +247,7 @@ class Disassembler:
             "memory": [a, 1, self.cpu.read_byte(a)],
         }
 
-    def zero_page_x_mode(self, pc):
+    def zero_page_x_mode(self, pc: int) -> OperandInfo:
         z = self.cpu.read_byte(pc + 1)
         a = (z + self.cpu.X) % 0x100
         return {
@@ -249,7 +256,7 @@ class Disassembler:
             "memory": [a, 1, self.cpu.read_byte(a)],
         }
 
-    def zero_page_y_mode(self, pc):
+    def zero_page_y_mode(self, pc: int) -> OperandInfo:
         z = self.cpu.read_byte(pc + 1)
         a = (z + self.cpu.Y) % 0x100
         return {
@@ -258,7 +265,7 @@ class Disassembler:
             "memory": [a, 1, self.cpu.read_byte(a)],
         }
 
-    def collect_op_info( self, pc ):
+    def collect_op_info( self, pc: int ) -> tuple[OperandInfo, int]:
         op = self.cpu.read_byte(pc)
         op_info = self.ops[op]
 
@@ -285,7 +292,7 @@ class Disassembler:
         return r, op_info[0]
 
 
-    def __disassemble_byte_blocks( self, byte_block_start, byte_block_end, lines ):
+    def __disassemble_byte_blocks( self, byte_block_start: int, byte_block_end: int, lines: list[list[str]] ) -> None:
 
         # convert [start:end] memory to 2-char hexbytes
         hexbytes = list(map(lambda x: hexbyte(x), self.memory._mem[byte_block_start:byte_block_end]))
@@ -314,14 +321,14 @@ class Disassembler:
             address += 16 if index > 0 else 16 - additional_spaces
 
 
-    def disassemble( self, start_address, end_address=0xC000, instructions=None ):
+    def disassemble( self, start_address: int, end_address: int = 0xC000, instructions: int | None = None ) -> list[list[str]]:
 
         # instructions: number of instructions to disassemble
         assert instructions is None or instructions > 0
 
         lines = []
 
-        def add_empty_line():
+        def add_empty_line() -> None:
             lines.append(['', '', '', '', '', ''])
 
         byte_block_start = None
@@ -343,7 +350,7 @@ class Disassembler:
                     self.__disassemble_byte_blocks( byte_block_start, byte_block_end, lines )
                     byte_block_start = None
 
-                info = self.memory_map.infos[address]  # type: OpInfo
+                info = self.memory_map.infos[address]
 
                 inline_label = ''
 
@@ -370,7 +377,7 @@ class Disassembler:
                         comments.append("< %s" % leaps_from)
 
                 instruction, length = self.collect_op_info( address )
-                bytes = instruction['bytes']
+                op_bytes = instruction['bytes']
 
                 operand = '' if 'operand' not in instruction else instruction['operand']
                 if 'operand_address' in instruction:
@@ -380,7 +387,7 @@ class Disassembler:
                 mnemonic = instruction['mnemonic']
 
                 if info.is_leap():
-                    info_leap = info  # type: OpInfo
+                    info_leap = info
                     if info_leap.is_branch():
                         # branch encountered in spidered section (i.e. not on real execution path) has branched==None
                         branched = info_leap.branched if info_leap.branched else "?"
@@ -389,9 +396,9 @@ class Disassembler:
                     elif mnemonic == "RTS":
                         comments.append("> %s" % info_leap.leaps_to.verbose( self ) )
 
-                str_bytes = hexbyte(bytes[0])
-                str_bytes += ' ' + hexbyte(bytes[1]) if len(bytes) > 1 else ''
-                str_bytes += ' ' + hexbyte(bytes[2]) if len(bytes) > 2 else ''
+                str_bytes = hexbyte(op_bytes[0])
+                str_bytes += ' ' + hexbyte(op_bytes[1]) if len(op_bytes) > 1 else ''
+                str_bytes += ' ' + hexbyte(op_bytes[2]) if len(op_bytes) > 2 else ''
 
                 line = [
                     hexaddr(address),
@@ -415,7 +422,7 @@ class Disassembler:
         return lines
 
 
-    def disassemble_formatted( self, start_address, end_address=0xC000, instructions=None ):
+    def disassemble_formatted( self, start_address: int, end_address: int = 0xC000, instructions: int | None = None ) -> list[str]:
         d = []
         lines = self.disassemble( start_address, end_address, instructions )
         for l in lines:
