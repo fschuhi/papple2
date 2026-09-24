@@ -27,6 +27,8 @@
 
 Each file its own approved step, `make test` green after each -- same rhythm as the pytest conversion work.
 
+Follow-up, after the signatures are done: annotate attributes where `mypy` cannot infer their type from the first value. Found in `core/cpu.py` (2026-09-24): `self.ops_dispatch = [None] * 0x100` makes `mypy` believe the list only holds `None` (151 errors, one per stored lambda) -- fix with `self.ops_dispatch: list[Callable[[], None] | None]`; `self.PC` starts as `None`, `self.branched` starts as `False` but later gets an int. Same kind in `core/memory.py`: `self.apple2` is `Apple2 | None`, and `mypy` cannot see that the `use_apple_*` flags guard it (3 errors). PyCharm does not flag these.
+
 `LLM_INSTRUCTIONS.md` requires type hints on every function signature. First surfaced when `tests/test_robotronxl.py` (added in the M7 session) turned out to be written without them; the Theme-1 conversion work made the gap bigger and, worse, inconsistent with itself.
 
 - Concrete inventory of what's inconsistent as of today, so this doesn't have to be re-derived:
