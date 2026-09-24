@@ -255,13 +255,6 @@ class Emulator:
 
         # TODO: add exceptions from connecting tiles to stretches in Emulator.load_image(), i.e. before entering the event_loop
 
-        if False:
-            self.mem[0x4572] = ord( 'F' )
-            self.mem[0x4573] = ord( 'R' )
-            self.mem[0x4574] = ord( 'A' )
-            self.mem[0x4575] = ord( 'N' )
-            self.mem[0x4576] = ord( 'K' )
-
     """
     event loop
     """
@@ -335,16 +328,6 @@ class Emulator:
                 self.post_op()
 
                 self.instructions += 1
-
-                # breakpoint events
-                if False:
-                    if self.cpu.PC in [0x4ec4, 0x4f65, 0x4f68]:
-                        self.states.dispatch(Event('breakpoint'))
-
-                # do things at certain PCs
-                if False:
-                    if self.cpu.PC == 0x4066:
-                        self.mem[0x1407] = 20
 
             passes += 1
             if passes % WINDOW_POLL_INTERVAL == 0:
