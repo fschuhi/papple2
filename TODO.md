@@ -49,24 +49,23 @@ See `DIRECTION.md` for the context of each item.
   - Stepping back stops one write early, so the very first write can never be undone (`> 1` instead of `> 0` in `restore_prev_state`: deliberate, or an off-by-one?).
 - `debug/assembler.py` calls `sys.exit(1)` on an error in the source it assembles. Fine for scripts and tests (`pytest` fails just that test), but it would end an interactive session (monitor, notebook) on a typo. Decide with the monitor: keep it, or raise an `AssemblerError` (stops just as fast, but can be caught -- and swallowed).
 - Check whether our leap recording handles two patterns where `JSR` and `RTS` don't pair up: tail calls (a `JMP` at the end of a routine instead of `JSR` + `RTS`, so the jumped-to routine's `RTS` returns straight to the original caller), and the RTS trick (push an address minus 1 onto the stack by hand, then `RTS` to jump there, e.g. for jump tables). Watch `has_matched_JSR` and how an `RTS` is matched to its `JSR`.
+- The memory map crashes on a `JMP` to its own address (`JMP *`, a "wait forever" loop): `MemoryMap._link_with_prev` asserts that an instruction never follows itself. The assertion is deliberate ("we do not allow jumps to self"), but real programs use `JMP *`. Found 2026-09-24.
 
 ## 4. Environment / packaging housekeeping
 
-- Bring in automated `black` formatting, as in some of my other projects: decide how it runs (a `make` target, PyCharm on save, or both), then reformat the whole codebase in one separate commit, so that later diffs show only real changes. Surfaced during the type hints sweep, 2026-09-24 (e.g. the `( self, x )` spacing in `core/cpu.py`).
-- _Needs investigation_: Python 3.14. `README.md` says pygame 2.6.1 fails under 3.14 (`mixer`, `font` missing), but that was the original `pygame`; `requirements.txt` now installs `pygame-ce`, the workaround. Does `pygame-ce` run on 3.14? If so, revisit the Python-version notes in `README.md`/`Makefile`.
-- Pin the installed `pysm` version in `requirements.txt`, left over from M3 (the `manifest.lst` note this came from, about `Assembler` being commented out, turned out to be stale -- `Assembler` was already active).
-- Public-repo prep, parked until Theme 1 is done: remove the contents from `data/bin` and `data/do`, use checked-in `.gitkeep` instead, files remain in the folders locally. Needs an explanatory section in `README.md` with the locations where to download the files.
+- Bring in automated `black` formatting, as in some of my other projects. Decide how it runs: a `make` target, PyCharm on save, or a pre-commit hook. A hook reformats on `git commit` and then stops the commit, so you have to `git add` and commit again; that's the "why do I have to commit twice" effect from other projects. Explain whichever choice plainly. Then reformat the whole codebase in one separate commit, so later diffs show only real changes, and list that commit in `.git-blame-ignore-revs`, so `git blame` looks past it.
+- Python 3.14: `pygame-ce` 2.5.8 works there (imports with `mixer` and `font` on 3.14.5, checked 2026-09-24). Remaining: run `make test` under 3.14, then update the Python-version notes in `README.md` and the `Makefile`.
+- Pin `pysm`'s version in `requirements.txt` (nothing is pinned today; `pip show pysm` shows the installed one). `pysm` first, because the emulator's state machine rests on it; decide whether to pin the others too.
 
 ## 5. Optional coverage
 
-- Finish the `unittest` -> `pytest` conversion: `tests/test_memory.py` and `tests/test_assembler.py` were never picked up by the 2026-09-12/14 conversion (see `HISTORY.md`). `test_memory.py` already has two `pytest` functions next to its old class (2026-09-24). In `test_assembler.py`, `test_dump` is a printing helper, not a test, but its `test_` name makes the runner collect and run it -- rename it during the conversion.
-- _Needs investigation, optional, carried over from M3:_ a second silent test that boots `A2ROM.BIN` (reset vector at `$FFFC`), runs for N instructions, presses a key, and asserts the ROM stored it in the input buffer at `$0200`. Not required for M3's Done-when, parked here in case it's still wanted.
+- Finish the `unittest` -> `pytest` conversion: `tests/test_memory.py` and `tests/test_assembler.py` still use `unittest` (`test_memory.py` already has two `pytest` functions next to its old class). In `test_assembler.py`, rename `test_dump`: it's a printing helper, but its `test_` name makes the runner run it as a test.
 
 ## 6. Performance (parked, 2026-09-23)
 
 Measured with `cProfile` on the headless Lode Runner run, see `HISTORY.md` 2026-09-23. Headless already runs at about twice real Apple II speed, so none of these is needed today.
 
-- `is_executing()` is called three times per instruction and walks the `pysm` state machine each time (about 8% headless). If ever: a plain flag set in the Running state's entry and exit handlers, not a local copy in `Emulator.run()`.
-- `Emulator.post_op()` calls `post_op()` of `TimeMachine`/`MemAccessCollector` even while they are disabled (about 7% headless): check their enabled flag instead of whether the object exists.
-- `MemoryMap.post_op()` defines three inner functions on every call.
-- No speed limit in `papple2`: the game slows itself down on repeated left-arrow presses, and future hooks will cost speed anyway.
+- `is_executing()` runs three times per instruction and asks the `pysm` state machine each time (about 8% headless). The flag already exists: `executing` is set in both states' `on_enter`/`on_exit`, and agrees with the state after every transition (checked 2026-09-24), except right after construction: `pysm` only fires the initial state's `on_enter` with `initialize(fire_events_on_init=True)`, which `papple2` doesn't pass. If ever: pass it (check that Running's `on_enter` is safe that early, e.g. without a window yet), `return self.executing`, and add a test that the flag agrees with the state.
+- ~~`Emulator.post_op()` called `post_op()` on `TimeMachine` and `MemAccessCollector` even while they were switched off (about 7% headless).~~ -- Fixed 2026-09-24: it checks their `hooked` flag.
+- ~~`MemoryMap.post_op()` defined three helper functions inside itself, rebuilt on every instruction.~~ -- Fixed 2026-09-24: private methods (measured 1288 -> 836 ns per call).
+- Speed limit: `papple2` runs as fast as Python allows, faster than a real Apple II. Lode Runner's attract mode is visibly too fast, and steering the player will be hard once real play works (see the real-play item in section 2). _Needs investigation:_ how emulators handle this; decide only once watches and hooks show what they cost.
