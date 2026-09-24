@@ -529,16 +529,3 @@ class Apple2:
         self.display.unpickle(unpickler)
         self.speaker.unpickle(unpickler)
         self.softswitches.unpickle(unpickler)
-
-
-def determine_states_from_kmods() -> int:
-    mods = pygame.key.get_mods()
-    if mods & pygame.KMOD_SHIFT:
-        states = 200
-    elif mods & pygame.KMOD_CTRL:
-        states = 20
-    elif mods & pygame.KMOD_ALT:
-        states = 1
-    else:
-        states = 2000
-    return states

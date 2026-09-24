@@ -1,9 +1,14 @@
 import time
+from typing import TYPE_CHECKING
+
 import pygame
 from pysm import Event
 
+if TYPE_CHECKING:
+    from papple2.core.emulator import Emulator
 
-def determine_states_from_kmods():
+
+def determine_states_from_kmods() -> int:
     mods = pygame.key.get_mods()
     if mods & pygame.KMOD_SHIFT:
         states = 200
@@ -18,11 +23,11 @@ def determine_states_from_kmods():
 
 class PygameWindow:
 
-    def __init__(self, emulator):
+    def __init__(self, emulator: "Emulator") -> None:
         self.emulator = emulator
         self.display = emulator.display
 
-    def poll(self):
+    def poll(self) -> list[Event]:
         events = []
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -76,24 +81,24 @@ class PygameWindow:
             return Event('l')
         return None
 
-    def present(self):
+    def present(self) -> None:
         elapsed_time = time.monotonic() - self.emulator.last_ticks
         if elapsed_time > self.emulator.elapsed_frame:
             self.display.flash()
             pygame.display.flip()
             self.emulator.last_ticks = time.monotonic()
 
-    def status(self, text):
+    def status(self, text: str) -> None:
         self.display.show_status(text)
 
 
 class NoWindow:
 
-    def poll(self):
+    def poll(self) -> list[Event]:
         return []
 
-    def present(self):
+    def present(self) -> None:
         pass
 
-    def status(self, text):
+    def status(self, text: str) -> None:
         pass
