@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Papple is based on ApplePy, see LICNSE
+# Papple is based on ApplePy, see LICENSE
 
 # ApplePy - an Apple ][ emulator in Python
 # James Tauber / http://jtauber.com/
@@ -11,10 +11,10 @@ import io
 from pickle import Pickler, Unpickler
 
 from papple2.util import hexaddr, hexbyte
-import sys
+from papple2.core.memory import Memory
 
 
-def signed( x ):
+def signed( x: int ) -> int:
     if x > 0x7F:
         x -= 0x100
     return x
@@ -34,30 +34,11 @@ JMP_absolute = 0x4C
 JMP_indirect = 0x6C
 
 
-def verbose_branch( opcode ):
-    if opcode == BPL:
-        return 'BPL'
-    elif opcode == BMI:
-        return 'BMI'
-    elif opcode == BVC:
-        return 'BVC'
-    elif opcode == BVS:
-        return 'BVS'
-    elif opcode == BCC:
-        return 'BCC'
-    elif opcode == BVS:
-        return 'BCS'
-    elif opcode == BNE:
-        return 'BNE'
-    elif opcode == BEQ:
-        return 'BEQ'
-
-
 class CPU:
     STACK_PAGE = 0x100
     RESET_VECTOR = 0xFFFC
 
-    def __init__( self, memory, program_counter ):
+    def __init__( self, memory: Memory, program_counter: int | None ) -> None:
         self.memory = memory
 
         self.A = 0x00
@@ -93,7 +74,7 @@ class CPU:
         self.op_hook = None
 
 
-    def reset( self ):
+    def reset( self ) -> None:
         self.A = 0x00
         self.X = 0x00
         self.Y = 0x00
@@ -112,7 +93,7 @@ class CPU:
         self.PC = self.read_word( self.RESET_VECTOR )
         self.last_PC = None
 
-    def pickle( self, pickler: Pickler ):
+    def pickle( self, pickler: Pickler ) -> None:
         pickler.dump( self.A )
         pickler.dump( self.X )
         pickler.dump( self.Y )
@@ -125,7 +106,7 @@ class CPU:
         pickler.dump( self.PC )
         pickler.dump( self.last_PC )
 
-    def unpickle( self, unpickler: Unpickler ):
+    def unpickle( self, unpickler: Unpickler ) -> None:
         self.A = unpickler.load( )
         self.X = unpickler.load( )
         self.Y = unpickler.load( )
@@ -138,19 +119,19 @@ class CPU:
         self.PC = unpickler.load( )
         self.last_PC = unpickler.load( )
 
-    def pickle_to_variable(self):
+    def pickle_to_variable(self) -> bytes:
         f = io.BytesIO()
         pickler = Pickler(f)
         self.pickle(pickler)
         pickled_cpu = f.getvalue()
         return pickled_cpu
 
-    def unpickle_from_variable(self, pickled_cpu):
+    def unpickle_from_variable(self, pickled_cpu: bytes) -> None:
         f = io.BytesIO(pickled_cpu)
         unpickler = Unpickler(f)
         self.unpickle(unpickler)
 
-    def verbose_status(self):
+    def verbose_status(self) -> str:
         flags = [
             'C' if self.carry_flag else 'c',
             'Z' if self.zero_flag else 'z',
@@ -162,7 +143,7 @@ class CPU:
         ]
         return ''.join(flags)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "PC=%s A=%s X=%s Y=%s SP=%s F=%s" % (
             hexaddr(self.PC, show_dollar=False),
             hexbyte(self.A),
@@ -172,7 +153,7 @@ class CPU:
             self.verbose_status()
         )
 
-    def setup_ops_dispatch( self ):
+    def setup_ops_dispatch( self ) -> None:
         self.ops_dispatch[BPL] = lambda: self.BPL( self.relative_mode( ) )
         self.ops_dispatch[BMI] = lambda: self.BMI( self.relative_mode( ) )
         self.ops_dispatch[BVC] = lambda: self.BVC( self.relative_mode( ) )
@@ -329,7 +310,7 @@ class CPU:
         self.ops_dispatch[0xFE] = lambda: self.INC( self.absolute_x_mode( rmw=True ) )
 
 
-    def do_next_step( self ):
+    def do_next_step( self ) -> None:
         if self.op_hook and self.op_hook(self):
             return
 
@@ -359,37 +340,37 @@ class CPU:
 
     # read/write
 
-    def get_and_inc_pc( self, inc=1 ):
+    def get_and_inc_pc( self, inc: int = 1 ) -> int:
         # ((ESHGNSG)) pc is on opcode
         pc = self.PC
         self.PC += inc
         return pc
 
-    def read_byte( self, address, hook=True ):
+    def read_byte( self, address: int, hook: bool = True ) -> int:
         value = self.memory.read_byte( address )
         if not self.immediate and hook and self.read_hook:
             self.read_hook(address, value)
         return value
 
-    def read_word( self, address, hook=True ):
+    def read_word( self, address: int, hook: bool = True ) -> int:
         value = self.memory.read_word( address )
         if hook and self.read_hook:
             self.read_hook(address, value)
         return value
 
-    def read_word_bug( self, address ):
+    def read_word_bug( self, address: int ) -> int:
         value = self.memory.read_word_bug( address )
         if self.read_hook:
             self.read_hook(address, value)
         return value
 
-    def read_pc_byte( self ):
+    def read_pc_byte( self ) -> int:
         return self.read_byte( self.get_and_inc_pc( ), hook=False )
 
-    def read_pc_word( self ):
+    def read_pc_word( self ) -> int:
         return self.read_word( self.get_and_inc_pc( 2 ), hook=False )
 
-    def write_byte( self, address, value ):
+    def write_byte( self, address: int, value: int ) -> None:
         if self.write_hook:
             if self.write_hook(address, value):
                 self.memory.write_byte( address, value )
@@ -398,7 +379,7 @@ class CPU:
 
     ####
 
-    def status_from_byte( self, status ):
+    def status_from_byte( self, status: int ) -> None:
         self.carry_flag = [0, 1][0 != status & 1]
         self.zero_flag = [0, 1][0 != status & 2]
         self.interrupt_disable_flag = [0, 1][0 != status & 4]
@@ -407,25 +388,25 @@ class CPU:
         self.overflow_flag = [0, 1][0 != status & 64]
         self.sign_flag = [0, 1][0 != status & 128]
 
-    def status_as_byte( self ):
+    def status_as_byte( self ) -> int:
         return self.carry_flag | self.zero_flag << 1 | self.interrupt_disable_flag << 2 | self.decimal_mode_flag << 3 | self.break_flag << 4 | 1 << 5 | self.overflow_flag << 6 | self.sign_flag << 7
 
     ####
 
-    def push_byte( self, byte ):
+    def push_byte( self, byte: int ) -> None:
         self.write_byte( self.STACK_PAGE + self.SP, byte )
         self.SP = (self.SP - 1) % 0x100
 
-    def pull_byte( self ):
+    def pull_byte( self ) -> int:
         self.SP = (self.SP + 1) % 0x100
         return self.read_byte( self.STACK_PAGE + self.SP )
 
-    def push_word( self, word ):
+    def push_word( self, word: int ) -> None:
         hi, lo = divmod( word, 0x100 )
         self.push_byte( hi )
         self.push_byte( lo )
 
-    def pull_word( self ):
+    def pull_word( self ) -> int:
         # two single pulls, so the stack pointer wraps within page 1 like on
         # the real 6502: with SP=$FF the word comes from $0100/$0101
         lo = self.pull_byte( )
@@ -434,54 +415,54 @@ class CPU:
 
     ####
 
-    def immediate_mode( self ):
+    def immediate_mode( self ) -> int:
         self.operand_length = 1
         self.immediate = True
         return self.get_and_inc_pc( )
 
-    def absolute_mode( self ):
+    def absolute_mode( self ) -> int:
         self.operand_length = 2
         self.cycles += 2
         return self.read_pc_word( )
 
-    def absolute_x_mode( self, rmw=False ):
+    def absolute_x_mode( self, rmw: bool = False ) -> int:
         self.operand_length = 2
         if rmw:
             self.cycles += 1
         return self.absolute_mode( ) + self.X
 
-    def absolute_y_mode( self, rmw=False ):
+    def absolute_y_mode( self, rmw: bool = False ) -> int:
         self.operand_length = 2
         if rmw:
             self.cycles += 1
         return self.absolute_mode( ) + self.Y
 
-    def zero_page_mode( self ):
+    def zero_page_mode( self ) -> int:
         self.operand_length = 1
         self.cycles += 1
         return self.read_pc_byte( )
 
-    def zero_page_x_mode( self ):
+    def zero_page_x_mode( self ) -> int:
         self.operand_length = 1
         self.cycles += 1
         return (self.zero_page_mode( ) + self.X) % 0x100
 
-    def zero_page_y_mode( self ):
+    def zero_page_y_mode( self ) -> int:
         self.operand_length = 1
         self.cycles += 1
         return (self.zero_page_mode( ) + self.Y) % 0x100
 
-    def indirect_mode( self ):
+    def indirect_mode( self ) -> int:
         self.operand_length = 2
         self.cycles += 2
         return self.read_word_bug( self.absolute_mode( ) )
 
-    def indirect_x_mode( self ):
+    def indirect_x_mode( self ) -> int:
         self.operand_length = 1
         self.cycles += 4
         return self.read_word_bug( (self.read_pc_byte( ) + self.X) % 0x100 )
 
-    def indirect_y_mode( self, rmw=False ):
+    def indirect_y_mode( self, rmw: bool = False ) -> int:
         self.operand_length = 1
         if rmw:
             self.cycles += 4
@@ -489,20 +470,20 @@ class CPU:
             self.cycles += 3
         return self.read_word_bug( self.read_pc_byte( ) ) + self.Y
 
-    def relative_mode( self ):
+    def relative_mode( self ) -> int:
         self.operand_length = 1
         pc = self.get_and_inc_pc( )
         return pc + 1 + signed( self.read_byte( pc, hook=False ) )
 
     ####
 
-    def update_nz( self, value ):
+    def update_nz( self, value: int ) -> int:
         value = value % 0x100
         self.zero_flag = [0, 1][(value == 0)]
         self.sign_flag = [0, 1][((value & 0x80) != 0)]
         return value
 
-    def update_nzc( self, value ):
+    def update_nzc( self, value: int ) -> int:
         self.carry_flag = [0, 1][(value > 0xFF)]
         return self.update_nz( value )
 
@@ -510,54 +491,54 @@ class CPU:
 
     # LOAD / STORE
 
-    def LDA( self, operand_address ):
+    def LDA( self, operand_address: int ) -> None:
         self.A = self.update_nz( self.read_byte( operand_address ) )
 
-    def LDX( self, operand_address ):
+    def LDX( self, operand_address: int ) -> None:
         self.X = self.update_nz( self.read_byte( operand_address ) )
 
-    def LDY( self, operand_address ):
+    def LDY( self, operand_address: int ) -> None:
         self.Y = self.update_nz( self.read_byte( operand_address ) )
 
-    def STA( self, operand_address ):
+    def STA( self, operand_address: int ) -> None:
         self.write_byte( operand_address, self.A )
 
-    def STX( self, operand_address ):
+    def STX( self, operand_address: int ) -> None:
         self.write_byte( operand_address, self.X )
 
-    def STY( self, operand_address ):
+    def STY( self, operand_address: int ) -> None:
         self.write_byte( operand_address, self.Y )
 
     # TRANSFER
 
-    def TAX( self ):
+    def TAX( self ) -> None:
         self.X = self.update_nz( self.A )
 
-    def TXA( self ):
+    def TXA( self ) -> None:
         self.A = self.update_nz( self.X )
 
-    def TAY( self ):
+    def TAY( self ) -> None:
         self.Y = self.update_nz( self.A )
 
-    def TYA( self ):
+    def TYA( self ) -> None:
         self.A = self.update_nz( self.Y )
 
-    def TSX( self ):
+    def TSX( self ) -> None:
         self.X = self.update_nz( self.SP )
 
-    def TXS( self ):
+    def TXS( self ) -> None:
         self.SP = self.X
 
     # SHIFTS / ROTATES
 
-    def ASL( self, operand_address=None ):
+    def ASL( self, operand_address: int | None = None ) -> None:
         if operand_address is None:
             self.A = self.update_nzc( self.A << 1 )
         else:
             self.cycles += 2
             self.write_byte( operand_address, self.update_nzc( self.read_byte( operand_address ) << 1 ) )
 
-    def ROL( self, operand_address=None ):
+    def ROL( self, operand_address: int | None = None ) -> None:
         if operand_address is None:
             a = self.A << 1
             if self.carry_flag:
@@ -570,7 +551,7 @@ class CPU:
                 m = m | 0x01
             self.write_byte( operand_address, self.update_nzc( m ) )
 
-    def ROR( self, operand_address=None ):
+    def ROR( self, operand_address: int | None = None ) -> None:
         if operand_address is None:
             if self.carry_flag:
                 self.A = self.A | 0x100
@@ -584,7 +565,7 @@ class CPU:
             self.carry_flag = m % 2
             self.write_byte( operand_address, self.update_nz( m >> 1 ) )
 
-    def LSR( self, operand_address=None ):
+    def LSR( self, operand_address: int | None = None ) -> None:
         if operand_address is None:
             self.carry_flag = self.A % 2
             self.A = self.update_nz( self.A >> 1 )
@@ -595,23 +576,23 @@ class CPU:
 
     # JUMPS / RETURNS
 
-    def JMP( self, operand_address ):
+    def JMP( self, operand_address: int ) -> None:
         self.cycles -= 1
         self.PC = operand_address
 
-    def JSR( self, operand_address ):
+    def JSR( self, operand_address: int ) -> None:
         self.cycles += 2
         self.push_word( self.PC - 1 )
         self.PC = operand_address
 
-    def RTS( self ):
+    def RTS( self ) -> None:
         self.cycles += 4
         target_pc = self.pull_word( ) + 1
         self.PC = target_pc
 
     # BRANCHES
 
-    def handle_branching( self, operand_address, must_branch ):
+    def handle_branching( self, operand_address: int, must_branch: int ) -> None:
         # that's how "branching" is defined...
         # BUT: we cannot test this here, because the nosetests call the Bxx method directly, w/o running actual code
         # assert self.current_opcode in [BCC, BCS, BEQ, BNE, BMI, BPL, BVC, BVS]
@@ -623,107 +604,107 @@ class CPU:
 
         self.branched = must_branch
 
-    def BCC( self, operand_address ):
+    def BCC( self, operand_address: int ) -> None:
         self.handle_branching( operand_address, not self.carry_flag )
 
-    def BCS( self, operand_address ):
+    def BCS( self, operand_address: int ) -> None:
         self.handle_branching( operand_address, self.carry_flag )
 
-    def BEQ( self, operand_address ):
+    def BEQ( self, operand_address: int ) -> None:
         self.handle_branching( operand_address, self.zero_flag )
 
-    def BNE( self, operand_address ):
+    def BNE( self, operand_address: int ) -> None:
         self.handle_branching( operand_address, not self.zero_flag )
 
-    def BMI( self, operand_address ):
+    def BMI( self, operand_address: int ) -> None:
         self.handle_branching( operand_address, self.sign_flag )
 
-    def BPL( self, operand_address ):
+    def BPL( self, operand_address: int ) -> None:
         self.handle_branching( operand_address, not self.sign_flag )
 
-    def BVC( self, operand_address ):
+    def BVC( self, operand_address: int ) -> None:
         self.handle_branching( operand_address, not self.overflow_flag )
 
-    def BVS( self, operand_address ):
+    def BVS( self, operand_address: int ) -> None:
         self.handle_branching( operand_address, self.overflow_flag )
 
     # SET / CLEAR FLAGS
 
-    def CLC( self ):
+    def CLC( self ) -> None:
         self.carry_flag = 0
 
-    def CLD( self ):
+    def CLD( self ) -> None:
         self.decimal_mode_flag = 0
 
-    def CLI( self ):
+    def CLI( self ) -> None:
         self.interrupt_disable_flag = 0
 
-    def CLV( self ):
+    def CLV( self ) -> None:
         self.overflow_flag = 0
 
-    def SEC( self ):
+    def SEC( self ) -> None:
         self.carry_flag = 1
 
-    def SED( self ):
+    def SED( self ) -> None:
         self.decimal_mode_flag = 1
 
-    def SEI( self ):
+    def SEI( self ) -> None:
         self.interrupt_disable_flag = 1
 
     # INCREMENT / DECREMENT
 
-    def DEC( self, operand_address ):
+    def DEC( self, operand_address: int ) -> None:
         self.cycles += 2
         self.write_byte( operand_address, self.update_nz( self.read_byte( operand_address ) - 1 ) )
 
-    def DEX( self ):
+    def DEX( self ) -> None:
         self.X = self.update_nz( self.X - 1 )
 
-    def DEY( self ):
+    def DEY( self ) -> None:
         self.Y = self.update_nz( self.Y - 1 )
 
-    def INC( self, operand_address ):
+    def INC( self, operand_address: int ) -> None:
         self.cycles += 2
         self.write_byte( operand_address, self.update_nz( self.read_byte( operand_address ) + 1 ) )
 
-    def INX( self ):
+    def INX( self ) -> None:
         self.X = self.update_nz( self.X + 1 )
 
-    def INY( self ):
+    def INY( self ) -> None:
         self.Y = self.update_nz( self.Y + 1 )
 
     # PUSH / PULL
 
-    def PHA( self ):
+    def PHA( self ) -> None:
         self.cycles += 1
         self.push_byte( self.A )
 
-    def PHP( self ):
+    def PHP( self ) -> None:
         self.cycles += 1
         self.push_byte( self.status_as_byte( ) )
 
-    def PLA( self ):
+    def PLA( self ) -> None:
         self.cycles += 2
         self.A = self.update_nz( self.pull_byte( ) )
 
-    def PLP( self ):
+    def PLP( self ) -> None:
         self.cycles += 2
         self.status_from_byte( self.pull_byte( ) )
 
     # LOGIC
 
-    def AND( self, operand_address ):
+    def AND( self, operand_address: int ) -> None:
         self.A = self.update_nz( self.A & self.read_byte( operand_address ) )
 
-    def ORA( self, operand_address ):
+    def ORA( self, operand_address: int ) -> None:
         self.A = self.update_nz( self.A | self.read_byte( operand_address ) )
 
-    def EOR( self, operand_address ):
+    def EOR( self, operand_address: int ) -> None:
         self.A = self.update_nz( self.A ^ self.read_byte( operand_address ) )
 
     # ARITHMETIC
 
-    def ADC( self, operand_address ):
+    def ADC( self, operand_address: int ) -> None:
         if self.decimal_mode_flag:
             self.A = self.update_nz( self.decimal_add( self.read_byte( operand_address ) ) )
             return
@@ -744,7 +725,7 @@ class CPU:
         # perhaps this could be calculated from result2 but result1 is more intuitive
         self.overflow_flag = [0, 1][(result1 > 127) | (result1 < -128)]
 
-    def SBC( self, operand_address ):
+    def SBC( self, operand_address: int ) -> None:
         if self.decimal_mode_flag:
             self.A = self.update_nz( self.decimal_subtract( self.read_byte( operand_address ) ) )
             return
@@ -773,7 +754,7 @@ class CPU:
     # intermediate value instead; games rely on the carry and the result, not
     # on that quirk, so it is not reproduced. V is left unchanged.
 
-    def decimal_add( self, operand ):
+    def decimal_add( self, operand: int ) -> int:
         lo = (self.A & 0x0F) + (operand & 0x0F) + self.carry_flag
         hi = (self.A >> 4) + (operand >> 4)
         if lo > 9:
@@ -784,7 +765,7 @@ class CPU:
             hi -= 10
         return ((hi << 4) | lo) & 0xFF
 
-    def decimal_subtract( self, operand ):
+    def decimal_subtract( self, operand: int ) -> int:
         lo = (self.A & 0x0F) - (operand & 0x0F) - [1, 0][self.carry_flag]
         hi = (self.A >> 4) - (operand >> 4)
         if lo < 0:
@@ -797,7 +778,7 @@ class CPU:
 
     # BIT
 
-    def BIT( self, operand_address ):
+    def BIT( self, operand_address: int ) -> None:
         value = self.read_byte( operand_address )
         self.sign_flag = ((value >> 7) % 2)  # bit 7
         self.overflow_flag = ((value >> 6) % 2)  # bit 6
@@ -805,34 +786,34 @@ class CPU:
 
     # COMPARISON
 
-    def CMP( self, operand_address ):
+    def CMP( self, operand_address: int ) -> None:
         result = self.A - self.read_byte( operand_address )
         self.carry_flag = [0, 1][(result >= 0)]
         self.update_nz( result )
 
-    def CPX( self, operand_address ):
+    def CPX( self, operand_address: int ) -> None:
         result = self.X - self.read_byte( operand_address )
         self.carry_flag = [0, 1][(result >= 0)]
         self.update_nz( result )
 
-    def CPY( self, operand_address ):
+    def CPY( self, operand_address: int ) -> None:
         result = self.Y - self.read_byte( operand_address )
         self.carry_flag = [0, 1][(result >= 0)]
         self.update_nz( result )
 
     # SYSTEM
 
-    def NOP( self ):
+    def NOP( self ) -> None:
         pass
 
-    def BRK( self ):
+    def BRK( self ) -> None:
         self.cycles += 5
         self.push_word( self.PC + 1 )
         self.push_byte( self.status_as_byte( ) )
         self.PC = self.read_word( 0xFFFE )
         self.break_flag = 1
 
-    def RTI( self ):
+    def RTI( self ) -> None:
         self.cycles += 4
         self.status_from_byte( self.pull_byte( ) )
         self.PC = self.pull_word( )
