@@ -20,24 +20,34 @@
 # https://www.hex-rays.com/products/ida/
 
 import time
+from collections.abc import Callable
+from pickle import Pickler, Unpickler
+
 from papple2.util import hexaddr, hexbyte, Ascii2Apple2Ascii, Apple2Ascii2Ascii
 from papple2.core.apple import Apple2
-from papple2.core.cpu import JMP_indirect, JMP_absolute, RTS, JSR
-from papple2.debug.memory_map import MemoryMap
+from papple2.core.cpu import CPU, JMP_indirect, JMP_absolute, RTS, JSR
+from papple2.debug.memory_map import MemoryMap, OpInfo
 from papple2.core.hooks import TimeMachine, MemAccessCollector
 from papple2.core.window import PygameWindow, NoWindow
 from pysm import State, StateMachine, Event
 
+# The two kinds of functions Emulator.run() calls on every instruction.
+# A checkpoint returns (stay active, execute this instruction); an `until`
+# condition returns True when run() should stop. `type` aliases are lazy,
+# so they can name Emulator before the class is defined below.
+type Checkpoint = Callable[[Emulator], tuple[bool, bool]]
+type Until = Callable[[Emulator], bool]
+
 class EmulatorRunningState( StateMachine ):
-    def __init__(self, emulator_states):
+    def __init__(self, emulator_states: "EmulatorStates") -> None:
         super().__init__('Running')
-        self.emulator_states = emulator_states  # type: EmulatorStates
+        self.emulator_states = emulator_states
         self.emulator = self.emulator_states.emulator
         self.apple2 = self.emulator.apple2
         self.cpu = self.emulator.cpu
         self.window = self.emulator.window
 
-    def register_handlers(self):
+    def register_handlers(self) -> None:
         self.handlers = {
             'enter': self.on_enter,
             'exit': self.on_exit,
@@ -45,33 +55,33 @@ class EmulatorRunningState( StateMachine ):
             'key': self.on_key,
         }
 
-    def on_enter(self, state, event):
+    def on_enter(self, state: State, event: Event) -> None:
         self.emulator.executing = True
 
-    def on_exit(self, state, event):
+    def on_exit(self, state: State, event: Event) -> None:
         self.emulator.executing = False
 
-    def on_breakpoint( self, state, event ):
+    def on_breakpoint( self, state: State, event: Event ) -> None:
         self.window.status("execution stopped (breakpoint), %s" % str(self.cpu))
 
-    def action(self, state, event):
+    def action(self, state: State, event: Event) -> None:
         print("action!!!! we are in state '%s', handling event '%s'" % (state.name, event.name))
 
-    def on_key(self, state, event):
+    def on_key(self, state: State, event: Event) -> None:
         key = event.cargo['key']
         self.emulator.press_key(key)
 
 
 class EmulatorStoppedState( StateMachine ):
-    def __init__(self, emulator_states):
+    def __init__(self, emulator_states: "EmulatorStates") -> None:
         super().__init__('Stopped')
-        self.emulator_states = emulator_states  # type: EmulatorStates
+        self.emulator_states = emulator_states
         self.emulator = self.emulator_states.emulator
         self.window = self.emulator.window
         self.cpu = self.emulator_states.cpu
         self.mem = self.emulator_states.mem
 
-    def register_handlers(self):
+    def register_handlers(self) -> None:
         self.handlers = {
             'enter': self.on_enter,
             'exit': self.on_exit,
@@ -80,41 +90,41 @@ class EmulatorStoppedState( StateMachine ):
             'd': self.on_d,
         }
 
-    def on_enter(self, state, event):
+    def on_enter(self, state: State, event: Event) -> None:
         # formerly known as suspend_execution()
         self.emulator.executing = False
-        print("on_exit")
+        print("on_enter")
         self.window.status("execution stopped, %s" % str(self.cpu))
         self.emulator.time_machine.enable_restoring( )
 
-    def on_exit(self, state, event):
+    def on_exit(self, state: State, event: Event) -> None:
         # formerly known as resume_execution()
         self.emulator.executing = True
-        print("on_enter")
+        print("on_exit")
         self.emulator.time_machine.disable_restoring( )
         self.window.status("execution resumed, %s" % str(self.cpu))
 
-    def on_left(self, state, event):
+    def on_left(self, state: State, event: Event) -> None:
         kbd_states = event.cargo['kbd_states']
         print("restore")
         self.emulator.time_machine.restore_prev_state(kbd_states)
 
-    def on_right(self, state, event):
+    def on_right(self, state: State, event: Event) -> None:
         kbd_states = event.cargo['kbd_states']
         self.emulator.time_machine.restore_next_state(kbd_states)
 
-    def on_d(self, state, event):
+    def on_d(self, state: State, event: Event) -> None:
         self.window.status(str(self.cpu))
 
 
 class EmulatorStates:
 
-    def __init__(self, emulator):
+    def __init__(self, emulator: "Emulator") -> None:
         self.emulator = emulator
         self.apple2 = self.emulator.apple2
         self.display = self.apple2.display
-        self.cpu = self.apple2.cpu  # type: CPU
-        self.mem = self.apple2.memory._mem   # type: [int]
+        self.cpu: CPU = self.apple2.cpu
+        self.mem: list[int] = self.apple2.memory._mem
         self.map = self.emulator.map
 
         self.sm = StateMachine('emulator')
@@ -144,21 +154,21 @@ class EmulatorStates:
 
 
     @property
-    def leaf_state(self):
+    def leaf_state(self) -> State:
         return self.sm.leaf_state
 
-    def dispatch(self, event):
+    def dispatch(self, event: Event) -> None:
         return self.sm.dispatch(event)
 
 
-def after_instructions(n):
-    def until(emulator):
+def after_instructions(n: int) -> Until:
+    def until(emulator: "Emulator") -> bool:
         return emulator.instructions >= n
     return until
 
 
-def at_address(address):
-    def until(emulator):
+def at_address(address: int) -> Until:
+    def until(emulator: "Emulator") -> bool:
         return emulator.cpu.PC == address
     return until
 
@@ -173,12 +183,12 @@ WINDOW_POLL_INTERVAL = 1000
 
 class Emulator:
 
-    def __init__(self, no_display=False, quiet=True, frame_rate=20, time_machine=False, mem_access=False, data_dir=None):
-        self.apple2 = Apple2( no_display, quiet, frame_rate, data_dir )  # type: Apple2
+    def __init__(self, no_display: bool = False, quiet: bool = True, frame_rate: int = 20, time_machine: bool = False, mem_access: bool = False, data_dir: str | None = None) -> None:
+        self.apple2: Apple2 = Apple2( no_display, quiet, frame_rate, data_dir )
         self.display = self.apple2.display
-        self.cpu = self.apple2.cpu  # type: CPU
-        self.mem = self.apple2.memory._mem   # type: [int]
-        self.map = MemoryMap( self.cpu.memory )  # type: MemoryMap
+        self.cpu: CPU = self.apple2.cpu
+        self.mem: list[int] = self.apple2.memory._mem
+        self.map: MemoryMap = MemoryMap( self.cpu.memory )
         self.window = NoWindow() if no_display else PygameWindow( self )
 
         self.states = EmulatorStates( self )
@@ -214,7 +224,7 @@ class Emulator:
         self.stepsize = 10000
 
 
-    def pickle(self, pickler):
+    def pickle(self, pickler: Pickler) -> None:
         # pickle apple2, including all parts of Apple2 (e.g. Memory, CPU)
         self.apple2.pickle( pickler )
 
@@ -226,7 +236,7 @@ class Emulator:
         pickler.dump(self.jsr_stack)
         pickler.dump(self.prev_info)
 
-    def unpickle(self, unpickler):
+    def unpickle(self, unpickler: Unpickler) -> None:
         self.apple2.unpickle( unpickler )
         self.map.unpickle( unpickler )
         self.elapsed_frame = unpickler.load()
@@ -238,7 +248,7 @@ class Emulator:
     BIN loading
     """
 
-    def load_image(self, start_address: int, fn: str):
+    def load_image(self, start_address: int, fn: str) -> None:
         self.apple2.memory.load_image(start_address, fn)
         if self.apple2.cpu.PC is None:
             self.apple2.cpu.PC = start_address
@@ -256,7 +266,7 @@ class Emulator:
     event loop
     """
 
-    def write_hook(self, address, newvalue):
+    def write_hook(self, address: int, newvalue: int) -> bool:
         if not self.write_hook_enabled: return True
         #if address != 0x1407: return True
         #print("PC=%s" % hexaddr(self.cpu.PC))
@@ -264,23 +274,23 @@ class Emulator:
         return True
 
 
-    def add_checkpoint( self, func ):
+    def add_checkpoint( self, func: Checkpoint ) -> None:
         active = True
         self.checkpoints.append( (active, func) )
 
 
-    def press_key(self, ascii_code):
+    def press_key(self, ascii_code: int) -> None:
         # high bit always set
         apple2key = Ascii2Apple2Ascii(ascii_code)
-        self.apple2.softswitches.kbd = Ascii2Apple2Ascii(apple2key)
+        self.apple2.softswitches.kbd = apple2key
         print(self.cpu.cycles, "pressed (pygame)", hexbyte(Apple2Ascii2Ascii(apple2key)))
 
 
-    def is_executing(self):
+    def is_executing(self) -> bool:
         return self.states.leaf_state.name == 'Running'
 
 
-    def run(self, until=None):
+    def run(self, until: Until | None = None) -> None:
 
         self.instructions = 0
         self.stepsize = 10000
@@ -291,7 +301,7 @@ class Emulator:
             self._until_checkpoint = None
 
         if until is not None:
-            def check_until(emulator):
+            def check_until(emulator: "Emulator") -> tuple[bool, bool]:
                 return (False, False) if until(emulator) else (True, True)
             self._until_checkpoint = (True, check_until)
             self.checkpoints.append(self._until_checkpoint)
@@ -356,11 +366,11 @@ class Emulator:
         print(self.states.leaf_state.name)
 
 
-    def event_loop(self):
+    def event_loop(self) -> None:
         return self.run()
 
 
-    def post_op(self):
+    def post_op(self) -> OpInfo:
         # ASSUMPTION: we are emulating on the execution path, i.e. there CPU is running
         op_address = self.cpu.last_PC
         operand_length = self.cpu.operand_length
@@ -402,18 +412,18 @@ class Emulator:
     register leaps with MemoryMap
     """
 
-    def handle_branching(self, leap_from_info):
+    def handle_branching(self, leap_from_info: OpInfo) -> None:
         branched = self.cpu.branched
         self.map.register_branch( leap_from_info, self.cpu.PC, branched )
 
-    def handle_jmp(self, leap_from_info):
+    def handle_jmp(self, leap_from_info: OpInfo) -> None:
         self.map.register_jmp( leap_from_info, self.cpu.PC )
 
-    def handle_jsr(self, leap_from_info):
+    def handle_jsr(self, leap_from_info: OpInfo) -> None:
         self.jsr_stack.append( self.cpu.last_PC )
         self.map.register_jsr( leap_from_info, self.cpu.PC )
 
-    def handle_rts(self, leap_from_info):
+    def handle_rts(self, leap_from_info: OpInfo) -> None:
         pc = self.cpu.PC
         assumed_jsr = pc - 3
 

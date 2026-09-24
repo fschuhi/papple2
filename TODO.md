@@ -63,6 +63,9 @@ See `DIRECTION.md` for the context of each item.
 - `Display.__init__` sets `self.flash_chars = [[0] * 0x400] * 2`, which is one list referenced twice, not two lists: text pages 1 and 2 share their flash state. Fix: `[[0] * 0x400 for _ in range(2)]`. Found during the type hints sweep, 2026-09-24.
 - `Apple2.__init__` accepts `frame_rate` and never uses it; `Emulator` passes it through. Remove, or give it a job? Found during the type hints sweep, 2026-09-24.
 
+- Dead code in `core/emulator.py`: `EmulatorRunningState.action()` is never registered as a handler, `Emulator.write_hook`/`write_hook_enabled` are unused (the hook assignment is commented out), and there are four `if False:` blocks. Remove, or keep some as debugging aids? Found during the type hints sweep, 2026-09-24.
+- `core/emulator.py` imports `MemoryMap`/`OpInfo` from `papple2.debug`, but the package diagram in `README.md` shows imports only going from debug to core. Either the diagram gets the exception (MemoryMap is fed on every instruction, see Settled decisions), or MemoryMap's recording moves. Found during the type hints sweep, 2026-09-24.
+
 ## 4. Environment / packaging housekeeping
 
 - Bring in automated `black` formatting, as in some of my other projects: decide how it runs (a `make` target, PyCharm on save, or both), then reformat the whole codebase in one separate commit, so that later diffs show only real changes. Surfaced during the type hints sweep, 2026-09-24 (e.g. the `( self, x )` spacing in `core/cpu.py`).
