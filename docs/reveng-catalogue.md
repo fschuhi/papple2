@@ -1,10 +1,10 @@
 # Reverse Engineering on 6502 Platforms -- Techniques and Tools
 
-**Status:** Draft 0.1 (2026-09-24). Seeded from a research dialog with Gemini, restructured and partly corrected. Claims not yet checked against primary sources are marked ⚠ and collected in section 8.
+**Status:** Draft 0.1 (2026-09-24). Seeded from a research dialog with Gemini, restructured and partly corrected. Claims not yet checked against primary sources are marked (unverified) and collected in section 8.
 
-**Purpose:** A catalogue of reverse engineering ("reveng") techniques used on MOS 6502-family machines (Apple II, Commodore 64, NES), the names each major tool gives them, and what that means for the `papple2` pipeline. The catalogue is organised by *technique*, not by tool: the question it answers is "what can be done, and who does it well", so that `papple2` can pick deliberately what to build, what to borrow, and what to skip.
+**Purpose:** A catalogue of reverse engineering ("reveng") techniques for the Apple II, the names each major tool gives them, and what that means for the `papple2` pipeline. The catalogue is organised by *technique*, not by tool: the question it answers is "what can be done, and who does it well", so that `papple2` can pick deliberately what to build, what to borrow, and what to skip. Its counterpart is `DIRECTION.md`, which says what `papple2` does with all this.
 
-**Scope:** 8-bit 6502 / 65C02 / 6510 / 2A03 software, with the Apple II / II+ 48k as the primary target. General-purpose reveng tools (x86/ARM world) are included only where the *concept* transfers, even if the tool itself does not run 6502 code.
+**Scope:** Apple II software, with the Apple II / II+ 48k as the primary target. Tools from the Commodore 64 and NES scenes are included as sources of inspiration: their reverse engineering communities are larger, and their tools go further than what exists for the Apple II. Because the 6502 is simple and deterministic, the same problems appear on every 6502 platform. For example, the 6502 has no multiply instruction, so lookup tables are everywhere, so tools that handle split lo/hi tables must exist somewhere. General-purpose reveng tools (x86/ARM world) are included only where the *concept* transfers, even if the tool itself does not run 6502 code.
 
 ---
 
@@ -17,7 +17,7 @@ Each technique in section 3 uses the same fields:
 - **How it works** -- the mechanism.
 - **6502 specifics** -- where the 8-bit world differs from modern binaries.
 - **Tools** -- who implements it, and under which name.
-- **papple2** -- status in `papple2`: *exists*, *wished* (on the wish list from our sessions), or *open* (not discussed yet). These statuses come from our past conversations, not from reading the current code.
+- **papple2** -- status in `papple2`: *exists*, *wished* (on the wish list in `DIRECTION.md` section 5), or *open* (not discussed yet). The first draft took these statuses from past conversations; each one is checked against the code when we discuss its entry.
 
 Two words used throughout:
 
@@ -172,7 +172,7 @@ Two words used throughout:
 - **Question it answers:** What is the CPU doing while the video beam is at this line?
 - **How it works:** The emulator stops when the video circuitry reaches a given screen line or cycle.
 - **6502 specifics:** Essential on the C64 and NES, where programs change the display mid-frame. Much less relevant on the Apple II, whose programs rarely synchronise with the beam (a few do, via the "vapor lock" trick).
-- **Tools:** C64Debugger, VICE ⚠, Mesen.
+- **Tools:** C64Debugger, VICE (unverified), Mesen.
 - **papple2:** open; low priority for 48k Apple II games.
 
 ### 3.14 Trace logging
@@ -213,7 +213,7 @@ Two words used throughout:
 - **Question it answers:** Which addresses belong together -- e.g. a 16-bit position split into a low and a high byte, or the X and Y of the same object?
 - **How it works:** *Relational search* filters addresses by relations to other addresses (A equals B plus an offset). *Co-change profiling* samples memory over many frames and groups the addresses that change at the same moments.
 - **6502 specifics:** Because of the lo/hi split (3.7), related bytes are often *not* adjacent: object X positions may sit in `$0200`--`$020F` and the matching high bytes in `$0210`--`$021F`.
-- **Tools:** FCEUX and Mesen (comparative search) ⚠; the co-change part is mostly done with custom scripts over trace logs.
+- **Tools:** FCEUX and Mesen (comparative search) (unverified); the co-change part is mostly done with custom scripts over trace logs.
 - **papple2:** open.
 
 ### 3.19 Snapshot diffing
@@ -221,7 +221,7 @@ Two words used throughout:
 - **Also called:** state comparison, memory diff.
 - **Question it answers:** What changed in memory between "just before" and "just after" an event?
 - **How it works:** Two snapshots are compared byte by byte; the differences are the candidates for the variables involved.
-- **Tools:** emulator snapshot tools ⚠; easily scripted.
+- **Tools:** emulator snapshot tools (unverified); easily scripted.
 - **papple2:** open; natural extension of the time machine.
 
 ### 3.20 Binary diffing
@@ -229,7 +229,7 @@ Two words used throughout:
 - **Also called:** BinDiff, function matching, graph matching.
 - **Question it answers:** What differs between two versions of a program (revisions, regional versions, ports)?
 - **How it works:** Instead of comparing raw bytes (useless once code shifts by one byte), the tool matches functions and basic blocks by their graph structure.
-- **Tools:** BinDiff (with Ghidra via the BinExport plugin), Diaphora ⚠; for raw bytes: VBinDiff.
+- **Tools:** BinDiff (with Ghidra via the BinExport plugin), Diaphora (unverified); for raw bytes: VBinDiff.
 - **papple2:** open. Possibly relevant for different releases of the same Apple II game.
 
 ### 3.21 Data-flow analysis and taint tracking
@@ -237,7 +237,7 @@ Two words used throughout:
 - **Also called:** DFA; dynamic taint analysis (DTA), taint propagation.
 - **Question it answers:** Where does this value come from, and where does it go?
 - **How it works:** *Data-flow analysis* follows values through registers and memory. *Taint tracking* marks an input (e.g. the keyboard byte from `$C000`) and propagates the mark to everything computed from it: `LDA $20 / CLC / ADC $21 / STA $22` makes `$22` depend on `$20` and `$21`.
-- **Tools:** Ghidra (static, internally); Triton, PANDA, angr (dynamic) -- ⚠ none of these supports the 6502 out of the box as far as I know; for 6502 this is custom work over an emulator.
+- **Tools:** Ghidra (static, internally); Triton, PANDA, angr (dynamic) -- (unverified) none of these supports the 6502 out of the box as far as I know; for 6502 this is custom work over an emulator.
 - **papple2:** open. With shadow memory (3.15) this is a realistic `papple2` feature.
 
 ### 3.22 Program slicing
@@ -264,7 +264,7 @@ Two words used throughout:
 - **Question it answers:** What does this code *mean* at a higher level (a 16-bit addition, a multiply routine, a loop over objects)?
 - **How it works:** Instructions are translated into a simpler, uniform intermediate language (*IR*, intermediate representation), which is then simplified and printed as pseudo-C. *Idiom recognition* spots known patterns, such as two zero-page bytes used together as a 16-bit pointer.
 - **6502 specifics:** Hand-written 6502 code has no calling convention and uses flags and registers freely, so decompilers often produce awkward output. Idiom recognition may be more useful than full decompilation.
-- **Tools:** Ghidra (built-in 6502 and 65C02 support via its SLEIGH processor descriptions); RetDec, Rellic ⚠ (no 6502 front end known to me).
+- **Tools:** Ghidra (built-in 6502 and 65C02 support via its SLEIGH processor descriptions); RetDec, Rellic (unverified) (no 6502 front end known to me).
 - **papple2:** open.
 
 ### 3.25 Symbolic execution
@@ -272,7 +272,7 @@ Two words used throughout:
 - **Also called:** constraint solving, SMT-based path exploration.
 - **Question it answers:** Which input makes the program reach this branch?
 - **How it works:** Values are treated as unknowns; each path accumulates conditions; a solver finds inputs that satisfy them.
-- **Tools:** angr, Triton, Miasm -- ⚠ none targets the 6502 out of the box as far as I know.
+- **Tools:** angr, Triton, Miasm -- (unverified) none targets the 6502 out of the box as far as I know.
 - **papple2:** open; likely low value for games compared to its cost.
 
 ### 3.26 Assets: graphics, compression, sound
@@ -302,16 +302,16 @@ What each tool calls a technique. "--" means the tool does not do it (usually be
 | Code/data logging (3.6) | Code/Data Logger (CDL) | -- | -- | -- | -- | memory map view |
 | Flow-tracing disassembly (3.5) | -- | auto-analysis | code/data analyzer | block type assignment | -- | -- |
 | Data typing (3.7) | -- | data types | format operand / data | byte, word, text, address table | -- | -- |
-| Labels (3.8) | labels | labels / symbols | user labels, project symbols | labels | `al` (add label) | label files ⚠ |
-| Cross-references (3.8) | -- ⚠ | XREFs | references | cross-references | -- | -- |
-| Banking (3.3) | mapper / bank view | overlays | address regions | -- | CPU port `$0001` | bank state view ⚠ |
+| Labels (3.8) | labels | labels / symbols | user labels, project symbols | labels | `al` (add label) | label files (unverified) |
+| Cross-references (3.8) | -- (unverified) | XREFs | references | cross-references | -- | -- |
+| Banking (3.3) | mapper / bank view | overlays | address regions | -- | CPU port `$0001` | bank state view (unverified) |
 | Execution breakpoint (3.11) | breakpoint | breakpoint (Ghidra debugger) | -- | -- | `break` | breakpoint |
 | Watchpoint (3.12) | read/write breakpoint | read/write breakpoint | -- | -- | `watch load`/`watch store` | read/write breakpoint |
-| Video-position breakpoint (3.13) | scanline/cycle breakpoint | -- | -- | -- | ⚠ | raster breakpoint |
+| Video-position breakpoint (3.13) | scanline/cycle breakpoint | -- | -- | -- | (unverified) | raster breakpoint |
 | Trace logging (3.14) | Trace Logger | trace (debugger) | -- | -- | `trace` | trace history |
-| Time travel (3.16) | rewind, step back | -- | -- | -- | -- | step back ⚠ |
-| RAM search (3.17) | memory search ⚠ | -- | -- | -- | `hunt` ⚠ | -- |
-| Scripting / hooks (3.15) | Lua | Java/Python scripts (static) | -- | -- | remote monitor | ⚠ |
+| Time travel (3.16) | rewind, step back | -- | -- | -- | -- | step back (unverified) |
+| RAM search (3.17) | memory search (unverified) | -- | -- | -- | `hunt` (unverified) | -- |
+| Scripting / hooks (3.15) | Lua | Java/Python scripts (static) | -- | -- | remote monitor | (unverified) |
 | Slicing (3.22) | -- | forward/backward slice | -- | -- | -- | -- |
 | Reassemblable source (3.27) | -- | -- (export only) | generate source | save source | -- | -- |
 
@@ -321,25 +321,25 @@ What each tool calls a technique. "--" means the tool does not do it (usually be
 
 | Tool | Platforms (target) | Kind | Runs on | Notes |
 |---|---|---|---|---|
-| Mesen 2 | NES (and other consoles) | debugging emulator | Win, Linux, macOS ⚠ | reference-grade NES debugger |
+| Mesen 2 | NES (and other consoles) | debugging emulator | Win, Linux, macOS (unverified) | reference-grade NES debugger |
 | FCEUX | NES | debugging emulator | Win, Linux | RAM search, Lua, CDL; TAS community |
 | VICE (`x64sc`) | C64 | emulator with monitor | Win, Linux, macOS | cycle-exact; remote monitor for scripting |
-| C64Debugger | C64 | visual debugger | Win, Linux, macOS | author: Marcin Skoczylas ("slajerek") -- Gemini's attribution was wrong ⚠ |
+| C64Debugger | C64 | visual debugger | Win, Linux, macOS | author: Marcin Skoczylas ("slajerek") -- Gemini's attribution was wrong (unverified) |
 | AppleWin | Apple II | emulator with debugger | Windows | the monitor-style debugger Frank wants in `papple2` |
 | MAME | Apple II and many others | emulator with debugger | Win, Linux, macOS | Lua scripting; macOS-native option for Apple II |
 | Ghidra | 6502, 65C02 built in | static analysis suite | Win, Linux, macOS | decompiler, graphs, slicing; NES loader: GhidraNes |
-| 6502bench SourceGen | Apple II, C64, NES, IIgs | interactive disassembler | Windows ⚠ | symbol tables, visualisers, verified round trip |
+| 6502bench SourceGen | Apple II, C64, NES, IIgs | interactive disassembler | Windows (unverified) | symbol tables, visualisers, verified round trip |
 | Regenerator | C64 | interactive disassembler | Windows | assembler-ready output |
 | JC64dis | C64 (and others) | interactive disassembler | Java (any) | reads PRG, CRT, VICE snapshots, SID |
 | da65 / cc65 | any 6502 | config-driven disassembler + assembler | any | reproducible, scriptable |
-| NESicide | NES | IDE incl. debugger | Win, Linux | ⚠ maintenance status |
+| NESicide | NES | IDE incl. debugger | Win, Linux | (unverified) maintenance status |
 | CiderPress II | Apple II | disk image utility | Win, Linux, macOS | file extraction |
 | AppleCommander | Apple II | disk image utility | Java (any) | file extraction, scriptable |
 | DirMaster | C64 | disk image utility | Windows | |
 | SIDDump | C64 | sound logger | any | logs SID register writes per frame |
-| Cheat Engine | any (via emulator process) | memory scanner | Win, macOS ⚠ | value search, structure dissect |
-| angr, Triton, Miasm | x86/ARM etc. | symbolic execution / taint | any | concept only for 6502 ⚠ |
-| BinDiff, Diaphora | via Ghidra/IDA | binary differ | any | ⚠ Diaphora is IDA-centred |
+| Cheat Engine | any (via emulator process) | memory scanner | Win, macOS (unverified) | value search, structure dissect |
+| angr, Triton, Miasm | x86/ARM etc. | symbolic execution / taint | any | concept only for 6502 (unverified) |
+| BinDiff, Diaphora | via Ghidra/IDA | binary differ | any | (unverified) Diaphora is IDA-centred |
 | `papple2` | Apple II | Python emulator as debugging instrument | macOS (primary) | hooks, time machine, access log, tiles/stretches |
 
 ---
@@ -375,7 +375,7 @@ Short definitions, alphabetical. Each term points to its section.
 - **Nesdev Wiki** (nesdev.org/wiki) -- the reference for NES hardware: memory map, graphics and sound chips, cartridge mappers.
 - **Nesdev Forums** (forums.nesdev.org) -- NES homebrew and reverse engineering community.
 - **RetroReversing** (retroreversing.com) -- walkthroughs incl. Ghidra setup for NES.
-- **NesCartDB** -- cartridge hardware database. ⚠ URL from the Gemini draft was garbled.
+- **NesCartDB** -- cartridge hardware database. (unverified) URL from the Gemini draft was garbled.
 - **Xekri's `reveng.md`** (github.com/XekriRedmane/ultima1_reveng) -- a practitioner's method note from the author whose `main.nw` underlies `a2-lode-runner`. To be read and summarised here.
 - **Lancaster (1984), *Tearing Into Machine-Language Code*** -- classic method text. To be summarised here.
 
@@ -383,7 +383,7 @@ Short definitions, alphabetical. Each term points to its section.
 
 - **Displaced Gamers** (YouTube) -- NES mechanics and bugs explained from the assembly, often with Mesen.
 - **NesHacker** (YouTube) -- 6502 assembly and NES ROM hacking tutorials.
-- **Michael Steil's congress talks** (media.ccc.de) -- "The Ultimate Commodore 64 Talk" (25C3), "The Ultimate Game Boy Talk" (33C3), and the Visual 6502 talk on reverse engineering the 6502 chip itself (27C3). ⚠ Gemini listed an "Ultimate NES Talk", which I believe does not exist.
+- **Michael Steil's congress talks** (media.ccc.de) -- "The Ultimate Commodore 64 Talk" (25C3), "The Ultimate Game Boy Talk" (33C3), and the Visual 6502 talk on reverse engineering the 6502 chip itself (27C3). (unverified) Gemini listed an "Ultimate NES Talk", which I believe does not exist.
 
 ---
 
