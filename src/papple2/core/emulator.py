@@ -279,7 +279,7 @@ class Emulator:
         self.checkpoints.append( (active, func) )
 
 
-    def press_key(self, ascii_code: int) -> None:
+    def press_key(self, ascii_code: str | int) -> None:
         # high bit always set
         apple2key = Ascii2Apple2Ascii(ascii_code)
         self.apple2.softswitches.kbd = apple2key

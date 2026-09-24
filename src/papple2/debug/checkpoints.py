@@ -1,17 +1,23 @@
 #!/usr/bin/env python3
 
+from collections.abc import Iterable
+from typing import TYPE_CHECKING
+
 from papple2.util import hexbyte, Apple2Ascii2Ascii, Ascii2Apple2Ascii
+
+if TYPE_CHECKING:
+    from papple2.core.emulator import Emulator
 
 
 class RecordedKeys:
-    def __init__( self ):
+    def __init__( self ) -> None:
         self.keys = [
             (5026414, ' ', 'switch to choose controls'),
             (5347664, 0x1b, 'switch back to intro noise'),
             (5769011, 0x00, 'exit'),
         ]
 
-    def press_keys( self, emulator ) -> (bool, bool):  # (active, execute)
+    def press_keys( self, emulator: "Emulator" ) -> tuple[bool, bool]:  # (active, execute)
         active = True
         execute = True
 
@@ -33,11 +39,11 @@ class RecordedKeys:
 
 
 class PrintCharTester:
-    def __init__( self ):
+    def __init__( self ) -> None:
         self.mem09_1 = None
 
-    def LDA_indirect( self, emulator ) -> (bool, bool):  # (active, execute)
-        cpu = emulator.apple2.cpu  # type: CPU
+    def LDA_indirect( self, emulator: "Emulator" ) -> tuple[bool, bool]:  # (active, execute)
+        cpu = emulator.apple2.cpu
         if cpu.PC == 0x5118:
             print( "yes_1" )
             self.mem09_1 = emulator.mem[0x09]
@@ -52,11 +58,11 @@ class PrintCharTester:
 
 
 class RandomTesterCheckpoint:
-    def __init__( self, emulator ):
+    def __init__( self, emulator: "Emulator" ) -> None:
         self.emulator = emulator
         self.cpu = self.emulator.cpu
 
-    def checkpoint( self, emulator ) -> (bool, bool):
+    def checkpoint( self, emulator: "Emulator" ) -> tuple[bool, bool]:
         if self.cpu.PC == 0x4c36:
             # in/out: 0x4e, 0x4f
             # in: 0xfc, 0x150a
@@ -88,11 +94,11 @@ class KeyScript:
         emulator.add_checkpoint(keys.press_keys)
     """
 
-    def __init__( self, key_schedule ):
+    def __init__( self, key_schedule: Iterable[tuple[int, str | int]] ) -> None:
         # key_schedule: list of (instruction_count, ascii_code) pairs, in order
         self.key_schedule = list( key_schedule )
 
-    def press_keys( self, emulator ) -> (bool, bool):  # (active, execute)
+    def press_keys( self, emulator: "Emulator" ) -> tuple[bool, bool]:  # (active, execute)
         execute = True
 
         if self.key_schedule:
