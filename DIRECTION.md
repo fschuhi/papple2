@@ -2,7 +2,7 @@
 
 (Note: "I" in the following paragraphs refer to the user, "you" to the AI model.)
 
-**Status:** working draft from the collection-mode session of 2026-09-23. Nothing here is decided unless it sits under "Decided". Where this content finally lands (`GOALS.md`, `README.md`, `TODO.md`, or this document for good) is an open question at the end.
+**Status:** working draft from the collection-mode session of 2026-09-23. Extended 2026-09-25 (oracle principle, lessons from Robotron). Nothing here is decided unless it sits under "Decided". Where this content finally lands (`GOALS.md`, `README.md`, `TODO.md`, or this document for good) is an open question at the end.
 
 ---
 
@@ -13,6 +13,7 @@
 ## 2. Worked example and targets
 
 - **Lode Runner** is the worked example. Xekri's `main.nw` tangles to `dasm` source that assembles byte-identically to the original, so it gives us both a runnable binary and an answer key (every routine, label, and data region named). Every tool can be graded against it.
+- **Oracle principle:** develop the workbench *as if* we were disassembling Lode Runner, with Xekri's code as the oracle to develop and debug our own toolchain. Which structures can our tools determine that we already know about from `a2-lode-runner`? The measure of success: an analysis run plus a few hours of manual tinkering with the binary yields a very good first draft of `main.nw`. In a way, this reverse engineers Xekri's documentation process. `papple2` is one point in a triangle with `a2-lode-runner` and, pulling weight in the short term, `a2-hires-lab`.
 - **Later targets:** games without an answer key, e.g. Bandits (the dream project) or Choplifter. Both fit the 48k II/II+ focus.
 - **Robotron** steps back from the documentation. `probotron` is hibernated and stays private.
 
@@ -141,3 +142,38 @@ Could-extension: run over a whole frame, every byte that ever flows to the scree
 - Glossary into the documentation. Then compare each existing tool with its closest established counterpart and borrow what has proven itself (features, names, file formats) -- e.g. does `MemAccessCollector` have filter conditions like a trace logger?
 - Robotron de-emphasis in `README.md` and the `Makefile` (`make run`), plus the test decision above.
 - Type hints sweep: postponed, but gained weight now that `make patch` makes many-file changes cheap.
+
+## 11. Lessons from Robotron (2019)
+
+The Robotron work is documented in the 6502.org thread "reverse engineering Robotron 2084 for the Apple II" (https://6502.org/forum/viewtopic.php?t=5517, 98 posts, February 2019 to June 2020). The flame flickered and then went out: lack of expertise, all-consuming work projects, lack of collaboration. We are in a different place today. The lessons from the heat map and the time machine are in section 5, the open question about stretches in section 9.
+
+**What worked** (what I deemed presentable in the thread):
+- Dynamic execution tracking.
+- Tiles and stretches for automatic grouping.
+- Subtractive analysis, BigEd's "opposite of instrumentation, removing code": poke an `RTS` into a stretch, rerun, see what disappears.
+- Saving and loading snapshots.
+- Cycle-indexed memory heatmaps -- a functional equivalent to time-travel debugging?
+- Chronological call trees: nodes ordered by the cycle of their first execution (White Flame: "a readable flowchart").
+
+**What hurt:**
+- I couldn't see the forest for the trees.
+- Handling different binaries was necessary, but it was easy to lose oversight.
+- Intent vs. mechanics: what an instruction did mechanically was straightforward; deducing why a specific comparison was made or a literal value was used was a massive conceptual leap.
+- Incomplete understanding of 6502 idioms. Chromatix's four subroutine classes (sorted by what a routine does to the stack between entry and `RTS`) need to be implemented; they have surfaced several times now. I lacked Leventhal-level knowledge to recognise standard routines like multiplication (see Chromatix's analysis of `closed03`).
+- No way to deal with self-modifying code. Lode Runner has some, which we will use to test our tools; Bandits reportedly has lots.
+- Cause and effect separated: 6502 status flags are not updated by all instructions, so a branch taken or not taken is often the consequence of an operation several steps earlier.
+- Steep learning curve for SourceGen and other tools; not-invented-here syndrome.
+- Visual clutter: automated call graphs produced unwieldy webs of nodes and arrows, readable only after aggressive pruning and cycle-timed vertical realignment. No clear idea how to keep the lessons learned about pruning. Graphviz: impressive eye candy, but useless for understanding.
+- Stretches: a single tile can belong to several logical stretches, depending on the game's runtime state. Fusing tiles onto an execution path only worked in easy cases; different states route through the same tiles in a different order.
+- The data bottleneck: fine-grained load/store tracking in Python produced datasets too slow to process and too large to comprehend. It might be necessary to say goodbye to an IDE approach and work with professional tools on `papple2`-generated dumps.
+- No native time-travel debugging: no register and status flag logging (performance). Scrolling backwards did not work; only incomplete ideas about synchronising memory changes with the program counter.
+
+**Ideas this led to** (2026-09-25, collected, not yet discussed):
+- Structural analysis and execution history go together in my head. Maybe that is the wrong approach, maybe not ("decoupled control flow graphs"). You suggested: the control-flow graph is one static map of the program, each execution path one walk across it; keep both, linked.
+- A folding editor instead of graphs: linear, text-block based, very fast keyboard navigation. My brain needs to become a supercharged 6502 execution system, in a many-worlds setting.
+- Relational trace logging: we need a database. Browsing experiments comes first, cross-experiment correlation later. Existing dynamic analysis tools may show how.
+- Stack-based subroutine identification as a quick win, building on what we have: pair each `RTS` with the `JSR` whose return address it pops; mismatches are candidates for Chromatix's classes 3 and 4. Open: tail calls, jump tables.
+- Data flow and taint analysis over one or more execution paths, presented in an Apple II specific memory overview. Brushing as the visualisation paradigm (selecting something in one view highlights it in all others).
+- Workbench paradigm: mark something in the noweb document (Notepad++, autosave), press a key picked up by Karabiner-Elements; the workbench determines the context by comparing the current file with the passed snippet and offers what to do. It can also generate snippets to paste into the document. Documentation and experimentation are only loosely coupled at first.
+- Overviews like the "genome sequence" of Lorenz Wiest's Star Raiders disassembly (https://github.com/lwiest/StarRaiders).
+- Reverse engineering as an artistic endeavour: mastery and beauty.
