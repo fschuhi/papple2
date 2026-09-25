@@ -2,7 +2,7 @@
 
 (Note: "I" in the following paragraphs refer to the user, "you" to you as the AI model.)
 
-## Charter 
+## Charter
 
 - Forward-looking only -- concrete, startable work: tasks specified well enough that next-session-me can begin within ten minutes, plus investigation items, test specs, and scratchpad ideas awaiting promotion or deletion.
 - Items are unordered within their theme sections; open questions are marked _Needs investigation_ in the bullet.
@@ -22,11 +22,11 @@
 
 See `DIRECTION.md` for the context of each item.
 
+- Lode Runner, real play: a key press in attract mode starts a real game, which hangs in the game's own copy of DOS 3.3's RWTS at `$B600`-`$BFFF` (PC `$B94F`) -- `papple2` has no disk drive. The game reads sectors only, through the standard IOB and DCT (`main.nw` chapter 10). Plan: a checkpoint at the RWTS entry reads the IOB (track, sector, buffer, command), copies that sector from a disk image into the buffer, reports success, and returns as RWTS would -- no drive emulation. Confirm first: where the RWTS entry and the IOB sit (`main.nw`), and the format of Xekri's disk files (https://github.com/XekriRedmane/lode_runner_reveng/tree/main/disk): nibbles or 256-byte sectors, physical or DOS logical sector order.
+- Level extraction for `a2-lode-runner`, depends on real play above: let the game's own code load each level, then read the filled memory -- all levels into the `a2-lode-runner` documentation. Expect its HTML to grow; the table of 103 sprites is already large.
 - _Needs investigation:_ stretches -- keep the concept, or replace it with what other disassemblers use (usually plain functions)? `tiles.py`'s docstring has the doubts.
 - _Needs investigation:_ is there an Apple II tool that saves per-byte code/data marks to a file (like FCEUX's Code/Data Logger), or tracks data provenance? microM8's heat map comes close.
 - Jupyter primer, for a conscious decision on the monitor: Joel Grus's talk "I Don't Like Notebooks" (JupyterCon 2018), marimo's "why marimo", then a small hands-on notebook with `papple2` booting Lode Runner.
-- Lode Runner, real play: a key press in attract mode starts a real game, which hangs in the game's own copy of DOS 3.3's RWTS at `$B600`-`$BFFF` (PC `$B94F`) -- `papple2` has no disk drive. The game reads sectors only, through the standard IOB and DCT (`main.nw` chapter 10). Plan: a checkpoint at the RWTS entry reads the IOB (track, sector, buffer, command), copies that sector from a disk image into the buffer, reports success, and returns as RWTS would -- no drive emulation. Confirm first: where the RWTS entry and the IOB sit (`main.nw`), and the format of Xekri's disk files (https://github.com/XekriRedmane/lode_runner_reveng/tree/main/disk): nibbles or 256-byte sectors, physical or DOS logical sector order.
-- Level extraction for `a2-lode-runner`, depends on real play above: let the game's own code load each level, then read the filled memory -- all levels into the `a2-lode-runner` documentation. Expect its HTML to grow; the table of 103 sprites is already large.
 - Robotron out of `papple2` (`make run` is already `make boot-robotron`; the script stays): the labels in `Labels.add_standard_labels` (including `waitKbd` twice), the three unused classes in `checkpoints.py`, and with `RecordedKeys` also `Display.save_hires_bytes`/`load_hires_bytes` (broken, no other caller), the `$51b6` exemption and the stale `examples/Robotron/workbench.py` pointer in `tiles.py`, `README.md` (Vision, screenshots, "hardest test case"), and the three tests in `test_emulator_silent.py` that load `ROBOTRON.BIN`. Move what `probotron` needs, delete the rest.
 - Research document with glossary (in progress, away from the keyboard): established reverse-engineering concepts, and what the tools for 6502 platforms (NES, C64, Apple II) offer to understand a game. Basis for renaming `papple2`'s concepts, or at least putting them into their proper context.
 

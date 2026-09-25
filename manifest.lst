@@ -67,20 +67,20 @@ src/papple2/debug/tiles.py
 
 ### --- Tests and fixtures data ---
 tests/conftest.py
-tests/test_assembler.py
-tests/test_cpu_arithmetic.py
-tests/test_cpu_branch.py
-tests/test_cpu_bugs.py
-tests/test_cpu_inc_dec.py
-tests/test_cpu_jump_call.py
-tests/test_cpu_load_store.py
-tests/test_cpu_logical.py
-tests/test_cpu_register_transfer.py
-tests/test_cpu_shift.py
-tests/test_cpu_stack.py
-tests/test_cpu_status_flags.py
-tests/test_cpu_system.py
-tests/test_display_memory.py
+#tests/test_assembler.py
+#tests/test_cpu_arithmetic.py
+#tests/test_cpu_branch.py
+#tests/test_cpu_bugs.py
+#tests/test_cpu_inc_dec.py
+#tests/test_cpu_jump_call.py
+#tests/test_cpu_load_store.py
+#tests/test_cpu_logical.py
+#tests/test_cpu_register_transfer.py
+#tests/test_cpu_shift.py
+#tests/test_cpu_stack.py
+#tests/test_cpu_status_flags.py
+#tests/test_cpu_system.py
+#tests/test_display_memory.py
 tests/test_emulator_debug_keys.py
 tests/test_emulator_silent.py
 tests/test_mem_access_collector.py
