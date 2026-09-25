@@ -57,6 +57,9 @@ Two words used throughout:
 | 3.25 | Understanding meaning | Symbolic execution | static | open |
 | 3.26 | Assets | Graphics, compression, sound | both | open (graphics partly in `a2-hires-lab`) |
 | 3.27 | Output | Reassemblable source | static | wished (noweb) |
+| 3.28 | Understanding meaning | Subroutine classes by stack behaviour | dynamic | wished |
+| 3.29 | Control flow | Stack-based subroutine identification | dynamic | open |
+| 3.30 | Following data | Flag provenance | dynamic | open |
 
 ---
 
@@ -263,7 +266,7 @@ Two words used throughout:
 - **Also called:** IR lifting, P-code (Ghidra), decompilation.
 - **Question it answers:** What does this code *mean* at a higher level (a 16-bit addition, a multiply routine, a loop over objects)?
 - **How it works:** Instructions are translated into a simpler, uniform intermediate language (*IR*, intermediate representation), which is then simplified and printed as pseudo-C. *Idiom recognition* spots known patterns, such as two zero-page bytes used together as a 16-bit pointer.
-- **6502 specifics:** Hand-written 6502 code has no calling convention and uses flags and registers freely, so decompilers often produce awkward output. Idiom recognition may be more useful than full decompilation.
+- **6502 specifics:** Hand-written 6502 code has no calling convention and uses flags and registers freely, so decompilers often produce awkward output. Idiom recognition may be more useful than full decompilation. Idioms pointed out in the 6502.org Robotron thread, as seeds for a library: `CLC`/`ADC` and `SEC`/`SBC` pairs (the 6502 has no add without carry); the 16-bit increment `INC lo` / `BNE +` / `INC hi`; the counted loop `LDX #n` ... `DEX` / `BNE`; shift-and-add multiplication (no multiply instruction); the `RTS` trick for jump tables; inline data after a `JSR` (see 3.28). Leventhal's *6502 Assembly Language Subroutines* is the classic catalogue of standard routines.
 - **Tools:** Ghidra (built-in 6502 and 65C02 support via its SLEIGH processor descriptions); RetDec, Rellic (unverified) (no 6502 front end known to me).
 - **papple2:** open.
 
@@ -290,6 +293,33 @@ Two words used throughout:
 - **How it works:** The tool writes source for a target assembler; assembling it and comparing with the original verifies the work.
 - **Tools:** da65 + ca65 (cc65 toolchain), SourceGen (verifies against several cross-assemblers), Regenerator, JC64dis. Xekri's Lode Runner source rebuilds byte-identically with `dasm`.
 - **papple2:** wished: "generate noweb markdown for tangling and weaving".
+
+### 3.28 Subroutine classes by stack behaviour
+
+- **Also called:** Chromatix's four classes (6502.org Robotron thread, 2019); related: stack-effect analysis.
+- **Question it answers:** Is this a well-behaved subroutine, or does it play tricks with the stack?
+- **How it works:** Each subroutine is sorted by what happens to the stack between entry and return. Class 1: no stack manipulation (`PHA`, `PLA`, `PHP`, `PLP`, `TXS`) at all. Class 2: pushes balanced by pops, never below the level at entry. Class 3: pushes not balanced before the `RTS`, or return via `RTI` -- "clever code" that needs deeper analysis. Class 4: the routine pops its own return address, usually to read inline data placed right after the `JSR`, then returns past that data.
+- **6502 specifics:** Class 4 is common for printing text: Robotron's `showtext` reads its string from the bytes after the calling `JSR`. Woz's Sweet16 interpreter in the Apple II ROM is a class 4 routine; when a game calls it, decode the Sweet16 bytecode instead of the interpreter.
+- **Tools:** (unverified) no tool known that assigns these classes automatically. Statically hard, dynamically cheap: an emulator sees the real stack pointer at every instruction.
+- **papple2:** wished (`DIRECTION.md` section 11); builds on 3.29.
+
+### 3.29 Stack-based subroutine identification
+
+- **Also called:** return address matching; shadow call stack (a parallel list, kept by the tool, of the calls currently in progress).
+- **Question it answers:** Where do subroutines start and end, as the CPU actually used them?
+- **How it works:** At each `JSR`, the tool records the return address the CPU pushes. At each `RTS`, it checks which address is popped. A match closes a call. A mismatch -- an `RTS` to an address no `JSR` pushed -- means the stack was manipulated: an `RTS` used as a jump (jump tables via the `RTS` trick) or a class 3 or 4 routine (3.28).
+- **6502 specifics:** Tail calls end a routine with `JMP` instead of `JSR` plus `RTS` (saves a byte and 9 cycles); the callee's `RTS` then returns to the caller's caller. A routine can also fall through into the next one, or call its own second half to run it twice (`JSR` to the following label). All of these show up as patterns in the matching.
+- **Tools:** The Robotron workbench did this in 2019 ("checking the pairings between JSR'd stack addresses and what the next RTS finds on the stack"); shadow stacks are a standard technique in security research.
+- **papple2:** open; named as a quick win in `DIRECTION.md` section 11.
+
+### 3.30 Flag provenance
+
+- **Also called:** flag def-use chains (for each use of a flag, the instruction that last defined it); a special case of data-flow analysis (3.21).
+- **Question it answers:** Which earlier instruction decided whether this branch was taken?
+- **How it works:** For each status flag the tool keeps the address of the instruction that last set it. At every branch it records that address. Over many runs: if a branch is always decided by the same nearby instruction, the logic is local; if the deciding instruction is far away or varies, the flag carries state between routines.
+- **6502 specifics:** Flags are not updated by every instruction, so cause and effect can be many instructions apart. BigEd: the flags act like four short-lived variables. A flag set just before an `RTS` works as a return code; `PHP` and `PLP` keep flags alive across long stretches of code. A branch looks "always taken" after `SEC` only if every path into it passes the `SEC` (White Flame's correction in the thread).
+- **Tools:** (unverified) not known as a built-in feature anywhere; possible with any scriptable emulator.
+- **papple2:** open; answers the Robotron lesson "cause and effect separated".
 
 ---
 
@@ -340,6 +370,10 @@ What each tool calls a technique. "--" means the tool does not do it (usually be
 | Cheat Engine | any (via emulator process) | memory scanner | Win, macOS (unverified) | value search, structure dissect |
 | angr, Triton, Miasm | x86/ARM etc. | symbolic execution / taint | any | concept only for 6502 (unverified) |
 | BinDiff, Diaphora | via Ghidra/IDA | binary differ | any | (unverified) Diaphora is IDA-centred |
+| WFDis | 6502 (unverified: which platforms) | interactive disassembler | browser | author White Flame (6502.org thread); rename on the fly, cross-references, simple tracing, ad hoc emulation of a routine; imports label files; a back-end server for deeper analysis was in progress in 2019 |
+| 8bitworkshop | several 8-bit systems incl. Apple II | IDE with emulator and debugger | browser | presented at KansasFest; runs entirely in a web page |
+| microM8 | Apple II | emulator with web debugger | (unverified) | single developer; breakpoints, stepping, memory editing, record with rewind and playback, memory access heat map |
+| Virtual II | Apple II | emulator with monitor | macOS | Quinn Dunki's tool for the Choplifter analysis |
 | `papple2` | Apple II | Python emulator as debugging instrument | macOS (primary) | hooks, time machine, access log, tiles/stretches |
 
 ---
@@ -356,12 +390,16 @@ Short definitions, alphabetical. Each term points to its section.
 - **Co-change profiling** -- grouping addresses that change at the same moments. (3.18)
 - **Cross-reference (XREF)** -- a list of all places that refer to an address. (3.8)
 - **Decompilation** -- turning machine code into readable higher-level pseudo-code. (3.24)
+- **Flag provenance** -- for a branch, the instruction that last set the flag it tests. (3.30)
 - **High ASCII** -- Apple II text encoding with bit 7 set. (3.7)
+- **Inline data** -- data placed directly after a `JSR`, read by the called routine via its own return address. (3.28)
 - **Lo/hi tables** -- an address table split into a table of low bytes and a table of high bytes. (3.7)
 - **Overlay** -- Ghidra's term for alternative contents at the same addresses (banking). (3.3)
 - **Program slice** -- the subset of instructions that affect (backward) or are affected by (forward) one value. (3.22)
+- **Shadow call stack** -- a tool's own list of the calls in progress, used to check each `RTS`. (3.29)
 - **Shadow memory** -- a parallel buffer with metadata about each memory byte. (3.15)
 - **Soft switch** -- an Apple II I/O address that changes hardware state when accessed. (3.4)
+- **Tail call** -- ending a routine with `JMP` to another routine instead of `JSR` plus `RTS`. (3.29)
 - **Stretch, tile** -- `papple2`'s terms for units of observed control flow (related to basic blocks). (3.9)
 - **Taint tracking** -- marking a value and following everything computed from it. (3.21)
 - **Watchpoint** -- stop when any instruction reads or writes an address. (3.12)
@@ -378,6 +416,20 @@ Short definitions, alphabetical. Each term points to its section.
 - **NesCartDB** -- cartridge hardware database. (unverified) URL from the Gemini draft was garbled.
 - **Xekri's `reveng.md`** (github.com/XekriRedmane/ultima1_reveng) -- a practitioner's method note from the author whose `main.nw` underlies `a2-lode-runner`. To be read and summarised here.
 - **Lancaster (1984), *Tearing Into Machine-Language Code*** -- classic method text. To be summarised here.
+
+### Disassembly projects
+
+Apple II:
+
+- **fadden's 6502disassembly.com** -- Space Eggs, Stellar 7, Elite, Caverns of Freitag and more, all made with SourceGen. Recommended by fadden himself in the Robotron thread for learning common ways to handle the hi-res screen.
+- **Quinn Dunki (Blondihacks)** -- Choplifter, told as a sequence of experiments, each answering one question.
+- **Xekri** -- Lode Runner (`main.nw`, byte-identical with `dasm`; the basis of `a2-lode-runner`) and Ultima I (`ultima1_reveng`).
+
+Other platforms, for inspiration:
+
+- **Lorenz Wiest, Star Raiders** (Atari 8-bit, github.com/lwiest/StarRaiders) -- with a "genome sequence" overview that shows the whole ROM as columns of code, data, and bitmaps.
+- **Williams Robotron** (6809) -- Scott Tunstall's disassembly, via seanriddle.com/robomame.asm (pointed out by sark02).
+- **Atari 7800 Robotron** -- original 6502 source released by Atari (OpenSourcedGames on GitHub; pointed out by sark02).
 
 ### Videos
 
@@ -401,6 +453,14 @@ Claims from the Gemini draft that need checking before this document is relied o
 8. Any 6502 support in angr, Triton, Miasm, RetDec, Rellic.
 9. NESicide maintenance status; NesCartDB current URL.
 10. Regenerator authorship.
+11. WFDis: which platforms and file formats it supports; state of the back-end server.
+12. microM8: which operating systems it runs on; state of development.
+
+Research to do (larger than a single check):
+
+- Compare the monitors of AppleWin and Virtual II.
+- SourceGen in detail: what it delivers for our work, including how it combines split lo/hi tables into one address table.
+- microM8's web debugger and 8bitworkshop's IDE: how close they come to what we want.
 
 ---
 
