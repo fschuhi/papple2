@@ -9,6 +9,14 @@
 
 ---
 
+## 2026-09-26 -- Hook review, steps 1 and 2: `op_hook` and the time machine removed
+
+- `CPU.op_hook` removed (patch `2026-09-26-remove-op-hook`): nothing used it, and a skipped instruction would have made `Emulator.post_op()` record the previous one a second time.
+- The time machine removed, after an inventory, in two patches. Code and tests (`2026-09-26-remove-time-machine-code`): `TimeMachine` in `core/hooks.py`; `Emulator`'s `time_machine` parameter, its creation and its `post_op` call; rewinding in the Stopped state (`enable_restoring`/`disable_restoring`, `on_left`/`on_right`); the arrow-key events in `window.py` with `determine_states_from_kmods()`; `CPU.pickle_to_variable`/`unpickle_from_variable` and `import io`; stale `TODO` comments in `emulator.py` and `memory_map.py`; `tests/test_time_machine.py`. Docs (`2026-09-26-remove-time-machine-docs`): `README.md` (Vision, extension points, the write-hook chain diagram now shows `MemAccessCollector` outside and `WriteProtectHook` inside), `docs/reveng-catalogue.md` (3.16, 3.17, 3.19, tools table), a docstring in `boot_lode_runner.py`.
+- Arrow keys now do nothing, Running or Stopped. Mapping them to the Apple II's `$08`/`$15` was left out on purpose.
+- `probotron`: its `Emulator` call no longer passes `time_machine`; the `@xl_func` arguments stay as they are. `make test` all green in `papple2` and in `probotron`.
+- Learned (process): an inventory table before removing things (what goes, why it is tied in, what changes in behaviour, what is unchecked), then code with tests and docs as separate patches, each looked at in PyCharm. Steps 3 to 5 of the review (checkpoint contract, `post_op` as a hook point, read/write hooks) move to a fresh session with a new dump.
+
 ## 2026-09-26 -- Bandits runs: Total Replay's ProDOS files served through an MLI hook
 
 - Milestone: Bandits (Sirius Software, 1982) runs in `papple2` from its own files: cutscene, scrolling title screen, the bandits with their scores, a second round of loading, level 1. The first game without an answer key, and the dream project of `DIRECTION.md`.
