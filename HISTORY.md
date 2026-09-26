@@ -9,6 +9,19 @@
 
 ---
 
+## 2026-09-26 -- Lode Runner real play: RWTS hook serves reads from the disk image
+
+- Milestone: a key press in attract mode starts a real game. Level 1 played in the window, level 2 loaded from disk by the game's own code. The first time `papple2` plays a real game from its disk.
+- `papple2.core.disk_image.DiskImage` (commit `a48667b`, `tests/test_disk_image.py`, 137 -> 148 tests): reads a 143360-byte `.do` image, sector at `(track * 16 + sector) * 256`, DOS 3.3 order as in the RWTS IOB. Checked against XekriRedmane's track files (`a2-lode-runner`, `reference/lode_runner_reveng/disk/`): all 224 sectors of the 14 tracks they cover match. The disk image lives in `data/do/` (`.gitignore`: `data/do/*.do`).
+- All disk access of the game ends in `DISABLE_INTS_CALL_RWTS` (`$B7B5`), from `main.nw` and `a2-lode-runner`'s disk routines page: levels via `ACCESS_COMPRESSED_LEVEL_DATA` -> `JSR JMP_RWTS` (`$23`, target in `RWTS_ADDR`), the high-score sector via `INDIRECT_RWTS` (`$63A5`) -> `$8E50` -> `$B7B5`. Only `JMP`s lie between the caller's `JSR` and `$B7B5`, so the caller's return address is on top of the stack there. Contract: `Y`/`A` point to the IOB (`DOS_IOB`, `$B7E8`), carry clear means success.
+- Step 3a, a watch that stops at `$B7B5`: the prediction from `main.nw` matched the running game on all six values (read, track `$0C`, sector `$0F`, buffer `$1F00`, IOB `$B7E8`, returns to `$637C`) -- the oracle principle of `DIRECTION.md` working for the first time on a live disk access.
+- Step 3b, `RwtsHook` in `scripts/boot_lode_runner.py`: for a read, the sector goes straight into memory (past the write hook, "deus ex machina"), the IOB return code and carry are cleared, and `cpu.pull_word() + 1` becomes `PC`, as `CPU.RTS()` does; the checkpoint returns `(True, True)`. Write, format and anything else print the request and stop (the game freezes on the high-score write at game over, accepted for now). A log of served reads is printed after the run: `$637C` for the high score, `$633F` for levels, both confirmed by counting bytes in `main.nw`. Mechanics checked beforehand with a tiny `JSR $B7B5` program and a fake disk image.
+- Stays in the script on purpose: the hook architecture review comes first (`TODO.md` section 7), with Bandits as the second case.
+- Decided: the time machine goes (`TODO.md` section 7); `op_hook` goes. `README.md`: `data_dir` points to `data/` (not `data/bin/`), the disk image is listed. `make gentree` appends `tmp/applied-patches/` to `tmp/project_tree.txt`.
+- For `a2-lode-runner` (to record there): its open question 6 is answered for the 14 tracks with track files (the plain offset formula holds for the `.do`); and `.level_cleared` does `INC DISK_LEVEL_LOC` before loading the next level, which confirms why `$96 = 6` led to level 8.
+- Learned (architecture): `Emulator.run()` calls all checkpoints and then executes whatever `cpu.PC` is at that moment, so a checkpoint can replace a whole routine; `execute=False` is a breakpoint, never a "skip". The tour of the four hook mechanisms is in `TODO.md` section 7.
+- Patches are named `YYYY-MM-DD-name.patch`, like those collected in `tmp/applied-patches/`.
+
 ## 2026-09-24 -- Type hints sweep: every function signature in src/papple2/ hinted
 
 - All twelve modules, in `TODO.md` section 1's order; `debug/` went annotations+labels, checkpoints, disassembler, memory_map, tiles, assembler (dependencies first). One patch per file via `make patch`, `make test` green after each: 129 -> 137 tests.

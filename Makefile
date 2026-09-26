@@ -61,6 +61,7 @@ showtree: ## Show project directory structure
 gentree: ## Save tree structure to file
 	mkdir -p tmp
 	tree -I ".venv|__pycache__|.idea|.pytest_cache|*egg-info|tmp" > tmp/project_tree.txt
+	@if [ -d tmp/applied-patches ]; then tree tmp/applied-patches >> tmp/project_tree.txt; fi
 
 patch: ## apply all *.patch files in the repo root, then move them to tmp/applied-patches/
 	@ls *.patch >/dev/null 2>&1 || (echo "No *.patch files in the repo root" && exit 1)
