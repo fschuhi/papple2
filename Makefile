@@ -11,7 +11,7 @@ RUN           = $(ACTIVATE) && python
 SETUP_STAMP   = $(VENV_DIR)/.setup_stamp
 
 # --- Phony targets ---
-.PHONY: all setup test test-verbose boot-basic boot-robotron boot-lode-runner boot-lode-runner-headless clean showtree gentree patch filesdump filesdump-detailed help
+.PHONY: all setup test test-verbose boot-basic boot-robotron boot-lode-runner boot-lode-runner-headless boot-bandits clean showtree gentree patch filesdump filesdump-detailed help
 
 all: setup
 
@@ -48,6 +48,10 @@ boot-lode-runner: $(SETUP_STAMP) ## Boot Lode Runner with the pygame window
 
 boot-lode-runner-headless: $(SETUP_STAMP) ## Boot Lode Runner headless: print statistics, save both hi-res pages as PNG
 	$(RUN) scripts/boot_lode_runner.py data/bin/LODE_RUNNER.BIN --headless
+
+# no headless target: the MLI hook serves every file, so a headless run never stops
+boot-bandits: $(SETUP_STAMP) ## Boot Bandits from its Total Replay files with the pygame window
+	$(RUN) scripts/boot_bandits.py
 
 # --- Utility Targets ---
 clean: ## Remove venv, cache, and tmp files
