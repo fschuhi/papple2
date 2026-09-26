@@ -22,9 +22,9 @@
 
 ## Vision
 
-`papple2` is a small Apple II emulator written in Python. It is not meant to compete with full emulators on speed or completeness. Its purpose is to be a debugging instrument: a machine I can stop, inspect, rewind, and script from Python while it runs Apple II code.
+`papple2` is a small Apple II emulator written in Python. It is not meant to compete with full emulators on speed or completeness. Its purpose is to be a debugging instrument: a machine I can stop, inspect, and script from Python while it runs Apple II code.
 
-The core comes from ApplePy by James Tauber, ported to Python 3 and stripped of what I did not need (the socket interface). Around that core I built tools that a normal emulator does not offer: an assembler and disassembler, breakpoints and hooks, a time machine that rewinds CPU and memory state, a log of every memory access, and a map of which instructions were executed and how control flowed between them.
+The core comes from ApplePy by James Tauber, ported to Python 3 and stripped of what I did not need (the socket interface). Around that core I built tools that a normal emulator does not offer: an assembler and disassembler, breakpoints and hooks, a log of every memory access, and a map of which instructions were executed and how control flowed between them.
 
 ![Robotron 2084 splash screen running under papple2](docs/images/robotron-splash.jpg)
 
@@ -35,7 +35,7 @@ Apart from Robotron, I intend to use `papple2` to research Doug Smith's _Lode Ru
 **Core philosophy:**
 
 - **Understandability over speed.** Python is slow for emulation, but that never mattered for the debugging use. What mattered was that the whole emulator is a few thousand lines I can read, change, and extend in an afternoon, and that the debugging tools can be written in the same language as the emulator, with no bridge in between.
-- **A debugging instrument, not a player.** The point isn't to run Apple II software well -- it's to run it *observably*: stoppable, inspectable, rewindable, scriptable.
+- **A debugging instrument, not a player.** The point isn't to run Apple II software well -- it's to run it *observably*: stoppable, inspectable, scriptable.
 - **Runs with and without a screen.** The pygame window is for watching and interacting. Silent mode (`Emulator(no_display=True)`) is for tests and scripted analysis: boot, run to a point, press keys from code, read the buffers, done.
 - **A second course in Python, this time on shape.** This project taught me Python the first time. This round it's teaching me how a Python project is shaped when it's meant to be reused: package layout, pytest, and separating a library from the programs that use it. `pysm` stays in the project for the same reason, even where a simpler mechanism would do -- state machines are part of what I want practice with.
 
@@ -57,7 +57,7 @@ graph TD
 
 `papple2` has no in-repo showcase anymore. `probotron` (the Robotron 2084 disassembly) depends on `papple2` as an installed package from outside this diagram, the same way `a2-lode-runner` or `a2-hires-lab` could.
 
-`Hooks` lives in `papple2.core`, not `papple2.debug` as an earlier version of this diagram had it: `Emulator.__init__` unconditionally constructs `TimeMachine`/`MemAccessCollector` (the `time_machine`/`mem_access` flags only control whether they're activated, not whether they exist), so `Emulator` cannot run at all without `Hooks` importable. The split follows that real coupling.
+`Hooks` lives in `papple2.core`, not `papple2.debug` as an earlier version of this diagram had it: `Emulator.__init__` unconditionally constructs `MemAccessCollector` (the `mem_access` flag only controls whether it's activated, not whether it exists), so `Emulator` cannot run at all without `Hooks` importable. The split follows that real coupling.
 
 ### Emulator / Window / States (current, as of M2.5)
 
@@ -87,7 +87,7 @@ graph TD
 `papple2` has four genuinely different ways to attach behavior to a running program, at different points in the per-instruction and per-frame loop. They tend to get lumped together in conversation as "hooks," but they're not the same mechanism, and flattening them into one diagram would teach something wrong:
 
 - **Checkpoints** (`add_checkpoint(func)`) run once per instruction, *before* it executes, and can stop execution (`execute=False`). This is how breakpoints and `KeyScript` work.
-- **`CPU` read/write hooks** (`cpu.read_hook`/`cpu.write_hook`) fire mid-instruction, on every actual memory access. `CPUHook` and its subclasses `TimeMachine`/`MemAccessCollector` chain rather than replace each other here.
+- **`CPU` read/write hooks** (`cpu.read_hook`/`cpu.write_hook`) fire mid-instruction, on every actual memory access. `CPUHook` and its subclasses (`MemAccessCollector`, and the tests' `WriteProtectHook`) chain rather than replace each other here.
 - **`MemoryMap`** isn't pluggable at all -- `Emulator.post_op()` feeds it unconditionally, once per instruction, after execution. This is what tiles and stretches are built from.
 - **Debug-key handlers** (`EmulatorStates.stopped_state`/`running_state`) are keyed to pygame frames and the `D`/`L` keys, not instructions -- the M4 extension points `tests/test_emulator_debug_keys.py` demonstrates.
 
@@ -99,7 +99,7 @@ graph TD
         RW["cpu.read_hook / write_hook<br/>CPUHook chain -- fires on every memory access"]
         POST["Emulator.post_op()"]
         MAP["MemoryMap.post_op()<br/>always on -- feeds tiles/stretches"]
-        HPOST["hook.post_op()<br/>TimeMachine / MemAccessCollector, if enabled"]
+        HPOST["hook.post_op()<br/>MemAccessCollector, if enabled"]
 
         CP -- "execute=True" --> EXEC
         CP -- "execute=False" --> BRK["dispatch Event('breakpoint')"]
@@ -120,9 +120,9 @@ The `CPUHook` chain from the diagram above, in detail: `enable_write_hook` alway
 
 ```mermaid
 graph LR
-    A["cpu.write_hook(addr, val)"] --> B["outer hook's write_hook<br/>e.g. TimeMachine: records (addr, old, new)"]
-    B -- "other_write_hook(...)" --> C["inner hook's write_hook<br/>e.g. MemAccessCollector: records this instruction's access"]
-    C --> D["write proceeds"]
+    A["cpu.write_hook(addr, val)"] --> B["outer hook's write_hook<br/>e.g. MemAccessCollector: records this instruction's access"]
+    B -- "other_write_hook(...)" --> C["inner hook's write_hook<br/>e.g. WriteProtectHook (tests): returns False for protected ranges"]
+    C --> D["write proceeds, unless a hook returned False"]
 ```
 
 ### Tiles, stretches, and call trees
@@ -169,7 +169,7 @@ graph TD
 
 `papple2` is verified at two tiers, deliberately:
 
-- **Automated (`make test`).** The pytest suite covers 6502 instruction semantics and the classic hardware quirks, Apple II specifics (soft switches, the hi-res memory buffer), running headless with and without checkpoints/breakpoints, and the debugging hooks (`TimeMachine`, `MemAccessCollector`). All of it runs with `no_display=True` -- no pygame window involved, and none of it can be, meaningfully: a headless run has no way to assert "does this look right on screen."
+- **Automated (`make test`).** The pytest suite covers 6502 instruction semantics and the classic hardware quirks, Apple II specifics (soft switches, the hi-res memory buffer), running headless with and without checkpoints/breakpoints, and the debugging hooks (`MemAccessCollector`). All of it runs with `no_display=True` -- no pygame window involved, and none of it can be, meaningfully: a headless run has no way to assert "does this look right on screen."
 - **Manual, with-window (`make boot-robotron`).** Runs `scripts/boot_robotron.py`, a plain script that boots `Emulator(no_display=False)` with the real `ROBOTRON.BIN` and calls `run()` with no `until` -- the same path the old in-repo Robotron showcase exercised, but with zero dependency on `probotron`'s workbench or Excel bridge.
 - **Manual, with-window, text mode (`make boot-basic`).** Runs `scripts/boot_basic.py`. Boots the Monitor and, on `Ctrl-B`, Integer BASIC -- the same real ROM path as `make boot-robotron`, but through the text page instead of hires. Catches display and keyboard bugs specific to `Display.update_text()` that a hires-only Robotron run never would.
 

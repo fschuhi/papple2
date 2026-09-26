@@ -61,8 +61,8 @@ class RwtsHook:
     """Serve the game's RWTS reads from a .do disk image.
 
     The sector appears in the buffer "deus ex machina": written straight
-    into memory, past the CPU's write hook, so the time machine can't undo
-    it. The fake RTS moves SP and PC outside the instruction stream, and
+    into memory, past the CPU's write hook, so no write hook sees it. The
+    fake RTS moves SP and PC outside the instruction stream, and
     Emulator's jsr_stack keeps the caller's JSR, which no RTS takes off
     again. `log` records every read served, for looking into both later.
     """

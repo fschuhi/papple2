@@ -45,7 +45,7 @@ Two words used throughout:
 | 3.13 | Stopping the machine | Video-position breakpoints | dynamic | open |
 | 3.14 | Watching the machine | Trace logging | dynamic | exists (memory access log) |
 | 3.15 | Watching the machine | Instrumentation and hooks | dynamic | exists / wished (richer) |
-| 3.16 | Watching the machine | Time travel (rewind, snapshots) | dynamic | exists (time machine) |
+| 3.16 | Watching the machine | Time travel (rewind, snapshots) | dynamic | open (time machine removed 2026-09-26) |
 | 3.17 | Finding variables | RAM search | dynamic | open |
 | 3.18 | Finding variables | Relational search and co-change profiling | dynamic | open |
 | 3.19 | Comparing | Snapshot diffing | dynamic | open |
@@ -200,7 +200,7 @@ Two words used throughout:
 - **Question it answers:** How did we get here? (Step backwards from the moment something went wrong.)
 - **How it works:** The emulator keeps periodic snapshots and replays forward from the nearest one; or it records enough to undo each instruction.
 - **Tools:** Mesen (rewind, step back), C64Debugger (snapshots, step back), most emulators (save states).
-- **papple2:** exists (time machine, rewinding CPU and memory). Wished: save and load complex state.
+- **papple2:** open. The time machine (rewinding CPU and memory) was removed 2026-09-26: never used much, and in the way of the hook review. Wished: save and load complex state.
 
 ### 3.17 RAM search
 
@@ -208,7 +208,7 @@ Two words used throughout:
 - **Question it answers:** Where does the game keep the number of lives, the player's position, the level number?
 - **How it works:** Take a snapshot, change something in the game (lose a life), then filter all addresses by how they changed (decreased by one). Repeat until few candidates remain.
 - **Tools:** FCEUX, Mesen, Cheat Engine (attached to an emulator process).
-- **papple2:** open. Cheap to build on top of the time machine.
+- **papple2:** open. Cheap to build: a snapshot is a copy of the 64K memory list.
 
 ### 3.18 Relational search and co-change profiling
 
@@ -225,7 +225,7 @@ Two words used throughout:
 - **Question it answers:** What changed in memory between "just before" and "just after" an event?
 - **How it works:** Two snapshots are compared byte by byte; the differences are the candidates for the variables involved.
 - **Tools:** emulator snapshot tools (unverified); easily scripted.
-- **papple2:** open; natural extension of the time machine.
+- **papple2:** open; easily scripted from two copies of the 64K memory list.
 
 ### 3.20 Binary diffing
 
@@ -374,7 +374,7 @@ What each tool calls a technique. "--" means the tool does not do it (usually be
 | 8bitworkshop | several 8-bit systems incl. Apple II | IDE with emulator and debugger | browser | presented at KansasFest; runs entirely in a web page |
 | microM8 | Apple II | emulator with web debugger | (unverified) | single developer; breakpoints, stepping, memory editing, record with rewind and playback, memory access heat map |
 | Virtual II | Apple II | emulator with monitor | macOS | Quinn Dunki's tool for the Choplifter analysis |
-| `papple2` | Apple II | Python emulator as debugging instrument | macOS (primary) | hooks, time machine, access log, tiles/stretches |
+| `papple2` | Apple II | Python emulator as debugging instrument | macOS (primary) | hooks, access log, tiles/stretches |
 
 ---
 
