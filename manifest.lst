@@ -102,7 +102,21 @@ tests/test_util.py
 
 # `*.do` are not in VCS
 #data/do/Lode_Runner_1983_Broderbund_cr_Reset_Vector.do
-#data/do/Bandits (1982)(Sirius Software)[cr Nameless Cracker - Pirate Treck - Krakowicz][t +1].do
+
+# Bandits from Total Recall, not in VCS
+#data/tr/bandits/BANDITS
+#data/tr/bandits/BANDITS.A
+#data/tr/bandits/BANDITS.C
+#data/tr/bandits/BANDITS.F
+#data/tr/bandits/BANDITS.G
+#data/tr/bandits/BANDITS.L
+#data/tr/bandits/BANDITS.N
+#data/tr/bandits/BANDITS.P
+#data/tr/bandits/BANDITS.R
+#data/tr/bandits/BANDITS.T
+#data/tr/bandits/BANDITS.V
+#data/tr/bandits/BANDITS.X
+#data/tr/bandits/BANDITS.Z
 
 ### --- Docs ---
 ## Main catalogue for NES/C64/other reveng platforms
