@@ -192,10 +192,12 @@ class MemoryMap:
         return info
 
     def _update_types( self, op_address: int, operand_length: int ) -> None:
-        # do not allow calling into an operand
+        # an instruction may start on a byte seen earlier as another instruction's
+        # operand: real code does this on purpose, e.g. the BIT trick in Bandits'
+        # loader, where `24 38` runs as BIT $38 from $0546 but a branch to $0547
+        # runs the $38 as SEC. So a byte's type is the last role we saw.
         # we only add info objects for memory locations which contain an opcode or which are accessed from opcodes
         # http://forum.6502.org/viewtopic.php?f=3&t=5517
-        assert self.types[op_address] != MEM_OPERAND
         assert 0 <= operand_length <= 2
         self.types[op_address] = MEM_OPCODE
         if operand_length >= 1:
