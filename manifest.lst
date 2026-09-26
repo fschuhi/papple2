@@ -41,6 +41,7 @@ papple2.example.toml
 #tools/concat_files.py
 
 ### --- Scripts, outside of the controlled package src ---
+scripts/boot_bandits.py
 scripts/boot_basic.py
 scripts/boot_lode_runner.py
 scripts/boot_robotron.py
