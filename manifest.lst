@@ -44,6 +44,7 @@ papple2.example.toml
 scripts/boot_basic.py
 scripts/boot_lode_runner.py
 scripts/boot_robotron.py
+scripts/speed_test.py
 
 ### --- Source ---
 src/papple2/util.py
@@ -81,6 +82,7 @@ tests/conftest.py
 #tests/test_cpu_stack.py
 #tests/test_cpu_status_flags.py
 #tests/test_cpu_system.py
+#tests/test_disassembler.py
 tests/test_disk_image.py
 #tests/test_display_memory.py
 tests/test_emulator_debug_keys.py
@@ -99,7 +101,8 @@ tests/test_util.py
 #data/bin/ROBOTRON.BIN
 
 # `*.do` are not in VCS
-#data/bin/Lode_Runner_1983_Broderbund_cr_Reset_Vector.do
+#data/do/Lode_Runner_1983_Broderbund_cr_Reset_Vector.do
+#data/do/Bandits (1982)(Sirius Software)[cr Nameless Cracker - Pirate Treck - Krakowicz][t +1].do
 
 ### --- Docs ---
 ## Main catalogue for NES/C64/other reveng platforms
