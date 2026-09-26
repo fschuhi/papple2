@@ -7,7 +7,7 @@ from papple2.core.hooks import CPUHook
 class WriteProtectHook(CPUHook):
     """
     Minimal demonstration of the veto-based write-hook pattern -- the same one
-    `TimeMachine` and `MemAccessCollector` use in `hooks.py`. Returning False
+    `MemAccessCollector` uses in `hooks.py`. Returning False
     from `write_hook` stops `CPU.write_byte` from writing at all, so nothing
     outside this hook needs to know the protected ranges exist. Whoever needs
     real write protection (e.g. a Robotron-specific hook) can start from this.

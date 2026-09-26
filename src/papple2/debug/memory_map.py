@@ -186,7 +186,6 @@ class MemoryMap:
         self._update_cycles( info, cycles )
         info.operand_length = operand_length
 
-        # TODO: cannot MemoryMap.link_with_prev() when using the TimeMachine
         self._link_with_prev( info, prev_info )
 
         return info

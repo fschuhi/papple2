@@ -34,7 +34,7 @@ def assemble():
 def make_emulator(assemble):
     """Factory fixture: returns a function that assembles a program, loads
     it into a headless Emulator at $6000, sets PC there, and applies any
-    preload bytes. Hook setup (mem_access, time_machine, write-protect, ...)
+    preload bytes. Hook setup (mem_access, write-protect, ...)
     stays in the test, since that's specific to what's under test."""
 
     def _make_emulator(
@@ -57,8 +57,7 @@ def run_steps():
     """Factory fixture: returns a function that drives the CPU directly,
     one instruction at a time -- the same way Emulator.run() does per step,
     but without going through the state machine / checkpoints / window
-    layer, so tests control exactly when side effects like TimeMachine
-    restoring get involved."""
+    layer, so tests control exactly which side effects get involved."""
 
     def _run_steps(emulator: Emulator, count: int) -> None:
         for _ in range(count):

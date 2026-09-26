@@ -8,19 +8,6 @@ if TYPE_CHECKING:
     from papple2.core.emulator import Emulator
 
 
-def determine_states_from_kmods() -> int:
-    mods = pygame.key.get_mods()
-    if mods & pygame.KMOD_SHIFT:
-        states = 200
-    elif mods & pygame.KMOD_CTRL:
-        states = 20
-    elif mods & pygame.KMOD_ALT:
-        states = 1
-    else:
-        states = 2000
-    return states
-
-
 class PygameWindow:
 
     def __init__(self, emulator: "Emulator") -> None:
@@ -41,12 +28,6 @@ class PygameWindow:
 
                 if event.key == pygame.K_x and (pygame.key.get_mods() & pygame.KMOD_CTRL):
                     events.append(Event('ctrlx'))
-
-                elif event.key == pygame.K_LEFT:  # A2 0x08
-                    events.append(Event('left', kbd_states=determine_states_from_kmods()))
-
-                elif event.key == pygame.K_RIGHT:  # A2 0x15
-                    events.append(Event('right', kbd_states=determine_states_from_kmods()))
 
                 elif event.key == pygame.K_PRINT:
                     events.append(Event('halt'))

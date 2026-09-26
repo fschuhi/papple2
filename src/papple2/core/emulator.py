@@ -27,7 +27,7 @@ from papple2.util import hexaddr, hexbyte, Ascii2Apple2Ascii, Apple2Ascii2Ascii
 from papple2.core.apple import Apple2
 from papple2.core.cpu import CPU, JMP_indirect, JMP_absolute, RTS, JSR
 from papple2.debug.memory_map import MemoryMap, OpInfo
-from papple2.core.hooks import TimeMachine, MemAccessCollector
+from papple2.core.hooks import MemAccessCollector
 from papple2.core.window import PygameWindow, NoWindow
 from pysm import State, StateMachine, Event
 
@@ -85,8 +85,6 @@ class EmulatorStoppedState( StateMachine ):
         self.handlers = {
             'enter': self.on_enter,
             'exit': self.on_exit,
-            'left': self.on_left,
-            'right': self.on_right,
             'd': self.on_d,
         }
 
@@ -95,23 +93,12 @@ class EmulatorStoppedState( StateMachine ):
         self.emulator.executing = False
         print("on_enter")
         self.window.status("execution stopped, %s" % str(self.cpu))
-        self.emulator.time_machine.enable_restoring( )
 
     def on_exit(self, state: State, event: Event) -> None:
         # formerly known as resume_execution()
         self.emulator.executing = True
         print("on_exit")
-        self.emulator.time_machine.disable_restoring( )
         self.window.status("execution resumed, %s" % str(self.cpu))
-
-    def on_left(self, state: State, event: Event) -> None:
-        kbd_states = event.cargo['kbd_states']
-        print("restore")
-        self.emulator.time_machine.restore_prev_state(kbd_states)
-
-    def on_right(self, state: State, event: Event) -> None:
-        kbd_states = event.cargo['kbd_states']
-        self.emulator.time_machine.restore_next_state(kbd_states)
 
     def on_d(self, state: State, event: Event) -> None:
         self.window.status(str(self.cpu))
@@ -183,7 +170,7 @@ WINDOW_POLL_INTERVAL = 1000
 
 class Emulator:
 
-    def __init__(self, no_display: bool = False, quiet: bool = True, frame_rate: int = 20, time_machine: bool = False, mem_access: bool = False, data_dir: str | None = None) -> None:
+    def __init__(self, no_display: bool = False, quiet: bool = True, frame_rate: int = 20, mem_access: bool = False, data_dir: str | None = None) -> None:
         self.apple2: Apple2 = Apple2( no_display, quiet, data_dir )
         self.display = self.apple2.display
         self.cpu: CPU = self.apple2.cpu
@@ -193,8 +180,6 @@ class Emulator:
 
         self.states = EmulatorStates( self )
 
-        # Emulator is not stateless => Timemachine would need to save these
-        # TODO: disallow tiling and further analysis w/ the memory map if we have used the TimeMachine
         self.jsr_stack = []
         self.prev_info = None
 
@@ -209,11 +194,6 @@ class Emulator:
 
         # self.cpu.write_hook = self.write_hook
         self.write_hook_enabled = False
-
-        # TODO: time machine cannot work together w/ tiling (not reliably at least)
-        self.time_machine = TimeMachine(self)
-        if time_machine:
-            self.time_machine.enable_write_hook( )
 
         self.mem_access = MemAccessCollector(self)
         if mem_access:
@@ -379,11 +359,7 @@ class Emulator:
 
         # save info about which path we have taken
         # currently only the last op, but could be reasonably expanded to trap e.g. SEC/BCS
-        # TODO: maybe store prev_info in timemachine state, so that we can do tiling even if using the timemachine
         self.prev_info = info
-
-        if self.time_machine.hooked:
-            self.time_machine.post_op()
 
         if self.mem_access.hooked:
             self.mem_access.post_op()

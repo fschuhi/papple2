@@ -7,7 +7,6 @@
 # originally written 2001, updated 2011
 
 import logging
-import io
 from pickle import Pickler, Unpickler
 
 from papple2.util import hexaddr, hexbyte, signed
@@ -111,18 +110,6 @@ class CPU:
         self.last_opcode = unpickler.load()
         self.PC = unpickler.load( )
         self.last_PC = unpickler.load( )
-
-    def pickle_to_variable(self) -> bytes:
-        f = io.BytesIO()
-        pickler = Pickler(f)
-        self.pickle(pickler)
-        pickled_cpu = f.getvalue()
-        return pickled_cpu
-
-    def unpickle_from_variable(self, pickled_cpu: bytes) -> None:
-        f = io.BytesIO(pickled_cpu)
-        unpickler = Unpickler(f)
-        self.unpickle(unpickler)
 
     def verbose_status(self) -> str:
         flags = [
