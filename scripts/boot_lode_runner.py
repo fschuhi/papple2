@@ -20,6 +20,11 @@ per address, notes the first jump into ROM ($D000 and up), keeps the last
 40 instructions with registers, and renders both hi-res pages to PNG files
 with a simple monochrome renderer (no NTSC color).
 
+RWTS watch (step 3a of the RWTS hook): every disk access of the game ends
+in DISABLE_INTS_CALL_RWTS at $B7B5 (main.nw, "disk routines"). A checkpoint
+there prints the request from the IOB and stops the emulator -- observing
+only, nothing is read yet. Both modes install it.
+
 Needs the stack wrap and decimal mode fixes in cpu.py (2026-09-23 patch).
 """
 
@@ -33,11 +38,43 @@ from papple2.util import load_data_dir
 
 LOAD_ADDRESS = 0x0800
 
+# DOS's RWTS entry as the game calls it: Y/A point to the IOB, carry clear
+# on return means success. Offsets into the IOB from main.nw's defines.
+DISABLE_INTS_CALL_RWTS = 0xB7B5
+IOB_TRACK_NUMBER = 0x04
+IOB_SECTOR_NUMBER = 0x05
+IOB_READ_WRITE_BUFFER_PTR = 0x08
+IOB_COMMAND_CODE = 0x0C
+RWTS_COMMANDS = {0: "seek", 1: "read", 2: "write", 4: "format"}
+
+
+def watch_rwts(em: Emulator) -> tuple[bool, bool]:
+    cpu = em.cpu
+    if cpu.PC != DISABLE_INTS_CALL_RWTS:
+        return True, True  # stay active, keep executing
+    mem = em.mem
+    iob = cpu.A << 8 | cpu.Y
+    command = mem[iob + IOB_COMMAND_CODE]
+    track = mem[iob + IOB_TRACK_NUMBER]
+    sector = mem[iob + IOB_SECTOR_NUMBER]
+    buffer = mem[iob + IOB_READ_WRITE_BUFFER_PTR] | mem[iob + IOB_READ_WRITE_BUFFER_PTR + 1] << 8
+    # only JMPs lead here from the caller's JSR, so the top of the stack is
+    # the caller's return address minus one, as JSR pushed it
+    low = mem[0x100 + (cpu.SP + 1 & 0xFF)]
+    high = mem[0x100 + (cpu.SP + 2 & 0xFF)]
+    caller = (high << 8 | low) + 1
+    name = RWTS_COMMANDS.get(command, "unknown")
+    print(f"RWTS after {em.instructions} instructions: {name} ({command}) "
+          f"track ${track:02X} sector ${sector:02X} buffer ${buffer:04X} "
+          f"-- IOB ${iob:04X}, returns to ${caller:04X}")
+    return True, False  # stop: step 3a only observes
+
 
 def boot(binary: str, headless: bool) -> Emulator:
     emulator = Emulator(no_display=headless, data_dir=load_data_dir())
     emulator.load_image(LOAD_ADDRESS, binary)
     emulator.cpu.PC = LOAD_ADDRESS
+    emulator.add_checkpoint(watch_rwts)
     return emulator
 
 
@@ -79,7 +116,7 @@ def run_headless(emulator: Emulator, instructions: int) -> None:
         last.append((em.instructions, cpu.PC, cpu.A, cpu.X, cpu.Y, cpu.SP))
         return True, True  # stay active, keep executing
 
-    emulator.checkpoints.append((True, watch))
+    emulator.add_checkpoint(watch)
 
     start = time.time()
     try:
