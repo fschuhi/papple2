@@ -65,7 +65,6 @@ class CPU:
 
         self.write_hook = None
         self.read_hook = None
-        self.op_hook = None
 
 
     def reset( self ) -> None:
@@ -305,9 +304,6 @@ class CPU:
 
 
     def do_next_step( self ) -> None:
-        if self.op_hook and self.op_hook(self):
-            return
-
         # all instructions take 2 cycles as a minimum
         self.cycles += 2
 
