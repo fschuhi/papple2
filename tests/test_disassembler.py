@@ -4,14 +4,13 @@ from papple2.core.cpu import CPU
 from papple2.core.memory import Memory
 from papple2.debug.disassembler import Disassembler
 from papple2.debug.labels import Labels
-from papple2.debug.memory_map import MemoryMap
 
 BNE = 0xD0
 
 
 @pytest.fixture
 def disassembler(memory: Memory, cpu: CPU) -> Disassembler:
-    return Disassembler(cpu, MemoryMap(memory), Labels())
+    return Disassembler(cpu, Labels())
 
 
 @pytest.mark.parametrize(
@@ -49,3 +48,28 @@ def test_disassembling_leaves_the_softswitches_on(
     disassembler.collect_op_info(0x0300)
 
     assert memory.use_apple_softswitches
+
+
+def test_every_address_is_code_by_default(
+    memory: Memory, disassembler: Disassembler
+) -> None:
+    # Without an is_code function, every address is decoded as an
+    # instruction: a plain static disassembler.
+    memory.load_test_data(0x0300, [0xA9, 0x05, 0x60])  # LDA #$05 / RTS
+
+    lines = disassembler.disassemble(0x0300, 0x0302)
+
+    assert [line[3] for line in lines] == ["LDA", "RTS"]
+
+
+def test_addresses_that_are_not_code_become_a_byte_block(
+    memory: Memory, cpu: CPU
+) -> None:
+    # is_code decides code or data per address. Here nothing is code, so
+    # the three bytes come out as one .byte line.
+    disassembler = Disassembler(cpu, Labels(), is_code=lambda address: False)
+    memory.load_test_data(0x0300, [0xA9, 0x05, 0x60])
+
+    lines = disassembler.disassemble(0x0300, 0x0302)
+
+    assert lines[-1][3:5] == [".byte", "a9 05 60"]

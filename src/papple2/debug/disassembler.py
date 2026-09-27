@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
+from collections.abc import Callable
+
 from papple2.util import signed, hexbyte, chunks, hexaddr
 from papple2.core.cpu import CPU
 from papple2.debug.labels import Labels
-from papple2.debug.memory_map import MemoryMap
 
 # What an addressing mode reports about an operand: keys "operand" (the text),
 # "operand_address" / "operand_value" (int), "memory" ([address, size, value]).
@@ -11,9 +12,17 @@ from papple2.debug.memory_map import MemoryMap
 type OperandInfo = dict[str, str | int | list[int]]
 
 class Disassembler:
-    def __init__(self, cpu: CPU, memory_map: MemoryMap, labels: Labels) -> None:
+    def __init__(
+        self,
+        cpu: CPU,
+        labels: Labels,
+        is_code: Callable[[int], bool] = lambda address: True,
+    ) -> None:
         self.cpu = cpu
-        self.memory_map = memory_map
+        # is_code(address) decides whether an address is disassembled as an
+        # instruction or shown in a .byte block; the default treats every
+        # address as code, which makes this a plain static disassembler
+        self.is_code = is_code
         self.memory = self.cpu.memory
         self.labels = labels
 
@@ -336,7 +345,7 @@ class Disassembler:
         address = start_address
         while (address <= end_address) and (instructions is None or instructions > 0):
 
-            if not self.memory_map.is_op(address):
+            if not self.is_code(address):
                 if byte_block_start is None:
                     byte_block_start = address
                     byte_block_end = address
@@ -350,31 +359,9 @@ class Disassembler:
                     self.__disassemble_byte_blocks( byte_block_start, byte_block_end, lines )
                     byte_block_start = None
 
-                info = self.memory_map.infos[address]
-
                 inline_label = ''
 
                 comments = []
-
-                if info.has_label():
-                    # for now we show every label
-                    # TODO: think about which labels we don't need
-                    # IMPORTANT: if we do not show a label but use it in leaps_from/leaps_to then Excel cannot scroll to it
-                    inline_label = info.label
-
-                    leaps_from = info.leaps_from.verbose( self )
-
-                    if not info.leaps_from.has_single_leap_from_regular_RTS():
-                        # returns from RTS don't need an empty line after the JSR
-                        add_empty_line()
-
-                    if info.has_single_leap_from_no_branching():
-                        # branch is immediately above, no need to show anything here
-                        # this only pertains to branches which actually fall through sequentially at least once
-                        # the branch above is marked anways w/ 0 or - in this case
-                        pass
-                    else:
-                        comments.append("< %s" % leaps_from)
 
                 instruction, length = self.collect_op_info( address )
                 op_bytes = instruction['bytes']
@@ -385,16 +372,6 @@ class Disassembler:
                     operand = self.labels.replace_operand_address(operand, operand_address)
 
                 mnemonic = instruction['mnemonic']
-
-                if info.is_leap():
-                    info_leap = info
-                    if info_leap.is_branch():
-                        # branch encountered in spidered section (i.e. not on real execution path) has branched==None
-                        branched = info_leap.branched if info_leap.branched else "?"
-                        comments.append(branched)
-
-                    elif mnemonic == "RTS":
-                        comments.append("> %s" % info_leap.leaps_to.verbose( self ) )
 
                 str_bytes = hexbyte(op_bytes[0])
                 str_bytes += ' ' + hexbyte(op_bytes[1]) if len(op_bytes) > 1 else ''
