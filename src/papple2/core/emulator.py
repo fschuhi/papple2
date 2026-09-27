@@ -25,8 +25,7 @@ from pickle import Pickler, Unpickler
 
 from papple2.util import hexaddr, hexbyte, Ascii2Apple2Ascii, Apple2Ascii2Ascii
 from papple2.core.apple import Apple2
-from papple2.core.cpu import CPU, JMP_indirect, JMP_absolute, RTS, JSR
-from papple2.debug.memory_map import MemoryMap, OpInfo
+from papple2.core.cpu import CPU
 from papple2.core.hooks import MemAccessCollector
 from papple2.core.window import PygameWindow, NoWindow
 from pysm import State, StateMachine, Event
@@ -112,7 +111,6 @@ class EmulatorStates:
         self.display = self.apple2.display
         self.cpu: CPU = self.apple2.cpu
         self.mem: list[int] = self.apple2.memory._mem
-        self.map = self.emulator.map
 
         self.sm = StateMachine('emulator')
 
@@ -167,24 +165,37 @@ def at_address(address: int) -> Until:
 # every instruction, so breakpoints and `until` stop exactly where they did.
 WINDOW_POLL_INTERVAL = 1000
 
+# The Apple II's 6502 runs at about 1.023 MHz. Windowed runs are throttled
+# to `speed` times this clock (see throttle_delay); headless runs and tests
+# are never throttled.
+APPLE_II_CYCLES_PER_SECOND = 1_023_000
+
+
+def throttle_delay(cycles: int, elapsed: float, speed: float) -> float:
+    """Seconds to sleep so that `cycles` emulated cycles take at least as
+    long as on an Apple II running at `speed` times its real clock.
+    `elapsed` is the wall-clock time those cycles actually took. Returns 0.0
+    when emulation is already slower than that."""
+    due = cycles / (APPLE_II_CYCLES_PER_SECOND * speed)
+    return max(0.0, due - elapsed)
+
 
 class Emulator:
 
-    def __init__(self, no_display: bool = False, quiet: bool = True, frame_rate: int = 20, mem_access: bool = False, data_dir: str | None = None) -> None:
+    def __init__(self, no_display: bool = False, quiet: bool = True, frame_rate: int = 20, mem_access: bool = False, data_dir: str | None = None, speed: float | None = 1.0) -> None:
         self.apple2: Apple2 = Apple2( no_display, quiet, data_dir )
         self.display = self.apple2.display
         self.cpu: CPU = self.apple2.cpu
         self.mem: list[int] = self.apple2.memory._mem
-        self.map: MemoryMap = MemoryMap( self.cpu.memory )
         self.window = NoWindow() if no_display else PygameWindow( self )
 
         self.states = EmulatorStates( self )
 
-        self.jsr_stack = []
-        self.prev_info = None
-
         self.elapsed_frame = 1 / int(frame_rate)
         self.last_ticks = time.monotonic()
+
+        # 1.0 = a real Apple II, 3.0 = three times as fast, None = unthrottled
+        self.speed = speed
 
         self.checkpoints = []
         self._until_checkpoint = None
@@ -208,21 +219,13 @@ class Emulator:
         # pickle apple2, including all parts of Apple2 (e.g. Memory, CPU)
         self.apple2.pickle( pickler )
 
-        # MemoryMap is the static execution trace capture, not part of the Apple2
-        self.map.pickle( pickler )
-
         pickler.dump(self.elapsed_frame)
         pickler.dump(self.last_ticks)
-        pickler.dump(self.jsr_stack)
-        pickler.dump(self.prev_info)
 
     def unpickle(self, unpickler: Unpickler) -> None:
         self.apple2.unpickle( unpickler )
-        self.map.unpickle( unpickler )
         self.elapsed_frame = unpickler.load()
         self.last_ticks = unpickler.load()
-        self.jsr_stack = unpickler.load()
-        self.prev_info = unpickler.load()
 
     """
     BIN loading
@@ -285,6 +288,9 @@ class Emulator:
         # runs, but the window must still be polled, or Ctrl-X could never
         # resume execution
         passes = 0
+        # (wall-clock time, cycles) when throttling last (re)started; reset
+        # while execution is stopped, so a resumed run doesn't race to catch up
+        throttle_start = None
         while not exit_while:
 
             if self.is_executing():
@@ -311,6 +317,21 @@ class Emulator:
 
             passes += 1
             if passes % WINDOW_POLL_INTERVAL == 0:
+                if self.speed is not None and not isinstance(self.window, NoWindow):
+                    if not self.is_executing():
+                        throttle_start = None
+                    elif throttle_start is None:
+                        throttle_start = (time.monotonic(), self.cpu.cycles)
+                    else:
+                        start_time, start_cycles = throttle_start
+                        delay = throttle_delay(
+                            self.cpu.cycles - start_cycles,
+                            time.monotonic() - start_time,
+                            self.speed,
+                        )
+                        if delay > 0:
+                            time.sleep(delay)
+
                 # empty the window's pending events
                 for event in self.window.poll():
                     if event.name == 'halt':
@@ -333,70 +354,6 @@ class Emulator:
         return self.run()
 
 
-    def post_op(self) -> OpInfo:
-        # ASSUMPTION: we are emulating on the execution path, i.e. there CPU is running
-        op_address = self.cpu.last_PC
-        operand_length = self.cpu.operand_length
-        cycles = self.cpu.cycles
-        info = self.map.post_op( op_address, operand_length, cycles, self.prev_info )
-
-        # execution_count can be increased because we are executing (see comment above)
-        if info.execution_count is None:
-            info.execution_count = 1
-        else:
-            info.execution_count += 1
-
-        opcode = info.opcode
-        if info.is_leap():
-            if info.is_branch():
-                self.handle_branching(info)
-            elif opcode == RTS:
-                self.handle_rts(info)
-            elif opcode == JSR:
-                self.handle_jsr(info)
-            elif opcode == JMP_absolute or opcode == JMP_indirect:
-                self.handle_jmp(info)
-
-        # save info about which path we have taken
-        # currently only the last op, but could be reasonably expanded to trap e.g. SEC/BCS
-        self.prev_info = info
-
+    def post_op(self) -> None:
         if self.mem_access.hooked:
             self.mem_access.post_op()
-
-        return info
-
-
-    """
-    register leaps with MemoryMap
-    """
-
-    def handle_branching(self, leap_from_info: OpInfo) -> None:
-        branched = self.cpu.branched
-        self.map.register_branch( leap_from_info, self.cpu.PC, branched )
-
-    def handle_jmp(self, leap_from_info: OpInfo) -> None:
-        self.map.register_jmp( leap_from_info, self.cpu.PC )
-
-    def handle_jsr(self, leap_from_info: OpInfo) -> None:
-        self.jsr_stack.append( self.cpu.last_PC )
-        self.map.register_jsr( leap_from_info, self.cpu.PC )
-
-    def handle_rts(self, leap_from_info: OpInfo) -> None:
-        pc = self.cpu.PC
-        assumed_jsr = pc - 3
-
-        # an empty jsr_stack here is not a bug: e.g. tail-call-style code, or the
-        # classic PHA/PHA + RTS "computed jump" trick, does an RTS without a
-        # matching JSR we tracked. Treat it as an unmatched return, don't crash.
-        if len(self.jsr_stack) > 0:
-            jsr_on_stack = self.jsr_stack[-1]
-            if assumed_jsr == jsr_on_stack:
-                # normal case: return to calling JSR (i.e. op after it)
-                matched_jsr = jsr_on_stack
-                self.jsr_stack.pop()
-            else:
-                matched_jsr = None
-        else:
-            matched_jsr = None
-        self.map.register_rts( leap_from_info, self.cpu.PC, matched_jsr )  # caller can be None
