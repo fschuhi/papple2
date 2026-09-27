@@ -19,8 +19,9 @@ GOALS.md
 TODO.md
 HISTORY.md
 
-# working document for finding the direction `papple2` wants to take
+# working documents for finding the direction `papple2` wants to take
 DIRECTION.md
+docs/instrumentation-ideas.md
 
 ### --- Build & Python Configuration ---
 Makefile
