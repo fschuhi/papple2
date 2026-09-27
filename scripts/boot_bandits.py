@@ -28,12 +28,6 @@ Run from the repo root:
 
 With the window, the emulator stays stopped at $BF00 after the hook stops
 it (Ctrl-X only stops it again); close the window to end the run.
-
-MemoryMap asserts that an instruction never starts on a byte it saw earlier
-as part of another instruction. Code loaded over code breaks that rule, and
-Bandits does exactly that early on. The script catches the assertion and
-prints which instruction tripped it and which earlier instruction owned the
-byte, to find out where it happens.
 """
 
 import argparse
@@ -256,32 +250,6 @@ def describe(instructions: int, jsr_address: int, command: int, parameters: int)
     )
 
 
-def report_memory_map_assertion(em: Emulator) -> None:
-    # Emulator.post_op() runs after the instruction, so last_PC is the
-    # instruction MemoryMap refused, and it has already executed
-    address = em.cpu.last_PC
-    print(
-        f"MemoryMap assertion after {em.instructions} instructions "
-        f"(cycle {em.cpu.cycles}): instruction at ${address:04X}, "
-        f"opcode ${em.mem[address]:02X}, PC now ${em.cpu.PC:04X}"
-    )
-    # which earlier instruction had this byte as its first or second operand
-    for distance in (1, 2):
-        owner = address - distance
-        info = em.map.get_info(owner)
-        if (
-            em.map.is_op(owner)
-            and info is not None
-            and info.operand_length is not None
-            and info.operand_length >= distance
-        ):
-            print(
-                f"  ${address:04X} was operand byte {distance} of the instruction "
-                f"at ${owner:04X}: opcode then ${info.opcode:02X}, byte there "
-                f"now ${em.mem[owner]:02X}, last executed at cycle {info.last_cycles}"
-            )
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--headless", action="store_true")
@@ -297,10 +265,7 @@ def main() -> None:
 
     mli = MliHook(directory)
     emulator.add_checkpoint(mli.checkpoint)
-    try:
-        emulator.run()
-    except AssertionError:
-        report_memory_map_assertion(emulator)
+    emulator.run()
 
     print(f"MLI calls seen: {len(mli.log)}")
     for entry in mli.log:

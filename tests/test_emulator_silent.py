@@ -118,13 +118,11 @@ def test_checkpoint_stop_halts_headless_run():
 
 def test_rts_without_matching_jsr_does_not_crash(make_emulator):
     """
-    Regression test for a real bug (not a Robotron assumption): `handle_rts`
-    used to assert that `jsr_stack` was non-empty on every RTS. That's false
-    in general -- the classic 6502 "computed jump" trick pushes a target
-    address by hand (PHA/PHA) and uses RTS to jump to it, with no JSR
-    involved at all. This program does exactly that: it never executes a
-    JSR, only two PHAs and an RTS, and should land at `landed` without
-    `handle_rts` raising.
+    The classic 6502 "computed jump" trick pushes a target address by hand
+    (PHA/PHA) and uses RTS to jump to it, with no JSR involved at all. This
+    program does exactly that: it never executes a JSR, only two PHAs and an
+    RTS, and should land at `landed`. (It began as a regression test for the
+    emulator's old JSR/RTS bookkeeping, removed after tag pre-redesign.)
     """
     asm, emulator = make_emulator("""
             *=$6000
@@ -140,7 +138,6 @@ def test_rts_without_matching_jsr_does_not_crash(make_emulator):
     emulator.run(until=at_address(asm.labels['LANDED']))
 
     assert emulator.cpu.PC == asm.labels['LANDED']
-    assert len(emulator.jsr_stack) == 0
 
 
 def test_write_protect_hook_vetoes_writes_in_range(make_emulator):
