@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>papple2 inner loop, per instruction (pre-redesign)</title>
+<style>
+:root {
+  --ink: #2C2C2A; --muted: #5F5E5A; --line: #D3D1C7; --line-strong: #888780;
+  --bg: #FFFFFF; --surface: #F1EFE8;
+  --purple: rgba(127, 119, 221, 0.20); --coral: rgba(216, 90, 48, 0.20);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #F1EFE8; --muted: #B4B2A9; --line: #444441; --line-strong: #888780;
+    --bg: #1F1F1D; --surface: #2C2C2A;
+    --purple: rgba(127, 119, 221, 0.35); --coral: rgba(216, 90, 48, 0.35);
+  }
+}
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; }
+main { max-width: 860px; margin: 0 auto; padding: 32px 24px 48px; }
+h1 { font-size: 22px; font-weight: 500; margin: 0 0 8px; }
+.intro { font-size: 15px; line-height: 1.6; color: var(--muted); margin: 0 0 16px; max-width: 70ch; }
+.bar { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+.bar button { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; padding: 5px 10px;
+  border: 1px solid var(--line-strong); border-radius: 8px; background: transparent; color: var(--ink); cursor: pointer; }
+.bar button.on { background: var(--surface); }
+.bar button:focus-visible { outline: 2px solid var(--line-strong); outline-offset: 2px; }
+.cap { font-size: 15px; line-height: 1.6; color: var(--muted); margin: 0 0 12px; max-width: 70ch; }
+.row { display: flex; align-items: baseline; gap: 8px; padding: 3px 0; }
+.chip { flex: 0 0 92px; font-size: 12px; text-align: center; padding: 1px 0; border-radius: 6px; color: var(--ink); }
+.l-emu, .l-hook { background: var(--purple); }
+.l-chk { background: var(--coral); }
+.l-cpu, .l-mem, .l-dev { background: var(--surface); border: 1px solid var(--line); }
+.txt { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; line-height: 1.5; }
+.nh { font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 11px; padding: 0 6px;
+  border-radius: 6px; background: var(--coral); margin-left: 6px; }
+.leg { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--muted); margin-top: 16px; }
+.leg .chip { flex: 0 0 auto; padding: 1px 8px; }
+</style>
+</head>
+<body>
+<main>
+<h1>papple2 inner loop, per instruction</h1>
+<p class="intro">The code as of the git tag <code>pre-redesign</code> (commit <code>0797250</code>). Pick an instruction to see every call from the checkpoints to <code>post_op()</code>. Indentation shows who calls whom; the tag shows where the step lives.</p>
+<div class="bar" id="bar"></div>
+<p class="cap" id="cap"></p>
+<div id="rows"></div>
+<div class="leg"><span class="chip l-chk">Checkpoints</span><span class="chip l-emu">Emulator</span><span class="chip l-cpu">CPU</span><span class="chip l-mem">Memory</span><span class="chip l-dev">Devices</span><span class="chip l-hook">Hooks</span><span><span class="nh" style="margin:0">no hook</span> invisible to read_hook / write_hook</span></div>
+</main>
+<script>
+const L = {chk: ['Checkpoints', 'l-chk'], emu: ['Emulator', 'l-emu'], cpu: ['CPU', 'l-cpu'],
+           mem: ['Memory', 'l-mem'], dev: ['Devices', 'l-dev'], hook: ['Hooks', 'l-hook']};
+function head(op, disp) { return [
+  ['chk', 0, 'checkpoints run, in list order (may change PC, SP, memory)'],
+  ['emu', 0, 'cpu.do_next_step()'],
+  ['cpu', 1, 'cycles += 2; reset immediate, branched, operand_length; last_PC = PC'],
+  ['cpu', 1, 'read_pc_byte(): read_byte(PC, hook=False), PC += 1', 1],
+  ['mem', 2, 'read_byte(PC) -> opcode $' + op],
+  ['cpu', 1, 'ops_dispatch[$' + op + ']() -> ' + disp]]; }
+function tail(extra) {
+  const t = [['emu', 0, 'post_op(): reads last_PC, operand_length, cycles'],
+             ['emu', 1, 'MemoryMap.post_op(): OpInfo (opcode from _mem, first sight only), byte types, link to previous']];
+  if (extra) t.push(['emu', 1, extra]);
+  t.push(['emu', 1, 'prev_info = info; collector stores its reads and last write (if hooked)']);
+  t.push(['emu', 0, 'instructions += 1']);
+  return t; }
+const absw = [['cpu', 1, 'absolute_mode(): operand_length = 2, cycles += 2'],
+              ['cpu', 1, 'read_pc_word(): read_word(PC, hook=False), PC += 2', 1],
+              ['mem', 2, 'read_word(PC): read_byte twice -> operand address']];
+const I = {
+'LDA #$05': {cap: 'Immediate mode: the operand sits in the instruction stream. The immediate flag keeps read_hook from seeing it.', s: [...head('A9', 'LDA(immediate_mode())'),
+  ['cpu', 1, 'immediate_mode(): operand_length = 1, immediate = True, returns PC, PC += 1'],
+  ['cpu', 1, 'LDA(address): read_byte(address)'], ['mem', 2, 'read_byte(address) -> $05'],
+  ['hook', 2, 'read_hook skipped: immediate flag is set', 1], ['cpu', 1, 'A = $05; update_nz sets N and Z'], ...tail()]},
+'LDA $1234': {cap: 'Absolute mode: two operand bytes are fetched without a hook, then one data read that read_hook sees.', s: [...head('AD', 'LDA(absolute_mode())'), ...absw,
+  ['cpu', 1, 'LDA($1234): read_byte($1234)'], ['mem', 2, 'read_byte($1234); $C000-$CFFF would go to the soft switches'],
+  ['dev', 3, 'only for $C0xx: SoftSwitches.read_byte (key latch, strobe, display modes)'],
+  ['hook', 2, 'read_hook($1234, value)'], ['cpu', 1, 'A = value; update_nz'], ...tail()]},
+'STA ($06),Y': {cap: 'Indirect indexed: a pointer read from zero page (one hook call with a 16-bit value), then a write that asks write_hook first.', s: [...head('91', 'STA(indirect_y_mode(rmw=True))'),
+  ['cpu', 1, 'indirect_y_mode(): operand_length = 1, cycles += 4'], ['cpu', 1, 'read_pc_byte(): zero-page address, PC += 1', 1], ['mem', 2, 'read_byte(PC) -> $06'],
+  ['cpu', 1, 'read_word_bug($06)'], ['mem', 2, 'read_word_bug($06): read_byte($06), read_byte($07) -> pointer'],
+  ['hook', 2, 'read_hook($06, pointer): once, with a 16-bit value'], ['cpu', 1, 'address = pointer + Y'],
+  ['cpu', 1, 'STA(address): write_byte(address, A)'], ['hook', 2, 'write_hook(address, A): a falsy return drops the write'],
+  ['mem', 2, 'write_byte(address, A): _mem[address] = A'], ['dev', 3, 'screen page: Display.update; $C0xx: soft switch'], ...tail()]},
+'INC $1234': {cap: 'Read-modify-write: one hooked read, then one hooked write to the same address.', s: [...head('EE', 'INC(absolute_mode())'), ...absw,
+  ['cpu', 1, 'INC($1234): cycles += 2, read_byte($1234)'], ['mem', 2, 'read_byte($1234) -> old'], ['hook', 2, 'read_hook($1234, old)'],
+  ['cpu', 1, 'update_nz(old + 1), then write_byte($1234, new)'], ['hook', 2, 'write_hook($1234, new): may veto'],
+  ['mem', 2, 'write_byte($1234, new)'], ['dev', 3, 'screen page: Display.update'], ...tail()]},
+'JSR $6000': {cap: 'A call: the operand is fetched without a hook, then two stack pushes. The collector keeps only the second.', s: [...head('20', 'JSR(absolute_mode())'), ...absw,
+  ['cpu', 1, 'JSR($6000): cycles += 2, push_word(PC - 1)'],
+  ['cpu', 2, 'push_byte(hi): write_byte($0100 + SP, hi), SP -= 1'], ['hook', 3, 'write_hook($01xx, hi)'], ['mem', 3, 'write_byte($01xx, hi)'],
+  ['cpu', 2, 'push_byte(lo): write_byte($0100 + SP, lo), SP -= 1'], ['hook', 3, 'write_hook($01xx, lo): collector keeps only this last write'], ['mem', 3, 'write_byte($01xx, lo)'],
+  ['cpu', 1, 'PC = $6000'], ...tail('handle_jsr(): jsr_stack.append(last_PC); MemoryMap.register_jsr()')]},
+'RTS': {cap: 'A return: no operand, two stack pulls, each seen by read_hook. post_op() matches it against jsr_stack.', s: [...head('60', 'RTS()'),
+  ['cpu', 1, 'RTS(): cycles += 4, pull_word()'],
+  ['cpu', 2, 'pull_byte(): SP += 1, read_byte($0100 + SP) -> lo'], ['mem', 3, 'read_byte($01xx)'], ['hook', 3, 'read_hook($01xx, lo)'],
+  ['cpu', 2, 'pull_byte(): SP += 1, read_byte($0100 + SP) -> hi'], ['mem', 3, 'read_byte($01xx)'], ['hook', 3, 'read_hook($01xx, hi)'],
+  ['cpu', 1, 'PC = word + 1'], ...tail('handle_rts(): if PC - 3 is on top of jsr_stack, pop it; MemoryMap.register_rts()')]},
+'BNE': {cap: 'A branch: the offset is read without a hook; the CPU records whether it branched, and post_op() registers it.', s: [...head('D0', 'BNE(relative_mode())'),
+  ['cpu', 1, 'relative_mode(): operand_length = 1, pc = PC, PC += 1'], ['cpu', 1, 'read_byte(pc, hook=False): offset', 1], ['mem', 2, 'read_byte(pc) -> offset'],
+  ['cpu', 1, 'target = pc + 1 + signed(offset)'], ['cpu', 1, 'BNE(target): handle_branching(target, not Z): if taken, cycles += 1, PC = target; branched = taken'],
+  ...tail('handle_branching(): MemoryMap.register_branch(info, PC, branched)')]}};
+const bar = document.getElementById('bar'), rows = document.getElementById('rows'), cap = document.getElementById('cap');
+function show(k) {
+  [...bar.children].forEach(b => b.classList.toggle('on', b.textContent === k));
+  cap.textContent = I[k].cap;
+  rows.innerHTML = I[k].s.map(([l, d, t, nh]) =>
+    '<div class="row" style="padding-left:' + (d * 22) + 'px"><span class="chip ' + L[l][1] + '">' + L[l][0] +
+    '</span><span class="txt">' + t.replace(/</g, '&lt;') + (nh ? '<span class="nh">no hook</span>' : '') + '</span></div>').join('');
+}
+Object.keys(I).forEach(k => { const b = document.createElement('button'); b.textContent = k; b.onclick = () => show(k); bar.appendChild(b); });
+show('STA ($06),Y');
+</script>
+</body>
+</html>

@@ -22,6 +22,10 @@ HISTORY.md
 # working documents for finding the direction `papple2` wants to take
 DIRECTION.md
 docs/instrumentation-ideas.md
+docs/instrumentation-map.md
+docs/diagrams/inner-loop.html
+docs/diagrams/memory-access.svg
+docs/diagrams/run-loop.svg
 
 ### --- Build & Python Configuration ---
 Makefile
@@ -119,7 +123,7 @@ tests/test_util.py
 #data/tr/bandits/BANDITS.X
 #data/tr/bandits/BANDITS.Z
 
-### --- Docs ---
+### --- Docs (remaining ones, see also above) ---
 ## Main catalogue for NES/C64/other reveng platforms
 docs/reveng-catalogue.md
 
