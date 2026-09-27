@@ -182,7 +182,7 @@ def throttle_delay(cycles: int, elapsed: float, speed: float) -> float:
 
 class Emulator:
 
-    def __init__(self, no_display: bool = False, quiet: bool = True, frame_rate: int = 20, mem_access: bool = False, data_dir: str | None = None, speed: float | None = 1.0) -> None:
+    def __init__(self, no_display: bool = False, quiet: bool = True, frame_rate: int = 40, mem_access: bool = False, data_dir: str | None = None, speed: float | None = 1.0) -> None:
         self.apple2: Apple2 = Apple2( no_display, quiet, data_dir )
         self.display = self.apple2.display
         self.cpu: CPU = self.apple2.cpu
