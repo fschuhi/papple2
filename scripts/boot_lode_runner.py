@@ -10,8 +10,11 @@ relative to the current working directory):
 
     python boot_lode_runner.py path/to/golden_source.bin
     python boot_lode_runner.py path/to/golden_source.bin --headless
+    python boot_lode_runner.py path/to/golden_source.bin --speed 1.0
 
-Default: opens the pygame window and runs until you close it or Ctrl-X.
+Default: opens the pygame window and runs until you close it or Ctrl-X,
+as fast as the emulator can. --speed 1.0 throttles the window to the speed
+of a real Apple II (`make boot-lode-runner-throttled`).
 Not tried by me -- my sandbox has no display.
 
 --headless: the run from our session. Runs N instructions without a window,
@@ -62,9 +65,8 @@ class RwtsHook:
 
     The sector appears in the buffer "deus ex machina": written straight
     into memory, past the CPU's write hook, so no write hook sees it. The
-    fake RTS moves SP and PC outside the instruction stream, and
-    Emulator's jsr_stack keeps the caller's JSR, which no RTS takes off
-    again. `log` records every read served, for looking into both later.
+    fake RTS moves SP and PC outside the instruction stream. `log` records
+    every read served, for looking into both later.
     """
 
     def __init__(self, disk: DiskImage) -> None:
@@ -110,9 +112,9 @@ def describe(instructions: int, command: int, track: int, sector: int, buffer: i
             f"returns to ${caller:04X}")
 
 
-def boot(binary: str, headless: bool) -> tuple[Emulator, RwtsHook]:
+def boot(binary: str, headless: bool, speed: float | None = None) -> tuple[Emulator, RwtsHook]:
     data_dir = load_data_dir()
-    emulator = Emulator(no_display=headless, data_dir=data_dir)
+    emulator = Emulator(no_display=headless, data_dir=data_dir, speed=speed)
     emulator.load_image(LOAD_ADDRESS, binary)
     emulator.cpu.PC = LOAD_ADDRESS
     rwts = RwtsHook(DiskImage(Path(data_dir) / "do" / DISK_IMAGE))
@@ -189,9 +191,11 @@ def main() -> None:
     parser.add_argument("--headless", action="store_true")
     parser.add_argument("--instructions", type=int, default=4_000_000,
                         help="headless only (default: 4000000)")
+    parser.add_argument("--speed", type=float, default=None,
+                        help="window only: 1.0 = a real Apple II (default: unthrottled)")
     args = parser.parse_args()
 
-    emulator, rwts = boot(args.binary, args.headless)
+    emulator, rwts = boot(args.binary, args.headless, args.speed)
     if args.headless:
         run_headless(emulator, args.instructions)
     else:
