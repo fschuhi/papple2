@@ -65,7 +65,6 @@ src/papple2/core/window.py
 
 ## debug
 src/papple2/debug/assembler.py
-src/papple2/debug/checkpoints.py
 src/papple2/debug/disassembler.py
 src/papple2/debug/labels.py
 
