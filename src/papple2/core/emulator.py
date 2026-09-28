@@ -62,9 +62,6 @@ class EmulatorRunningState( StateMachine ):
     def on_breakpoint( self, state: State, event: Event ) -> None:
         self.window.status("execution stopped (breakpoint), %s" % str(self.cpu))
 
-    def action(self, state: State, event: Event) -> None:
-        print("action!!!! we are in state '%s', handling event '%s'" % (state.name, event.name))
-
     def on_key(self, state: State, event: Event) -> None:
         key = event.cargo['key']
         self.emulator.press_key(key)
@@ -88,14 +85,10 @@ class EmulatorStoppedState( StateMachine ):
 
     def on_enter(self, state: State, event: Event) -> None:
         # formerly known as suspend_execution()
-        self.emulator.executing = False
-        print("on_enter")
         self.window.status("execution stopped, %s" % str(self.cpu))
 
     def on_exit(self, state: State, event: Event) -> None:
         # formerly known as resume_execution()
-        self.emulator.executing = True
-        print("on_exit")
         self.window.status("execution resumed, %s" % str(self.cpu))
 
     def on_d(self, state: State, event: Event) -> None:
@@ -134,7 +127,9 @@ class EmulatorStates:
         self.sm.add_transition(running, halt, events=['halt'])
         self.sm.add_transition(stopped, halt, events=['halt'])
 
-        self.sm.initialize()
+        # fire_events_on_init: the initial state's entry action runs, as
+        # Harel's statecharts demand -- pysm's default would skip it
+        self.sm.initialize(fire_events_on_init=True)
 
 
     @property
@@ -198,13 +193,8 @@ class Emulator:
 
         self.checkpoints = []
         self._until_checkpoint = None
-        # self.add_checkpoint( RandomTesterCheckpoint(self).checkpoint)
-        # self.add_checkpoint( RecordedKeys( ).press_keys )
-        # self.add_checkpoint( PrintCharTester( ).LDA_indirect )
 
-        self.executing = False
         self.instructions = 0
-        self.stepsize = 10000
 
 
     def pickle(self, pickler: Pickler) -> None:
@@ -227,8 +217,6 @@ class Emulator:
         self.apple2.memory.load_image(start_address, fn)
         if self.apple2.cpu.PC is None:
             self.apple2.cpu.PC = start_address
-
-        # TODO: add exceptions from connecting tiles to stretches in Emulator.load_image(), i.e. before entering the event_loop
 
     """
     event loop
@@ -253,8 +241,6 @@ class Emulator:
     def run(self, until: Until | None = None) -> None:
 
         self.instructions = 0
-        self.stepsize = 10000
-        self.executing = True
 
         if self._until_checkpoint is not None:
             self.checkpoints.remove(self._until_checkpoint)
@@ -331,7 +317,3 @@ class Emulator:
 
         # do some cleanup here
         print(self.states.leaf_state.name)
-
-
-    def event_loop(self) -> None:
-        return self.run()

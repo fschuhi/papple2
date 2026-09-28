@@ -38,6 +38,19 @@ def test_ctrlx_toggles_state():
     assert emulator.states.leaf_state.name == 'Running'
 
 
+def test_executing_follows_the_state_from_the_start():
+    # `executing` mirrors the state machine (a plain flag is cheaper than
+    # asking for the state's name). Running's entry and exit actions set it;
+    # the entry action also runs on initialize, so the mirror is right from
+    # construction on.
+    emulator = Emulator(no_display=True)
+    assert emulator.executing is True
+    emulator.states.dispatch(Event('ctrlx'))
+    assert emulator.executing is False
+    emulator.states.dispatch(Event('ctrlx'))
+    assert emulator.executing is True
+
+
 def test_keypress_reaches_program(make_emulator):
     """
     Walkthrough: driving papple2 purely from code, no pygame window.
