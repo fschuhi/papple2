@@ -1,6 +1,6 @@
 # Instrumentation ideas -- braindump
 
-**Status:** braindump, nothing decided. Collected 2026-09-26/27 while preparing the clean-slate redesign of `papple2`'s instrumentation.
+**Status:** braindump, nothing decided. Collected 2026-09-26 to 28 while preparing the clean-slate redesign of `papple2`'s instrumentation.
 **Sources:** each idea is labelled by who brought it in: **[user]** (project owner), **[Claude]** (this `papple2` conversation), **[Astra]** (a separate conversation with GPT-6-Astra), **[Gemini]** (a separate conversation about storage speed).
 **Old code:** everything referred to as "old" is at the git tag `pre-redesign` (commit `0797250`).
 
@@ -137,6 +137,9 @@ This document is raw material for a later design document. Order within sections
 - **[Astra]** Describe the result honestly: "an instruction-level trace with memory-operation observations -- not a cycle-accurate hardware bus trace". Record access order and the emulator's cycle totals; don't assign exact hardware-cycle timestamps; don't silently correct duplicate accesses in the raw trace.
 - **[Astra]** Direct `_mem` assignments and slice assignments bypass byte-method instrumentation.
 - **[Claude]** Open: indirect addressing modes (`(zp),Y`, `(zp,X)`, `JMP (abs)`) read a pointer, then the data. Whether the seam can tell a pointer read from a data read decides whether "pointer read" is a fact or an inference.
+- **[user]** Proposal: tell `read_byte()` what kind of read it is doing -- through a parameter or through separate methods -- and let that information flow into the trace. Then `Memory` knows it too; "only the CPU knows why" is a property of today's interface, not a law.
+- **[user]** `hook=False` in the old `cpu.py` was a policy ("don't let anyone see this read"), not a fact. Together with the vetoing `write_hook`, it was where observing and modifying got mixed up, and it baked in the decision not to trace opcode and operand reads.
+- **[Claude]** Keep the fact, drop the policy: report every access, deterministically, and say what kind of access it is.
 
 ## 9. The record per executed instruction
 
@@ -193,6 +196,10 @@ This document is raw material for a later design document. Order within sections
 - **[Astra]** Start with structured in-memory events, a readable text renderer, JSON Lines for short sessions, and counters and indexes that don't retain every event. Later: filters before formatting, buffered output, ring buffers, an explicit overflow policy, run metadata (image hashes, initial state, emulator version, enabled instrumentation).
 - **[Astra]** Triggered history as the default investigative mode: keep a bounded recent-history buffer and save it when something interesting happens, rather than writing every event to disk.
 - **[Astra]** A trace is replayable only with a known initial state, external inputs injected at recorded instruction boundaries, and all machine-state changes accounted for.
+- **[Astra]** Decide on either tracking bytes or tracking semantic units, not both.
+- **[user]** (devil's advocate) Record per access and just grow a list of tuples -- the one thing Python does really well. Offline trace readers, and online analyzers for specific situations, do the interpreting. Python means being very selective in what is done live.
+- **[Claude]** A tuple append costs about 45 ns on the M4, so three or four accesses per instruction add roughly 150 to 200 ns to about 1 microsecond: affordable. What bites is growth, not speed: millions of kept objects per second are where the garbage collector cost showed up, so long runs need a ring buffer or regular flushing to disk. Tracing fetches as separate events roughly triples the number of events per instruction; one record per instruction carrying the bytes as fetched covers them for the price of one.
+- **[user]** Measured on the M4 with the throttle (2026-09-27): 3.55x a real Apple II unthrottled, but only 1.51x while awake when throttled -- the emulator gets slower once it sleeps regularly. So the real headroom at Apple II speed is about 1.5x: the budget the new instrumentation has to fit into.
 
 ## 13. Consumers
 
@@ -214,7 +221,19 @@ General knowledge, not checked; terms to search for.
 - **Mesen, FCEUX:** trace loggers and code/data loggers.
 - **Shadow call stack:** a second, analysis-side model of the stack.
 
-## 15. Open questions
+## 15. Tiles and stretches
+
+- **[user]** What they were for: tiles and stretches project the execution path onto the serial, one-dimensional listing, like the literate-source model of XekriRedmane's documentation. A stretch -- consecutive tiles stitched together -- has a good chance of being part of a subroutine, so stretches point to subroutine candidates. Typical cases: relative branches out of a tight loop that land right behind its end, or execution falling through a branch that loops upwards. The longer the stretches, the more compact the call graphs: like zooming out, or a folding editor.
+- **[user]** The linked list (`link_next`/`link_prev`) was a faithful translation of what "stitching" means -- borrowing a concept from another domain and implementing it true to its meaning. More than one leap out of the same position never came up.
+- **[Claude]** The three stitching rules of the old `tiles.py`: two tiles adjacent in memory are linked if execution fell through from one to the next, if the first ends in a branch that was always taken, or if it ends in a `JSR` whose `RTS` came back to the very next instruction.
+- **[Claude]** Suggestions for the new design: control-flow edges (from, to, kind) as the data, and chains along the listing as one view computed from them -- a pointer allows one successor, real control flow has many. Tiles are basic blocks *as observed*: a leap target not yet executed doesn't split a block, so blocks change as coverage grows, and are best computed afresh from a recorded trace (with `numpy`, finding where blocks start is a few array operations). The stitching itself was never the cost; building `MemoryMap` live on every instruction was.
+- **[Claude]** Search terms (general knowledge): superblock and extended basic block (a chain of blocks with one entry), trace, IDA's function chunk, QEMU's translation block chaining (several of these are already in `DIRECTION.md`'s glossary); function boundary detection or function identification (finding subroutines); structural analysis or control-flow structuring (collapsing loops and ifs into single nodes, as decompilers do); Ghidra's subroutine models, one of them named "Partitioned Code" (to be checked).
+
+## 16. Keeping what we've learned
+
+- **[user]** The old tile lists in Excel showed notes from `Annotations` (address -> topic -> value) next to each tile, which made the dumps much more readable. How learnings persist across experiments has to be revisited in the new design.
+
+## 17. Open questions
 
 - The machine seam: which events can the machine report as facts, and which are inferences (section 8)?
 - The record per executed instruction (section 9).
@@ -224,3 +243,5 @@ General knowledge, not checked; terms to search for.
 - Run-level statechart: which states and events are needed at all?
 - Where the design document lives, and how tests pin its rules.
 - Which of the old paradigms (tiles / basic blocks, stretches, data flow) come back, in which form, and when.
+- How learnings persist across experiments (section 16).
+- Tiles and stretches in the new design: which views, computed when (section 15).
