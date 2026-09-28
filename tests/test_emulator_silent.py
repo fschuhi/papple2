@@ -1,5 +1,4 @@
 from pysm import Event
-from papple2.debug.checkpoints import KeyScript
 from papple2.core.emulator import Emulator, after_instructions, at_address
 
 
@@ -63,12 +62,13 @@ def test_keypress_reaches_program(make_emulator):
     target, since the emulator passes through it before any key has
     been pressed).
 
-    `KeyScript` is a checkpoint: a function `Emulator.run` calls before
-    every instruction. It waits until `emulator.instructions` reaches a
-    scheduled count, then calls `emulator.press_key`, the same call the
-    pygame window makes on a real keypress. The CPU never learns this
-    happened directly; it only sees the effect on its next read of
-    $C000, wherever in the polling loop that happens to land.
+    The key takes the same path as a real keypress in the window: after
+    300 instructions `until` stops the run (the state machine goes to
+    Stopped via 'breakpoint'), 'ctrlx' resumes it, and a 'key' event
+    reaches the Running state's on_key(), which calls press_key(). The
+    CPU never learns this happened directly; it only sees the effect on
+    its next read of $C000, wherever in the polling loop that happens to
+    land.
     """
     asm, emulator = make_emulator("""
             *=$6000
@@ -80,32 +80,63 @@ def test_keypress_reaches_program(make_emulator):
     halt:   JMP halt        ; spin here forever -- our known address
     """)
 
-    keys = KeyScript([(300, 'A')])
-    emulator.add_checkpoint(keys.press_keys)
-
+    emulator.run(until=after_instructions(300))
+    assert emulator.states.leaf_state.name == 'Stopped'
+    emulator.states.dispatch(Event('ctrlx'))              # Stopped -> Running
+    emulator.states.dispatch(Event('key', key=ord('A')))  # the window's path
     emulator.run(until=at_address(asm.labels['HALT']))
 
     assert emulator.mem[0x0300] == ord('A') | 0x80
 
 
-def test_checkpoint_stop_halts_headless_run():
+def test_unserved_trap_halts_headless_run(make_emulator):
     """
-    A checkpoint-requested stop (execute=False) has to act like a real
-    halt when there's no window to resume it from -- otherwise `run()`
-    never returns. This exercises that path directly, with no `until`
-    involved at all: the checkpoint below is the only thing stopping it.
+    A trap that doesn't serve its address (returns False) stops the
+    emulator before the instruction there. Without a window there's nothing
+    to resume from, so the stop has to act like a real halt -- otherwise
+    `run()` never returns. No `until` is involved: the trap is the only
+    thing stopping this run.
     """
-    emulator = Emulator(no_display=True)
-    emulator.load_image(0x2dfd, 'data/bin/ROBOTRON.BIN')
+    asm, emulator = make_emulator("""
+            *=$6000
 
-    def stop_after_10(e):
-        return (True, e.instructions < 10)  # (active, execute)
+    start:  LDA #$00
+            INX
+    trap:   NOP             ; the trap sits here
+    spin:   JMP spin        ; never reached
+    """)
 
-    emulator.add_checkpoint(stop_after_10)
-    emulator.run()  # no `until` -- only the checkpoint can stop this
+    emulator.add_trap(asm.labels['TRAP'], lambda em: False)
+    emulator.run()  # no `until` -- only the trap can stop this
 
-    assert emulator.instructions == 10
+    assert emulator.cpu.PC == asm.labels['TRAP']
+    assert emulator.instructions == 2
     assert emulator.states.leaf_state.name == 'Stopped'
+
+
+def test_served_trap_continues_where_the_handler_points(make_emulator):
+    """
+    A served trap (returns True) lets the run go on at whatever PC the
+    handler set -- the way the disk stand-ins return to their caller.
+    Here the handler jumps over the LDA #$FF, so $0300 keeps the $42.
+    """
+    asm, emulator = make_emulator("""
+            *=$6000
+
+    start:  LDA #$42
+    skip:   LDA #$FF        ; the trap jumps over this
+    store:  STA $0300
+    halt:   JMP halt
+    """)
+
+    def jump_over(em):
+        em.cpu.PC = asm.labels['STORE']
+        return True  # served
+
+    emulator.add_trap(asm.labels['SKIP'], jump_over)
+    emulator.run(until=at_address(asm.labels['HALT']))
+
+    assert emulator.mem[0x0300] == 0x42
 
 
 def test_rts_without_matching_jsr_does_not_crash(make_emulator):

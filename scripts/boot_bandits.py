@@ -13,7 +13,7 @@ call looks like this:
 ProDOS returns to the byte after these three, so the caller's code goes on
 behind them.
 
-papple2 has no ProDOS, so nothing answers at $BF00. A checkpoint there, the
+papple2 has no ProDOS, so nothing answers at $BF00. A trap there, the
 MLI hook, stands in for it, one command at a time:
 
 - GET_PREFIX: writes the prefix /BANDITS/ into the caller's buffer. With a
@@ -124,10 +124,8 @@ class MliHook:
             MLI_CLOSE: self.close,
         }
 
-    def checkpoint(self, em: Emulator) -> tuple[bool, bool]:
+    def serve(self, em: Emulator) -> bool:
         cpu = em.cpu
-        if cpu.PC != MLI_ENTRY:
-            return True, True  # stay active, keep executing
         mem = em.mem
 
         # JSR pushed the address of its own last byte; one more is the first
@@ -142,13 +140,13 @@ class MliHook:
         parameters = read_word(mem, inline + 1)
         self.log.append((em.instructions, jsr_address, command, parameters))
 
-        serve = self.commands.get(command)
-        served = serve(em, parameters) if serve is not None else None
+        serve_command = self.commands.get(command)
+        served = serve_command(em, parameters) if serve_command is not None else None
         if served is not None:
             print(describe(em.instructions, jsr_address, command, parameters)
                   + " -- served: " + served)
             self.return_to_caller(em, inline)
-            return True, True  # continue in the caller
+            return True  # served: continue in the caller
 
         print(describe(em.instructions, jsr_address, command, parameters))
         block = mem[parameters : parameters + PARAMETER_BYTES_SHOWN]
@@ -157,7 +155,7 @@ class MliHook:
             pathname_address = read_word(mem, parameters + 1)
             name = read_pathname(mem, pathname_address)
             print(f"  pathname at ${pathname_address:04X}: {name!r}")
-        return True, False  # breakpoint: stop here, not served
+        return False  # not served: stop here
 
     def get_prefix(self, em: Emulator, parameters: int) -> str | None:
         # parameter block: count, buffer address
@@ -264,7 +262,7 @@ def main() -> None:
     emulator.cpu.PC = LOAD_ADDRESS
 
     mli = MliHook(directory)
-    emulator.add_checkpoint(mli.checkpoint)
+    emulator.add_trap(MLI_ENTRY, mli.serve)
     emulator.run()
 
     print(f"MLI calls seen: {len(mli.log)}")

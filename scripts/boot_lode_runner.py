@@ -17,14 +17,12 @@ as fast as the emulator can. --speed 1.0 throttles the window to the speed
 of a real Apple II (`make boot-lode-runner-throttled`).
 Not tried by me -- my sandbox has no display.
 
---headless: the run from our session. Runs N instructions without a window,
-watching every instruction through a papple2 checkpoint: counts executions
-per address, notes the first jump into ROM ($D000 and up), keeps the last
-40 instructions with registers, and renders both hi-res pages to PNG files
-with a simple monochrome renderer (no NTSC color).
+--headless: the run from our session. Runs N instructions without a window
+and renders both hi-res pages to PNG files with a simple monochrome
+renderer (no NTSC color).
 
 RWTS hook (step 3b): every disk access of the game ends in
-DISABLE_INTS_CALL_RWTS at $B7B5 (main.nw, "disk routines"). A checkpoint
+DISABLE_INTS_CALL_RWTS at $B7B5 (main.nw, "disk routines"). A trap
 there serves reads from the disk image in data_dir/do/: it copies the sector
 straight into the buffer, clears carry, and returns to the caller as RTS
 would. Anything else (the high-score write at game over, format) prints the
@@ -35,7 +33,6 @@ Needs the stack wrap and decimal mode fixes in cpu.py (2026-09-23 patch).
 """
 
 import argparse
-import collections
 import time
 from pathlib import Path
 
@@ -74,10 +71,8 @@ class RwtsHook:
         # (instructions, command, track, sector, buffer, return address)
         self.log: list[tuple[int, int, int, int, int, int]] = []
 
-    def checkpoint(self, em: Emulator) -> tuple[bool, bool]:
+    def serve(self, em: Emulator) -> bool:
         cpu = em.cpu
-        if cpu.PC != DISABLE_INTS_CALL_RWTS:
-            return True, True  # stay active, keep executing
         mem = em.mem
         iob = cpu.A << 8 | cpu.Y
         command = mem[iob + IOB_COMMAND_CODE]
@@ -93,7 +88,7 @@ class RwtsHook:
             caller = (high << 8 | low) + 1
             print("RWTS: stopping, only reads are served -- "
                   + describe(em.instructions, command, track, sector, buffer, caller))
-            return True, False  # breakpoint: the game freezes here
+            return False  # not served: the game freezes here
 
         mem[buffer : buffer + SECTOR_SIZE] = self.disk.read_sector(track, sector)
         mem[iob + IOB_RETURN_CODE] = 0
@@ -102,7 +97,7 @@ class RwtsHook:
         caller = cpu.pull_word() + 1
         cpu.PC = caller
         self.log.append((em.instructions, command, track, sector, buffer, caller))
-        return True, True  # continue in the caller
+        return True  # served: continue in the caller
 
 
 def describe(instructions: int, command: int, track: int, sector: int, buffer: int, caller: int) -> str:
@@ -118,7 +113,7 @@ def boot(binary: str, headless: bool, speed: float | None = None) -> tuple[Emula
     emulator.load_image(LOAD_ADDRESS, binary)
     emulator.cpu.PC = LOAD_ADDRESS
     rwts = RwtsHook(DiskImage(Path(data_dir) / "do" / DISK_IMAGE))
-    emulator.add_checkpoint(rwts.checkpoint)
+    emulator.add_trap(DISABLE_INTS_CALL_RWTS, rwts.serve)
     return emulator, rwts
 
 
@@ -148,38 +143,12 @@ def save_hires_png(emulator: Emulator, page_base: int, filename: str) -> None:
 
 
 def run_headless(emulator: Emulator, instructions: int) -> None:
-    executions = collections.Counter()
-    first_rom_entry = []
-    last = collections.deque(maxlen=40)
-
-    def watch(em: Emulator) -> tuple[bool, bool]:
-        cpu = em.cpu
-        executions[cpu.PC] += 1
-        if cpu.PC >= 0xD000 and not first_rom_entry:
-            first_rom_entry.append((cpu.PC, em.instructions))
-        last.append((em.instructions, cpu.PC, cpu.A, cpu.X, cpu.Y, cpu.SP))
-        return True, True  # stay active, keep executing
-
-    emulator.add_checkpoint(watch)
-
     start = time.time()
-    try:
-        emulator.run(until=after_instructions(instructions))
-    except AssertionError:
-        print("CPU stopped with an assertion -- last instructions:")
-        for count, pc, a, x, y, sp in last:
-            print(f"  {count:>9}  PC=${pc:04X} A=${a:02X} X=${x:02X} Y=${y:02X} SP=${sp:02X}")
+    emulator.run(until=after_instructions(instructions))
     seconds = time.time() - start
 
     print(f"{emulator.instructions} instructions in {seconds:.1f} s")
     print(f"PC at the end: ${emulator.cpu.PC:04X}")
-    print(f"distinct addresses executed: {len(executions)}")
-    print("hot spots:", ", ".join(f"${a:04X}x{n}" for a, n in executions.most_common(10)))
-    if first_rom_entry:
-        pc, count = first_rom_entry[0]
-        print(f"first jump into ROM: ${pc:04X} after {count} instructions")
-    else:
-        print("never jumped into ROM")
 
     save_hires_png(emulator, 0x2000, "tmp/lode_runner_page1.png")
     save_hires_png(emulator, 0x4000, "tmp/lode_runner_page2.png")

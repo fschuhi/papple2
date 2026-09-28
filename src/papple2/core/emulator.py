@@ -29,11 +29,12 @@ from papple2.core.cpu import CPU
 from papple2.core.window import PygameWindow, NoWindow
 from pysm import State, StateMachine, Event
 
-# The two kinds of functions Emulator.run() calls on every instruction.
-# A checkpoint returns (stay active, execute this instruction); an `until`
-# condition returns True when run() should stop. `type` aliases are lazy,
-# so they can name Emulator before the class is defined below.
-type Checkpoint = Callable[[Emulator], tuple[bool, bool]]
+# The two kinds of functions Emulator.run() calls before an instruction.
+# A trap is called only when PC reaches its address; it returns whether it
+# served that address (False: stop before the instruction there). An
+# `until` condition returns True when run() should stop. `type` aliases
+# are lazy, so they can name Emulator before the class is defined below.
+type Trap = Callable[[Emulator], bool]
 type Until = Callable[[Emulator], bool]
 
 class EmulatorRunningState( StateMachine ):
@@ -155,8 +156,8 @@ def at_address(address: int) -> Until:
 # Emulator.run() asks the window for keyboard/window events and redraws only
 # every WINDOW_POLL_INTERVAL loop passes, not on every instruction: calling
 # pygame.event.get() once per instruction took about a third of the windowed
-# run time (cProfile, Lode Runner, 2026-09-23). Checkpoints still run on
-# every instruction, so breakpoints and `until` stop exactly where they did.
+# run time (cProfile, Lode Runner, 2026-09-23). Traps and `until` are still
+# checked before every instruction, so they stop exactly where they did.
 WINDOW_POLL_INTERVAL = 1000
 
 # The Apple II's 6502 runs at about 1.023 MHz. Windowed runs are throttled
@@ -191,8 +192,8 @@ class Emulator:
         # 1.0 = a real Apple II, 3.0 = three times as fast, None = unthrottled
         self.speed = speed
 
-        self.checkpoints = []
-        self._until_checkpoint = None
+        # address -> handler; looked up only while there are any
+        self.traps: dict[int, Trap] = {}
 
         self.instructions = 0
 
@@ -222,9 +223,8 @@ class Emulator:
     event loop
     """
 
-    def add_checkpoint( self, func: Checkpoint ) -> None:
-        active = True
-        self.checkpoints.append( (active, func) )
+    def add_trap(self, address: int, handler: Trap) -> None:
+        self.traps[address] = handler
 
 
     def press_key(self, ascii_code: str | int) -> None:
@@ -242,16 +242,6 @@ class Emulator:
 
         self.instructions = 0
 
-        if self._until_checkpoint is not None:
-            self.checkpoints.remove(self._until_checkpoint)
-            self._until_checkpoint = None
-
-        if until is not None:
-            def check_until(emulator: "Emulator") -> tuple[bool, bool]:
-                return (False, False) if until(emulator) else (True, True)
-            self._until_checkpoint = (True, check_until)
-            self.checkpoints.append(self._until_checkpoint)
-
         # exit event loop via setting exit_while, to do cleanup afterwards
         exit_while = False
         # counts loop passes, not instructions: while Stopped no instruction
@@ -264,19 +254,19 @@ class Emulator:
         while not exit_while:
 
             if self.is_executing():
-                for index, (active, func) in enumerate(self.checkpoints):
-                    if active:
-                        (continue_active, execute) = func(self)
-                        if not execute:
-                            self.states.dispatch(Event('breakpoint'))
-                            if isinstance(self.window, NoWindow):
-                                # no window means no keyboard: nothing can ever
-                                # send ctrlx or halt, so a checkpoint-requested
-                                # stop has to be a real halt here, not a pause
-                                exit_while = True
-                        else:
-                            if not continue_active:
-                                self.checkpoints[index] = False, func
+                if self.traps:
+                    trap = self.traps.get(self.cpu.PC)
+                    if trap is not None and not trap(self):
+                        self.states.dispatch(Event('breakpoint'))
+                        if isinstance(self.window, NoWindow):
+                            # no window means no keyboard: nothing can ever
+                            # send ctrlx or halt, so an unserved trap has to
+                            # be a real halt here, not a pause
+                            exit_while = True
+                if until is not None and self.is_executing() and until(self):
+                    # stop via the state machine; the check at the end of
+                    # the pass then ends the run
+                    self.states.dispatch(Event('breakpoint'))
 
             if self.is_executing():
                 # IMPORTANT: we first execute the current opcode (i.e. where pc points to)...
