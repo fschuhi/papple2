@@ -34,8 +34,9 @@ def hexaddr(address: int | None, show_dollar: bool = True, lower: bool = True) -
     return res.lower() if lower else res.upper()
 
 
-def hexbyte(byte: int | None, lower: bool = True) -> str:
-    res = "-" if byte is None else hex(byte)[2:].zfill(2)
+def hexbyte(byte: int | None, show_dollar: bool = False, lower: bool = True) -> str:
+    res = "-" if byte is None else ("$" if show_dollar else "") + hex(byte)[2:].zfill(2)
+    # res = "-" if byte is None else hex(byte)[2:].zfill(2)
     return res if lower else res.upper()
 
 def hexbytes(values: Iterable[int]) -> list[str]:

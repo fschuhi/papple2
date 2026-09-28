@@ -140,7 +140,7 @@ class Display:
         self.screen = pygame.display.set_mode((apple_width + mem_width, max(apple_height, mem_height) + status_bar_height))
 
         pygame.font.init()
-        self.status_font = pygame.font.SysFont("Source Code Pro", 12)
+        self.status_font = pygame.font.SysFont("Lucida Console", 12)
         self.clear_status()
 
         self.init_chars()

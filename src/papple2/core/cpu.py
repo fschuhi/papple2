@@ -121,11 +121,11 @@ class CPU:
 
     def __repr__(self) -> str:
         return "PC=%s A=%s X=%s Y=%s SP=%s F=%s" % (
-            hexaddr(self.PC, show_dollar=False),
-            hexbyte(self.A),
-            hexbyte(self.X),
-            hexbyte(self.Y),
-            hexbyte(self.SP),
+            hexaddr(self.PC, show_dollar=True, lower=False),
+            hexbyte(self.A, show_dollar=True, lower=False),
+            hexbyte(self.X, show_dollar=True, lower=False),
+            hexbyte(self.Y, show_dollar=True, lower=False),
+            hexbyte(self.SP, show_dollar=True, lower=False),
             self.verbose_status()
         )
 
