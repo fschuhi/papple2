@@ -1,27 +1,6 @@
 from pysm import Event
 from papple2.debug.checkpoints import KeyScript
 from papple2.core.emulator import Emulator, after_instructions, at_address
-from papple2.core.hooks import CPUHook
-
-
-class WriteProtectHook(CPUHook):
-    """
-    Minimal demonstration of the veto-based write-hook pattern -- the same one
-    `MemAccessCollector` uses in `hooks.py`. Returning False
-    from `write_hook` stops `CPU.write_byte` from writing at all, so nothing
-    outside this hook needs to know the protected ranges exist. Whoever needs
-    real write protection (e.g. a Robotron-specific hook) can start from this.
-    """
-
-    def __init__(self, emulator, protected_ranges):
-        super().__init__(emulator)
-        self.protected_ranges = protected_ranges  # list of (start, end), inclusive
-
-    def write_hook(self, address, newvalue):
-        for start, end in self.protected_ranges:
-            if start <= address <= end:
-                return False
-        return super().write_hook(address, newvalue)
 
 
 def test_create_no_display():
@@ -138,29 +117,3 @@ def test_rts_without_matching_jsr_does_not_crash(make_emulator):
     emulator.run(until=at_address(asm.labels['LANDED']))
 
     assert emulator.cpu.PC == asm.labels['LANDED']
-
-
-def test_write_protect_hook_vetoes_writes_in_range(make_emulator):
-    """
-    The program writes once inside the protected range and once outside
-    it. Only the write outside the range should actually land in memory --
-    showing that write protection can live entirely in a hook, with no
-    changes to Memory or CPU needed.
-    """
-    asm, emulator = make_emulator("""
-            *=$6000
-
-    start:  LDA #$42
-            STA $4050       ; inside the protected range -- should be vetoed
-            LDA #$99
-            STA $0300       ; outside the protected range -- should go through
-    done:   JMP done
-    """)
-
-    guard = WriteProtectHook(emulator, protected_ranges=[(0x4000, 0x40ff)])
-    guard.enable_write_hook()
-
-    emulator.run(until=at_address(asm.labels['DONE']))
-
-    assert emulator.mem[0x4050] == 0x00  # vetoed
-    assert emulator.mem[0x0300] == 0x99  # went through

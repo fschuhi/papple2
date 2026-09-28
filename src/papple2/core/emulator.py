@@ -23,10 +23,9 @@ import time
 from collections.abc import Callable
 from pickle import Pickler, Unpickler
 
-from papple2.util import hexaddr, hexbyte, Ascii2Apple2Ascii, Apple2Ascii2Ascii
+from papple2.util import hexbyte, Ascii2Apple2Ascii, Apple2Ascii2Ascii
 from papple2.core.apple import Apple2
 from papple2.core.cpu import CPU
-from papple2.core.hooks import MemAccessCollector
 from papple2.core.window import PygameWindow, NoWindow
 from pysm import State, StateMachine, Event
 
@@ -182,7 +181,7 @@ def throttle_delay(cycles: int, elapsed: float, speed: float) -> float:
 
 class Emulator:
 
-    def __init__(self, no_display: bool = False, quiet: bool = True, frame_rate: int = 40, mem_access: bool = False, data_dir: str | None = None, speed: float | None = 1.0) -> None:
+    def __init__(self, no_display: bool = False, quiet: bool = True, frame_rate: int = 40, data_dir: str | None = None, speed: float | None = 1.0) -> None:
         self.apple2: Apple2 = Apple2( no_display, quiet, data_dir )
         self.display = self.apple2.display
         self.cpu: CPU = self.apple2.cpu
@@ -202,13 +201,6 @@ class Emulator:
         # self.add_checkpoint( RandomTesterCheckpoint(self).checkpoint)
         # self.add_checkpoint( RecordedKeys( ).press_keys )
         # self.add_checkpoint( PrintCharTester( ).LDA_indirect )
-
-        # self.cpu.write_hook = self.write_hook
-        self.write_hook_enabled = False
-
-        self.mem_access = MemAccessCollector(self)
-        if mem_access:
-            self.mem_access.enable_hooks()
 
         self.executing = False
         self.instructions = 0
@@ -241,14 +233,6 @@ class Emulator:
     """
     event loop
     """
-
-    def write_hook(self, address: int, newvalue: int) -> bool:
-        if not self.write_hook_enabled: return True
-        #if address != 0x1407: return True
-        #print("PC=%s" % hexaddr(self.cpu.PC))
-        #return False
-        return True
-
 
     def add_checkpoint( self, func: Checkpoint ) -> None:
         active = True
@@ -311,7 +295,6 @@ class Emulator:
             if self.is_executing():
                 # IMPORTANT: we first execute the current opcode (i.e. where pc points to)...
                 self.cpu.do_next_step()
-                self.post_op()
 
                 self.instructions += 1
 
@@ -352,8 +335,3 @@ class Emulator:
 
     def event_loop(self) -> None:
         return self.run()
-
-
-    def post_op(self) -> None:
-        if self.mem_access.hooked:
-            self.mem_access.post_op()

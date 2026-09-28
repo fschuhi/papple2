@@ -57,13 +57,9 @@ class CPU:
         self.ops_dispatch = [None] * 0x100
         self.setup_ops_dispatch( )
 
-        self.immediate = False
         self.last_opcode = None
         self.PC = program_counter
         self.last_PC = None
-
-        self.write_hook = None
-        self.read_hook = None
 
 
     def reset( self ) -> None:
@@ -295,7 +291,6 @@ class CPU:
         self.cycles += 2
 
         # reset flags from last op
-        self.immediate = False
         self.branched = False
         self.operand_length = 0
 
@@ -323,36 +318,23 @@ class CPU:
         self.PC += inc
         return pc
 
-    def read_byte( self, address: int, hook: bool = True ) -> int:
-        value = self.memory.read_byte( address )
-        if not self.immediate and hook and self.read_hook:
-            self.read_hook(address, value)
-        return value
+    def read_byte( self, address: int ) -> int:
+        return self.memory.read_byte( address )
 
-    def read_word( self, address: int, hook: bool = True ) -> int:
-        value = self.memory.read_word( address )
-        if hook and self.read_hook:
-            self.read_hook(address, value)
-        return value
+    def read_word( self, address: int ) -> int:
+        return self.memory.read_word( address )
 
     def read_word_bug( self, address: int ) -> int:
-        value = self.memory.read_word_bug( address )
-        if self.read_hook:
-            self.read_hook(address, value)
-        return value
+        return self.memory.read_word_bug( address )
 
     def read_pc_byte( self ) -> int:
-        return self.read_byte( self.get_and_inc_pc( ), hook=False )
+        return self.read_byte( self.get_and_inc_pc( ) )
 
     def read_pc_word( self ) -> int:
-        return self.read_word( self.get_and_inc_pc( 2 ), hook=False )
+        return self.read_word( self.get_and_inc_pc( 2 ) )
 
     def write_byte( self, address: int, value: int ) -> None:
-        if self.write_hook:
-            if self.write_hook(address, value):
-                self.memory.write_byte( address, value )
-        else:
-            self.memory.write_byte( address, value )
+        self.memory.write_byte( address, value )
 
     ####
 
@@ -394,7 +376,6 @@ class CPU:
 
     def immediate_mode( self ) -> int:
         self.operand_length = 1
-        self.immediate = True
         return self.get_and_inc_pc( )
 
     def absolute_mode( self ) -> int:
@@ -450,7 +431,7 @@ class CPU:
     def relative_mode( self ) -> int:
         self.operand_length = 1
         pc = self.get_and_inc_pc( )
-        return pc + 1 + signed( self.read_byte( pc, hook=False ) )
+        return pc + 1 + signed( self.read_byte( pc ) )
 
     ####
 
