@@ -7,11 +7,12 @@
 ## Contents
 
 - [Vision](#vision)
+- [The games](#the-games)
 - [Architecture](#architecture)
   - [Package split](#package-split-m4-done-2026-09-12)
-  - [Emulator / Window / States](#emulator--window--states-current-as-of-m25)
+  - [Emulator / Window / States](#emulator--window--states)
   - [Extension points](#extension-points)
-  - [Tiles, stretches, and call trees](#tiles-stretches-and-call-trees)
+  - [Speed](#speed)
 - [Relation to sibling projects](#relation-to-sibling-projects)
 - [Testing strategy](#testing-strategy)
 - [Data files](#data-files)
@@ -24,13 +25,7 @@
 
 `papple2` is a small Apple II emulator written in Python. It is not meant to compete with full emulators on speed or completeness. Its purpose is to be a debugging instrument: a machine I can stop, inspect, and script from Python while it runs Apple II code.
 
-The core comes from ApplePy by James Tauber, ported to Python 3 and stripped of what I did not need (the socket interface). Around that core I built tools that a normal emulator does not offer: an assembler and disassembler, breakpoints and hooks, a log of every memory access, and a map of which instructions were executed and how control flowed between them.
-
-![Robotron 2084 splash screen running under papple2](docs/images/robotron-splash.jpg)
-
-*The Robotron 2084 splash screen, running through `make boot-robotron` -- `papple2`'s original and still hardest test case.*
-
-Apart from Robotron, I intend to use `papple2` to research Doug Smith's _Lode Runner_. I will base that work on XekriRedmane's fantastic disassembly project published at https://github.com/XekriRedmane/lode_runner_reveng.
+The core comes from ApplePy by James Tauber, ported to Python 3 and stripped of what I did not need (the socket interface). Around that core sit an assembler and disassembler, stand-ins for the disk routines two of the games call, and a speed control. The instruments that made it a debugging tool -- breakpoints and hooks, a log of every memory access, a map of which instructions ran and how control flowed between them -- are being redesigned from scratch: the old ones are drawn in `docs/instrumentation-map.md`, the ideas for the new ones are collected in `docs/instrumentation-ideas.md`.
 
 **Core philosophy:**
 
@@ -38,6 +33,32 @@ Apart from Robotron, I intend to use `papple2` to research Doug Smith's _Lode Ru
 - **A debugging instrument, not a player.** The point isn't to run Apple II software well -- it's to run it *observably*: stoppable, inspectable, scriptable.
 - **Runs with and without a screen.** The pygame window is for watching and interacting. Silent mode (`Emulator(no_display=True)`) is for tests and scripted analysis: boot, run to a point, press keys from code, read the buffers, done.
 - **A second course in Python, this time on shape.** This project taught me Python the first time. This round it's teaching me how a Python project is shaped when it's meant to be reused: package layout, pytest, and separating a library from the programs that use it. `pysm` stays in the project for the same reason, even where a simpler mechanism would do -- state machines are part of what I want practice with.
+
+---
+
+## The games
+
+Four programs boot in `papple2`: the Apple II's own Monitor and Integer BASIC, and three games that are among the best the Apple II has to offer. Only one of them has been completely disassembled so far, the way Lode Runner and Choplifter have; the other two are the challenges ahead, with enough food for thought for countless hours.
+
+**Lode Runner** (Doug Smith, Broderbund, 1983) is the worked example. XekriRedmane's literate-source disassembly, published at https://github.com/XekriRedmane/lode_runner_reveng, assembles byte for byte into the original, so it serves as the answer key: whatever `papple2` finds out by running the game can be checked against it. `papple2` plays real games from the original disk image, through a stand-in for the game's disk routine. All 150 levels, a celebration of Doug Smith's creativity, are on a single page: https://fschuhi.github.io/a2-lode-runner/levels.html.
+
+![Lode Runner in a real game, running under papple2](docs/images/lode-runner-play.jpg)
+
+*Lode Runner in a real game, played in `papple2`'s window from the original disk image (`make boot-lode-runner-throttled`).*
+
+**Bandits** (Sirius Software, 1982, by the Ngo brothers) runs from Total Replay's ProDOS files, through a stand-in for ProDOS's MLI, from its cutscene into the game and on to Game Over. It has not been disassembled yet, and it is expected to be full of self-modifying code: the dream project in `DIRECTION.md`.
+
+![Bandits title screen with the bandits and their scores, running under papple2](docs/images/bandits-title.jpg)
+
+*Bandits' title screen with the bandits and their scores, from Total Replay's files (`make boot-bandits`).*
+
+**Robotron 2084** (Atari, 1983) was `papple2`'s first test case, researched in 2019 and 2020: the public project https://github.com/fschuhi/Robotron_2084, and a thread on 6502.org. It has not been completely disassembled either.
+
+![Robotron 2084 splash screen running under papple2](docs/images/robotron-splash.jpg)
+
+*The Robotron 2084 splash screen, running through `make boot-robotron` -- `papple2`'s first test case.*
+
+**More games:** Total Replay (by 4am and qkumba) ships many Apple II games as ProDOS files, loaded through the MLI, so the Bandits stand-in may serve many of them. Unchecked so far: how many need more MLI calls than Bandits, and how many need more than 48K (Total Replay itself targets 64K machines).
 
 ---
 
@@ -49,19 +70,18 @@ Apart from Robotron, I intend to use `papple2` to research Doug Smith's _Lode Ru
 
 ```mermaid
 graph TD
-    DEBUG["papple2.debug<br/>assembler, disassembler,<br/>memory_map, checkpoints, tiles, labels, annotations"]
-    CORE["papple2.core<br/>cpu, memory, apple, window, emulator, hooks"]
+    DEBUG["papple2.debug<br/>assembler, disassembler, labels"]
+    CORE["papple2.core<br/>cpu, memory, apple, window, emulator, disk_image"]
 
     DEBUG --> CORE
 ```
 
-`papple2` has no in-repo showcase anymore. `probotron` (the Robotron 2084 disassembly) depends on `papple2` as an installed package from outside this diagram, the same way `a2-lode-runner` or `a2-hires-lab` could.
+`papple2.core` never imports from `papple2.debug` (since 2026-09-27): the debugging tools use the machine, never the other way round. Programs that use `papple2` live outside both packages -- the boot scripts in `scripts/`, and the sibling projects below.
 
-`Hooks` lives in `papple2.core`, not `papple2.debug` as an earlier version of this diagram had it: `Emulator.__init__` unconditionally constructs `MemAccessCollector` (the `mem_access` flag only controls whether it's activated, not whether it exists), so `Emulator` cannot run at all without `Hooks` importable. The split follows that real coupling.
-
-### Emulator / Window / States (current, as of M2.5)
+### Emulator / Window / States
 
 This part is real and current, as of the M2.5 refactor (`HISTORY.md`, 2026-09-11). `Emulator.run` no longer touches pygame directly -- it polls a `Window`, dispatches whatever comes back to `EmulatorStates`, and lets `EmulatorStates` decide what that means:
+
 
 ```mermaid
 graph TD
@@ -80,88 +100,51 @@ graph TD
     ST -- "ctrlx" --> R
 ```
 
-`PygameWindow` and `NoWindow` share the same three methods (`poll`, `present`, `status`), so `Emulator` doesn't know or care whether a window exists. A watcher firing -- a real breakpoint, or an `until` condition passed to `run` -- dispatches the same `breakpoint` event that `ctrlx` uses, so `Running` -> `Stopped` always goes through the state machine, never around it.
+`PygameWindow` and `NoWindow` share the same three methods (`poll`, `present`, `status`), so `Emulator` doesn't know or care whether a window exists. An unserved trap, or an `until` condition passed to `run`, dispatches the same `breakpoint` event that `ctrlx` uses, so `Running` -> `Stopped` always goes through the state machine, never around it.
 
 ### Extension points
 
-`papple2` has four genuinely different ways to attach behavior to a running program, at different points in the per-instruction and per-frame loop. They tend to get lumped together in conversation as "hooks," but they're not the same mechanism, and flattening them into one diagram would teach something wrong:
+Since the redesign began (`HISTORY.md` 2026-09-27/28), `papple2` has three deliberately small ways to act on a running program. The old ones (checkpoints, CPU read/write hooks, the memory map) are drawn in `docs/instrumentation-map.md`, pinned to the tag `pre-redesign`; the ideas for what comes next are in `docs/instrumentation-ideas.md`.
 
-- **Checkpoints** (`add_checkpoint(func)`) run once per instruction, *before* it executes, and can stop execution (`execute=False`). This is how breakpoints and `KeyScript` work.
-- **`CPU` read/write hooks** (`cpu.read_hook`/`cpu.write_hook`) fire mid-instruction, on every actual memory access. `CPUHook` and its subclasses (`MemAccessCollector`, and the tests' `WriteProtectHook`) chain rather than replace each other here.
-- **`MemoryMap`** isn't pluggable at all -- `Emulator.post_op()` feeds it unconditionally, once per instruction, after execution. This is what tiles and stretches are built from.
-- **Debug-key handlers** (`EmulatorStates.stopped_state`/`running_state`) are keyed to pygame frames and the `D`/`L` keys, not instructions -- the M4 extension points `tests/test_emulator_debug_keys.py` demonstrates.
+- **Traps** (`add_trap(address, handler)`) stand in for a routine at a fixed address. Before each instruction, `run()` looks up `PC` in the trap table (only while there are any traps). A handler returns whether it *served* the address: `True`, and the run continues at whatever `PC` the handler set; `False`, and the run stops before the instruction there, via `breakpoint`. The two disk stand-ins, `RwtsHook` (Lode Runner, `$B7B5`) and `MliHook` (Bandits, `$BF00`), are traps.
+- **`until`** is a parameter of `run()`, not an attachment point: a condition checked before each instruction (`after_instructions(n)`, `at_address(a)`). When it is met, `run()` stops via `breakpoint` and returns.
+- **Debug-key handlers** (`EmulatorStates.stopped_state`/`running_state`) are keyed to the window's events, not to instructions: `D` and `L` while Stopped. `tests/test_emulator_debug_keys.py` shows how to attach one from outside.
 
 ```mermaid
 graph TD
-    subgraph INSTR["Once per instruction, inside Emulator.run()"]
-        CP["Checkpoints<br/>add_checkpoint(func)<br/>checked before execution"]
+    subgraph STEP["Before each instruction, inside Emulator.run(), while Running"]
+        TRAP["trap at PC?<br/>add_trap(address, handler)"]
+        UNTIL["until(emulator)?<br/>parameter of run()"]
         EXEC["cpu.do_next_step()"]
-        RW["cpu.read_hook / write_hook<br/>CPUHook chain -- fires on every memory access"]
-        POST["Emulator.post_op()"]
-        MAP["MemoryMap.post_op()<br/>always on -- feeds tiles/stretches"]
-        HPOST["hook.post_op()<br/>MemAccessCollector, if enabled"]
+        BRK["dispatch Event('breakpoint')"]
 
-        CP -- "execute=True" --> EXEC
-        CP -- "execute=False" --> BRK["dispatch Event('breakpoint')"]
-        EXEC -- "memory access" --> RW
-        EXEC --> POST
-        POST --> MAP
-        POST --> HPOST
+        TRAP -- "no trap, or served" --> UNTIL
+        TRAP -- "not served" --> BRK
+        UNTIL -- "not met" --> EXEC
+        UNTIL -- "met" --> BRK
     end
 
-    subgraph FRAME["Once per frame, via the pygame window"]
-        POLL["PygameWindow.poll()"]
-        KEYS["EmulatorStates handlers<br/>D / L debug keys (M4 extension points)"]
-        POLL -- "Stopped state only" --> KEYS
+    subgraph PASSES["Every 1000 loop passes"]
+        THR["throttle to speed<br/>windowed runs only"]
+        WIN["PygameWindow.poll() / present()"]
+        KEYS["EmulatorStates handlers<br/>keys, Ctrl-X; D / L while Stopped"]
+        THR --> WIN --> KEYS
     end
 ```
 
-The `CPUHook` chain from the diagram above, in detail: `enable_write_hook` always stashes whatever was already installed on `cpu.write_hook` as `other_write_hook`, then installs its own -- so which hook ends up outer or inner depends on enable order, not a fixed rule.
+### Speed
 
-```mermaid
-graph LR
-    A["cpu.write_hook(addr, val)"] --> B["outer hook's write_hook<br/>e.g. MemAccessCollector: records this instruction's access"]
-    B -- "other_write_hook(...)" --> C["inner hook's write_hook<br/>e.g. WriteProtectHook (tests): returns False for protected ranges"]
-    C --> D["write proceeds, unless a hook returned False"]
-```
-
-### Tiles, stretches, and call trees
-
-`papple2.debug.tiles` turns raw instruction data into a Graphviz call-flow graph, the way `probotron`'s workbench visualizes disassembled control flow. Three concepts, in increasing order of how settled they are:
-
-- **Tile** -- a basic block: a run of instructions that always execute one after another. A tile always ends at a leap (branch, jump, call, or return) and always starts where something else jumps to. This maps cleanly onto the standard "basic block" idea and isn't in question.
-- **Stretch** -- a chain of tiles linked end-to-end because control flow between them is fixed and predictable (falls straight through, an always-taken branch, or a `JSR` that always returns to the next instruction). Still an open question, in the code's own words: "whether 'stretch' is pulling its own weight as a concept, or whether it should be reworked or folded into something else -- revisit before extending this further."
-- **Call tree** -- `DotCallTree` turns stretches into the actual Graphviz graph: one node per stretch (a box if "compact" -- entered only via `JSR`, ends in `RTS` -- an ellipse otherwise), with arrows for branches, calls, jumps, and unmatched returns.
-
-The two tiles below are `test_tiles.py`'s real `BRANCH_PROGRAM` -- a genuine, if deliberately unlinked, example (a dead byte keeps the branch and its target physically apart, so the automatic linker's "consecutive" check never fires). The three-tile stretch to its right is illustrative, showing what a chain looks like when tiles *do* link up:
-
-```mermaid
-graph TD
-    T1["Tile: start<br/>LDA #$00 / STA $0300 / BEQ target<br/>ends in a leap (the branch)"]
-    T2["Tile: target<br/>LDA #$11 / STA $0301 / JMP done<br/>starts here because something jumps to it"]
-
-    T1 -.->|"not linked here -- dead LDA #$FF<br/>keeps them non-adjacent, see test_tiles.py"| T2
-
-    T3["Tile A"] -->|"TYPE_SEQUENTIAL<br/>falls straight through"| T4["Tile B"]
-    T4 -->|"TYPE_STRAIGHT_JSR<br/>JSR that always returns to the next op"| T5["Tile C"]
-
-    S["Stretch<br/>A-B-C chained end-to-end<br/>'compact' only if entered via JSR, ends in RTS"]
-    T3 -.-> S
-    T4 -.-> S
-    T5 -.-> S
-
-    S --> CT["Call tree node (DotCallTree)<br/>box if compact, ellipse otherwise"]
-```
+Unthrottled, `papple2` runs as fast as Python allows: about 3.5 times a real Apple II on an M4. Windowed runs take a `speed` (`Emulator(speed=...)`): 1.0 is a real Apple II (about 1.023 MHz), `None` is unthrottled, and 1.0 is the default. Every 1000 loop passes, `run()` compares the cycles the CPU has counted with the wall-clock time and sleeps the difference; after a pause it measures afresh. Headless runs and tests are never throttled. `scripts/boot_lode_runner.py` passes `None` unless it gets `--speed`, so `make boot-lode-runner` runs at full speed and `make boot-lode-runner-throttled` at the speed of a real Apple II. The display is shown 40 times per second (`frame_rate`).
 
 ---
 
 ## Relation to sibling projects
 
-**`a2-lode-runner`:** a private educational project to understand the Apple II game thoroughly. `papple2` can help two ways: cycle counting, if timing fidelity turns out to matter for the port; and level extraction, by letting the original code load a level into memory and then reading the filled buffers instead of reverse-engineering the disk format by hand. Not started yet. The project is based on XekriRedmane's literate-source disassembly project published at https://github.com/XekriRedmane/lode_runner_reveng. 
+**`a2-lode-runner`:** a private educational project to understand the Apple II game thoroughly, based on XekriRedmane's literate-source disassembly project published at https://github.com/XekriRedmane/lode_runner_reveng. All 150 levels are extracted and shown on one page: https://fschuhi.github.io/a2-lode-runner/levels.html. Reverse engineering the sprites and the levels built from them -- the code in chapters 3 and 6 of the disassembly -- will be among the first targets for the instrumented `papple2`.
 
 **`a2-hires-lab`:** a standalone Excel/VBA lab exploring Apple II hi-res graphics mechanics, built around Chapter 3 of the `a2-lode-runner` disassembly. No shared code or repo with `papple2`. Its NTSC color decision table, once fully verified by hand against the chapter's worked examples, is meant to become test fixtures for `papple2`'s `Display.update_hires`, which currently uses a simplified per-pixel color model with no neighbor-adjacency rules. That handoff hasn't happened yet.
 
-**`probotron`:** the Robotron 2084 disassembly and its Excel/PyXLL workbench, carved out of `papple2` in M7.5. Depends on `papple2` as an installed package rather than living inside it -- the `papple2.core`/`papple2.debug` split exists to serve exactly this kind of outside consumer. `scripts/boot_robotron.py` remains here as `papple2`'s own manual check of the with-window path.
+**`probotron`:** my private project with the Robotron 2084 disassembly and its Excel/PyXLL workbench, carved out of `papple2` in M7.5. Since 2026-09-27 it holds its own copy of `papple2` (the state at the tag `pre-redesign`), so it no longer depends on this repo. Its predecessor from 2019/2020 is public: https://github.com/fschuhi/Robotron_2084. `scripts/boot_robotron.py` remains here as `papple2`'s own manual check of the with-window path.
 
 ---
 
@@ -169,21 +152,22 @@ graph TD
 
 `papple2` is verified at two tiers, deliberately:
 
-- **Automated (`make test`).** The pytest suite covers 6502 instruction semantics and the classic hardware quirks, Apple II specifics (soft switches, the hi-res memory buffer), running headless with and without checkpoints/breakpoints, and the debugging hooks (`MemAccessCollector`). All of it runs with `no_display=True` -- no pygame window involved, and none of it can be, meaningfully: a headless run has no way to assert "does this look right on screen."
+- **Automated (`make test`).** The pytest suite covers 6502 instruction semantics and the classic hardware quirks, Apple II specifics (soft switches, the hi-res memory buffer, the disk image), running headless with traps and `until`, the state machine, the throttle's calculation, and the assembler and disassembler. All of it runs with `no_display=True` -- no pygame window involved, and none of it can be, meaningfully: a headless run has no way to assert "does this look right on screen."
 - **Manual, with-window (`make boot-robotron`).** Runs `scripts/boot_robotron.py`, a plain script that boots `Emulator(no_display=False)` with the real `ROBOTRON.BIN` and calls `run()` with no `until` -- the same path the old in-repo Robotron showcase exercised, but with zero dependency on `probotron`'s workbench or Excel bridge.
 - **Manual, with-window, text mode (`make boot-basic`).** Runs `scripts/boot_basic.py`. Boots the Monitor and, on `Ctrl-B`, Integer BASIC -- the same real ROM path as `make boot-robotron`, but through the text page instead of hires. Catches display and keyboard bugs specific to `Display.update_text()` that a hires-only Robotron run never would.
+- **Manual, with-window, games (`make boot-lode-runner`, `make boot-lode-runner-throttled`, `make boot-bandits`).** Lode Runner's attract mode, then a real game on a key press, at full speed or at the speed of a real Apple II; Bandits from its cutscene into the game. Both reach their games through the disk stand-ins, so these runs check the traps as well.
 
 The manual checks are plain scripts in `scripts/`, not pytest tests: they assert nothing, and the point is a human watching the window. So `make test` never opens a window, and each script runs via its own `make` target.
 
 ![Robotron 2084 gameplay stopped mid-run via Ctrl-X, status bar showing PC, A, X, Y, SP, and flags](docs/images/robotron-stopped.jpg)
 
-*Execution stopped mid-game via `Ctrl-X` -- the status bar shows the halted CPU state, the same inspect point `Emulator.run(until=...)` and breakpoints stop at.*
+*Execution stopped mid-game via `Ctrl-X` -- the status bar shows the halted CPU state, the same inspect point `Emulator.run(until=...)` and unserved traps stop at.*
 
 ---
 
 ## Data files
 
-`papple2` needs three Apple II binaries and one disk image that can't be distributed in this repo -- all of them are still under copyright. `data_dir` in `papple2.toml` points to `data/`; its two folders `data/bin/` (binaries) and `data/do/` (disk images) ship with a `.gitkeep` and nothing else. Get the files yourself:
+`papple2` needs three Apple II binaries, one disk image and Bandits' files from Total Replay, none of which can be distributed in this repo -- all of them are still under copyright. `data_dir` in `papple2.toml` points to `data/`; its folders `data/bin/` (binaries), `data/do/` (disk images) and `data/tr/bandits/` (Total Replay files) ship with a `.gitkeep` and nothing else. Get the files yourself:
 
 - **`A2ROM.BIN`** -- the Apple II ROM. Available from [Reactive Micro's downloads](https://downloads.reactivemicro.com/Users/Grant_Stockley/), Grant Stockley's page -- also a good source of hard-to-find Apple II documentation and software generally, worth knowing about on its own.
 - **`ROBOTRON.BIN`** -- a raw memory image of Robotron 2084. Not distributed as a standalone binary anywhere; has to be produced from the original DOS 3.3 disk image:
@@ -197,8 +181,13 @@ The manual checks are plain scripts in `scripts/`, not pytest tests: they assert
   3. Right-click on the `LODE RUNNER` entry (Type `B`, binary) and extract it. Its auxiliary type is `$0800`, the address DOS loads it to, which is also where `scripts/boot_lode_runner.py` loads it.
   4. Check the extracted file's size: 33024 bytes, matching the Data Len CiderPress II shows for the entry. Rename it to `LODE_RUNNER.BIN`.
 - **`Lode_Runner_1983_Broderbund_cr_Reset_Vector.do`** -- the Lode Runner disk image itself, the same archive.org download as in step 1 above. Keep its name. `make boot-lode-runner` reads the levels and the high-score table from it once a real game starts. Its size must be 143360 bytes (35 tracks, 16 sectors of 256 bytes, DOS 3.3 order); `papple2.core.disk_image` refuses anything else.
+- **Bandits' files** -- the main program `BANDITS` and its data files `BANDITS.A` to `BANDITS.Z`, from Total Replay v6.1 (by 4am and qkumba), for `make boot-bandits`:
+  1. Get the Total Replay v6.1 disk image.
+  2. Open it in CiderPress II.
+  3. Extract `BANDITS` (Type `BIN`, loads at `$0800`, 9479 bytes) and the data files `BANDITS.A` to `BANDITS.Z` (Type `NON`), keeping their names.
 
-Place the three binaries in `data/bin/` and the disk image in `data/do/` (both below wherever `data_dir` in your `papple2.toml` points).
+Place the three binaries in `data/bin/`, the disk image in `data/do/`, and Bandits' files in `data/tr/bandits/` (all below wherever `data_dir` in your `papple2.toml` points).
+
 
 ---
 
@@ -210,7 +199,9 @@ make test     # run the pytest suite
 make boot-robotron  # boot Robotron with the pygame window open
 make boot-basic     # boot Apple II into the Monitor; Ctrl-B enters Integer BASIC
 make boot-lode-runner           # boot Lode Runner with the pygame window open; a key press starts a real game from the disk image
-make boot-lode-runner-headless  # run Lode Runner headless; print statistics, save both hi-res pages as PNG
+make boot-lode-runner-throttled # the same, at the speed of a real Apple II
+make boot-lode-runner-headless  # run Lode Runner headless; save both hi-res pages as PNG
+make boot-bandits               # boot Bandits from Total Replay's ProDOS files
 ```
 
 `make setup` will happily produce a broken install if your default `python3` resolves to 3.14. If needed: `rm -rf .venv && python3.12 -m venv .venv && make setup`.
@@ -231,9 +222,14 @@ This section is more useful to an LLM picking this project back up than to me --
 - **`EmulatorStates` composes a `StateMachine` rather than subclassing one.** It's the root of its own state tree and is never handed to code that expects a plain `StateMachine` -- the case for composition over inheritance. The individual states (`EmulatorRunningState`, `EmulatorStoppedState`) do legitimately subclass `StateMachine`, since they're genuinely registered as states via `add_state`.
 - **`L` and `D` are reserved for debug hooks, and only while execution is `Stopped`.** `PygameWindow.poll()` turns those two keys into `Event('l')`/`Event('d')` instead of ordinary keystrokes -- but only in the `Stopped` state; while `Running`, they pass through like any other key, so typing them into the Monitor or BASIC works normally. `D`'s built-in use is `EmulatorStoppedState.on_d`, a generic CPU-register dump -- genuinely core behavior, not Robotron-specific. `L` has no built-in behavior at all; it's a bare hook slot, meaningful only once something external attaches to it (see `tests/test_emulator_debug_keys.py`).
 - **`Display.update_text()` only draws a glyph in full `text` mode, or in `mix` mode on rows 20-23.** Outside those cases (plain hires/lores, `mix` off) a text-page write must stay invisible, matching real hardware, where the text page isn't scanned out at all in that mode. Had this backwards for a long time (`not self.mix` instead of `self.mix and row >= 20`) -- harmless while `update_text()` itself was commented out, but corrupts hires output the moment it's turned on.
-- **The window (pygame) is a separate, swappable layer, not baked into `Emulator`.** `PygameWindow`/`NoWindow` share `poll() -> list`, `present()`, `status(text)`; `Emulator.__init__` picks one based on `no_display`. `Emulator.run`/`event_loop` and the state handlers contain no pygame reference.
-- **A watcher firing dispatches `Event('breakpoint')` into the state machine, rather than hard-returning out of `run`.** Separately, `run(until=...)` returns to its caller once execution stops for any reason; a plain `run()`/`event_loop()` call (no `until`) keeps looping through pauses as before, and only stops on `halt`.
+- **The window (pygame) is a separate, swappable layer, not baked into `Emulator`.** `PygameWindow`/`NoWindow` share `poll() -> list`, `present()`, `status(text)`; `Emulator.__init__` picks one based on `no_display`. `Emulator.run` and the state handlers contain no pygame reference.
+- **An unserved trap or a met `until` condition dispatches `Event('breakpoint')` into the state machine, rather than hard-returning out of `run`.** Separately, `run(until=...)` returns to its caller once execution stops for any reason; a plain `run()` call (no `until`) keeps looping through pauses as before, and only stops on `halt`. Without a window, an unserved trap ends the run, since nothing could resume it.
 - **`time.monotonic()`, not `pygame.time.get_ticks()`, for frame pacing** -- works identically whether or not a window exists.
 - **`QUIT` (closing the window) and the Print key both map to the same `halt` event.** There's no separate hard-exit path. Print exists mainly for the Windows heritage of this code; on macOS, closing the window is the primary way to trigger it.
 - **`pygame` 2.6.1 does not build or run correctly under Python 3.14** -- `pygame.mixer` and `pygame.font` fail to import. Open upstream packaging issue, not specific to this machine. Use Python 3.12 for the venv until that's resolved.
-- **A checkpoint that pauses execution (a real breakpoint, or an `until` condition) stays registered after it fires.** If something resumes via `ctrlx` within the same `run()` call and the checkpoint's condition is still true, it re-fires immediately. `run(until=...)`'s own checkpoint is cleaned up automatically at the start of the next `run()` call, so this only affects hand-registered checkpoints (`add_checkpoint`) used interactively -- none are currently active by default.
+- **An unserved trap stays in the table after it fires.** Its handler left `PC` at the trap's address, so if something resumes via `ctrlx` within the same `run()` call, the trap is called again at once and stops again, unless what it depends on has changed. `until` is checked afresh in every `run()` call.
+- **`papple2.core` never imports from `papple2.debug`** (since 2026-09-27). The debugging tools use the machine, never the other way round.
+- **State changes go through events, and `executing` mirrors the state machine.** Only `Running`'s entry and exit actions set `executing`, and `initialize(fire_events_on_init=True)` runs the entry action at construction, as Harel's statecharts demand (`test_executing_follows_the_state_from_the_start`).
+- **A trap returns *served*, a single `bool`.** `True`: continue at the `PC` the handler set. `False`: stop before the instruction at the trap's address. The table is looked up only while it holds any traps -- the dictionary's own truthiness, no separate flag to keep in sync.
+- **The throttle compares emulated cycles with wall-clock time, in windowed runs only** (`throttle_delay()`, tested without sleeping). It can only slow down a run that is too fast.
+- **The disassembler is static**, with an optional `is_code(address)` (default: every address is code); addresses that aren't code come out as `.byte` blocks.
