@@ -8,9 +8,10 @@
 
 ## 📍 Current Session Pointer
 
-**Where we are:** `papple2` is to become a system to disassemble and understand Apple II and II+ games by running them, with Lode Runner as the worked example (`DIRECTION.md`). Two games run from their own files through a hook that stands in for the disk: Lode Runner plays real games (`RwtsHook` in `scripts/boot_lode_runner.py`, serving RWTS reads from the `.do`), and Bandits runs to level 1 from Total Replay's ProDOS files (`MliHook` in `scripts/boot_bandits.py`, `make boot-bandits`). The hook architecture review has begun: `op_hook` and the time machine are gone (`HISTORY.md` 2026-09-26). Both games run much faster than on a real Apple II.
+**Where we are:** `papple2` is to become a system to disassemble and understand Apple II and II+ games by running them, with Lode Runner as the worked example (`DIRECTION.md`). The old instrumentation is gone (`HISTORY.md` 2026-09-27/28): `papple2` is an emulator again, with four boots (`make boot-basic`, `boot-robotron`, `boot-lode-runner`, `boot-bandits`), the two disk stand-ins as address traps, and Apple II speed on request (`make boot-lode-runner-throttled`). The redesign of the instrumentation starts from `docs/instrumentation-ideas.md` (the braindump) and `docs/instrumentation-map.md` (the "before" picture, pinned to the tag `pre-redesign`).
 
 **What's next:**
-- `TODO.md` section 7, next item: write the checkpoint contract next to the `Checkpoint` alias in `core/emulator.py`. Then `post_op` as a hook point others register with, then the read/write hooks (registration instead of hand-chaining, reads a hook can answer). Test the design against `RwtsHook` and `MliHook` (their differences are in `HISTORY.md` 2026-09-26) and small assembled test programs.
+- Open the design phase with an in-depth discussion: `pysm`, yes or no (`TODO.md`).
+- Turn the braindump into a design document, structure first, experiments afterwards: the machine seam, one record per instruction or one event per access, roles, the lifecycle of a step.
+- Alongside, the small code steps in `TODO.md`: the assembler bug, uppercase defaults in `util.py`, the stale comments in the stand-ins, `graphviz` in `requirements.txt`.
 - Discuss and expand `docs/reveng-catalogue.md`. Add AFK research on Ghidra and SourceGen. 
-- The sweep's findings in `TODO.md` section 3 are a map, not a queue: pick them up when the fun work passes by them. For mechanical work, group files into bigger patches.
