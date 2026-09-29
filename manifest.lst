@@ -74,6 +74,7 @@ src/papple2/debug/stop_conditions.py
 ### --- Tests and fixtures data ---
 tests/conftest.py
 #tests/test_assembler.py
+tests/test_attach.py
 #tests/test_cpu_arithmetic.py
 #tests/test_cpu_branch.py
 #tests/test_cpu_bugs.py
