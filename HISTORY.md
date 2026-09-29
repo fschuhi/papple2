@@ -15,7 +15,7 @@
 
 - `Memory` has one hook list per kind of access, named after its method with an `after_` prefix (`after_read_opcode` ... `after_write_stack`). A read hook gets `(address, value)`, a write hook `(address, value, old_value)`. The old value comes straight from the memory list, so taking it does not flip a soft switch at `$C0xx`. Each list is tested before its loop.
 - Speed: headless Lode Runner, median of five runs in the same sitting, 3.19 s before and 3.29 s after, about 3%. Accepted as the price every run pays for the hooks.
-- Tests: `tests/test_memory_hooks.py`, in `pytest` style: each read kind reports address and value, each write kind the old value, and hooks run in list order.
+- Tests: `tests/test_memory_hooks.py`, written out, one test per method: each read method reports address and value to its own list, each write method the old value too, and hooks run in list order. A first version built the names from strings (`getattr`, parametrize); PyCharm can't follow such names, so it was replaced.
 - A windowed run can pause at an instruction count: `scripts/boot_lode_runner.py --instructions N` stops as if Ctrl-X had been pressed, and the next Ctrl-X continues. In `Emulator.run()`, a met `until` is dropped when a window is open; headless runs still end at it.
 - First experiment, run by the user: 4,000,000 instructions (the headless timing run) reach deep into the attract play -- iris wipe, the level being built, player and enemies moving, the first dig. No RWTS reads in that stretch: the attract play's level comes from memory.
 - `after_instructions` and `at_address` moved from `core/emulator.py` to `papple2/debug/stop_conditions.py`. The core keeps the type `Until`: the shape of a condition, not the conditions themselves.

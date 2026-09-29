@@ -40,7 +40,7 @@ See `DIRECTION.md` for the context of each item.
 
 ## 5. Optional coverage
 
-- First step of the next session: finish the `unittest` -> `pytest` conversion, so every test module is `pytest` style. `grep -rln unittest tests/` lists the modules still using it; known so far: `tests/test_memory.py` and `tests/test_assembler.py` still use `unittest` (`test_memory.py` already has two `pytest` functions next to its old class). In `test_assembler.py`, rename `test_dump`: it's a printing helper, but its `test_` name makes the runner run it as a test.
+- First step of the next session: finish the `unittest` -> `pytest` conversion, so every test module is `pytest` style, in the form of `tests/test_memory_hooks.py`: plain functions, written out, no class around them. `grep -rln unittest tests/` lists the modules still using it; known so far: `tests/test_memory.py` and `tests/test_assembler.py` still use `unittest` (`test_memory.py` already has two `pytest` functions next to its old class). In `test_assembler.py`, rename `test_dump`: it's a printing helper, but its `test_` name makes the runner run it as a test.
 
 ## 6. Performance (parked, 2026-09-23)
 
