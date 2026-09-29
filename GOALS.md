@@ -8,13 +8,13 @@
 
 ## 📍 Current Session Pointer
 
-**Where we are:** `papple2` is to become a system to disassemble and understand Apple II and II+ games by running them, with Lode Runner as the worked example (`DIRECTION.md`). The instrumentation is being rebuilt from scratch. The decisions are in `docs/instrumentation-design.md` (2026-09-29), and the first part is in place: `CPU` and `Memory` name every access by its kind (`read_opcode`, `read_operand`, ..., `write_stack`) at no measurable cost, and the disassembler reads the memory list directly. `Memory` has one hook list per kind (`after_read_opcode` ... `after_write_stack`), about 3% slower with all lists empty; `CPU` has none yet. A windowed Lode Runner run can pause at an instruction count (`--instructions`), which showed that the 4,000,000 instructions of the timing run reach deep into the attract play. Four boots run (`make boot-basic`, `boot-robotron`, `boot-lode-runner`, `boot-bandits`), and the two disk stand-ins are traps.
+**Where we are:** `papple2` is to become a system to disassemble and understand Apple II and II+ games by running them, with Lode Runner as the worked example (`DIRECTION.md`). The instrumentation is being rebuilt from scratch, following `docs/instrumentation-design.md`. Step 4 is complete: `Memory` reports every access by its kind to its own hook list (`after_read_opcode` ... `after_write_stack`), and `CPU` counts its instructions (`instruction_count`) and calls `after_instruction` after each one. Nothing uses the hooks yet. Every test module is in `pytest` style. Four boots run (`make boot-basic`, `boot-robotron`, `boot-lode-runner`, `boot-bandits`), and the two disk stand-ins are traps.
+
+**How to work in the next session** (the user's feedback, `HISTORY.md` 2026-09-29, third session): one thing per message, in plain words, no idioms. Say what a step is for, and how it brings us closer to something the user can see, before saying how it is done. Keep the big picture in view: the hooks exist so that we can watch Lode Runner run and think in the terms we track. Do not suggest a fresh conversation unless asked.
 
 **What's next:**
-- First: every test module in `pytest` style (`TODO.md` section 5).
-- Step 4, the `CPU` half: the instruction count and `after_instruction` (`TODO.md` section 7).
-- Step 5: breakpoints and traps at the `Emulator`'s boundary.
+- Head for something visible soon: the execution-count map (Step 6) is the first thing the hooks can show. Discuss at the start whether Step 5 (breakpoints and traps at the `Emulator`'s boundary) must come first, or whether a first, simple count on Lode Runner can come before it.
 - Step 6: the execution-count map on Lode Runner inside a level, the first real output of the new instrumentation, run together. Decide there how experiments attach their hooks.
 - Reserve time for looking at the results: report generators in HTML, or queries in Jupyter.
 - Alongside: the small code steps in `TODO.md` section 8.
-- Discuss and expand `docs/reveng-catalogue.md`. Add AFK research on Ghidra and SourceGen. 
+- Discuss and expand `docs/reveng-catalogue.md`. Add AFK research on Ghidra and SourceGen.

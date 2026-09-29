@@ -11,6 +11,14 @@
 
 ---
 
+## 2026-09-29 (third session) -- Every test module in `pytest` style; the `CPU` half of the hooks
+
+- `tests/test_memory.py` and `tests/test_assembler.py` converted from `unittest` to plain `pytest` functions; no test module uses `unittest` any more. In `test_assembler.py` the helpers became module functions, the star import became explicit imports, the unused `dump_chromatix01_state` went, and the printing helper `test_dump` became `dump_state`, so the runner no longer collects it as a test (the two commented-out `dump=` calls now name it).
+- `CPU` counts instructions: `instruction_count`, zeroed like `cycles` in `__init__` and `reset()`, increased at the start of `do_next_step()`, so the first instruction is number 1. Named so it is not confused with `Emulator.instructions`, which every `run()` call resets. About 2-3% slower (medians 3.32 s without, 3.38 s and 3.43 s with, in one sitting; the times rose during the sitting, so the figure is rough). Accepted: every position in the design rests on this count.
+- `CPU` has the hook list `after_instruction`, called at the end of `do_next_step()`, after the memory hooks of that instruction. A hook gets no arguments and reads `instruction_count`, `last_PC` and `last_opcode` from the `CPU`; an experiment keeps the `CPU` in `self.cpu`. `reset()` keeps the hooks. Chosen over `hook(cpu)` because it follows the design note, and a quick `timeit` (4,000,000 calls, one hook) found it slightly faster, not slower. Not measured on Lode Runner: the user decided that the cost of each small step tells us little; what counts is the total, and we pay it anyway.
+- Tests: `tests/test_instruction_count.py` and `tests/test_cpu_hooks.py`, all green.
+- Learned (process, the user's feedback at the end of the session): the steps were small, but the explanations were not. What got in the way: dense sentences and idioms, a git command (`git stash`) used without explaining it, instructions that assumed the wrong state of the repo, measurement plans without a clear question, several open threads at once, and no big picture that ties each step to something the user can see on screen and start thinking in. Suggesting a fresh conversation was not asked for and read as pressure. For next time: one thing per message, plain words, say what a step is for before how it is done, and head for something visible.
+
 ## 2026-09-29 (second session) -- Hook lists in `Memory`; a first look at the attract play
 
 - `Memory` has one hook list per kind of access, named after its method with an `after_` prefix (`after_read_opcode` ... `after_write_stack`). A read hook gets `(address, value)`, a write hook `(address, value, old_value)`. The old value comes straight from the memory list, so taking it does not flip a soft switch at `$C0xx`. Each list is tested before its loop.

@@ -40,7 +40,10 @@ See `DIRECTION.md` for the context of each item.
 
 ## 5. Optional coverage
 
-- First step of the next session: finish the `unittest` -> `pytest` conversion, so every test module is `pytest` style, in the form of `tests/test_memory_hooks.py`: plain functions, written out, no class around them. `grep -rln unittest tests/` lists the modules still using it; known so far: `tests/test_memory.py` and `tests/test_assembler.py` still use `unittest` (`test_memory.py` already has two `pytest` functions next to its old class). In `test_assembler.py`, rename `test_dump`: it's a printing helper, but its `test_` name makes the runner run it as a test.
+- ~~Finish the `unittest` -> `pytest` conversion~~ -- done 2026-09-29: `test_memory.py` and `test_assembler.py` converted; `test_dump` is now `dump_state`.
+- `tests/test_assembler.py`: `test_8bit_bitcount` runs its routine but asserts nothing.
+- `tests/test_assembler.py`: its `compile` helper does what the `assemble` fixture in `conftest.py` does (and shadows Python's built-in `compile`). Use the fixture instead.
+- `tests/test_assembler.py`: `dump_state` prints registers, flags and the stack once per instruction when passed as `dump=` to `run_to_RTS`. Use it as the model for a state dump in the new instrumentation (an `after_instruction` hook would be the natural home).
 
 ## 6. Performance (parked, 2026-09-23)
 
@@ -53,10 +56,9 @@ Measured with `cProfile` on the headless Lode Runner run (`HISTORY.md` 2026-09-2
 The old instrumentation is gone (`HISTORY.md` 2026-09-27/28); the ideas for the new one are in `docs/instrumentation-ideas.md`.
 
 - Keeping what we've learned about an address across experiments: the old tile lists in Excel showed notes from `Annotations` next to each tile (removed 2026-09-27, at the tag). Decide how learnings persist in the new design.
-- ~~Step 4 (`docs/instrumentation-design.md`): the hook lists -- one per `Memory` method, `after_instruction` on `CPU` -- and the fields a hook may read (instruction count, instruction PC, opcode). Measure with all lists empty: median of five `make boot-lode-runner-headless` runs, against 3.16 s.~~ -- the `Memory` half done 2026-09-29: `after_read_opcode` ... `after_write_stack`, about 3% slower with all lists empty (3.19 s -> 3.29 s, same sitting), tests in `tests/test_memory_hooks.py`.
-- Step 4, the `CPU` half: the instruction count in `CPU`, reset only at a fresh start (design note, section 5), and the `after_instruction` list. Hooks read the count, the instruction's PC (`last_PC`) and the opcode (`last_opcode`) from `CPU`. Open: what counts as a fresh start in code -- `CPU.__init__` and `CPU.reset()`, which already zero `cycles`? Measure as for the `Memory` half, against 3.29 s.
+- ~~Step 4, the `CPU` half~~ -- done 2026-09-29: `instruction_count`, zeroed like `cycles` in `__init__` and `reset()`; the `after_instruction` list, hooks called with no arguments. Step 4 is complete.
+- Optional, once, whenever it is of interest: the total cost of the instrumentation with all lists empty, measured against the commit before the `Memory` hook lists. Not per step (decided 2026-09-29).
 - How an experiment gets its hooks into the lists. Discussed 2026-09-29, not settled: an `Emulator.attach(obj)` that passes the object to `Memory` and `CPU`, each picking the `after_...` methods it knows, and a matching `detach()`. Until then, plain `append` to the lists. Decide with the first experiment (Step 6), not before.
-- ~~Stop conditions out of `core`~~ -- done 2026-09-29: `after_instructions` and `at_address` are in `papple2/debug/stop_conditions.py`; `Until` stays in `core/emulator.py`.
 - Step 5: the boundary in `Emulator`: breakpoints first, then traps (terms in the design note, section 1). `until` stays a parameter of `run()` for now.
 - Step 6: the first experiment, the execution-count map, on Lode Runner inside a level. A milestone: planned and run together.
 - _Needs investigation:_ where the attract play's moves come from. Probably a table the demo code reads instead of the keyboard; `main.nw` may name it. A read hook on the demo code would show which table it reads. The same "script" could drive experiments. The block `main.nw` calls "random init data" (`levels.html`) looks like leftover memory from when the file was saved (loader code calling the ROM and reading the disk, fill patterns, hi-res bytes), not keystrokes.

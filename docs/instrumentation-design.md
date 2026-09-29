@@ -1,6 +1,6 @@
 # Instrumentation design
 
-**Status:** decided in the design session of 2026-09-29. This document holds decisions; the raw material they came from is `docs/instrumentation-ideas.md` (the braindump), and the old design they replace is drawn in `docs/instrumentation-map.md` (the tag `pre-redesign`). Section 9 lists what is still open. Implemented so far (2026-09-29): the `Memory` methods per kind, the CPU calling them, and the hook lists in `Memory` (section 3). No hooks on `CPU` yet.
+**Status:** decided in the design session of 2026-09-29. This document holds decisions; the raw material they came from is `docs/instrumentation-ideas.md` (the braindump), and the old design they replace is drawn in `docs/instrumentation-map.md` (the tag `pre-redesign`). Section 9 lists what is still open. Implemented so far (2026-09-29): the `Memory` methods per kind, the CPU calling them, the hook lists in `Memory` (section 3), and on `CPU` the instruction count and the `after_instruction` list (sections 4 and 5).
 
     **Purpose:** one place for the rules that span `Emulator`, `CPU` and `Memory`, so that they are not spread over comments in several modules.
 
@@ -66,6 +66,7 @@ The name of the method says *why* the CPU accesses a byte, not *where* the byte 
 
 - One list: `after_instruction`.
 - Fields a hook may read during its call: instruction count, instruction PC, opcode. Hooks read what they need from fields instead of receiving it as arguments; only what is gone afterwards (address, value, old value) is passed.
+- So an `after_instruction` hook is called with no arguments, and an experiment keeps the `CPU` in `self.cpu`. `hook(cpu)` was considered and dropped: it departs from the rule above, and a `timeit` check (4,000,000 calls, one hook) found `hook()` slightly faster. `reset()` keeps the hooks.
 - No saving of registers and flags before the instruction, and no switch for it. A hook that needs the state before an instruction keeps the values from the previous `after_instruction` call, or the trace does it afterwards. That approximation breaks right after a trap, which is one reason traps log what they did.
 
 ## 5. Position
@@ -73,6 +74,7 @@ The name of the method says *why* the CPU accesses a byte, not *where* the byte 
 - Every observation is placed by run and instruction count.
 - A run is everything since a fresh start. Continuing after a breakpoint is the same run.
 - The instruction count lives in `CPU` and is reset only at a fresh start. It is not `Emulator.instructions`, which every `run()` call resets and which `after_instructions(n)` relies on.
+- In code, a fresh start is `CPU.__init__` and `CPU.reset()`: `instruction_count` is zeroed exactly where `cycles` is. It is increased at the start of `do_next_step()`, so the first instruction is number 1, and an `after_instruction` hook sees the number of the instruction it follows.
 
 ## 6. Rules
 
@@ -80,7 +82,7 @@ The name of the method says *why* the CPU accesses a byte, not *where* the byte 
 2. Hooks may change the machine, by convention only at boundaries. Nothing prevents more; we are close to the machine on purpose.
 3. A hook cannot stop execution. It can request a stop; the `Emulator` acts on the request at the next boundary.
 4. `papple2.core` holds the hook lists and calls them through fixed interfaces, and nothing else. What a hook does with the data is none of the core's business: ring buffers, counters and logs are building blocks outside `core`.
-5. Speed is measured, not assumed: before and after each change to the core, and with all hook lists empty, since that is the price every run pays.
+5. Speed is measured, not assumed, but as a total, not per step: the cost of the instrumentation with all hook lists empty, against the state before it, since that is the price every run pays. Measuring each small step told us little (decided 2026-09-29).
 
 ## 7. Building blocks (outside `core`)
 
