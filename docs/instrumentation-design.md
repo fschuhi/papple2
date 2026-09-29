@@ -1,6 +1,6 @@
 # Instrumentation design
 
-**Status:** decided in the design session of 2026-09-29. This document holds decisions; the raw material they came from is `docs/instrumentation-ideas.md` (the braindump), and the old design they replace is drawn in `docs/instrumentation-map.md` (the tag `pre-redesign`). Section 9 lists what is still open. Implemented so far (2026-09-29): the `Memory` methods per kind and the CPU calling them (section 3). No hook lists yet.
+**Status:** decided in the design session of 2026-09-29. This document holds decisions; the raw material they came from is `docs/instrumentation-ideas.md` (the braindump), and the old design they replace is drawn in `docs/instrumentation-map.md` (the tag `pre-redesign`). Section 9 lists what is still open. Implemented so far (2026-09-29): the `Memory` methods per kind, the CPU calling them, and the hook lists in `Memory` (section 3). No hooks on `CPU` yet.
 
     **Purpose:** one place for the rules that span `Emulator`, `CPU` and `Memory`, so that they are not spread over comments in several modules.
 
@@ -55,8 +55,8 @@ The name of the method says *why* the CPU accesses a byte, not *where* the byte 
 | `write_stack(address, value)` | `JSR`, `PHA`, `PHP`, `BRK` | 1 or 2 |
 
 - Each method is thin: it calls the shared `read_byte` or `write_byte`, where the device logic (soft switches, display) stays in one place, and then runs its own hook list.
-- One after list per method. A hook that only needs opcode reads is called once per instruction, not on every access.
-- Signatures: a read hook gets `(address, value)`, a write hook gets `(address, value, old_value)`. `Memory` keeps the old value before it overwrites it.
+- One after list per method, named after it with an `after_` prefix (`after_read_opcode` ... `after_write_stack`). A hook that only needs opcode reads is called once per instruction, not on every access. Each list is tested before its loop; with all lists empty, headless Lode Runner is about 3% slower (2026-09-29).
+- Signatures: a read hook gets `(address, value)`, a write hook gets `(address, value, old_value)`. `Memory` keeps the old value before it overwrites it, taken straight from the memory list: going through `read_byte` would flip a soft switch at `$C0xx`.
 - The addressing mode is not passed: every opcode has exactly one addressing mode, so it follows from the opcode. Zero page and `$00xx` absolute stay distinguishable that way.
 - Only bytes reach the hooks. A 16-bit read is two byte reads of the same kind, low byte first: `read_operand_word`, `read_pointer_word` (with the page wrap: at `$xxFF` the high byte comes from `$xx00`), `read_vector_word`.
 - **Immediate operands:** the operations read their operand with the same call they use for data, so an immediate operand (the `$05` in `LDA #$05`) is reported by `read_data`. The core leaves this as it is for now; a hook that cares corrects the label from the opcode (11 opcodes use immediate mode). To be revisited when an experiment shows the need; it matters for detecting self-modifying code, because changing an immediate operand is a classic trick.
@@ -99,7 +99,8 @@ The name of the method says *why* the CPU accesses a byte, not *where* the byte 
 ## 9. Open
 
 - How a hook requests a stop, concretely.
-- `until`: stays a parameter of `run()` for now; it could become a conditional breakpoint in the `Emulator`'s list.
+- `until`: stays a parameter of `run()` for now; it could become a conditional breakpoint in the `Emulator`'s list. With a window it already pauses the run instead of ending it (2026-09-29). The ready-made conditions live outside `core`, in `papple2/debug/stop_conditions.py`.
+- How an experiment gets its hooks into the lists: an `attach()` on `Emulator` that passes an object to `Memory` and `CPU`, or plain `append`. Decide with the first experiment.
 - Devices: how the soft switches, the keyboard and the display fit with the hooks. Look at how they work today first.
 
 ## 10. First experiments

@@ -24,7 +24,6 @@ See `DIRECTION.md` for the context of each item.
 - _Needs investigation:_ is there an Apple II tool that saves per-byte code/data marks to a file (like FCEUX's Code/Data Logger), or tracks data provenance? microM8's heat map comes close.
 - Jupyter primer, for a conscious decision on the monitor: Joel Grus's talk "I Don't Like Notebooks" (JupyterCon 2018), marimo's "why marimo", then a small hands-on notebook with `papple2` booting Lode Runner.
 - Robotron leftovers in `papple2` (`make boot-robotron` and its script stay, as decided 2026-09-27): the three tests in `test_emulator_silent.py` that load `ROBOTRON.BIN` -- they could use small assembled programs instead, like the trap tests. The labels, the checkpoint classes, the `$51b6` exemption and the tiles pointer went with the pruning (2026-09-28).
-- ~~`Display.save_hires_bytes`/`load_hires_bytes` in `core/apple.py` (broken, no caller)~~ -- removed 2026-09-29, with pickling.
 - Research document with glossary (in progress, away from the keyboard): established reverse-engineering concepts, and what the tools for 6502 platforms (NES, C64, Apple II) offer to understand a game. Basis for renaming `papple2`'s concepts, or at least putting them into their proper context.
 
 ## 3. Parked decisions
@@ -41,7 +40,7 @@ See `DIRECTION.md` for the context of each item.
 
 ## 5. Optional coverage
 
-- Finish the `unittest` -> `pytest` conversion: `tests/test_memory.py` and `tests/test_assembler.py` still use `unittest` (`test_memory.py` already has two `pytest` functions next to its old class). In `test_assembler.py`, rename `test_dump`: it's a printing helper, but its `test_` name makes the runner run it as a test.
+- First step of the next session: finish the `unittest` -> `pytest` conversion, so every test module is `pytest` style. `grep -rln unittest tests/` lists the modules still using it; known so far: `tests/test_memory.py` and `tests/test_assembler.py` still use `unittest` (`test_memory.py` already has two `pytest` functions next to its old class). In `test_assembler.py`, rename `test_dump`: it's a printing helper, but its `test_` name makes the runner run it as a test.
 
 ## 6. Performance (parked, 2026-09-23)
 
@@ -53,11 +52,14 @@ Measured with `cProfile` on the headless Lode Runner run (`HISTORY.md` 2026-09-2
 
 The old instrumentation is gone (`HISTORY.md` 2026-09-27/28); the ideas for the new one are in `docs/instrumentation-ideas.md`.
 
-- ~~`pysm`, yes or no: an in-depth discussion with the arguments on both sides. The state machine is where run-level behaviour could grow (single step, run to here, recording modes); the risk so far was hollowing it out patch by patch (entry actions removed, `until` without an event). For now it does statechart work: state changes by events, entry and exit actions, the initial state entered on `initialize()`.~~ -- settled 2026-09-29: `pysm` stays, as the one place where run control happens; an event queue would be a wrapper of our own, later (`HISTORY.md`).
 - Keeping what we've learned about an address across experiments: the old tile lists in Excel showed notes from `Annotations` next to each tile (removed 2026-09-27, at the tag). Decide how learnings persist in the new design.
-- Step 4 (`docs/instrumentation-design.md`): the hook lists -- one per `Memory` method, `after_instruction` on `CPU` -- and the fields a hook may read (instruction count, instruction PC, opcode). Measure with all lists empty: median of five `make boot-lode-runner-headless` runs, against 3.16 s.
+- ~~Step 4 (`docs/instrumentation-design.md`): the hook lists -- one per `Memory` method, `after_instruction` on `CPU` -- and the fields a hook may read (instruction count, instruction PC, opcode). Measure with all lists empty: median of five `make boot-lode-runner-headless` runs, against 3.16 s.~~ -- the `Memory` half done 2026-09-29: `after_read_opcode` ... `after_write_stack`, about 3% slower with all lists empty (3.19 s -> 3.29 s, same sitting), tests in `tests/test_memory_hooks.py`.
+- Step 4, the `CPU` half: the instruction count in `CPU`, reset only at a fresh start (design note, section 5), and the `after_instruction` list. Hooks read the count, the instruction's PC (`last_PC`) and the opcode (`last_opcode`) from `CPU`. Open: what counts as a fresh start in code -- `CPU.__init__` and `CPU.reset()`, which already zero `cycles`? Measure as for the `Memory` half, against 3.29 s.
+- How an experiment gets its hooks into the lists. Discussed 2026-09-29, not settled: an `Emulator.attach(obj)` that passes the object to `Memory` and `CPU`, each picking the `after_...` methods it knows, and a matching `detach()`. Until then, plain `append` to the lists. Decide with the first experiment (Step 6), not before.
+- ~~Stop conditions out of `core`~~ -- done 2026-09-29: `after_instructions` and `at_address` are in `papple2/debug/stop_conditions.py`; `Until` stays in `core/emulator.py`.
 - Step 5: the boundary in `Emulator`: breakpoints first, then traps (terms in the design note, section 1). `until` stays a parameter of `run()` for now.
 - Step 6: the first experiment, the execution-count map, on Lode Runner inside a level. A milestone: planned and run together.
+- _Needs investigation:_ where the attract play's moves come from. Probably a table the demo code reads instead of the keyboard; `main.nw` may name it. A read hook on the demo code would show which table it reads. The same "script" could drive experiments. The block `main.nw` calls "random init data" (`levels.html`) looks like leftover memory from when the file was saved (loader code calling the ROM and reading the disk, fill patterns, hi-res bytes), not keystrokes.
 - After step 6: how we look at what the hooks collected -- report generators in HTML, queries in Jupyter, or both; which one first. Earlier answers to the same question: the HTML browser in `a2-lode-runner` and the Excel tile lists from Robotron.
 
 ## 8. Small code steps

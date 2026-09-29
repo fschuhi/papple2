@@ -8,12 +8,13 @@
 
 ## 📍 Current Session Pointer
 
-**Where we are:** `papple2` is to become a system to disassemble and understand Apple II and II+ games by running them, with Lode Runner as the worked example (`DIRECTION.md`). The instrumentation is being rebuilt from scratch. The decisions are in `docs/instrumentation-design.md` (2026-09-29), and the first part is in place: `CPU` and `Memory` name every access by its kind (`read_opcode`, `read_operand`, ..., `write_stack`) at no measurable cost, and the disassembler reads the memory list directly. There are no hooks yet. Four boots run (`make boot-basic`, `boot-robotron`, `boot-lode-runner`, `boot-bandits`), and the two disk stand-ins are traps.
+**Where we are:** `papple2` is to become a system to disassemble and understand Apple II and II+ games by running them, with Lode Runner as the worked example (`DIRECTION.md`). The instrumentation is being rebuilt from scratch. The decisions are in `docs/instrumentation-design.md` (2026-09-29), and the first part is in place: `CPU` and `Memory` name every access by its kind (`read_opcode`, `read_operand`, ..., `write_stack`) at no measurable cost, and the disassembler reads the memory list directly. `Memory` has one hook list per kind (`after_read_opcode` ... `after_write_stack`), about 3% slower with all lists empty; `CPU` has none yet. A windowed Lode Runner run can pause at an instruction count (`--instructions`), which showed that the 4,000,000 instructions of the timing run reach deep into the attract play. Four boots run (`make boot-basic`, `boot-robotron`, `boot-lode-runner`, `boot-bandits`), and the two disk stand-ins are traps.
 
 **What's next:**
-- Step 4: the hook lists and the fields a hook may read, measured with all lists empty (`TODO.md` section 7).
+- First: every test module in `pytest` style (`TODO.md` section 5).
+- Step 4, the `CPU` half: the instruction count and `after_instruction` (`TODO.md` section 7).
 - Step 5: breakpoints and traps at the `Emulator`'s boundary.
-- Step 6: the execution-count map on Lode Runner inside a level, the first real output of the new instrumentation, run together.
+- Step 6: the execution-count map on Lode Runner inside a level, the first real output of the new instrumentation, run together. Decide there how experiments attach their hooks.
 - Reserve time for looking at the results: report generators in HTML, or queries in Jupyter.
 - Alongside: the small code steps in `TODO.md` section 8.
 - Discuss and expand `docs/reveng-catalogue.md`. Add AFK research on Ghidra and SourceGen. 

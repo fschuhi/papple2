@@ -11,6 +11,16 @@
 
 ---
 
+## 2026-09-29 (second session) -- Hook lists in `Memory`; a first look at the attract play
+
+- `Memory` has one hook list per kind of access, named after its method with an `after_` prefix (`after_read_opcode` ... `after_write_stack`). A read hook gets `(address, value)`, a write hook `(address, value, old_value)`. The old value comes straight from the memory list, so taking it does not flip a soft switch at `$C0xx`. Each list is tested before its loop.
+- Speed: headless Lode Runner, median of five runs in the same sitting, 3.19 s before and 3.29 s after, about 3%. Accepted as the price every run pays for the hooks.
+- Tests: `tests/test_memory_hooks.py`, in `pytest` style: each read kind reports address and value, each write kind the old value, and hooks run in list order.
+- A windowed run can pause at an instruction count: `scripts/boot_lode_runner.py --instructions N` stops as if Ctrl-X had been pressed, and the next Ctrl-X continues. In `Emulator.run()`, a met `until` is dropped when a window is open; headless runs still end at it.
+- First experiment, run by the user: 4,000,000 instructions (the headless timing run) reach deep into the attract play -- iris wipe, the level being built, player and enemies moving, the first dig. No RWTS reads in that stretch: the attract play's level comes from memory.
+- `after_instructions` and `at_address` moved from `core/emulator.py` to `papple2/debug/stop_conditions.py`. The core keeps the type `Until`: the shape of a condition, not the conditions themselves.
+- Learned (process): compare old and new in the same sitting; against the baseline from an earlier sitting the cost looked like 4%, in the same sitting it was 3%. Designing how experiments get their hooks (`attach()`) before any experiment exists went in circles; decide it with the first one. Short answers, one point at a time.
+
 ## 2026-09-29 -- The instrumentation design; `CPU` and `Memory` speak in kinds
 
 - Design session: the braindump became decisions, in `docs/instrumentation-design.md`. Three kinds of instrumentation: breakpoints and traps at the `Emulator`'s boundary, before the instruction; hooks inside it, after an access or after the instruction. After-hooks only, one hook list per kind of access, return values ignored, position = run plus instruction count. Ring buffers and counters are building blocks outside `core`. `pysm` stays: the one place where run control happens; an event queue would be a wrapper of our own, later.
