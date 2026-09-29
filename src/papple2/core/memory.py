@@ -76,3 +76,33 @@ class Memory:
         ):
             if self.use_apple_display:
                 self.apple2.display.update(address, value)
+
+    # The CPU reads and writes through these methods, one per kind of access.
+    # The name says why the CPU accesses a byte, not where the byte is:
+    # LDA $0100,X touches the stack page, but it is a data read. See
+    # docs/instrumentation-design.md, section 3. For now each one only passes
+    # the access on to read_byte or write_byte.
+
+    def read_opcode(self, address: int) -> int:
+        return self.read_byte(address)
+
+    def read_operand(self, address: int) -> int:
+        return self.read_byte(address)
+
+    def read_pointer(self, address: int) -> int:
+        return self.read_byte(address)
+
+    def read_data(self, address: int) -> int:
+        return self.read_byte(address)
+
+    def read_stack(self, address: int) -> int:
+        return self.read_byte(address)
+
+    def read_vector(self, address: int) -> int:
+        return self.read_byte(address)
+
+    def write_data(self, address: int, value: int) -> None:
+        self.write_byte(address, value)
+
+    def write_stack(self, address: int, value: int) -> None:
+        self.write_byte(address, value)

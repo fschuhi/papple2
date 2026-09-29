@@ -147,7 +147,7 @@ def run_headless(emulator: Emulator, instructions: int) -> None:
     emulator.run(until=after_instructions(instructions))
     seconds = time.time() - start
 
-    print(f"{emulator.instructions} instructions in {seconds:.1f} s")
+    print(f"{emulator.instructions} instructions in {seconds:.2f} s")
     print(f"PC at the end: ${emulator.cpu.PC:04X}")
 
     save_hires_png(emulator, 0x2000, "tmp/lode_runner_page1.png")

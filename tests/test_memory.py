@@ -56,3 +56,25 @@ def test_load_image_refuses_an_image_that_does_not_fit(tmp_path: Path) -> None:
 
     # the guard fires before anything is copied: memory stays 64K
     assert len(memory._mem) == 0x10000
+
+
+# Every kind of access reaches the same memory; the kind only says why the
+# CPU accesses a byte (docs/instrumentation-design.md, section 3). Hook lists
+# per kind will build on this.
+
+READ_KINDS = ["read_opcode", "read_operand", "read_pointer", "read_data", "read_stack", "read_vector"]
+WRITE_KINDS = ["write_data", "write_stack"]
+
+
+@pytest.mark.parametrize("method", READ_KINDS)
+def test_every_kind_of_read_returns_what_read_byte_returns(memory: Memory, method: str) -> None:
+    memory.load_test_data(0x1000, [0x42])
+
+    assert getattr(memory, method)(0x1000) == memory.read_byte(0x1000) == 0x42
+
+
+@pytest.mark.parametrize("method", WRITE_KINDS)
+def test_every_kind_of_write_lands_where_write_byte_would(memory: Memory, method: str) -> None:
+    getattr(memory, method)(0x1000, 0x42)
+
+    assert memory.read_byte(0x1000) == 0x42
