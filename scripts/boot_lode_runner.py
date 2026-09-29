@@ -40,7 +40,8 @@ import time
 from pathlib import Path
 
 from papple2.core.disk_image import SECTOR_SIZE, DiskImage
-from papple2.core.emulator import Emulator, after_instructions
+from papple2.core.emulator import Emulator
+from papple2.debug.stop_conditions import after_instructions
 from papple2.util import load_data_dir
 
 LOAD_ADDRESS = 0x0800

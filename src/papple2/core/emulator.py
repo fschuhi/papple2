@@ -140,18 +140,6 @@ class EmulatorStates:
         return self.sm.dispatch(event)
 
 
-def after_instructions(n: int) -> Until:
-    def until(emulator: "Emulator") -> bool:
-        return emulator.instructions >= n
-    return until
-
-
-def at_address(address: int) -> Until:
-    def until(emulator: "Emulator") -> bool:
-        return emulator.cpu.PC == address
-    return until
-
-
 # Emulator.run() asks the window for keyboard/window events and redraws only
 # every WINDOW_POLL_INTERVAL loop passes, not on every instruction: calling
 # pygame.event.get() once per instruction took about a third of the windowed

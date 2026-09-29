@@ -1,5 +1,6 @@
 from pysm import Event
-from papple2.core.emulator import Emulator, after_instructions, at_address
+from papple2.core.emulator import Emulator
+from papple2.debug.stop_conditions import after_instructions, at_address
 
 
 def test_create_no_display():
