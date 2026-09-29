@@ -58,6 +58,7 @@ The old instrumentation is gone (`HISTORY.md` 2026-09-27/28); the ideas for the 
 - Step 4 (`docs/instrumentation-design.md`): the hook lists -- one per `Memory` method, `after_instruction` on `CPU` -- and the fields a hook may read (instruction count, instruction PC, opcode). Measure with all lists empty: median of five `make boot-lode-runner-headless` runs, against 3.16 s.
 - Step 5: the boundary in `Emulator`: breakpoints first, then traps (terms in the design note, section 1). `until` stays a parameter of `run()` for now.
 - Step 6: the first experiment, the execution-count map, on Lode Runner inside a level. A milestone: planned and run together.
+- After step 6: how we look at what the hooks collected -- report generators in HTML, queries in Jupyter, or both; which one first. Earlier answers to the same question: the HTML browser in `a2-lode-runner` and the Excel tile lists from Robotron.
 
 ## 8. Small code steps
 

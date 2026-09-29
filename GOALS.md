@@ -14,5 +14,6 @@
 - Step 4: the hook lists and the fields a hook may read, measured with all lists empty (`TODO.md` section 7).
 - Step 5: breakpoints and traps at the `Emulator`'s boundary.
 - Step 6: the execution-count map on Lode Runner inside a level, the first real output of the new instrumentation, run together.
+- Reserve time for looking at the results: report generators in HTML, or queries in Jupyter.
 - Alongside: the small code steps in `TODO.md` section 8.
 - Discuss and expand `docs/reveng-catalogue.md`. Add AFK research on Ghidra and SourceGen. 
