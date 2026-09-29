@@ -11,6 +11,16 @@
 
 ---
 
+## 2026-09-29 -- The instrumentation design; `CPU` and `Memory` speak in kinds
+
+- Design session: the braindump became decisions, in `docs/instrumentation-design.md`. Three kinds of instrumentation: breakpoints and traps at the `Emulator`'s boundary, before the instruction; hooks inside it, after an access or after the instruction. After-hooks only, one hook list per kind of access, return values ignored, position = run plus instruction count. Ring buffers and counters are building blocks outside `core`. `pysm` stays: the one place where run control happens; an event queue would be a wrapper of our own, later.
+- Pickling removed: `pickle`/`unpickle` in five classes, and the broken `save_hires_bytes`/`load_hires_bytes`. Snapshots will be designed fresh when an experiment needs them.
+- `Memory` has one method per kind of access (`read_opcode`, `read_operand`, `read_pointer`, `read_data`, `read_stack`, `read_vector`, `write_data`, `write_stack`), and three 16-bit reads built from them (`read_operand_word`, `read_pointer_word` with the page wrap, `read_vector_word`). The CPU calls them; `CPU.read_byte`, `read_word` and `write_byte` are gone. Immediate operands are still reported as data reads, on purpose.
+- The disassembler reads the memory list directly, and no longer switches the soft switches off around its reads.
+- Speed: headless Lode Runner, 4,000,000 instructions, median of five runs 3.19 s before and 3.16 s after, so no measurable cost. `scripts/boot_lode_runner.py` now prints two decimals.
+- Tests: every kind of access reaches the same memory; word reads take the low byte first; the pointer read wraps within the page.
+- Learned (process): the noise between runs alone spans about 6%, so compare medians of five runs. Checking for callers before a change (`grep`) found the disassembler reading through the CPU before it could become a problem. A pushed commit can still be reviewed in PyCharm's Log, and `git revert` is the safe way back.
+
 ## 2026-09-27/28 -- The clean-slate redesign begins: the old instrumentation pruned
 
 - Decision: the instrumentation (hooks, checkpoints, `MemoryMap`/`OpInfo`, tiles, stretches, annotations) is not improved but designed anew. The machine stays: CPU, memory, soft switches, display, keyboard. The last state before the redesign is the tag `pre-redesign` (commit `0797250`); a separate private project keeps a working copy of it, so nothing that was built is lost.
