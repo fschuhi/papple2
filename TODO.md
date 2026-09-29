@@ -23,7 +23,8 @@ See `DIRECTION.md` for the context of each item.
 
 - _Needs investigation:_ is there an Apple II tool that saves per-byte code/data marks to a file (like FCEUX's Code/Data Logger), or tracks data provenance? microM8's heat map comes close.
 - Jupyter primer, for a conscious decision on the monitor: Joel Grus's talk "I Don't Like Notebooks" (JupyterCon 2018), marimo's "why marimo", then a small hands-on notebook with `papple2` booting Lode Runner.
-- Robotron leftovers in `papple2` (`make boot-robotron` and its script stay, as decided 2026-09-27): `Display.save_hires_bytes`/`load_hires_bytes` in `core/apple.py` (broken, no caller), and the three tests in `test_emulator_silent.py` that load `ROBOTRON.BIN` -- they could use small assembled programs instead, like the trap tests. The labels, the checkpoint classes, the `$51b6` exemption and the tiles pointer went with the pruning (2026-09-28).
+- Robotron leftovers in `papple2` (`make boot-robotron` and its script stay, as decided 2026-09-27): the three tests in `test_emulator_silent.py` that load `ROBOTRON.BIN` -- they could use small assembled programs instead, like the trap tests. The labels, the checkpoint classes, the `$51b6` exemption and the tiles pointer went with the pruning (2026-09-28).
+- ~~`Display.save_hires_bytes`/`load_hires_bytes` in `core/apple.py` (broken, no caller)~~ -- removed 2026-09-29, with pickling.
 - Research document with glossary (in progress, away from the keyboard): established reverse-engineering concepts, and what the tools for 6502 platforms (NES, C64, Apple II) offer to understand a game. Basis for renaming `papple2`'s concepts, or at least putting them into their proper context.
 
 ## 3. Parked decisions
@@ -52,8 +53,11 @@ Measured with `cProfile` on the headless Lode Runner run (`HISTORY.md` 2026-09-2
 
 The old instrumentation is gone (`HISTORY.md` 2026-09-27/28); the ideas for the new one are in `docs/instrumentation-ideas.md`.
 
-- `pysm`, yes or no: an in-depth discussion with the arguments on both sides. The state machine is where run-level behaviour could grow (single step, run to here, recording modes); the risk so far was hollowing it out patch by patch (entry actions removed, `until` without an event). For now it does statechart work: state changes by events, entry and exit actions, the initial state entered on `initialize()`.
+- ~~`pysm`, yes or no: an in-depth discussion with the arguments on both sides. The state machine is where run-level behaviour could grow (single step, run to here, recording modes); the risk so far was hollowing it out patch by patch (entry actions removed, `until` without an event). For now it does statechart work: state changes by events, entry and exit actions, the initial state entered on `initialize()`.~~ -- settled 2026-09-29: `pysm` stays, as the one place where run control happens; an event queue would be a wrapper of our own, later (`HISTORY.md`).
 - Keeping what we've learned about an address across experiments: the old tile lists in Excel showed notes from `Annotations` next to each tile (removed 2026-09-27, at the tag). Decide how learnings persist in the new design.
+- Step 4 (`docs/instrumentation-design.md`): the hook lists -- one per `Memory` method, `after_instruction` on `CPU` -- and the fields a hook may read (instruction count, instruction PC, opcode). Measure with all lists empty: median of five `make boot-lode-runner-headless` runs, against 3.16 s.
+- Step 5: the boundary in `Emulator`: breakpoints first, then traps (terms in the design note, section 1). `until` stays a parameter of `run()` for now.
+- Step 6: the first experiment, the execution-count map, on Lode Runner inside a level. A milestone: planned and run together.
 
 ## 8. Small code steps
 
@@ -61,3 +65,8 @@ The old instrumentation is gone (`HISTORY.md` 2026-09-27/28); the ideas for the 
 - `util.py`: `hexaddr()` and `hexbyte()` default to lowercase (`lower=True`), but the decision is uppercase with `$` (XekriRedmane's style, used in the CPU status line since 2026-09-28). Flip the defaults, or remove `lower`, so the disassembler, `Labels` and messages follow.
 - The stand-ins' comments still say their writes go past "the CPU's write hook", which no longer exists: `RwtsHook`'s docstring in `scripts/boot_lode_runner.py`, `MliHook`'s docstring and the comment in `MliHook.read()` in `scripts/boot_bandits.py`.
 - `graphviz` in `requirements.txt` is unused since `tiles.py` went (2026-09-27); remove it.
+- `Memory.read_word_bug` is unused since 2026-09-29; `read_pointer_word` took over its logic.
+- `CPU.read_word_bug` reads pointers only now, so its name no longer fits.
+- The disassembler's `read_byte`/`read_word` (2026-09-29): an underscore, or not.
+- The indexed modes (`abs,X`, `abs,Y`, `(zp),Y`) don't wrap at `$FFFF` as the 6502 does.
+- Flattening the kind methods in `Memory`, so they no longer call `read_byte`/`write_byte`. No priority.
