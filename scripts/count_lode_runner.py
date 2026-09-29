@@ -26,6 +26,7 @@ read relative to the current working directory):
 """
 
 import argparse
+import logging
 import time
 from pathlib import Path
 
@@ -49,19 +50,19 @@ BOTH_COLOUR = (255, 60, 60)
 class ExecutionCounts:
     """Per address: how often it was fetched as an opcode, and as an operand.
 
-    The two methods are hooks for Memory's after_read_opcode and
-    after_read_operand lists. A read hook gets (address, value); the value
-    is not needed for counting.
+    The two methods are named after Memory's hook lists, so that
+    Emulator.attach() puts each one into its list. A read hook gets
+    (address, value); the value is not needed for counting.
     """
 
     def __init__(self) -> None:
         self.opcode: list[int] = [0] * MEMORY_SIZE
         self.operand: list[int] = [0] * MEMORY_SIZE
 
-    def on_opcode(self, address: int, value: int) -> None:
+    def after_read_opcode(self, address: int, value: int) -> None:
         self.opcode[address] += 1
 
-    def on_operand(self, address: int, value: int) -> None:
+    def after_read_operand(self, address: int, value: int) -> None:
         self.operand[address] += 1
 
     def colour(self, address: int) -> tuple[int, int, int]:
@@ -109,12 +110,13 @@ def main() -> None:
                         help="stop after N instructions (default: 4000000)")
     args = parser.parse_args()
 
+    # shows the line attach() logs
+    logging.basicConfig(level=logging.INFO)
+
     emulator, rwts = boot(args.binary, headless=True)
 
     counts = ExecutionCounts()
-    memory = emulator.apple2.memory
-    memory.after_read_opcode.append(counts.on_opcode)
-    memory.after_read_operand.append(counts.on_operand)
+    emulator.attach(counts)
 
     start = time.time()
     emulator.run(until=after_instructions(args.instructions))
