@@ -1,50 +1,112 @@
 """The hook lists in Memory: one list per kind of access, called after the
-access, in list order. See docs/instrumentation-design.md, section 3."""
+access, in list order. See docs/instrumentation-design.md, section 3.
 
-import pytest
+One test per method, written out on purpose: the eight methods are near
+copies of each other, and each test checks that its method calls its own
+list with the right values."""
 
 from papple2.core.memory import Memory
 
-ADDRESS = 0x0300
 
-READ_KINDS = ["opcode", "operand", "pointer", "data", "stack", "vector"]
-WRITE_KINDS = ["data", "stack"]
+# reads: a read hook gets (address, value)
 
 
-@pytest.mark.parametrize("kind", READ_KINDS)
-def test_read_hook_sees_address_and_value(kind: str) -> None:
+def test_read_opcode_calls_its_hooks() -> None:
     memory = Memory()
-    memory.load_test_data(ADDRESS, [0x42])
-    seen: list[tuple[int, int]] = []
-    getattr(memory, f"after_read_{kind}").append(lambda address, value: seen.append((address, value)))
+    memory.load_test_data(0x0300, [0x42])
+    seen = []
+    memory.after_read_opcode.append(lambda address, value: seen.append((address, value)))
 
-    value = getattr(memory, f"read_{kind}")(ADDRESS)
-
-    assert value == 0x42
-    assert seen == [(ADDRESS, 0x42)]
+    assert memory.read_opcode(0x0300) == 0x42
+    assert seen == [(0x0300, 0x42)]
 
 
-@pytest.mark.parametrize("kind", WRITE_KINDS)
-def test_write_hook_sees_the_old_value(kind: str) -> None:
+def test_read_operand_calls_its_hooks() -> None:
     memory = Memory()
-    memory.load_test_data(ADDRESS, [0x05])
-    seen: list[tuple[int, int, int]] = []
-    getattr(memory, f"after_write_{kind}").append(
-        lambda address, value, old_value: seen.append((address, value, old_value))
-    )
+    memory.load_test_data(0x0300, [0x42])
+    seen = []
+    memory.after_read_operand.append(lambda address, value: seen.append((address, value)))
 
-    getattr(memory, f"write_{kind}")(ADDRESS, 0x07)
+    assert memory.read_operand(0x0300) == 0x42
+    assert seen == [(0x0300, 0x42)]
 
-    assert memory._mem[ADDRESS] == 0x07
-    assert seen == [(ADDRESS, 0x07, 0x05)]
+
+def test_read_pointer_calls_its_hooks() -> None:
+    memory = Memory()
+    memory.load_test_data(0x0300, [0x42])
+    seen = []
+    memory.after_read_pointer.append(lambda address, value: seen.append((address, value)))
+
+    assert memory.read_pointer(0x0300) == 0x42
+    assert seen == [(0x0300, 0x42)]
+
+
+def test_read_data_calls_its_hooks() -> None:
+    memory = Memory()
+    memory.load_test_data(0x0300, [0x42])
+    seen = []
+    memory.after_read_data.append(lambda address, value: seen.append((address, value)))
+
+    assert memory.read_data(0x0300) == 0x42
+    assert seen == [(0x0300, 0x42)]
+
+
+def test_read_stack_calls_its_hooks() -> None:
+    memory = Memory()
+    memory.load_test_data(0x0300, [0x42])
+    seen = []
+    memory.after_read_stack.append(lambda address, value: seen.append((address, value)))
+
+    assert memory.read_stack(0x0300) == 0x42
+    assert seen == [(0x0300, 0x42)]
+
+
+def test_read_vector_calls_its_hooks() -> None:
+    memory = Memory()
+    memory.load_test_data(0x0300, [0x42])
+    seen = []
+    memory.after_read_vector.append(lambda address, value: seen.append((address, value)))
+
+    assert memory.read_vector(0x0300) == 0x42
+    assert seen == [(0x0300, 0x42)]
+
+
+# writes: a write hook gets (address, value, old_value)
+
+
+def test_write_data_calls_its_hooks_with_the_old_value() -> None:
+    memory = Memory()
+    memory.load_test_data(0x0300, [0x05])
+    seen = []
+    memory.after_write_data.append(lambda address, value, old_value: seen.append((address, value, old_value)))
+
+    memory.write_data(0x0300, 0x07)
+
+    assert memory._mem[0x0300] == 0x07
+    assert seen == [(0x0300, 0x07, 0x05)]
+
+
+def test_write_stack_calls_its_hooks_with_the_old_value() -> None:
+    memory = Memory()
+    memory.load_test_data(0x0300, [0x05])
+    seen = []
+    memory.after_write_stack.append(lambda address, value, old_value: seen.append((address, value, old_value)))
+
+    memory.write_stack(0x0300, 0x07)
+
+    assert memory._mem[0x0300] == 0x07
+    assert seen == [(0x0300, 0x07, 0x05)]
+
+
+# order: hooks in one list run in the order they were added
 
 
 def test_hooks_run_in_list_order() -> None:
     memory = Memory()
-    calls: list[str] = []
+    calls = []
     memory.after_read_opcode.append(lambda address, value: calls.append("first"))
     memory.after_read_opcode.append(lambda address, value: calls.append("second"))
 
-    memory.read_opcode(ADDRESS)
+    memory.read_opcode(0x0300)
 
     assert calls == ["first", "second"]
