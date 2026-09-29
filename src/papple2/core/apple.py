@@ -13,7 +13,6 @@ with contextlib.redirect_stdout(None):
 
 import time
 from pathlib import Path
-from pickle import Pickler, Unpickler
 
 import numpy
 from papple2.core.cpu import CPU
@@ -191,25 +190,6 @@ class Display:
             self.chargen.append(chars)
 
 
-    def pickle(self, pickler: Pickler) -> None:
-        pickler.dump(self.mix)
-        pickler.dump(self.flash_time)
-        pickler.dump(self.flash_on)
-        pickler.dump(self.page)
-        pickler.dump(self.text)
-        pickler.dump(self.colour)
-        pickler.dump(self.high_res)
-
-    def unpickle(self, unpickler: Unpickler) -> None:
-        self.mix = unpickler.load()
-        self.flash_time = unpickler.load()
-        self.flash_on = unpickler.load()
-        self.page = unpickler.load()
-        self.text = unpickler.load()
-        self.colour = unpickler.load()
-        self.high_res = unpickler.load()
-
-
     def txtclr(self) -> None:
         self.text = False
 
@@ -366,21 +346,6 @@ class Display:
             self.flash_time = time.time()
 
 
-    def save_hires_bytes( self, fn: str ) -> None:
-        with open(fn, 'wb') as f:
-            start_hires = 0x2000 if self.page == 1 else 0x4000
-            end_hires = start_hires + 0x2000
-            bytes = self.apple2.memory._mem[start_hires:end_hires]
-            self.pickle.dump(bytes, f)
-
-    def load_hires_bytes( self, fn: str ) -> None:
-        with open(fn, 'rb') as f:
-            start_hires = 0x2000 if self.page == 1 else 0x4000
-            end_hires = start_hires + 0x2000
-            bytes = self.pickle.load(f)
-            self.apple2.memory._mem[start_hires:end_hires] = bytes
-        self.refresh_hires()
-
     def save_hires_image(self, fn: str) -> None:
         self.refresh_hires()
         import re
@@ -406,18 +371,6 @@ class Speaker:
         self.buffer = []
         self.polarity = False
         self.reset()
-
-    def pickle(self, pickler: Pickler) -> None:
-        pickler.dump(self.quiet)
-        pickler.dump(self.last_toggle)
-        pickler.dump(self.buffer)
-        pickler.dump(self.polarity)
-
-    def unpickle(self, unpickler: Unpickler) -> None:
-        self.quiet = unpickler.load()
-        self.last_toggle = unpickler.load()
-        self.buffer = unpickler.load()
-        self.polarity = unpickler.load()
 
     def toggle(self, cycle: int) -> None:
         if not self.quiet:
@@ -453,12 +406,6 @@ class SoftSwitches:
         self.kbd = 0x00
         self.display = display
         self.speaker = speaker
-
-    def pickle(self, pickler: Pickler) -> None:
-        pickler.dump(self.kbd)
-
-    def unpickle(self, unpickler: Unpickler) -> None:
-        self.kbd = unpickler.load()
 
     def read_byte(self, address: int) -> int:
         assert 0xC000 <= address <= 0xCFFF
@@ -515,17 +462,3 @@ class Apple2:
         rom_path = str(Path(data_dir) / "bin" / "A2ROM.BIN") if data_dir is not None else 'data/bin/A2ROM.BIN'
         self.memory.load_image(0xD000, rom_path)
         self.cpu = CPU(self.memory, program_counter=None)
-
-    def pickle(self, pickler: Pickler) -> None:
-        self.memory.pickle(pickler)
-        self.cpu.pickle(pickler)
-        self.display.pickle(pickler)
-        self.speaker.pickle(pickler)
-        self.softswitches.pickle(pickler)
-
-    def unpickle(self, unpickler: Unpickler) -> None:
-        self.memory.unpickle(unpickler)
-        self.cpu.unpickle(unpickler)
-        self.display.unpickle(unpickler)
-        self.speaker.unpickle(unpickler)
-        self.softswitches.unpickle(unpickler)

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 from collections.abc import Iterable
-from pickle import Pickler, Unpickler
 from typing import TYPE_CHECKING
 
 from papple2.util import hexaddr
@@ -38,16 +37,6 @@ class Memory:
     def load_test_data(self, address: int, data: Iterable[int]) -> None:
         for offset, datum in enumerate(data):
             self._mem[address + offset] = datum
-
-    def pickle(self, pickler: Pickler) -> None:
-        pickler.dump(self._mem)
-        pickler.dump(self.use_apple_display)
-        pickler.dump(self.use_apple_softswitches)
-
-    def unpickle(self, unpickler: Unpickler) -> None:
-        self._mem = unpickler.load()
-        self.use_apple_display = unpickler.load()
-        self.use_apple_softswitches = unpickler.load()
 
     def read_byte(self, address: int) -> int:
         # Access to the $C0xx pages with soft switches might be masked by

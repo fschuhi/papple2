@@ -21,7 +21,6 @@
 
 import time
 from collections.abc import Callable
-from pickle import Pickler, Unpickler
 
 from papple2.util import hexbyte, Ascii2Apple2Ascii, Apple2Ascii2Ascii
 from papple2.core.apple import Apple2
@@ -197,18 +196,6 @@ class Emulator:
 
         self.instructions = 0
 
-
-    def pickle(self, pickler: Pickler) -> None:
-        # pickle apple2, including all parts of Apple2 (e.g. Memory, CPU)
-        self.apple2.pickle( pickler )
-
-        pickler.dump(self.elapsed_frame)
-        pickler.dump(self.last_ticks)
-
-    def unpickle(self, unpickler: Unpickler) -> None:
-        self.apple2.unpickle( unpickler )
-        self.elapsed_frame = unpickler.load()
-        self.last_ticks = unpickler.load()
 
     """
     BIN loading

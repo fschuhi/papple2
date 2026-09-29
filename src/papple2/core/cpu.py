@@ -7,7 +7,6 @@
 # originally written 2001, updated 2011
 
 import logging
-from pickle import Pickler, Unpickler
 
 from papple2.util import hexaddr, hexbyte, signed
 from papple2.core.memory import Memory
@@ -80,32 +79,6 @@ class CPU:
         self.last_opcode = None
         self.PC = self.read_word( self.RESET_VECTOR )
         self.last_PC = None
-
-    def pickle( self, pickler: Pickler ) -> None:
-        pickler.dump( self.A )
-        pickler.dump( self.X )
-        pickler.dump( self.Y )
-        pickler.dump( self.status_as_byte( ) )
-        pickler.dump( self.SP )
-        pickler.dump( self.branched )
-        pickler.dump( self.operand_length )
-        pickler.dump( self.cycles )
-        pickler.dump( self.last_opcode )
-        pickler.dump( self.PC )
-        pickler.dump( self.last_PC )
-
-    def unpickle( self, unpickler: Unpickler ) -> None:
-        self.A = unpickler.load( )
-        self.X = unpickler.load( )
-        self.Y = unpickler.load( )
-        self.status_from_byte( unpickler.load( ) )
-        self.SP = unpickler.load( )
-        self.branched = unpickler.load( )
-        self.operand_length = unpickler.load( )
-        self.cycles = unpickler.load( )
-        self.last_opcode = unpickler.load()
-        self.PC = unpickler.load( )
-        self.last_PC = unpickler.load( )
 
     def verbose_status(self) -> str:
         flags = [
