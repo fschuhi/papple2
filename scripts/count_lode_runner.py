@@ -4,8 +4,9 @@ Boots Lode Runner headless (the same boot as scripts/boot_lode_runner.py,
 including the RWTS trap), runs 4,000,000 instructions from the start, and
 counts for every address how often it was fetched as an opcode, as an
 operand, and as an immediate operand. Saves a 256 x 256 map as a PNG, one pixel per address,
-scaled up 3 times, and the same map as an HTML page, where hovering over a
-coloured cell shows its address and counts:
+scaled up 3 times, and the same map as an HTML page, where a line above the
+map shows the address and counts under the mouse, and the address labels stay
+in place while the map scrolls:
 
     row     = high byte of the address (the page)
     column  = low byte of the address
@@ -130,8 +131,15 @@ def css_colour(colour: tuple[int, int, int]) -> str:
 
 def save_html(counts: ExecutionCounts, filename: str, instructions: int) -> None:
     """The same map as the PNG, as a plain HTML table: one row per page, one
-    cell per address. Only coloured cells get a tooltip (the title
-    attribute); black cells stay empty, which keeps the file small."""
+    cell per address. Only coloured cells carry their counts (the data-info
+    attribute); black cells stay empty, which keeps the file small.
+
+    The table sits in its own box that does the scrolling, so the title,
+    the legend and the info line above it stay in view. Inside the box, the
+    row and column labels are sticky: they scroll until they reach the box's
+    edge, then stay there. A small script shows the address and counts of
+    the cell under the mouse in the info line; it works out the address from
+    the cell's row and column, so black cells show their address too."""
     classes = {OPCODE_COLOUR: "o", OPERAND_COLOUR: "p", IMMEDIATE_COLOUR: "i", BOTH_COLOUR: "b"}
     lines = [
         "<!DOCTYPE html>",
@@ -140,11 +148,21 @@ def save_html(counts: ExecutionCounts, filename: str, instructions: int) -> None
         '<meta charset="utf-8">',
         "<title>Lode Runner: execution map</title>",
         "<style>",
-        f"body {{ background: {css_colour(BLACK)}; color: #ddd; font-family: sans-serif; margin: 1em; }}",
+        # the body fills the window as a column, so the map box below can take
+        # the height that is left and scroll on its own
+        f"body {{ background: {css_colour(BLACK)}; color: #ddd; font-family: sans-serif; margin: 0; padding: 1em; "
+        "box-sizing: border-box; height: 100vh; display: flex; flex-direction: column; }",
+        ".map { flex: 1; min-height: 0; overflow: auto; }",
         "table { border-collapse: collapse; }",
         f"td {{ width: {HTML_CELL_SIZE}px; height: {HTML_CELL_SIZE}px; padding: 0; }}",
         "th { font-family: monospace; font-size: 10px; font-weight: normal; color: #888; padding: 0 4px; text-align: left; }",
         "tbody th { line-height: 0; }",
+        # sticky labels need a background, or the map shows through them.
+        # The column labels lie above the page labels, the corner above both.
+        f"thead th {{ position: sticky; top: 0; z-index: 2; background: {css_colour(BLACK)}; }}",
+        f"tbody th {{ position: sticky; left: 0; z-index: 1; background: {css_colour(BLACK)}; }}",
+        "thead th:first-child { left: 0; z-index: 3; }",
+        "#info { font-family: monospace; }",
         f".o {{ background: {css_colour(OPCODE_COLOUR)}; }}",
         f".p {{ background: {css_colour(OPERAND_COLOUR)}; }}",
         f".i {{ background: {css_colour(IMMEDIATE_COLOUR)}; }}",
@@ -154,13 +172,15 @@ def save_html(counts: ExecutionCounts, filename: str, instructions: int) -> None
         "</head>",
         "<body>",
         "<h1>Lode Runner: execution map</h1>",
-        f"<p>{instructions} instructions from the start. Hover over a coloured cell for its address and counts.</p>",
+        f"<p>{instructions} instructions from the start. Move the mouse over the map to see an address and its counts.</p>",
         "<p>",
         '<span class="key o"></span>opcode (an instruction started here)',
         '<span class="key p"></span>operand',
         '<span class="key i"></span>immediate operand',
         '<span class="key b"></span>more than one of these',
         "</p>",
+        '<p id="info">Move the mouse over the map.</p>',
+        '<div class="map">',
         "<table>",
         # column labels every 16 addresses: $00, $10, ... $F0
         "<thead><tr><th></th>"
@@ -176,14 +196,35 @@ def save_html(counts: ExecutionCounts, filename: str, instructions: int) -> None
             if colour == BLACK:
                 cells.append("<td></td>")
             else:
-                tooltip = (f"${address:04X}: opcode {counts.opcode[address]}, "
-                           f"operand {counts.operand[address]}, "
-                           f"immediate {counts.immediate[address]}")
-                cells.append(f'<td class="{classes[colour]}" title="{tooltip}"></td>')
+                # no address here: the script works it out from the cell's position
+                info = (f"opcode {counts.opcode[address]}, "
+                        f"operand {counts.operand[address]}, "
+                        f"immediate {counts.immediate[address]}")
+                cells.append(f'<td class="{classes[colour]}" data-info="{info}"></td>')
         # a label on every 4th row only: 10px text on 6px rows would overlap
         label = f"${page:02X}" if page % 4 == 0 else ""
         lines.append(f"<tr><th>{label}</th>" + "".join(cells) + "</tr>")
-    lines += ["</tbody>", "</table>", "</body>", "</html>"]
+    lines += [
+        "</tbody>",
+        "</table>",
+        "</div>",
+        "<script>",
+        'const info = document.getElementById("info");',
+        # one listener on the whole table instead of one per cell: the event
+        # tells us which cell the mouse entered
+        'document.querySelector(".map table").addEventListener("mouseover", (event) => {',
+        '  const cell = event.target.closest("td");',
+        "  if (!cell) return;",
+        "  // the row's position in the table body is the page, the cell's position",
+        "  // after the row label is the low byte",
+        "  const address = cell.parentElement.sectionRowIndex * 256 + cell.cellIndex - 1;",
+        '  const hex = "$" + address.toString(16).toUpperCase().padStart(4, "0");',
+        '  info.textContent = hex + ": " + (cell.dataset.info || "never fetched");',
+        "});",
+        "</script>",
+        "</body>",
+        "</html>",
+    ]
 
     # the folder may not exist yet, e.g. on a fresh clone or after `make clean`
     Path(filename).parent.mkdir(parents=True, exist_ok=True)
