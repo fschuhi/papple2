@@ -8,13 +8,11 @@
 
 ## 📍 Current Session Pointer
 
-**Where we are:** `papple2` is to become a system to disassemble and understand Apple II and II+ games by running them, with Lode Runner as the worked example (`DIRECTION.md`). The instrumentation is being rebuilt from scratch, following `docs/instrumentation-design.md`. Step 4 is complete: `Memory` reports every access by its kind to its own hook list (`after_read_opcode` ... `after_write_stack`), and `CPU` counts its instructions (`instruction_count`) and calls `after_instruction` after each one. Nothing uses the hooks yet. Every test module is in `pytest` style. Four boots run (`make boot-basic`, `boot-robotron`, `boot-lode-runner`, `boot-bandits`), and the two disk stand-ins are traps.
-
-**How to work in the next session** (the user's feedback, `HISTORY.md` 2026-09-29, third session): one thing per message, in plain words, no idioms. Say what a step is for, and how it brings us closer to something the user can see, before saying how it is done. Keep the big picture in view: the hooks exist so that we can watch Lode Runner run and think in the terms we track. Do not suggest a fresh conversation unless asked.
+**Where we are:** `papple2` is to become a system to disassemble and understand Apple II and II+ games by running them, with Lode Runner as the worked example (`DIRECTION.md`). The instrumentation is being rebuilt from scratch, following `docs/instrumentation-design.md`. The first experiment has run: `scripts/count_lode_runner.py` counts which addresses Lode Runner's attract play fetches as opcode, operand or immediate operand, and draws a memory map as PNG and HTML. Experiments attach their hooks with `Emulator.attach()`. Four boots run (`make boot-basic`, `boot-robotron`, `boot-lode-runner`, `boot-bandits`), and the two disk stand-ins are traps.
 
 **What's next:**
-- Head for something visible soon: the execution-count map (Step 6) is the first thing the hooks can show. Discuss at the start whether Step 5 (breakpoints and traps at the `Emulator`'s boundary) must come first, or whether a first, simple count on Lode Runner can come before it.
-- Step 6: the execution-count map on Lode Runner inside a level, the first real output of the new instrumentation, run together. Decide there how experiments attach their hooks.
-- Reserve time for looking at the results: report generators in HTML, or queries in Jupyter.
+- The HTML map: a JavaScript info line instead of the browser's tooltips, and new colours (`TODO.md` section 7). Reports will need room to try things out; that is part of the work.
+- `read_immediate` in `core` (`TODO.md` section 7), the base for detecting self-modifying code.
+- Candidates for the next experiment, to discuss: names from `main.nw` in the map (which named routines ran), the instruction count at which each address first ran (the game's phases), differential maps (with and without a dig), self-modifying code detection.
 - Alongside: the small code steps in `TODO.md` section 8.
 - Discuss and expand `docs/reveng-catalogue.md`. Add AFK research on Ghidra and SourceGen.

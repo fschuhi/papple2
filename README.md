@@ -139,6 +139,8 @@ The CPU reads and writes memory through one `Memory` method per kind of access: 
 
 `CPU` counts its instructions in `instruction_count` (zeroed like `cycles`, in `__init__` and `reset()`) and, at the end of each instruction, calls the hooks in `after_instruction`. These hooks get no arguments: they read `instruction_count`, `last_PC` and `last_opcode` from the `CPU`, so an experiment keeps the `CPU` it watches in `self.cpu`. See `docs/instrumentation-design.md`, section 4.
 
+An experiment is a plain object whose methods are named after the hook lists. `Emulator.attach(experiment)` puts each such method into its list in `Memory` or `CPU`, and `detach(experiment)` takes them out again; both log one line at INFO. The first experiment is `scripts/count_lode_runner.py`, a memory map of what Lode Runner's attract play runs as code, saved as PNG and HTML.
+
 ### Speed
 
 Unthrottled, `papple2` runs as fast as Python allows: about 3.5 times a real Apple II on an M4. Windowed runs take a `speed` (`Emulator(speed=...)`): 1.0 is a real Apple II (about 1.023 MHz), `None` is unthrottled, and 1.0 is the default. Every 1000 loop passes, `run()` compares the cycles the CPU has counted with the wall-clock time and sleeps the difference; after a pause it measures afresh. Headless runs and tests are never throttled. `scripts/boot_lode_runner.py` passes `None` unless it gets `--speed`, so `make boot-lode-runner` runs at full speed and `make boot-lode-runner-throttled` at the speed of a real Apple II. The display is shown 40 times per second (`frame_rate`).
@@ -245,3 +247,4 @@ This section is more useful to an LLM picking this project back up than to me --
 - **No save states for now.** Pickling was removed on 2026-09-29; snapshots will be designed fresh when an experiment needs them.
 - **`after_instruction` hooks take no arguments** (since 2026-09-29). They read what they need from the `CPU`'s fields; `reset()` keeps them. `CPU.instruction_count` is not `Emulator.instructions`: the first counts since a fresh start, the second since the current `run()` call.
 - **Every test module is plain `pytest`** (since 2026-09-29): functions and fixtures, no `unittest` classes.
+- **Experiments attach by method name** (since 2026-09-29): `Emulator.attach()` matches methods to the hook lists by name, refuses a method starting with `after_` that matches no list, and logs through Python's `logging`. No base class and no named hook types for experiments: an experiment exposes whichever hooks it needs.

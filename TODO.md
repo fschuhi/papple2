@@ -40,7 +40,6 @@ See `DIRECTION.md` for the context of each item.
 
 ## 5. Optional coverage
 
-- ~~Finish the `unittest` -> `pytest` conversion~~ -- done 2026-09-29: `test_memory.py` and `test_assembler.py` converted; `test_dump` is now `dump_state`.
 - `tests/test_assembler.py`: `test_8bit_bitcount` runs its routine but asserts nothing.
 - `tests/test_assembler.py`: its `compile` helper does what the `assemble` fixture in `conftest.py` does (and shadows Python's built-in `compile`). Use the fixture instead.
 - `tests/test_assembler.py`: `dump_state` prints registers, flags and the stack once per instruction when passed as `dump=` to `run_to_RTS`. Use it as the model for a state dump in the new instrumentation (an `after_instruction` hook would be the natural home).
@@ -56,11 +55,14 @@ Measured with `cProfile` on the headless Lode Runner run (`HISTORY.md` 2026-09-2
 The old instrumentation is gone (`HISTORY.md` 2026-09-27/28); the ideas for the new one are in `docs/instrumentation-ideas.md`.
 
 - Keeping what we've learned about an address across experiments: the old tile lists in Excel showed notes from `Annotations` next to each tile (removed 2026-09-27, at the tag). Decide how learnings persist in the new design.
-- ~~Step 4, the `CPU` half~~ -- done 2026-09-29: `instruction_count`, zeroed like `cycles` in `__init__` and `reset()`; the `after_instruction` list, hooks called with no arguments. Step 4 is complete.
 - Optional, once, whenever it is of interest: the total cost of the instrumentation with all lists empty, measured against the commit before the `Memory` hook lists. Not per step (decided 2026-09-29).
-- How an experiment gets its hooks into the lists. Discussed 2026-09-29, not settled: an `Emulator.attach(obj)` that passes the object to `Memory` and `CPU`, each picking the `after_...` methods it knows, and a matching `detach()`. Until then, plain `append` to the lists. Decide with the first experiment (Step 6), not before.
-- Step 5: the boundary in `Emulator`: breakpoints first, then traps (terms in the design note, section 1). `until` stays a parameter of `run()` for now.
-- Step 6: the first experiment, the execution-count map, on Lode Runner inside a level. A milestone: planned and run together.
+- ~~How an experiment gets its hooks into the lists~~ -- done 2026-09-29: `Emulator.attach(experiment)` and `detach()`, by method name, unknown `after_` names refused, logged at INFO; `tests/test_attach.py`.
+- Step 5: the boundary in `Emulator`: breakpoints first, then traps (terms in the design note, section 1). `until` stays a parameter of `run()` for now. Not needed for the first experiment (2026-09-29); do it when an experiment needs to stop at an address.
+- ~~Step 6: the first experiment, the execution-count map~~ -- first run done 2026-09-29, by the user: `scripts/count_lode_runner.py`, attract play, 4,000,000 instructions from the start, PNG and HTML map. Counts opcode, operand and (worked around) immediate-operand fetches.
+- `read_immediate` in `core`: a kind of its own for immediate operands, with its own hook list `after_read_immediate`. `immediate_mode()` only returns the operand's address; the operation (`LDA`, `CMP`, ...) reads the byte with `read_data`. So split each of the 11 operations with immediate mode (`ORA AND EOR ADC LDY LDX LDA CPY CMP CPX SBC`) into reading the byte and working with it, e.g. `LDA(address)` -> `lda_value(read_data(address))`, and let the 11 immediate dispatch entries call `lda_value(read_immediate(...))`. The CPU tests guard each operation. Then `ExecutionCounts` drops its last-opcode workaround. Needed for detecting self-modifying code: patching an immediate operand is the classic trick.
+- HTML execution map: the browser's own tooltips need the mouse to stop on a 6-pixel cell, so they often don't appear. Replace them with a few lines of JavaScript: a fixed line at the top that shows address and counts while the mouse moves.
+- HTML execution map: change the colours; blue, orange and green together don't work.
+- `scripts/count_lode_runner.py` has no `make` target. Add one if it's run often.
 - _Needs investigation:_ where the attract play's moves come from. Probably a table the demo code reads instead of the keyboard; `main.nw` may name it. A read hook on the demo code would show which table it reads. The same "script" could drive experiments. The block `main.nw` calls "random init data" (`levels.html`) looks like leftover memory from when the file was saved (loader code calling the ROM and reading the disk, fill patterns, hi-res bytes), not keystrokes.
 - After step 6: how we look at what the hooks collected -- report generators in HTML, queries in Jupyter, or both; which one first. Earlier answers to the same question: the HTML browser in `a2-lode-runner` and the Excel tile lists from Robotron.
 

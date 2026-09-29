@@ -1,6 +1,6 @@
 # Instrumentation design
 
-**Status:** decided in the design session of 2026-09-29. This document holds decisions; the raw material they came from is `docs/instrumentation-ideas.md` (the braindump), and the old design they replace is drawn in `docs/instrumentation-map.md` (the tag `pre-redesign`). Section 9 lists what is still open. Implemented so far (2026-09-29): the `Memory` methods per kind, the CPU calling them, the hook lists in `Memory` (section 3), and on `CPU` the instruction count and the `after_instruction` list (sections 4 and 5).
+**Status:** decided in the design session of 2026-09-29. This document holds decisions; the raw material they came from is `docs/instrumentation-ideas.md` (the braindump), and the old design they replace is drawn in `docs/instrumentation-map.md` (the tag `pre-redesign`). Section 9 lists what is still open. Implemented so far (2026-09-29): the `Memory` methods per kind, the CPU calling them, the hook lists in `Memory` (section 3), and on `CPU` the instruction count and the `after_instruction` list (sections 4 and 5); `Emulator.attach()` and `detach()` (section 6, rule 6), with the first experiment.
 
     **Purpose:** one place for the rules that span `Emulator`, `CPU` and `Memory`, so that they are not spread over comments in several modules.
 
@@ -59,7 +59,7 @@ The name of the method says *why* the CPU accesses a byte, not *where* the byte 
 - Signatures: a read hook gets `(address, value)`, a write hook gets `(address, value, old_value)`. `Memory` keeps the old value before it overwrites it, taken straight from the memory list: going through `read_byte` would flip a soft switch at `$C0xx`.
 - The addressing mode is not passed: every opcode has exactly one addressing mode, so it follows from the opcode. Zero page and `$00xx` absolute stay distinguishable that way.
 - Only bytes reach the hooks. A 16-bit read is two byte reads of the same kind, low byte first: `read_operand_word`, `read_pointer_word` (with the page wrap: at `$xxFF` the high byte comes from `$xx00`), `read_vector_word`.
-- **Immediate operands:** the operations read their operand with the same call they use for data, so an immediate operand (the `$05` in `LDA #$05`) is reported by `read_data`. The core leaves this as it is for now; a hook that cares corrects the label from the opcode (11 opcodes use immediate mode). To be revisited when an experiment shows the need; it matters for detecting self-modifying code, because changing an immediate operand is a classic trick.
+- **Immediate operands:** the operations read their operand with the same call they use for data, so an immediate operand (the `$05` in `LDA #$05`) is reported by `read_data`. The core leaves this as it is for now; a hook that cares corrects the label from the opcode (11 opcodes use immediate mode). To be revisited when an experiment shows the need; it matters for detecting self-modifying code, because changing an immediate operand is a classic trick. The first experiment showed the need (2026-09-29): immediate operands came out as holes in the execution map. It works around it by the last opcode; a `read_immediate` kind of its own is planned in `TODO.md`, section 7.
 - **Direct access to the memory list** (`mem[...]`) means "past devices and hooks, on purpose". There are no `peek` and `poke` wrappers. Loaders and traps write this way, and the disassembler reads this way; and traps log their whole task as one entry instead of reporting each byte.
 
 ## 4. The `CPU` side
@@ -83,6 +83,7 @@ The name of the method says *why* the CPU accesses a byte, not *where* the byte 
 3. A hook cannot stop execution. It can request a stop; the `Emulator` acts on the request at the next boundary.
 4. `papple2.core` holds the hook lists and calls them through fixed interfaces, and nothing else. What a hook does with the data is none of the core's business: ring buffers, counters and logs are building blocks outside `core`.
 5. Speed is measured, not assumed, but as a total, not per step: the cost of the instrumentation with all hook lists empty, against the state before it, since that is the price every run pays. Measuring each small step told us little (decided 2026-09-29).
+6. An experiment attaches with `Emulator.attach(experiment)`: each of its methods named after a hook list goes into that list, in `Memory` or `CPU`. A method starting with `after_` that matches no list is refused before anything is attached. `detach(experiment)` takes the same methods out again. Both log one line at INFO (decided 2026-09-29, with the first experiment).
 
 ## 7. Building blocks (outside `core`)
 
@@ -102,14 +103,13 @@ The name of the method says *why* the CPU accesses a byte, not *where* the byte 
 
 - How a hook requests a stop, concretely.
 - `until`: stays a parameter of `run()` for now; it could become a conditional breakpoint in the `Emulator`'s list. With a window it already pauses the run instead of ending it (2026-09-29). The ready-made conditions live outside `core`, in `papple2/debug/stop_conditions.py`.
-- How an experiment gets its hooks into the lists: an `attach()` on `Emulator` that passes an object to `Memory` and `CPU`, or plain `append`. Decide with the first experiment.
 - Devices: how the soft switches, the keyboard and the display fit with the hooks. Look at how they work today first.
 
 ## 10. First experiments
 
 On Lode Runner, inside a level (the level loader comes later):
 
-- a memory map with execution counts;
+- a memory map with execution counts (first run 2026-09-29: `scripts/count_lode_runner.py`);
 - detecting self-modifying code;
 - finding lookup tables used together with screen writes.
 
