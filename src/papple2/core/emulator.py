@@ -19,6 +19,7 @@
 # https://www.hopperapp.com
 # https://www.hex-rays.com/products/ida/
 
+import logging
 import time
 from collections.abc import Callable
 
@@ -35,6 +36,24 @@ from pysm import State, StateMachine, Event
 # are lazy, so they can name Emulator before the class is defined below.
 type Trap = Callable[[Emulator], bool]
 type Until = Callable[[Emulator], bool]
+
+# The hook lists that attach() and detach() know, by the name they have in
+# Memory and in CPU. An experiment names its hook methods the same way.
+MEMORY_HOOKS = (
+    "after_read_opcode",
+    "after_read_operand",
+    "after_read_pointer",
+    "after_read_data",
+    "after_read_stack",
+    "after_read_vector",
+    "after_write_data",
+    "after_write_stack",
+)
+CPU_HOOKS = ("after_instruction",)
+
+# silent unless a script turns on the INFO level, e.g. with
+# logging.basicConfig(level=logging.INFO); tests stay quiet
+logger = logging.getLogger(__name__)
 
 class EmulatorRunningState( StateMachine ):
     def __init__(self, emulator_states: "EmulatorStates") -> None:
@@ -200,6 +219,52 @@ class Emulator:
 
     def add_trap(self, address: int, handler: Trap) -> None:
         self.traps[address] = handler
+
+
+    def attach(self, experiment: object) -> None:
+        """Put each hook method of `experiment` into the list of the same
+        name in Memory or CPU, e.g. `experiment.after_read_opcode` into
+        `Memory.after_read_opcode`. A method whose name starts with
+        `after_` but matches no list is refused before anything is
+        attached, so a typo cannot go unnoticed."""
+        unknown = [
+            name for name in dir(experiment)
+            if name.startswith("after_") and name not in MEMORY_HOOKS + CPU_HOOKS
+        ]
+        if unknown:
+            raise ValueError(
+                f"{type(experiment).__name__} has no hook list for: {', '.join(unknown)}"
+            )
+        names = []
+        for name, hook, hook_list in self._hooks_of(experiment):
+            hook_list.append(hook)
+            names.append(name)
+        logger.info("attached %s: %s", type(experiment).__name__, ", ".join(names))
+
+
+    def detach(self, experiment: object) -> None:
+        """Take out again what attach() put in. `experiment.after_read_opcode`
+        gives a new method object each time it is written, so it is not the
+        same object as the one in the list; but the two are equal (same
+        method, same experiment), and list.remove() looks for an equal
+        entry."""
+        names = []
+        for name, hook, hook_list in self._hooks_of(experiment):
+            hook_list.remove(hook)
+            names.append(name)
+        logger.info("detached %s: %s", type(experiment).__name__, ", ".join(names))
+
+
+    def _hooks_of(self, experiment: object) -> list[tuple[str, Callable[..., None], list[Callable[..., None]]]]:
+        """(name, the experiment's method, the list it belongs in) for each
+        known hook name the experiment has a method for."""
+        found = []
+        for owner, names in ((self.apple2.memory, MEMORY_HOOKS), (self.cpu, CPU_HOOKS)):
+            for name in names:
+                hook = getattr(experiment, name, None)
+                if hook is not None:
+                    found.append((name, hook, getattr(owner, name)))
+        return found
 
 
     def press_key(self, ascii_code: str | int) -> None:
