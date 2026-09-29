@@ -7,6 +7,7 @@
 # originally written 2001, updated 2011
 
 import logging
+from collections.abc import Callable
 
 from papple2.util import hexaddr, hexbyte, signed
 from papple2.core.memory import Memory
@@ -60,6 +61,10 @@ class CPU:
         self.last_opcode = None
         self.PC = program_counter
         self.last_PC = None
+
+        # hooks read what they need from the CPU's fields
+        # (docs/instrumentation-design.md, section 4); reset() keeps them
+        self.after_instruction: list[Callable[[], None]] = []
 
 
     def reset( self ) -> None:
@@ -285,6 +290,10 @@ class CPU:
         # https://stackoverflow.com/questions/24902258/pycharm-warning-about-not-callable
         assert callable( op_func )
         op_func( )
+
+        if self.after_instruction:
+            for hook in self.after_instruction:
+                hook()
 
     # read/write
 

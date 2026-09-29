@@ -76,6 +76,7 @@ tests/conftest.py
 #tests/test_cpu_arithmetic.py
 #tests/test_cpu_branch.py
 #tests/test_cpu_bugs.py
+tests/test_cpu_hooks.py
 #tests/test_cpu_inc_dec.py
 #tests/test_cpu_jump_call.py
 #tests/test_cpu_load_store.py
