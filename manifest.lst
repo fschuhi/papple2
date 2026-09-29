@@ -51,6 +51,7 @@ scripts/boot_bandits.py
 scripts/boot_basic.py
 scripts/boot_lode_runner.py
 scripts/boot_robotron.py
+scripts/count_lode_runner.py
 scripts/speed_test.py
 
 ### --- Source ---
