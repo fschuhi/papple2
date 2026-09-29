@@ -1,6 +1,6 @@
 # Instrumentation design
 
-**Status:** decided in the design session of 2026-09-29. This document holds decisions; the raw material they came from is `docs/instrumentation-ideas.md` (the braindump), and the old design they replace is drawn in `docs/instrumentation-map.md` (the tag `pre-redesign`). Section 9 lists what is still open.
+**Status:** decided in the design session of 2026-09-29. This document holds decisions; the raw material they came from is `docs/instrumentation-ideas.md` (the braindump), and the old design they replace is drawn in `docs/instrumentation-map.md` (the tag `pre-redesign`). Section 9 lists what is still open. Implemented so far (2026-09-29): the `Memory` methods per kind and the CPU calling them (section 3). No hook lists yet.
 
     **Purpose:** one place for the rules that span `Emulator`, `CPU` and `Memory`, so that they are not spread over comments in several modules.
 
@@ -58,9 +58,9 @@ The name of the method says *why* the CPU accesses a byte, not *where* the byte 
 - One after list per method. A hook that only needs opcode reads is called once per instruction, not on every access.
 - Signatures: a read hook gets `(address, value)`, a write hook gets `(address, value, old_value)`. `Memory` keeps the old value before it overwrites it.
 - The addressing mode is not passed: every opcode has exactly one addressing mode, so it follows from the opcode. Zero page and `$00xx` absolute stay distinguishable that way.
-- Only bytes. A 16-bit read is two calls.
+- Only bytes reach the hooks. A 16-bit read is two byte reads of the same kind, low byte first: `read_operand_word`, `read_pointer_word` (with the page wrap: at `$xxFF` the high byte comes from `$xx00`), `read_vector_word`.
 - **Immediate operands:** the operations read their operand with the same call they use for data, so an immediate operand (the `$05` in `LDA #$05`) is reported by `read_data`. The core leaves this as it is for now; a hook that cares corrects the label from the opcode (11 opcodes use immediate mode). To be revisited when an experiment shows the need; it matters for detecting self-modifying code, because changing an immediate operand is a classic trick.
-- **Direct access to the memory list** (`mem[...]`) means "past devices and hooks, on purpose". There are no `peek` and `poke` wrappers. Loaders and traps write this way, and traps log their whole task as one entry instead of reporting each byte.
+- **Direct access to the memory list** (`mem[...]`) means "past devices and hooks, on purpose". There are no `peek` and `poke` wrappers. Loaders and traps write this way, and the disassembler reads this way; and traps log their whole task as one entry instead of reporting each byte.
 
 ## 4. The `CPU` side
 
