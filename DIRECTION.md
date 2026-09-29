@@ -15,7 +15,7 @@
 - **Lode Runner** is the worked example. Xekri's `main.nw` tangles to `dasm` source that assembles byte-identically to the original, so it gives us both a runnable binary and an answer key (every routine, label, and data region named). Every tool can be graded against it.
 - **Oracle principle:** develop the workbench *as if* we were disassembling Lode Runner, with Xekri's code as the oracle to develop and debug our own toolchain. Which structures can our tools determine that we already know about from `a2-lode-runner`? The measure of success: an analysis run plus a few hours of manual tinkering with the binary yields a very good first draft of `main.nw`. In a way, this reverse engineers Xekri's documentation process. `papple2` is one point in a triangle with `a2-lode-runner` and, pulling weight in the short term, `a2-hires-lab`.
 - **Later targets:** games without an answer key, e.g. Bandits (the dream project) or Choplifter. Both fit the 48k II/II+ focus.
-- **Robotron** steps back from the documentation. `probotron` is hibernated and stays private.
+- **Robotron** stays a test case (`make boot-robotron`) and one of the three games in `README.md`. `probotron` is hibernated and stays private.
 
 ## 3. Decided this session
 
@@ -89,6 +89,8 @@ Nothing here is prioritized yet. Established terms in parentheses.
 
 "Close" = same concept. "Related" = overlapping, forcing the standard name would mislead.
 
+The `papple2` terms name the old instrumentation, removed 2026-09-27 (at the tag `pre-redesign`); they stay here as vocabulary for the redesign.
+
 | `papple2` term | Established term | Match |
 |---|---|---|
 | tile | basic block | close |
@@ -126,22 +128,22 @@ Could-extension: run over a whole frame, every byte that ever flows to the scree
 
 ## 9. Open questions
 
-- **Stretches:** should the concept survive? Research what other software uses as a container for basic blocks (candidates: traces, superblocks, IDA's function chunks, QEMU's translation block chaining, plain functions / call graph nodes).
+- **Stretches:** the code is gone (2026-09-27); the question continues in `docs/instrumentation-ideas.md`, section 15.
 - **Monitor form:** a web monitor in microM8's style (local web server, HTML pages, buttons), or Jupyter notebooks (cells to run, break, inspect; Markdown cells as lab journal; rich HTML output inline)? Or both: notebook as the working place, exported HTML as reports. Concerns: hidden state when cells run out of order (the Mathematica experience), JSON files in git (`jupytext`), a running emulator blocks its cell. marimo, a reactive notebook stored as plain `.py`, answers the first two -- but it tracks which cell defines a variable, not which cell changes an object like the emulator. Primer planned, see `TODO.md`.
 
 - Where does this content land: `GOALS.md` (strategy), `README.md` (vision, glossary), `TODO.md` (startable items), or a document of its own?
 - Do run reports live next to `a2-lode-runner`'s HTML research browser, or in their own site?
-- Levels: the game loads them through its own disk routine. Option: a checkpoint at that routine's entry fills memory from the `.dsk` file in Python and skips the routine -- no floppy emulation needed.
-- Three automated tests in `make test` load `data/bin/ROBOTRON.BIN` by hard-coded path, so a fresh clone cannot run the suite without Robotron. Replace with Lode Runner, make them skip when the file is missing, or keep?
+- ~~Levels: the game loads them through its own disk routine.~~ -- done: a trap at the game's disk routine serves reads from the disk image (2026-09-26), and all 150 levels are extracted (https://fschuhi.github.io/a2-lode-runner/levels.html).
+- Three automated tests in `make test` load `data/bin/ROBOTRON.BIN` by hard-coded path: now an item in `TODO.md` section 2 (Robotron leftovers).
 
 ## 10. Candidate next steps (unordered)
 
-- ~~Boot Lode Runner in `papple2`~~ -- done 2026-09-23, headless, demo mode on level 1; needed the stack wrap and decimal mode fixes in `cpu.py`. Real play (levels from disk) still open.
+- ~~Boot Lode Runner in `papple2`~~ -- done 2026-09-23, headless, demo mode on level 1; needed the stack wrap and decimal mode fixes in `cpu.py`. Real play (levels from disk) done 2026-09-26.
 - Interactive monitor mode.
 - Provenance prototype for the question in section 7.
-- Glossary into the documentation. Then compare each existing tool with its closest established counterpart and borrow what has proven itself (features, names, file formats) -- e.g. does `MemAccessCollector` have filter conditions like a trace logger?
-- Robotron de-emphasis in `README.md` and the `Makefile` (`make run`), plus the test decision above.
-- Type hints sweep: postponed, but gained weight now that `make patch` makes many-file changes cheap.
+- Glossary into the documentation. Then compare each existing tool with its closest established counterpart and borrow what has proven itself (features, names, file formats) -- e.g. the filter conditions of trace loggers, for the redesigned instrumentation.
+- ~~Robotron de-emphasis in `README.md` and the `Makefile` (`make run`), plus the test decision above.~~ -- done: `make run` became `make boot-robotron` earlier, `README.md` was rewritten 2026-09-28 (Robotron as one of three games), and the test decision is in `TODO.md` section 2.
+- ~~Type hints sweep: postponed, but gained weight now that `make patch` makes many-file changes cheap.~~ -- done 2026-09-24.
 
 ## 11. Lessons from Robotron (2019)
 
