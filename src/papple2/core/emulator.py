@@ -251,9 +251,14 @@ class Emulator:
                             # be a real halt here, not a pause
                             exit_while = True
                 if until is not None and self.is_executing() and until(self):
-                    # stop via the state machine; the check at the end of
-                    # the pass then ends the run
+                    # stop via the state machine; without a window, the check
+                    # at the end of the pass then ends the run
                     self.states.dispatch(Event('breakpoint'))
+                    if not isinstance(self.window, NoWindow):
+                        # with a window this is a pause, as if Ctrl-X had been
+                        # pressed: the next Ctrl-X continues, and `until` must
+                        # not stop the run again
+                        until = None
 
             if self.is_executing():
                 # IMPORTANT: we first execute the current opcode (i.e. where pc points to)...

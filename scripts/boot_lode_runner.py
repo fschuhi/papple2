@@ -11,10 +11,13 @@ relative to the current working directory):
     python boot_lode_runner.py path/to/golden_source.bin
     python boot_lode_runner.py path/to/golden_source.bin --headless
     python boot_lode_runner.py path/to/golden_source.bin --speed 1.0
+    python boot_lode_runner.py path/to/golden_source.bin --instructions 4000000
 
 Default: opens the pygame window and runs until you close it or Ctrl-X,
 as fast as the emulator can. --speed 1.0 throttles the window to the speed
-of a real Apple II (`make boot-lode-runner-throttled`).
+of a real Apple II (`make boot-lode-runner-throttled`). With --instructions N
+the window stops after N instructions, as if Ctrl-X had been pressed; the
+next Ctrl-X continues.
 Not tried by me -- my sandbox has no display.
 
 --headless: the run from our session. Runs N instructions without a window
@@ -158,15 +161,18 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("binary", help="path to golden_source.bin")
     parser.add_argument("--headless", action="store_true")
-    parser.add_argument("--instructions", type=int, default=4_000_000,
-                        help="headless only (default: 4000000)")
+    parser.add_argument("--instructions", type=int, default=None,
+                        help="headless: stop after N (default: 4000000); "
+                             "window: stop after N, Ctrl-X continues (default: no stop)")
     parser.add_argument("--speed", type=float, default=None,
                         help="window only: 1.0 = a real Apple II (default: unthrottled)")
     args = parser.parse_args()
 
     emulator, rwts = boot(args.binary, args.headless, args.speed)
     if args.headless:
-        run_headless(emulator, args.instructions)
+        run_headless(emulator, args.instructions if args.instructions is not None else 4_000_000)
+    elif args.instructions is not None:
+        emulator.run(until=after_instructions(args.instructions))
     else:
         emulator.run()
 
