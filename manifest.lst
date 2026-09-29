@@ -21,6 +21,7 @@ HISTORY.md
 
 # working documents for finding the direction `papple2` wants to take
 DIRECTION.md
+docs/instrumentation-design.md
 docs/instrumentation-ideas.md
 docs/instrumentation-map.md
 docs/diagrams/inner-loop.html
