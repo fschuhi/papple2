@@ -1,4 +1,3 @@
-import unittest
 from pathlib import Path
 
 import pytest
@@ -6,29 +5,20 @@ import pytest
 from papple2.core.memory import Memory
 
 
-class TestMemory(unittest.TestCase):
-
-    def setUp(self):
-        self.memory = Memory()
-
-    def test_load(self):
-        self.memory.load_test_data(0x1000, [0x01, 0x02, 0x03])
-        self.assertEqual(self.memory.read_byte(0x1000), 0x01)
-        self.assertEqual(self.memory.read_byte(0x1001), 0x02)
-        self.assertEqual(self.memory.read_byte(0x1002), 0x03)
-
-    def test_write(self):
-        self.memory.write_byte(0x1000, 0x11)
-        self.memory.write_byte(0x1001, 0x12)
-        self.memory.write_byte(0x1002, 0x13)
-        self.assertEqual(self.memory.read_byte(0x1000), 0x11)
-        self.assertEqual(self.memory.read_byte(0x1001), 0x12)
-        self.assertEqual(self.memory.read_byte(0x1002), 0x13)
+def test_load(memory: Memory) -> None:
+    memory.load_test_data(0x1000, [0x01, 0x02, 0x03])
+    assert memory.read_byte(0x1000) == 0x01
+    assert memory.read_byte(0x1001) == 0x02
+    assert memory.read_byte(0x1002) == 0x03
 
 
-# The two load_image tests below are plain pytest functions, next to the older
-# unittest class above; pytest runs both styles in one file. The class moves
-# over when we redo the pytest conversion (TODO.md).
+def test_write(memory: Memory) -> None:
+    memory.write_byte(0x1000, 0x11)
+    memory.write_byte(0x1001, 0x12)
+    memory.write_byte(0x1002, 0x13)
+    assert memory.read_byte(0x1000) == 0x11
+    assert memory.read_byte(0x1001) == 0x12
+    assert memory.read_byte(0x1002) == 0x13
 
 
 def test_load_image_fills_memory_up_to_ffff(tmp_path: Path) -> None:
