@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING
 
 from papple2.util import hexaddr
@@ -15,6 +15,19 @@ class Memory:
         self.use_apple_softswitches = apple2 is not None
         self.use_apple_display = apple2 is not None
         self._mem = [0x00] * 0x10000
+
+        # One hook list per kind of access, called after the access, in list
+        # order. A read hook gets (address, value), a write hook gets
+        # (address, value, old_value). See docs/instrumentation-design.md,
+        # section 3.
+        self.after_read_opcode: list[Callable[[int, int], None]] = []
+        self.after_read_operand: list[Callable[[int, int], None]] = []
+        self.after_read_pointer: list[Callable[[int, int], None]] = []
+        self.after_read_data: list[Callable[[int, int], None]] = []
+        self.after_read_stack: list[Callable[[int, int], None]] = []
+        self.after_read_vector: list[Callable[[int, int], None]] = []
+        self.after_write_data: list[Callable[[int, int, int], None]] = []
+        self.after_write_stack: list[Callable[[int, int, int], None]] = []
 
     def load_image(self, first_address: int, fn: str) -> None:
         with open(fn, "rb") as f:
@@ -80,32 +93,73 @@ class Memory:
     # The CPU reads and writes through these methods, one per kind of access.
     # The name says why the CPU accesses a byte, not where the byte is:
     # LDA $0100,X touches the stack page, but it is a data read. See
-    # docs/instrumentation-design.md, section 3. For now each one only passes
-    # the access on to read_byte or write_byte.
+    # docs/instrumentation-design.md, section 3. Each one passes the access on
+    # to read_byte or write_byte, then calls the hooks in its own list. The
+    # list is checked before the loop, so an empty list costs one truth test.
 
     def read_opcode(self, address: int) -> int:
-        return self.read_byte(address)
+        value = self.read_byte(address)
+        if self.after_read_opcode:
+            for hook in self.after_read_opcode:
+                hook(address, value)
+        return value
 
     def read_operand(self, address: int) -> int:
-        return self.read_byte(address)
+        value = self.read_byte(address)
+        if self.after_read_operand:
+            for hook in self.after_read_operand:
+                hook(address, value)
+        return value
 
     def read_pointer(self, address: int) -> int:
-        return self.read_byte(address)
+        value = self.read_byte(address)
+        if self.after_read_pointer:
+            for hook in self.after_read_pointer:
+                hook(address, value)
+        return value
 
     def read_data(self, address: int) -> int:
-        return self.read_byte(address)
+        value = self.read_byte(address)
+        if self.after_read_data:
+            for hook in self.after_read_data:
+                hook(address, value)
+        return value
 
     def read_stack(self, address: int) -> int:
-        return self.read_byte(address)
+        value = self.read_byte(address)
+        if self.after_read_stack:
+            for hook in self.after_read_stack:
+                hook(address, value)
+        return value
 
     def read_vector(self, address: int) -> int:
-        return self.read_byte(address)
+        value = self.read_byte(address)
+        if self.after_read_vector:
+            for hook in self.after_read_vector:
+                hook(address, value)
+        return value
 
     def write_data(self, address: int, value: int) -> None:
-        self.write_byte(address, value)
+        if self.after_write_data:
+            # the old value straight from the memory list: going through
+            # read_byte would flip a soft switch at $C0xx
+            old_value = self._mem[address]
+            self.write_byte(address, value)
+            for hook in self.after_write_data:
+                hook(address, value, old_value)
+        else:
+            self.write_byte(address, value)
 
     def write_stack(self, address: int, value: int) -> None:
-        self.write_byte(address, value)
+        if self.after_write_stack:
+            # the old value straight from the memory list: going through
+            # read_byte would flip a soft switch at $C0xx
+            old_value = self._mem[address]
+            self.write_byte(address, value)
+            for hook in self.after_write_stack:
+                hook(address, value, old_value)
+        else:
+            self.write_byte(address, value)
 
     # 16-bit reads, low byte first, as two reads of the same kind, so every
     # byte is still seen on its own.
