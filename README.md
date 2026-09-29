@@ -12,6 +12,7 @@
   - [Package split](#package-split-m4-done-2026-09-12)
   - [Emulator / Window / States](#emulator--window--states)
   - [Extension points](#extension-points)
+  - [Memory access by kind](#memory-access-by-kind)
   - [Speed](#speed)
 - [Relation to sibling projects](#relation-to-sibling-projects)
 - [Testing strategy](#testing-strategy)
@@ -25,7 +26,7 @@
 
 `papple2` is a small Apple II emulator written in Python. It is not meant to compete with full emulators on speed or completeness. Its purpose is to be a debugging instrument: a machine I can stop, inspect, and script from Python while it runs Apple II code.
 
-The core comes from ApplePy by James Tauber, ported to Python 3 and stripped of what I did not need (the socket interface). Around that core sit an assembler and disassembler, stand-ins for the disk routines two of the games call, and a speed control. The instruments that made it a debugging tool -- breakpoints and hooks, a log of every memory access, a map of which instructions ran and how control flowed between them -- are being redesigned from scratch: the old ones are drawn in `docs/instrumentation-map.md`, the ideas for the new ones are collected in `docs/instrumentation-ideas.md`.
+The core comes from ApplePy by James Tauber, ported to Python 3 and stripped of what I did not need (the socket interface). Around that core sit an assembler and disassembler, stand-ins for the disk routines two of the games call, and a speed control. The instruments that made it a debugging tool -- breakpoints and hooks, a log of every memory access, a map of which instructions ran and how control flowed between them -- are being redesigned from scratch: the old ones are drawn in `docs/instrumentation-map.md`, the ideas for the new ones are collected in `docs/instrumentation-ideas.md`, and the decisions taken so far are in `docs/instrumentation-design.md`.
 
 **Core philosophy:**
 
@@ -104,7 +105,7 @@ graph TD
 
 ### Extension points
 
-Since the redesign began (`HISTORY.md` 2026-09-27/28), `papple2` has three deliberately small ways to act on a running program. The old ones (checkpoints, CPU read/write hooks, the memory map) are drawn in `docs/instrumentation-map.md`, pinned to the tag `pre-redesign`; the ideas for what comes next are in `docs/instrumentation-ideas.md`.
+Since the redesign began (`HISTORY.md` 2026-09-27/28), `papple2` has three deliberately small ways to act on a running program. The old ones (checkpoints, CPU read/write hooks, the memory map) are drawn in `docs/instrumentation-map.md`, pinned to the tag `pre-redesign`; the ideas for what comes next are in `docs/instrumentation-ideas.md`, and the decisions taken so far in `docs/instrumentation-design.md`.
 
 - **Traps** (`add_trap(address, handler)`) stand in for a routine at a fixed address. Before each instruction, `run()` looks up `PC` in the trap table (only while there are any traps). A handler returns whether it *served* the address: `True`, and the run continues at whatever `PC` the handler set; `False`, and the run stops before the instruction there, via `breakpoint`. The two disk stand-ins, `RwtsHook` (Lode Runner, `$B7B5`) and `MliHook` (Bandits, `$BF00`), are traps.
 - **`until`** is a parameter of `run()`, not an attachment point: a condition checked before each instruction (`after_instructions(n)`, `at_address(a)`). When it is met, `run()` stops via `breakpoint` and returns.
@@ -131,6 +132,10 @@ graph TD
         THR --> WIN --> KEYS
     end
 ```
+
+### Memory access by kind
+
+The CPU reads and writes memory through one `Memory` method per kind of access: `read_opcode`, `read_operand`, `read_pointer`, `read_data`, `read_stack` and `read_vector` for reads, `write_data` and `write_stack` for writes, plus three 16-bit reads built from them (`read_operand_word`, `read_pointer_word` with the 6502's page wrap, `read_vector_word`). The name says why the CPU accesses a byte, not where the byte is: `LDA $0100,X` touches the stack page, but it is a data read. Each method passes the access on to the shared `read_byte`/`write_byte`, where the soft switches and the display stay. This is the seam the hooks will attach to; see `docs/instrumentation-design.md`, section 3.
 
 ### Speed
 
@@ -232,4 +237,7 @@ This section is more useful to an LLM picking this project back up than to me --
 - **State changes go through events, and `executing` mirrors the state machine.** Only `Running`'s entry and exit actions set `executing`, and `initialize(fire_events_on_init=True)` runs the entry action at construction, as Harel's statecharts demand (`test_executing_follows_the_state_from_the_start`).
 - **A trap returns *served*, a single `bool`.** `True`: continue at the `PC` the handler set. `False`: stop before the instruction at the trap's address. The table is looked up only while it holds any traps -- the dictionary's own truthiness, no separate flag to keep in sync.
 - **The throttle compares emulated cycles with wall-clock time, in windowed runs only** (`throttle_delay()`, tested without sleeping). It can only slow down a run that is too fast.
-- **The disassembler is static**, with an optional `is_code(address)` (default: every address is code); addresses that aren't code come out as `.byte` blocks.
+- **The disassembler is static**, with an optional `is_code(address)` (default: every address is code); addresses that aren't code come out as `.byte` blocks. It reads the memory list directly.
+- **The CPU accesses memory only through the kind methods** (since 2026-09-29), and a 16-bit read is two byte reads of the same kind.
+- **Whatever only looks reads the memory list directly** -- the disassembler, and later monitors and reports -- past the devices and past anything that watches the CPU.
+- **No save states for now.** Pickling was removed on 2026-09-29; snapshots will be designed fresh when an experiment needs them.
