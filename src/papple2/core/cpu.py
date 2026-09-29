@@ -52,6 +52,7 @@ class CPU:
         self.operand_length = 0
 
         self.cycles = 0
+        self.instruction_count = 0
 
         self.ops_dispatch = [None] * 0x100
         self.setup_ops_dispatch( )
@@ -76,6 +77,7 @@ class CPU:
         self.branched = False
         self.operand_length = 0
         self.cycles = 0
+        self.instruction_count = 0
         self.last_opcode = None
         self.PC = self.memory.read_vector_word( self.RESET_VECTOR )
         self.last_PC = None
@@ -262,6 +264,7 @@ class CPU:
     def do_next_step( self ) -> None:
         # all instructions take 2 cycles as a minimum
         self.cycles += 2
+        self.instruction_count += 1
 
         # reset flags from last op
         self.branched = False
