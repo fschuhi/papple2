@@ -8,10 +8,11 @@
 
 ## 📍 Current Session Pointer
 
-**Where we are:** `papple2` is to become a system to disassemble and understand Apple II and II+ games by running them, with Lode Runner as the worked example (`DIRECTION.md`). The old instrumentation is gone (`HISTORY.md` 2026-09-27/28): `papple2` is an emulator again, with four boots (`make boot-basic`, `boot-robotron`, `boot-lode-runner`, `boot-bandits`), the two disk stand-ins as address traps, and Apple II speed on request (`make boot-lode-runner-throttled`). The redesign of the instrumentation starts from `docs/instrumentation-ideas.md` (the braindump) and `docs/instrumentation-map.md` (the "before" picture, pinned to the tag `pre-redesign`).
+**Where we are:** `papple2` is to become a system to disassemble and understand Apple II and II+ games by running them, with Lode Runner as the worked example (`DIRECTION.md`). The instrumentation is being rebuilt from scratch. The decisions are in `docs/instrumentation-design.md` (2026-09-29), and the first part is in place: `CPU` and `Memory` name every access by its kind (`read_opcode`, `read_operand`, ..., `write_stack`) at no measurable cost, and the disassembler reads the memory list directly. There are no hooks yet. Four boots run (`make boot-basic`, `boot-robotron`, `boot-lode-runner`, `boot-bandits`), and the two disk stand-ins are traps.
 
 **What's next:**
-- Open the design phase with an in-depth discussion: `pysm`, yes or no (`TODO.md`).
-- Turn the braindump into a design document, structure first, experiments afterwards: the machine seam, one record per instruction or one event per access, roles, the lifecycle of a step.
-- Alongside, the small code steps in `TODO.md`: the assembler bug, uppercase defaults in `util.py`, the stale comments in the stand-ins, `graphviz` in `requirements.txt`.
+- Step 4: the hook lists and the fields a hook may read, measured with all lists empty (`TODO.md` section 7).
+- Step 5: breakpoints and traps at the `Emulator`'s boundary.
+- Step 6: the execution-count map on Lode Runner inside a level, the first real output of the new instrumentation, run together.
+- Alongside: the small code steps in `TODO.md` section 8.
 - Discuss and expand `docs/reveng-catalogue.md`. Add AFK research on Ghidra and SourceGen. 
