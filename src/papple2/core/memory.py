@@ -106,3 +106,19 @@ class Memory:
 
     def write_stack(self, address: int, value: int) -> None:
         self.write_byte(address, value)
+
+    # 16-bit reads, low byte first, as two reads of the same kind, so every
+    # byte is still seen on its own.
+
+    def read_operand_word(self, address: int) -> int:
+        return self.read_operand(address) + (self.read_operand(address + 1) << 8)
+
+    def read_pointer_word(self, address: int) -> int:
+        # the 6502's page wrap: a pointer at $xxFF takes its high byte from
+        # $xx00, not from the next page
+        if address % 0x100 == 0xFF:
+            return self.read_pointer(address) + (self.read_pointer(address & 0xFF00) << 8)
+        return self.read_pointer(address) + (self.read_pointer(address + 1) << 8)
+
+    def read_vector_word(self, address: int) -> int:
+        return self.read_vector(address) + (self.read_vector(address + 1) << 8)

@@ -78,3 +78,22 @@ def test_every_kind_of_write_lands_where_write_byte_would(memory: Memory, method
     getattr(memory, method)(0x1000, 0x42)
 
     assert memory.read_byte(0x1000) == 0x42
+
+
+WORD_KINDS = ["read_operand_word", "read_pointer_word", "read_vector_word"]
+
+
+@pytest.mark.parametrize("method", WORD_KINDS)
+def test_word_reads_take_the_low_byte_first(memory: Memory, method: str) -> None:
+    memory.load_test_data(0x1000, [0x34, 0x12])
+
+    assert getattr(memory, method)(0x1000) == 0x1234
+
+
+def test_read_pointer_word_wraps_within_the_page(memory: Memory) -> None:
+    # like JMP ($10FF) on the 6502: the high byte comes from $1000, not $1100
+    memory.load_test_data(0x10FF, [0x34])
+    memory.load_test_data(0x1000, [0x12])
+    memory.load_test_data(0x1100, [0x99])
+
+    assert memory.read_pointer_word(0x10FF) == 0x1234

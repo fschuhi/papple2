@@ -29,6 +29,15 @@ class Disassembler:
         self.ops = [(1, "???")] * 0x100
         self.setup_ops()
 
+    # The disassembler only looks: it reads the memory list directly, past
+    # the soft switches and past anything that watches the CPU's accesses.
+
+    def read_byte(self, address: int) -> int:
+        return self.memory._mem[address]
+
+    def read_word(self, address: int) -> int:
+        return self.memory._mem[address] | self.memory._mem[address + 1] << 8
+
     def setup_ops(self) -> None:
         self.ops[0x00] = (1, "BRK", None)
         self.ops[0x01] = (2, "ORA", self.indirect_x_mode)
@@ -183,119 +192,112 @@ class Disassembler:
         self.ops[0xFE] = (3, "INC", self.absolute_x_mode)
 
     def absolute_mode(self, pc: int) -> OperandInfo:
-        a = self.cpu.read_word(pc + 1)
+        a = self.read_word(pc + 1)
         return {
             "operand": "$%04x" % a,
             "operand_address": a,
-            "memory": [a, 2, self.cpu.read_word(a)],
+            "memory": [a, 2, self.read_word(a)],
         }
 
     def absolute_x_mode(self, pc: int) -> OperandInfo:
-        a = self.cpu.read_word(pc + 1)
+        a = self.read_word(pc + 1)
         e = a + self.cpu.X
         return {
             "operand": "$%04x,X" % a,
             "operand_address": a,
-            "memory": [e, 1, self.cpu.read_byte(e)],
+            "memory": [e, 1, self.read_byte(e)],
         }
 
     def absolute_y_mode(self, pc: int) -> OperandInfo:
-        a = self.cpu.read_word(pc + 1)
+        a = self.read_word(pc + 1)
         e = a + self.cpu.Y
         return {
             "operand": "$%04x,Y" % a,
             "operand_address": a,
-            "memory": [e, 1, self.cpu.read_byte(e)],
+            "memory": [e, 1, self.read_byte(e)],
         }
 
     def immediate_mode(self, pc: int) -> OperandInfo:
-        v = self.cpu.read_byte(pc + 1)
+        v = self.read_byte(pc + 1)
         return {
             "operand": "#$%02x" % (v),
             "operand_value": v,
         }
 
     def indirect_mode(self, pc: int) -> OperandInfo:
-        a = self.cpu.read_word(pc + 1)
+        a = self.read_word(pc + 1)
         return {
             "operand": "($%04x)" % a,
             "operand_address": a,
-            "memory": [a, 2, self.cpu.read_word(a)],
+            "memory": [a, 2, self.read_word(a)],
         }
 
     def indirect_x_mode(self, pc: int) -> OperandInfo:
-        z = self.cpu.read_byte(pc + 1)
-        a = self.cpu.read_word( (z + self.cpu.X) % 0x100 )
+        z = self.read_byte(pc + 1)
+        a = self.read_word( (z + self.cpu.X) % 0x100 )
         return {
             "operand": "($%02x,X)" % z,
             "operand_address": z,
-            "memory": [a, 1, self.cpu.read_byte(a)],
+            "memory": [a, 1, self.read_byte(a)],
         }
 
     def indirect_y_mode(self, pc: int) -> OperandInfo:
-        z = self.cpu.read_byte(pc + 1)
-        a = self.cpu.read_word(z) + self.cpu.Y
+        z = self.read_byte(pc + 1)
+        a = self.read_word(z) + self.cpu.Y
         return {
             "operand": "($%02x),Y" % z,
             "operand_address": z,
-            "memory": [a, 1, self.cpu.read_byte(a)],
+            "memory": [a, 1, self.read_byte(a)],
         }
 
     def relative_mode(self, pc: int) -> OperandInfo:
-        a = pc + 2 + signed(self.cpu.read_byte(pc + 1))
+        a = pc + 2 + signed(self.read_byte(pc + 1))
         return {
             "operand": "$%04x" % a,
             "operand_address": a,
         }
 
     def zero_page_mode(self, pc: int) -> OperandInfo:
-        a = self.cpu.read_byte(pc + 1)
+        a = self.read_byte(pc + 1)
         return {
             "operand": "$%02x" % a,
             "operand_address": a,
-            "memory": [a, 1, self.cpu.read_byte(a)],
+            "memory": [a, 1, self.read_byte(a)],
         }
 
     def zero_page_x_mode(self, pc: int) -> OperandInfo:
-        z = self.cpu.read_byte(pc + 1)
+        z = self.read_byte(pc + 1)
         a = (z + self.cpu.X) % 0x100
         return {
             "operand": "$%02x,X" % z,
             "operand_address": z,
-            "memory": [a, 1, self.cpu.read_byte(a)],
+            "memory": [a, 1, self.read_byte(a)],
         }
 
     def zero_page_y_mode(self, pc: int) -> OperandInfo:
-        z = self.cpu.read_byte(pc + 1)
+        z = self.read_byte(pc + 1)
         a = (z + self.cpu.Y) % 0x100
         return {
             "operand": "$%02x,Y" % z,
             "operand_address": z,
-            "memory": [a, 1, self.cpu.read_byte(a)],
+            "memory": [a, 1, self.read_byte(a)],
         }
 
     def collect_op_info( self, pc: int ) -> tuple[OperandInfo, int]:
-        op = self.cpu.read_byte(pc)
+        op = self.read_byte(pc)
         op_info = self.ops[op]
 
         r = {
             "address": pc,
-            "bytes": [self.cpu.read_byte(pc + i) for i in range(op_info[0])],
+            "bytes": [self.read_byte(pc + i) for i in range(op_info[0])],
             "mnemonic": op_info[1],
         }
-
-        # some of the operands will access keyb state etc. in page $C0
-        # the side effects of such a memory access is not wanted here - - we just need to acccess the memory
-        using_softswitches = self.memory.use_apple_softswitches
-        self.memory.use_apple_softswitches = False
 
         # no need to read any argument for immediate addressing mode (has just one entry in the opcode list)
         # if address mode indicates an argument: info[2] is function pointer for the address mode
         if len(op_info) > 2 and op_info[2] is not None:
             specific_instruction_data = op_info[2](pc)
             r.update(specific_instruction_data)
-
-        self.memory.use_apple_softswitches = using_softswitches
 
         # returned size of instruction
         return r, op_info[0]
