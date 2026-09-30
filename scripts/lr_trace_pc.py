@@ -23,7 +23,7 @@ from pathlib import Path
 # so the sibling boot script can be imported directly.
 from boot_lode_runner import boot
 from papple2.core.cpu import CPU
-from papple2.debug.stop_conditions import after_instructions
+from papple2.debug.stop_conditions import instruction_count_reaches
 
 OUTPUT = Path("tmp/lr_trace_pc.csv")
 
@@ -71,7 +71,7 @@ def main() -> None:
     emulator.attach(trace)
 
     start = time.perf_counter()
-    emulator.run(until=after_instructions(args.instructions))
+    emulator.run(until=instruction_count_reaches(args.instructions))
     seconds = time.perf_counter() - start
     emulator.detach(trace)
 

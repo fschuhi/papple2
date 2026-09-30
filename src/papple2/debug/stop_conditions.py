@@ -7,7 +7,9 @@
 from papple2.core.emulator import Emulator, Until
 
 
-def after_instructions(n: int) -> Until:
+def instruction_count_reaches(n: int) -> Until:
+    """True once this run has executed n instructions (Emulator.instructions,
+    reset by every run())."""
     def until(emulator: Emulator) -> bool:
         return emulator.instructions >= n
     return until

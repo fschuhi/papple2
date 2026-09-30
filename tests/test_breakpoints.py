@@ -2,13 +2,13 @@
 method into the breakpoint list, and run() asks every breakpoint before
 each instruction, before the traps.
 
-Each run() here also gets until=after_instructions(10), as a safety net: if
+Each run() here also gets until=instruction_count_reaches(10), as a safety net: if
 a breakpoint never fires, the run ends there instead of hanging the test."""
 
 import pytest
 
 from papple2.core.emulator import Emulator
-from papple2.debug.stop_conditions import after_instructions, break_at
+from papple2.debug.stop_conditions import instruction_count_reaches, break_at
 
 NOP = 0xEA
 
@@ -38,7 +38,7 @@ def emulator() -> Emulator:
 def test_break_at_stops_before_the_instruction(emulator: Emulator) -> None:
     emulator.add_breakpoint(break_at(0x1002))
 
-    emulator.run(until=after_instructions(10))
+    emulator.run(until=instruction_count_reaches(10))
 
     # the NOPs at $1000 and $1001 ran, the one at $1002 did not
     assert emulator.cpu.PC == 0x1002
@@ -55,7 +55,7 @@ def test_a_breakpoint_stops_before_the_trap_at_its_address(emulator: Emulator) -
     emulator.add_trap(0x1002, trap)
     emulator.add_breakpoint(break_at(0x1002))
 
-    emulator.run(until=after_instructions(10))
+    emulator.run(until=instruction_count_reaches(10))
 
     assert emulator.cpu.PC == 0x1002
     assert trap_calls == []
@@ -67,7 +67,7 @@ def test_every_breakpoint_is_asked(emulator: Emulator) -> None:
     emulator.add_breakpoint(first)
     emulator.add_breakpoint(second)
 
-    emulator.run(until=after_instructions(10))
+    emulator.run(until=instruction_count_reaches(10))
 
     # the second was asked at $1001 too, although the first already said stop
     assert first.asked == [0x1000, 0x1001]

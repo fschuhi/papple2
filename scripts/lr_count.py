@@ -24,8 +24,8 @@ later maps.
 Run from the repo root, like the other scripts (papple2.toml's data_dir is
 read relative to the current working directory):
 
-    python scripts/count_lode_runner.py data/bin/LODE_RUNNER.BIN
-    python scripts/count_lode_runner.py data/bin/LODE_RUNNER.BIN --instructions 1000000
+    python scripts/lr_count.py data/bin/LODE_RUNNER.BIN
+    python scripts/lr_count.py data/bin/LODE_RUNNER.BIN --instructions 1000000
 """
 
 import argparse
@@ -38,7 +38,7 @@ from pathlib import Path
 # is started as shown above.
 from boot_lode_runner import boot
 from papple2.core.emulator import APPLE_II_CYCLES_PER_SECOND
-from papple2.debug.stop_conditions import after_instructions
+from papple2.debug.stop_conditions import instruction_count_reaches
 
 MEMORY_SIZE = 0x10000
 SCALE = 3
@@ -259,7 +259,7 @@ def main() -> None:
     emulator.attach(counts)
 
     start = time.time()
-    emulator.run(until=after_instructions(args.instructions))
+    emulator.run(until=instruction_count_reaches(args.instructions))
     seconds = time.time() - start
 
     print(f"{emulator.instructions} instructions in {seconds:.2f} s")

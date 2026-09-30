@@ -108,7 +108,7 @@ graph TD
 Since the redesign began (`HISTORY.md` 2026-09-27/28), `papple2` has three deliberately small ways to act on a running program. The old ones (checkpoints, CPU read/write hooks, the memory map) are drawn in `docs/instrumentation-map.md`, pinned to the tag `pre-redesign`; the ideas for what comes next are in `docs/instrumentation-ideas.md`, and the decisions taken so far in `docs/instrumentation-design.md`.
 
 - **Traps** (`add_trap(address, handler)`) stand in for a routine at a fixed address. Before each instruction, `run()` looks up `PC` in the trap table (only while there are any traps). A handler returns whether it *served* the address: `True`, and the run continues at whatever `PC` the handler set; `False`, and the run stops before the instruction there, via `breakpoint`. The two disk stand-ins, `RwtsHook` (Lode Runner, `$B7B5`) and `MliHook` (Bandits, `$BF00`), are traps.
-- **`until`** is a parameter of `run()`, not an attachment point: a condition checked before each instruction (`after_instructions(n)`, `at_address(a)`). When it is met, `run()` stops via `breakpoint`; without a window it then returns, with a window it pauses as if Ctrl-X had been pressed. The ready-made conditions are in `papple2/debug/stop_conditions.py`.
+- **`until`** is a parameter of `run()`, not an attachment point: a condition checked before each instruction (`instruction_count_reaches(n)`, `at_address(a)`). When it is met, `run()` stops via `breakpoint`; without a window it then returns, with a window it pauses as if Ctrl-X had been pressed. The ready-made conditions are in `papple2/debug/stop_conditions.py`.
 - **Debug-key handlers** (`EmulatorStates.stopped_state`/`running_state`) are keyed to the window's events, not to instructions: `D` and `L` while Stopped. `tests/test_emulator_debug_keys.py` shows how to attach one from outside.
 
 ```mermaid
@@ -139,7 +139,7 @@ The CPU reads and writes memory through one `Memory` method per kind of access: 
 
 `CPU` counts its instructions in `instruction_count` (zeroed like `cycles`, in `__init__` and `reset()`) and, at the end of each instruction, calls the hooks in `after_instruction`. These hooks get no arguments: they read `instruction_count`, `last_PC` and `last_opcode` from the `CPU`, so an experiment keeps the `CPU` it watches in `self.cpu`. See `docs/instrumentation-design.md`, section 4.
 
-An experiment is a plain object whose methods are named after the hook lists. `Emulator.attach(experiment)` puts each such method into its list in `Memory` or `CPU`, and `detach(experiment)` takes them out again; both log one line at INFO. The first experiment is `scripts/count_lode_runner.py`, a memory map of what Lode Runner's attract play runs as code, saved as PNG and HTML.
+An experiment is a plain object whose methods are named after the hook lists. `Emulator.attach(experiment)` puts each such method into its list in `Memory` or `CPU`, and `detach(experiment)` takes them out again; both log one line at INFO. The first experiment is `scripts/lr_count.py`, a memory map of what Lode Runner's attract play runs as code, saved as PNG and HTML.
 
 ### Speed
 

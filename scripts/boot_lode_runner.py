@@ -41,7 +41,7 @@ from pathlib import Path
 
 from papple2.core.disk_image import SECTOR_SIZE, DiskImage
 from papple2.core.emulator import Emulator
-from papple2.debug.stop_conditions import after_instructions
+from papple2.debug.stop_conditions import instruction_count_reaches
 from papple2.util import load_data_dir
 
 LOAD_ADDRESS = 0x0800
@@ -148,7 +148,7 @@ def save_hires_png(emulator: Emulator, page_base: int, filename: str) -> None:
 
 def run_headless(emulator: Emulator, instructions: int) -> None:
     start = time.time()
-    emulator.run(until=after_instructions(instructions))
+    emulator.run(until=instruction_count_reaches(instructions))
     seconds = time.time() - start
 
     print(f"{emulator.instructions} instructions in {seconds:.2f} s")
@@ -173,7 +173,7 @@ def main() -> None:
     if args.headless:
         run_headless(emulator, args.instructions if args.instructions is not None else 4_000_000)
     elif args.instructions is not None:
-        emulator.run(until=after_instructions(args.instructions))
+        emulator.run(until=instruction_count_reaches(args.instructions))
     else:
         emulator.run()
 

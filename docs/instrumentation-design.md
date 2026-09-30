@@ -73,7 +73,7 @@ The name of the method says *why* the CPU accesses a byte, not *where* the byte 
 
 - Every observation is placed by run and instruction count.
 - A run is everything since a fresh start. Continuing after a breakpoint is the same run.
-- The instruction count lives in `CPU` and is reset only at a fresh start. It is not `Emulator.instructions`, which every `run()` call resets and which `after_instructions(n)` relies on.
+- The instruction count lives in `CPU` and is reset only at a fresh start. It is not `Emulator.instructions`, which every `run()` call resets and which `instruction_count_reaches(n)` relies on.
 - In code, a fresh start is `CPU.__init__` and `CPU.reset()`: `instruction_count` is zeroed exactly where `cycles` is. It is increased at the start of `do_next_step()`, so the first instruction is number 1, and an `after_instruction` hook sees the number of the instruction it follows.
 
 ## 6. Rules
@@ -109,7 +109,7 @@ The name of the method says *why* the CPU accesses a byte, not *where* the byte 
 
 On Lode Runner, inside a level (the level loader comes later):
 
-- a memory map with execution counts (first run 2026-09-29: `scripts/count_lode_runner.py`);
+- a memory map with execution counts (first run 2026-09-29: `scripts/lr_count.py`);
 - detecting self-modifying code;
 - finding lookup tables used together with screen writes.
 

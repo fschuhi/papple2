@@ -11,7 +11,7 @@ RUN           = $(ACTIVATE) && python
 SETUP_STAMP   = $(VENV_DIR)/.setup_stamp
 
 # --- Phony targets ---
-.PHONY: all setup test test-verbose boot-basic boot-robotron boot-lode-runner boot-lode-runner-throttled boot-lode-runner-headless boot-bandits clean showtree gentree patch filesdump filesdump-detailed help
+.PHONY: all setup test test-verbose boot-basic boot-robotron boot-lode-runner boot-lode-runner-throttled boot-lode-runner-headless boot-bandits lr-count lr-trace-pc lr-tiles clean showtree gentree patch filesdump filesdump-detailed help
 
 all: setup
 
@@ -55,6 +55,16 @@ boot-lode-runner-headless: $(SETUP_STAMP) ## Boot Lode Runner headless: print st
 # no headless target: the MLI hook serves every file, so a headless run never stops
 boot-bandits: $(SETUP_STAMP) ## Boot Bandits from its Total Replay files with the pygame window
 	$(RUN) scripts/boot_bandits.py
+
+# --- Experiment Targets (scripts/lr_*.py, headless, output in tmp/) ---
+lr-count: $(SETUP_STAMP) ## Experiment: map which addresses Lode Runner's attract play runs (PNG and HTML)
+	$(RUN) scripts/lr_count.py data/bin/LODE_RUNNER.BIN
+
+lr-trace-pc: $(SETUP_STAMP) ## Experiment: record start PC, opcode and end PC of every instruction (CSV)
+	$(RUN) scripts/lr_trace_pc.py data/bin/LODE_RUNNER.BIN
+
+lr-tiles: $(SETUP_STAMP) ## Experiment: collect tiles and transitions, plus measurements (CSV and text)
+	$(RUN) scripts/lr_tiles.py data/bin/LODE_RUNNER.BIN
 
 # --- Utility Targets ---
 clean: ## Remove venv, cache, and tmp files

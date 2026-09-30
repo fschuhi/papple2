@@ -1,6 +1,6 @@
 from pysm import Event
 from papple2.core.emulator import Emulator
-from papple2.debug.stop_conditions import after_instructions, at_address
+from papple2.debug.stop_conditions import instruction_count_reaches, at_address, instruction_count_reaches
 
 
 def test_create_no_display():
@@ -17,7 +17,7 @@ def test_constructs_without_window():
 def test_run_stops_after_n_instructions():
     emulator = Emulator(no_display=True)
     emulator.load_image(0x2dfd, 'data/bin/ROBOTRON.BIN')
-    emulator.run(until=after_instructions(1000))
+    emulator.run(until=instruction_count_reaches(1000))
     assert emulator.instructions == 1000
 
 
@@ -81,7 +81,7 @@ def test_keypress_reaches_program(make_emulator):
     halt:   JMP halt        ; spin here forever -- our known address
     """)
 
-    emulator.run(until=after_instructions(300))
+    emulator.run(until=instruction_count_reaches(300))
     assert emulator.states.leaf_state.name == 'Stopped'
     emulator.states.dispatch(Event('ctrlx'))              # Stopped -> Running
     emulator.states.dispatch(Event('key', key=ord('A')))  # the window's path

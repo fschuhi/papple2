@@ -64,7 +64,7 @@ from papple2.core.cpu import (
     RTS,
     CPU,
 )
-from papple2.debug.stop_conditions import after_instructions
+from papple2.debug.stop_conditions import instruction_count_reaches
 
 BRK = 0x00
 RTI = 0x40
@@ -1068,7 +1068,7 @@ def main() -> None:
     instructions_before = emulator.instructions
     start = time.perf_counter()
     try:
-        emulator.run(until=after_instructions(args.instructions))
+        emulator.run(until=instruction_count_reaches(args.instructions))
     finally:
         seconds = time.perf_counter() - start
         emulator.detach(experiment)
