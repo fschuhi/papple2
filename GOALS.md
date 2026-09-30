@@ -13,6 +13,7 @@
 **What's next:**
 - Review `lr_trace_pc.py` and `lr_tiles.py`; discuss naming of experiments; review "tiles" concept, "gliding" vs "leaping"; discuss `lr_tiles.csv` in `lr_reports.zip` (ask for it if not uploaded); review add document other reports in the `zip`; short description of experiments (including the `boot_...`) to `README.md`.  
 - `read_immediate` in `core` (`TODO.md` section 7), the base for detecting self-modifying code.
+- Refactor the `instrumentation-*.md` files.
 - Discuss and expand `docs/reveng-catalogue.md`. Add AFK research on Ghidra and SourceGen.
 - Generate more candidates for further experiments, to discuss: names from `main.nw` in the map (which named routines ran), the instruction count at which each address first ran (the game's phases), differential maps (with and without a dig), self-modifying code detection.
 - Alongside: the small code steps in `TODO.md` section 8.

@@ -23,10 +23,10 @@ HISTORY.md
 DIRECTION.md
 docs/instrumentation-design.md
 docs/instrumentation-ideas.md
-docs/instrumentation-map.md
-docs/diagrams/inner-loop.html
-docs/diagrams/memory-access.svg
-docs/diagrams/run-loop.svg
+#docs/instrumentation-map.md
+#docs/diagrams/inner-loop.html
+#docs/diagrams/memory-access.svg
+#docs/diagrams/run-loop.svg
 
 ### --- Build & Python Configuration ---
 Makefile
@@ -51,7 +51,7 @@ scripts/boot_bandits.py
 scripts/boot_basic.py
 scripts/boot_lode_runner.py
 scripts/boot_robotron.py
-scripts/count_lode_runner.py
+scripts/lr_count.py
 scripts/lr_tiles.py
 scripts/lr_trace_pc.py
 scripts/speed_test.py
