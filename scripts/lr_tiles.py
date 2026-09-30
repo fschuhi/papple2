@@ -43,6 +43,7 @@ import time
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import Path
+from typing import NamedTuple
 
 # Python puts the folder of the started script on its search path,
 # so the sibling boot script can be imported directly.
@@ -71,6 +72,14 @@ BRANCH_OPCODES = frozenset({BCC, BCS, BEQ, BMI, BNE, BPL, BVC, BVS})
 OTHER_LEAP_OPCODES = frozenset({JMP_absolute, JMP_indirect, JSR, RTS, BRK, RTI})
 CALL_RETURN_OPCODES = frozenset({JSR, RTS, RTI})
 
+# Precomputed fast opcode lookup for the hot loop:
+# 0 = straight-line, 1 = conditional branch, 2 = other leap (jump, call, return, trap)
+OPCODE_KIND = bytearray(256)
+for _op in BRANCH_OPCODES:
+    OPCODE_KIND[_op] = 1
+for _op in OTHER_LEAP_OPCODES:
+    OPCODE_KIND[_op] = 2
+
 # Conservatively avoid stitching across calls, returns, or interrupts.
 STITCH_EXCLUDED_OPCODES = frozenset({JSR, RTS, RTI, BRK})
 
@@ -82,8 +91,15 @@ OVERLAP_GROUPS_OUTPUT = Path("tmp/lr_overlap_groups.csv")
 STITCH_CANDIDATES_OUTPUT = Path("tmp/lr_stitch_candidates.csv")
 LOOP_CANDIDATES_OUTPUT = Path("tmp/lr_loop_candidates.csv")
 
-# Source tile, transfer instruction PC, opcode, branch outcome, target tile.
-type TransitionKey = tuple[int, int, int, str, int]
+
+class TransitionKey(NamedTuple):
+    source: int
+    pc: int
+    opcode: int
+    outcome: str
+    target: int
+
+
 type TransitionRecord = tuple[TransitionKey, int]
 
 OPCODE_NAMES = {
@@ -140,6 +156,7 @@ class Tile:
     furthest_instruction_size: int = 0
 
     def observe_instruction(self, pc: int, size: int) -> None:
+        """IMPORTANT: not called anymore, but inlined in _after_instruction_hot"""
         self.instructions += 1
 
         # Retain the observed extent for reporting, not a fixed tile boundary.
@@ -168,9 +185,12 @@ class Tiles:
     def __init__(self, cpu: CPU) -> None:
         self.cpu = cpu
         self.tiles: dict[int, Tile] = {}
-        self.transitions: dict[TransitionKey, int] = {}
+        self.transitions: dict[tuple, int] = {}
         self.current_tile: Tile | None = None
         self.observed_instructions = 0
+
+        # Internal runner points to the first-instruction handler initially:
+        self._step = self._first_instruction
 
     def tile_at(self, start_pc: int) -> Tile:
         tile = self.tiles.get(start_pc)
@@ -180,27 +200,61 @@ class Tiles:
         return tile
 
     def after_instruction(self) -> None:
+        self._step()
+
+    def _first_instruction(self) -> None:
         pc = self.cpu.last_PC
-        opcode = self.cpu.last_opcode
+        tile = self.tile_at(pc)
+        tile.initial_entries += 1
+        self.current_tile = tile
+
+        # Swap internal step handler to hot loop
+        self._step = self._after_instruction_hot
+        self._after_instruction_hot()
+
+    def _after_instruction_hot(self) -> None:
+        cpu = self.cpu
+        pc = cpu.last_PC
+        opcode = cpu.last_opcode
         self.observed_instructions += 1
 
-        if self.current_tile is None:
-            self.current_tile = self.tile_at(pc)
-            self.current_tile.initial_entries += 1
-
         source = self.current_tile
-        source.observe_instruction(pc, 1 + self.cpu.operand_length)
 
-        if opcode in BRANCH_OPCODES:
-            outcome = "taken" if self.cpu.branched else "fall_through"
-        elif opcode in OTHER_LEAP_OPCODES:
-            outcome = ""
-        else:
+        # Inlined source.observe_instruction(pc, 1 + cpu.operand_length)
+        source.instructions += 1
+
+        # Retain the observed extent for reporting, not a fixed tile boundary.
+        # Overlap with any other tile is deliberately ignored.
+        furthest = source.furthest_pc
+        if furthest is None or pc > furthest:
+            source.furthest_pc = pc
+            source.furthest_instruction_size = 1 + cpu.operand_length
+        elif pc == furthest:
+            size = 1 + cpu.operand_length
+            if size > source.furthest_instruction_size:
+                source.furthest_instruction_size = size
+
+        # Fast opcode dispatch via precomputed table
+        kind = OPCODE_KIND[opcode]
+        if not kind:
             return
 
-        target = self.tile_at(self.cpu.PC)
+        if kind == 1:
+            outcome = "taken" if cpu.branched else "fall_through"
+        else:
+            outcome = ""
+
+        # Inlined tile lookup/creation
+        target_pc = cpu.PC
+        tiles = self.tiles
+        target = tiles.get(target_pc)
+        if target is None:
+            target = Tile(target_pc)
+            tiles[target_pc] = target
+
         key = (source.start_pc, pc, opcode, outcome, target.start_pc)
-        self.transitions[key] = self.transitions.get(key, 0) + 1
+        transitions = self.transitions
+        transitions[key] = transitions.get(key, 0) + 1
 
         # A self-transition is an exit and a new entry, even though source
         # and target refer to the same tile.
@@ -373,13 +427,12 @@ def report_findings(experiment: Tiles) -> None:
     that is not behind any observed JSR points at an address pushed by the
     code itself, e.g. the PHA-PHA-RTS jump through a table.
     """
-    jsr_pcs = {
-        pc for _, pc, opcode, _, _ in experiment.transitions if opcode == JSR
-    }
+    keys = [TransitionKey._make(k) for k in experiment.transitions]
+    jsr_pcs = {key.pc for key in keys if key.opcode == JSR}
     unusual = sorted(
-        (pc, target, count)
-        for (_, pc, opcode, _, target), count in experiment.transitions.items()
-        if opcode == RTS and (target - 3) & 0xFFFF not in jsr_pcs
+        (key.pc, key.target, experiment.transitions[key])
+        for key in keys
+        if key.opcode == RTS and (key.target - 3) & 0xFFFF not in jsr_pcs
     )
     print(f"RTS targets not behind an observed JSR: {len(unusual)}")
     for pc, target, count in unusual:
@@ -432,15 +485,15 @@ def save_transitions(experiment: Tiles, filename: Path) -> None:
                 "count",
             )
         )
-        for key, count in sorted(experiment.transitions.items()):
-            source, pc, opcode, outcome, target = key
+        for raw_key, count in sorted(experiment.transitions.items()):
+            key = TransitionKey._make(raw_key)
             writer.writerow(
                 (
-                    address(source),
-                    address(pc),
-                    f"${opcode:02X}",
-                    outcome,
-                    address(target),
+                    address(key.source),
+                    address(key.pc),
+                    f"${key.opcode:02X}",
+                    key.outcome,
+                    address(key.target),
                     count,
                 )
             )
@@ -465,13 +518,13 @@ def boundary_measurements(
     # different opcodes if the program modifies instruction bytes.
     sites = defaultdict(list)
     for key, count in records:
-        sites[(key[1], key[2])].append((key, count))
+        sites[(key.pc, key.opcode)].append((key, count))
 
     rows = []
     for (pc, opcode), site_records in sorted(sites.items()):
-        sources = {key[0] for key, _ in site_records}
-        targets = {key[4] for key, _ in site_records}
-        outcomes = {key[3] for key, _ in site_records if key[3]}
+        sources = {key.source for key, _ in site_records}
+        targets = {key.target for key, _ in site_records}
+        outcomes = {key.outcome for key, _ in site_records if key.outcome}
         rows.append(
             {
                 "leap_from_PC": address(pc),
@@ -484,12 +537,12 @@ def boundary_measurements(
                 "traversals": sum(count for _, count in site_records),
                 "outcomes": " ".join(sorted(outcomes)),
                 "taken": sum(
-                    count for key, count in site_records if key[3] == "taken"
+                    count for key, count in site_records if key.outcome == "taken"
                 ),
                 "fall_through": sum(
                     count
                     for key, count in site_records
-                    if key[3] == "fall_through"
+                    if key.outcome == "fall_through"
                 ),
                 "source_members": addresses(sorted(sources)),
                 "target_members": addresses(sorted(targets)),
@@ -505,19 +558,19 @@ def boundary_measurements(
         selected = [
             (key, count)
             for key, count in records
-            if boundary_class(key[2]) == kind
+            if boundary_class(key.opcode) == kind
         ]
         lines.append(
             f"  {kind}: "
-            f"{len({key[1] for key, _ in selected}):,} transfer PCs; "
-            f"{len({(key[1], key[2]) for key, _ in selected}):,} sites; "
+            f"{len({key.pc for key, _ in selected}):,} transfer PCs; "
+            f"{len({(key.pc, key.opcode) for key, _ in selected}):,} sites; "
             f"{len(selected):,} transition records; "
             f"{sum(count for _, count in selected):,} traversals; "
-            f"{len({key[4] for key, _ in selected}):,} destination tiles"
+            f"{len({key.target for key, _ in selected}):,} destination tiles"
         )
 
     branch_sites = [
-        {key[3] for key, _ in site_records}
+        {key.outcome for key, _ in site_records}
         for (_, opcode), site_records in sites.items()
         if opcode in BRANCH_OPCODES
     ]
@@ -659,9 +712,8 @@ def graph_adjacency(
     outgoing = {node: set() for node in nodes}
     incoming = {node: set() for node in nodes}
     for key, _ in records:
-        source, _, _, _, target = key
-        outgoing[source].add(target)
-        incoming[target].add(source)
+        outgoing[key.source].add(key.target)
+        incoming[key.target].add(key.source)
     return outgoing, incoming
 
 
@@ -722,8 +774,8 @@ def stitch_candidates(
     outgoing = defaultdict(list)
     incoming = defaultdict(list)
     for key, count in records:
-        outgoing[key[0]].append((key, count))
-        incoming[key[4]].append((key, count))
+        outgoing[key.source].append((key, count))
+        incoming[key.target].append((key, count))
 
     successor = {}
     predecessor = {}
@@ -731,10 +783,10 @@ def stitch_candidates(
         if len(outgoing[source]) != 1:
             continue
         key, _ = outgoing[source][0]
-        target = key[4]
+        target = key.target
         if (
             source == target
-            or key[2] in STITCH_EXCLUDED_OPCODES
+            or key.opcode in STITCH_EXCLUDED_OPCODES
             or len(incoming[target]) != 1
         ):
             continue
@@ -769,8 +821,8 @@ def region_metrics(
     incoming = []
     outgoing = []
     for key, count in records:
-        source_inside = key[0] in member_set
-        target_inside = key[4] in member_set
+        source_inside = key.source in member_set
+        target_inside = key.target in member_set
         if source_inside and target_inside:
             internal.append((key, count))
         elif target_inside:
@@ -795,12 +847,12 @@ def region_metrics(
         "external_in_traversals": sum(count for _, count in incoming),
         "external_out_records": len(outgoing),
         "external_out_traversals": sum(count for _, count in outgoing),
-        "entry_tiles": addresses(sorted({key[4] for key, _ in incoming})),
-        "exit_tiles": addresses(sorted({key[0] for key, _ in outgoing})),
-        "outside_sources": addresses(sorted({key[0] for key, _ in incoming})),
-        "outside_targets": addresses(sorted({key[4] for key, _ in outgoing})),
+        "entry_tiles": addresses(sorted({key.target for key, _ in incoming})),
+        "exit_tiles": addresses(sorted({key.source for key, _ in outgoing})),
+        "outside_sources": addresses(sorted({key.source for key, _ in incoming})),
+        "outside_targets": addresses(sorted({key.target for key, _ in outgoing})),
         "internal_call_return_records": sum(
-            key[2] in CALL_RETURN_OPCODES for key, _ in internal
+            key.opcode in CALL_RETURN_OPCODES for key, _ in internal
         ),
     }
 
@@ -938,7 +990,12 @@ REGION_FIELDS = (
 
 
 def save_measurements(experiment: Tiles, rwts_reads: int) -> None:
-    records = sorted(experiment.transitions.items())
+    # Convert the unique keys to NamedTuples once:
+    records: list[TransitionRecord] = sorted(
+        (TransitionKey._make(key), count)
+        for key, count in experiment.transitions.items()
+    )
+
     boundary_rows, boundary_lines = boundary_measurements(records)
     overlap_rows, overlap_lines = overlap_measurements(experiment)
 
@@ -952,7 +1009,7 @@ def save_measurements(experiment: Tiles, rwts_reads: int) -> None:
             [
                 (key, count)
                 for key, count in records
-                if key[2] not in CALL_RETURN_OPCODES
+                if key.opcode not in CALL_RETURN_OPCODES
             ],
         ),
     ):
