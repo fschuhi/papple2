@@ -11,17 +11,25 @@
 
 ---
 
-## 2026-09-30 (sixth session) -- The experiments as a group; `instruction_count_reaches`
+## 2026-09-30 -- Hot-loop optimization and dynamic Basic Blocks (Stretches)
+
+- Optimization of the `lr_tiles.py` hot path: I noticed a 4% performance hit just from packing data into `NamedTuples` on every instruction. You suggested keeping raw tuples in the hot loop and converting them on the cold path. You also bypassed method call overhead by inlining `observe_instruction` and `tile_at`, and replaced set lookups for opcodes with a precomputed 256-byte array (`OPCODE_KIND`). This brought the 4,000,000-instruction run down to 4.77 seconds.
+- The conceptual pivot: We discarded the academic graph-theory heuristics (SCCs, loop candidates, interval overlaps) that you initially generated, as they didn't suit dynamic 6502 execution. My intuition was that a leap landing inside a glided execution path should simply break the tile into two pieces. We committed to my vocabulary for this domain: tiles, gliding, leaps, and stretches.
+- The Transformer pass: Instead of risking the hot loop's speed by breaking tiles on the fly, you implemented a post-run `transform_to_stretches` function. It mathematically slices overlapping tiles into strictly disjoint basic blocks (stretches) using all known entry points, accurately reconstructing the historical execution traffic by cascading the counts down the split pieces.
+- Validation and Output: The noisy graph reports (`lr_loop_candidates.csv`, `lr_stitch_candidates.csv`, `lr_overlap_groups.csv`) were deleted. In their place, `lr_split_tiles.csv` and `lr_split_transitions.csv` are now generated. You extracted the ledger math validation into a standalone `check_stretch_consistency` function to guarantee zero overlaps and perfectly conserved traversals. 
+- The Revelation: Running the transformer on Lode Runner yielded the exact same number of stretches as raw tiles. This proved that during the 4M-cycle attract play, the game's execution paths merge in perfect alignment with zero mid-instruction overlaps.
+
+## 2026-09-30 -- The experiments as a group; `instruction_count_reaches`
 
 - `scripts/count_lode_runner.py` renamed to `scripts/lr_count.py`, so the Lode Runner experiments (`lr_count.py`, `lr_trace_pc.py`, `lr_tiles.py`) group as `lr_*`. Each has a `make` target: `lr-count`, `lr-trace-pc`, `lr-tiles`. The `boot_*` scripts keep their names.
 - The stop condition `after_instructions(n)` renamed to `instruction_count_reaches(n)`: the old name read almost like the hook `after_instruction`, with a different meaning. The count is `Emulator.instructions`, which every `run()` resets, so `n` counts the instructions of this run.
 
-## 2026-09-29/30 (fifth session) -- Breakpoints; a readable HTML map
+## 2026-09-29/30 -- Breakpoints; a readable HTML map
 
 - Milestone, run by the user: breakpoints, step 5 of the redesign. With them, the three kinds from the design note are all in place: breakpoints and traps at the `Emulator`'s boundary, hooks inside the instruction. `Emulator.add_breakpoint(breakpoint)` puts the object's `should_break(pc)` into `Emulator.breakpoints`, just as `attach()` puts hook methods into the hook lists; the method name is the interface (duck typing). Before each instruction, before the traps, `run()` asks every breakpoint, and stops the same way `until` does if any said `True`. So a breakpoint at a trap's address stops before the trap moves PC away. PC is passed because it is about to change ("pass only what is gone afterwards"). `break_at(address)` lives in `stop_conditions.py`, outside `core`. Not in the first iteration: a hit counter ("stop on the n-th visit"). `attach()` stays reserved for hooks.
 - The HTML execution map: an info line above the map shows address and counts under the mouse, black cells included (the script works out the address from the cell's position, so the cells carry only their counts). The map scrolls in its own box, with sticky row and column labels, so the address grid stays in view. The colours stay as they are; the map does its job.
 
-## 2026-09-29 (fourth session) -- The first execution map; `Emulator.attach()`
+## 2026-09-29 -- The first execution map; `Emulator.attach()`
 
 - Milestone, run by the user: the first real output of the new instrumentation. `scripts/count_lode_runner.py` boots Lode Runner headless, runs 4,000,000 instructions from the start (the attract play), counts per address how often it was fetched as an opcode and as an operand, and saves a 256 x 256 map as a PNG (one pixel per address, row = page) and as an HTML table with tooltips. Step 5 (breakpoints at the boundary) was not needed first: the hook lists are public, and `until` already stops the run.
 - What the map shows: 2316 addresses ran as opcode, 2083 as operand, none as both. `$0800`-`$0802` is the `JMP $2800` the file starts with; `$2800`-`$2831` is the relocation routine, which lies in hi-res page 1 and is overwritten by graphics later, so the map records history, not what is in memory at the end. The game's code runs in `$5F32`-`$8B0B`; nothing in `$0000`-`$1FFF` apart from `$0800`, nothing above `$8B0B`, no ROM, no RWTS reads. The run is deterministic: a second run gave the same map.
@@ -30,7 +38,7 @@
 - Immediate operands (the `$0B` in `LDA #$0B`) are read with `read_data`, so they showed as black holes after their opcode (found by the user at `$8438`). `ExecutionCounts` works around it: it remembers the last opcode and counts a data read as immediate when that opcode has immediate mode and the read is the byte right after it. Shown in green; a byte of more than one kind in red.
 - The browser's own tooltips are unreliable on 6-pixel cells (they need the mouse to stop). The combination of blue, orange and green doesn't work either. Both are in `TODO.md`.
 
-## 2026-09-29 (third session) -- Every test module in `pytest` style; the `CPU` half of the hooks
+## 2026-09-29 -- Every test module in `pytest` style; the `CPU` half of the hooks
 
 - `tests/test_memory.py` and `tests/test_assembler.py` converted from `unittest` to plain `pytest` functions; no test module uses `unittest` any more. In `test_assembler.py` the helpers became module functions, the star import became explicit imports, the unused `dump_chromatix01_state` went, and the printing helper `test_dump` became `dump_state`, so the runner no longer collects it as a test (the two commented-out `dump=` calls now name it).
 - `CPU` counts instructions: `instruction_count`, zeroed like `cycles` in `__init__` and `reset()`, increased at the start of `do_next_step()`, so the first instruction is number 1. Named so it is not confused with `Emulator.instructions`, which every `run()` call resets. About 2-3% slower (medians 3.32 s without, 3.38 s and 3.43 s with, in one sitting; the times rose during the sitting, so the figure is rough). Accepted: every position in the design rests on this count.
@@ -38,7 +46,7 @@
 - Tests: `tests/test_instruction_count.py` and `tests/test_cpu_hooks.py`, all green.
 - Learned (process, the user's feedback at the end of the session): the steps were small, but the explanations were not. What got in the way: dense sentences and idioms, a git command (`git stash`) used without explaining it, instructions that assumed the wrong state of the repo, measurement plans without a clear question, several open threads at once, and no big picture that ties each step to something the user can see on screen and start thinking in. Suggesting a fresh conversation was not asked for and read as pressure. For next time: one thing per message, plain words, say what a step is for before how it is done, and head for something visible.
 
-## 2026-09-29 (second session) -- Hook lists in `Memory`; a first look at the attract play
+## 2026-09-29 -- Hook lists in `Memory`; a first look at the attract play
 
 - `Memory` has one hook list per kind of access, named after its method with an `after_` prefix (`after_read_opcode` ... `after_write_stack`). A read hook gets `(address, value)`, a write hook `(address, value, old_value)`. The old value comes straight from the memory list, so taking it does not flip a soft switch at `$C0xx`. Each list is tested before its loop.
 - Speed: headless Lode Runner, median of five runs in the same sitting, 3.19 s before and 3.29 s after, about 3%. Accepted as the price every run pays for the hooks.
