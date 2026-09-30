@@ -1102,8 +1102,7 @@ def main() -> None:
     if args.instructions <= 0:
         parser.error("--instructions must be positive")
 
-    #emulator, rwts = boot(args.binary, headless=True)
-    emulator, rwts = boot(args.binary, headless=False)
+    emulator, rwts = boot(args.binary, headless=True)
     experiment = Tiles(emulator.cpu)
     emulator.attach(experiment)
 
