@@ -29,11 +29,14 @@ from papple2.core.cpu import CPU
 from papple2.core.window import PygameWindow, NoWindow
 from pysm import State, StateMachine, Event
 
-# The two kinds of functions Emulator.run() calls before an instruction.
-# A trap is called only when PC reaches its address; it returns whether it
-# served that address (False: stop before the instruction there). An
-# `until` condition returns True when run() should stop. `type` aliases
-# are lazy, so they can name Emulator before the class is defined below.
+# The three kinds of functions Emulator.run() calls before an instruction.
+# A breakpoint's should_break(pc) is called before every instruction and
+# returns True when run() should stop there. A trap is called only when PC
+# reaches its address; it returns whether it served that address (False:
+# stop before the instruction there). An `until` condition returns True
+# when run() should stop. `type` aliases are lazy, so they can name
+# Emulator before the class is defined below.
+type Breakpoint = Callable[[int], bool]
 type Trap = Callable[[Emulator], bool]
 type Until = Callable[[Emulator], bool]
 
@@ -198,6 +201,10 @@ class Emulator:
         # 1.0 = a real Apple II, 3.0 = three times as fast, None = unthrottled
         self.speed = speed
 
+        # the should_break methods of the breakpoints; asked only while
+        # there are any
+        self.breakpoints: list[Breakpoint] = []
+
         # address -> handler; looked up only while there are any
         self.traps: dict[int, Trap] = {}
 
@@ -216,6 +223,13 @@ class Emulator:
     """
     event loop
     """
+
+    def add_breakpoint(self, new_breakpoint: object) -> None:
+        """Put `new_breakpoint.should_break` into the breakpoint list, the
+        way attach() puts an experiment's hook methods into the hook lists.
+        Any object with a should_break(pc) method will do. Ready-made
+        breakpoints are in papple2/debug/stop_conditions.py."""
+        self.breakpoints.append(getattr(new_breakpoint, "should_break"))
 
     def add_trap(self, address: int, handler: Trap) -> None:
         self.traps[address] = handler
@@ -292,6 +306,21 @@ class Emulator:
         # while execution is stopped, so a resumed run doesn't race to catch up
         throttle_start = None
         while not exit_while:
+
+            # breakpoints first, before the traps: a breakpoint at a trap's
+            # address stops before the trap moves PC away
+            if self.breakpoints and self.is_executing():
+                pc = self.cpu.PC
+                # ask every breakpoint, not only up to the first True, so
+                # each one sees every instruction
+                answers = [should_break(pc) for should_break in self.breakpoints]
+                if True in answers:
+                    # stop the same way `until` does
+                    self.states.dispatch(Event('breakpoint'))
+                    if isinstance(self.window, NoWindow):
+                        # no window means no keyboard: nothing can continue
+                        # the run, so end it here
+                        exit_while = True
 
             if self.is_executing():
                 if self.traps:
