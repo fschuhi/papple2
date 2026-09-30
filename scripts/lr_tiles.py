@@ -230,6 +230,7 @@ def check_consistency(experiment: Tiles, expected_instructions: int) -> None:
 
     incoming: Counter[int] = Counter()
     outgoing: Counter[int] = Counter()
+    exit_pcs: dict[int, set[int]] = defaultdict(set)
 
     for key, count in experiment.transitions.items():
         source, pc, opcode, outcome, target = key
@@ -253,8 +254,16 @@ def check_consistency(experiment: Tiles, expected_instructions: int) -> None:
         else:
             require(outcome == "", f"outcome on non-branch: {key!r}")
 
+        # A branch that is not taken continues right behind its operand.
+        if outcome == "fall_through":
+            require(
+                target == (pc + 2) & 0xFFFF,
+                f"fall-through target is not branch PC + 2: {key!r}",
+            )
+
         incoming[target] += count
         outgoing[source] += count
+        exit_pcs[source].add(pc)
 
     for start_pc, tile in experiment.tiles.items():
         label = address(start_pc)
@@ -290,6 +299,25 @@ def check_consistency(experiment: Tiles, expected_instructions: int) -> None:
             tile.leaped_from <= tile.instructions,
             f"{label}: more exits than observed instructions",
         )
+
+        # The PC glides from the tile's start to the first leap, so every
+        # visit leaves through the same instruction, the furthest one. A tile
+        # without exits can only be the open tile, stopped in its first visit.
+        if exit_pcs[start_pc]:
+            require(
+                exit_pcs[start_pc] == {tile.furthest_pc},
+                f"{label}: exits {addresses(sorted(exit_pcs[start_pc]))} "
+                "!= furthest PC",
+            )
+
+        # For the same reason every completed visit runs the same number of
+        # instructions. The open tile's last visit is unfinished.
+        if tile is not experiment.current_tile:
+            require(
+                tile.leaped_from > 0
+                and tile.instructions % tile.leaped_from == 0,
+                f"{label}: instructions not a whole number per visit",
+            )
 
         if tile.instructions == 0:
             require(
@@ -343,6 +371,26 @@ def check_consistency(experiment: Tiles, expected_instructions: int) -> None:
     print("tile/transition consistency checks passed")
 
 
+def report_findings(experiment: Tiles) -> None:
+    """Report what is unusual but not wrong.
+
+    An RTS normally returns right behind a JSR (its PC + 3). An RTS target
+    that is not behind any observed JSR points at an address pushed by the
+    code itself, e.g. the PHA-PHA-RTS jump through a table.
+    """
+    jsr_pcs = {
+        pc for _, pc, opcode, _, _ in experiment.transitions if opcode == JSR
+    }
+    unusual = sorted(
+        (pc, target, count)
+        for (_, pc, opcode, _, target), count in experiment.transitions.items()
+        if opcode == RTS and (target - 3) & 0xFFFF not in jsr_pcs
+    )
+    print(f"RTS targets not behind an observed JSR: {len(unusual)}")
+    for pc, target, count in unusual:
+        print(f"    {address(pc)} -> {address(target)} ({count:,}x)")
+
+
 def save_tiles(experiment: Tiles, filename: Path) -> None:
     filename.parent.mkdir(parents=True, exist_ok=True)
     with filename.open("w", newline="", encoding="utf-8") as output:
@@ -352,11 +400,9 @@ def save_tiles(experiment: Tiles, filename: Path) -> None:
                 "start_PC",
                 "furthest_PC",
                 "length_bytes",
-                "initial_entries",
                 "leaped_to",
                 "leaped_from",
                 "instructions",
-                "open_visit",
             )
         )
         for start_pc in sorted(experiment.tiles):
@@ -369,11 +415,9 @@ def save_tiles(experiment: Tiles, filename: Path) -> None:
                     address(tile.start_pc),
                     furthest_pc,
                     tile.length_bytes(),
-                    tile.initial_entries,
                     tile.leaped_to,
                     tile.leaped_from,
                     tile.instructions,
-                    int(tile is experiment.current_tile),
                 )
             )
     print(f"wrote {len(experiment.tiles):,} tile records to {filename}")
@@ -1075,6 +1119,14 @@ def main() -> None:
 
     instructions_executed = emulator.instructions - instructions_before
     check_consistency(experiment, instructions_executed)
+    first_tile = next(
+        tile for tile in experiment.tiles.values() if tile.initial_entries
+    )
+    print(
+        f"run started in tile {address(first_tile.start_pc)}, "
+        f"stopped in tile {address(experiment.current_tile.start_pc)}"
+    )
+    report_findings(experiment)
 
     print(f"{instructions_executed:,} instructions in {seconds:.2f} s")
     print(f"RWTS reads served: {len(rwts.log)}")
