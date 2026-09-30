@@ -12,7 +12,6 @@ After the run, check accounting and write:
     tmp/lr_tiles.csv
     tmp/lr_transitions.csv
     tmp/lr_measurements.txt
-    tmp/lr_boundary_sites.csv
     tmp/lr_split_tiles.csv
     tmp/lr_split_transitions.csv
 
@@ -73,7 +72,6 @@ for _op in OTHER_LEAP_OPCODES:
 TILES_OUTPUT = Path("tmp/lr_tiles.csv")
 TRANSITIONS_OUTPUT = Path("tmp/lr_transitions.csv")
 MEASUREMENTS_OUTPUT = Path("tmp/lr_measurements.txt")
-BOUNDARY_SITES_OUTPUT = Path("tmp/lr_boundary_sites.csv")
 SPLIT_TILES_OUTPUT = Path("tmp/lr_split_tiles.csv")
 SPLIT_TRANSITIONS_OUTPUT = Path("tmp/lr_split_transitions.csv")
 
@@ -105,8 +103,6 @@ OPCODE_NAMES = {
     RTI: "RTI",
 }
 
-BOUNDARY_CLASSES = ("branch", "call", "return", "jump", "interrupt", "other")
-
 
 def address(pc: int) -> str:
     return f"${pc:04X}"
@@ -115,20 +111,6 @@ def address(pc: int) -> str:
 def addresses(pcs) -> str:
     """Format a collection in the supplied order."""
     return " ".join(address(pc) for pc in pcs)
-
-
-def boundary_class(opcode: int) -> str:
-    if opcode in BRANCH_OPCODES:
-        return "branch"
-    if opcode == JSR:
-        return "call"
-    if opcode in {RTS, RTI}:
-        return "return"
-    if opcode in {JMP_absolute, JMP_indirect}:
-        return "jump"
-    if opcode == BRK:
-        return "interrupt"
-    return "other"
 
 
 @dataclass
@@ -531,80 +513,6 @@ def write_table(filename: Path, fields: tuple[str, ...], rows: list[dict]) -> No
     print(f"wrote {len(rows):,} measurement records to {filename}")
 
 
-def boundary_measurements(
-        records: list[TransitionRecord],
-) -> tuple[list[dict], list[str]]:
-    # A site is identified by PC and opcode. The same PC may appear with
-    # different opcodes if the program modifies instruction bytes.
-    sites = defaultdict(list)
-    for key, count in records:
-        sites[(key.pc, key.opcode)].append((key, count))
-
-    rows = []
-    for (pc, opcode), site_records in sorted(sites.items()):
-        sources = {key.source for key, _ in site_records}
-        targets = {key.target for key, _ in site_records}
-        outcomes = {key.outcome for key, _ in site_records if key.outcome}
-        rows.append(
-            {
-                "leap_from_PC": address(pc),
-                "opcode": f"${opcode:02X}",
-                "mnemonic": OPCODE_NAMES.get(opcode, "unknown"),
-                "class": boundary_class(opcode),
-                "source_tiles": len(sources),
-                "target_tiles": len(targets),
-                "transition_records": len(site_records),
-                "traversals": sum(count for _, count in site_records),
-                "outcomes": " ".join(sorted(outcomes)),
-                "taken": sum(
-                    count for key, count in site_records if key.outcome == "taken"
-                ),
-                "fall_through": sum(
-                    count
-                    for key, count in site_records
-                    if key.outcome == "fall_through"
-                ),
-                "source_members": addresses(sorted(sources)),
-                "target_members": addresses(sorted(targets)),
-            }
-        )
-
-    lines = [
-        "BOUNDARY CAUSES",
-        "Sites are (PC, opcode) pairs; transfer PCs are also counted separately.",
-        "Destination counts across classes are not additive.",
-    ]
-    for kind in BOUNDARY_CLASSES:
-        selected = [
-            (key, count)
-            for key, count in records
-            if boundary_class(key.opcode) == kind
-        ]
-        lines.append(
-            f"  {kind}: "
-            f"{len({key.pc for key, _ in selected}):,} transfer PCs; "
-            f"{len({(key.pc, key.opcode) for key, _ in selected}):,} sites; "
-            f"{len(selected):,} transition records; "
-            f"{sum(count for _, count in selected):,} traversals; "
-            f"{len({key.target for key, _ in selected}):,} destination tiles"
-        )
-
-    branch_sites = [
-        {key.outcome for key, _ in site_records}
-        for (_, opcode), site_records in sites.items()
-        if opcode in BRANCH_OPCODES
-    ]
-    lines.extend(
-        (
-            f"  Branch sites with one observed outcome: "
-            f"{sum(len(outcomes) == 1 for outcomes in branch_sites):,}",
-            f"  Branch sites with both observed outcomes: "
-            f"{sum(len(outcomes) == 2 for outcomes in branch_sites):,}",
-        )
-    )
-    return rows, lines
-
-
 def transform_to_stretches(
         experiment: Tiles, records: list[TransitionRecord]
 ) -> tuple[list[dict], list[dict]]:
@@ -682,28 +590,7 @@ def save_measurements(experiment: Tiles, rwts_reads: int) -> None:
         for key, count in experiment.transitions.items()
     )
 
-    boundary_rows, boundary_lines = boundary_measurements(records)
     stretch_rows, transition_rows = transform_to_stretches(experiment, records)
-
-    write_table(
-        BOUNDARY_SITES_OUTPUT,
-        (
-            "leap_from_PC",
-            "opcode",
-            "mnemonic",
-            "class",
-            "source_tiles",
-            "target_tiles",
-            "transition_records",
-            "traversals",
-            "outcomes",
-            "taken",
-            "fall_through",
-            "source_members",
-            "target_members",
-        ),
-        boundary_rows,
-    )
 
     write_table(
         SPLIT_TILES_OUTPUT,
@@ -739,8 +626,6 @@ def save_measurements(experiment: Tiles, rwts_reads: int) -> None:
         f"  Transition records: {len(records):,}",
         f"  Transition traversals: {sum(count for _, count in records):,}",
         f"  RWTS reads served: {rwts_reads:,}",
-        "",
-        *boundary_lines,
         "",
         "STRETCH TRANSFORM",
         f"  Original tiles: {len(experiment.tiles):,}",
