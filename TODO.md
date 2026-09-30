@@ -14,9 +14,10 @@
 
 ## Experiments 
 
-- Tile ideas (2026-09-30): stretches on top of tiles, with their own leap_from/target_stretch; tiles stay unchanged underneath. Alternative: basic blocks by resolving overlaps into further tiles, keeping the glide counts. A 64 KB map of tile IDs, colored at each leap from the tile's start to its exit. Labels, then `disassembler.py`.
-- `lr_tiles.py`: a `NamedTuple` for `TransitionKey` (fields `source`, `leap_pc`, `opcode`, `outcome`, `target`) instead of `key[0]`...`key[4]`.
-- `lr_tiles.py`: decide what happens to the graph measurements (stitch and loop candidates) and the INTERPRETATION block -- first understand what GPT was after.
+- ~~Tile ideas (2026-09-30): stretches on top of tiles, with their own leap_from/target_stretch; tiles stay unchanged underneath. Alternative: basic blocks by resolving overlaps into further tiles, keeping the glide counts. A 64 KB map of tile IDs, colored at each leap from the tile's start to its exit. Labels, then `disassembler.py`.~~ *(Done 2026-09-30: Implemented via a post-run mathematical transformer that splits overlapping tiles into strictly disjoint stretches/Basic Blocks, conserving execution traffic perfectly without slowing the hot loop.)*
+- ~~`lr_tiles.py`: a `NamedTuple` for `TransitionKey` (fields `source`, `leap_pc`, `opcode`, `outcome`, `target`) instead of `key[0]`...`key[4]`.~~ *(Done 2026-09-30: Converted on the cold path to maintain the 4.77s hot-loop speed).*
+- ~~`lr_tiles.py`: decide what happens to the graph measurements (stitch and loop candidates) and the INTERPRETATION block -- first understand what GPT was after.~~ *(Done 2026-09-30: Graph heuristics tossed entirely; replaced with strict dynamic basic block isolation and verification.)*
+- Map the generated basic blocks in `lr_split_tiles.csv` to XekriRedmane's `main.nw` to identify which routines execute during the Lode Runner attract play.
 
 ## Type hints follow-ups
 
@@ -63,10 +64,7 @@ The old instrumentation is gone (`HISTORY.md` 2026-09-27/28); the ideas for the 
 
 - Keeping what we've learned about an address across experiments: the old tile lists in Excel showed notes from `Annotations` next to each tile (removed 2026-09-27, at the tag). Decide how learnings persist in the new design.
 - Optional, once, whenever it is of interest: the total cost of the instrumentation with all lists empty, measured against the commit before the `Memory` hook lists. Not per step (decided 2026-09-29).
-- ~~Step 5: the boundary in `Emulator`: breakpoints first, then traps~~ -- done 2026-09-30: `Emulator.add_breakpoint()` puts a breakpoint's `should_break(pc)` into `Emulator.breakpoints`; `run()` asks every breakpoint before the traps and stops the same way `until` does; `break_at(address)` in `stop_conditions.py`; `tests/test_breakpoints.py`. `until` stays a parameter of `run()`.
 - `read_immediate` in `core`: a kind of its own for immediate operands, with its own hook list `after_read_immediate`. `immediate_mode()` only returns the operand's address; the operation (`LDA`, `CMP`, ...) reads the byte with `read_data`. So split each of the 11 operations with immediate mode (`ORA AND EOR ADC LDY LDX LDA CPY CMP CPX SBC`) into reading the byte and working with it, e.g. `LDA(address)` -> `lda_value(read_data(address))`, and let the 11 immediate dispatch entries call `lda_value(read_immediate(...))`. The CPU tests guard each operation. Then `ExecutionCounts` drops its last-opcode workaround. Needed for detecting self-modifying code: patching an immediate operand is the classic trick.
-- ~~HTML execution map: replace the browser's tooltips~~ -- done 2026-09-30: an info line above the map shows address and counts under the mouse (black cells: address only, the script works it out from the cell's position); the map scrolls in its own box, with sticky row and column labels.
-- ~~`scripts/count_lode_runner.py` has no `make` target~~ -- done 2026-09-30: renamed to `scripts/lr_count.py`, so the experiments group as `lr_*`; `make lr-count`, `make lr-trace-pc`, `make lr-tiles`.
 - _Needs investigation:_ where the attract play's moves come from. Probably a table the demo code reads instead of the keyboard; `main.nw` may name it. A read hook on the demo code would show which table it reads. The same "script" could drive experiments. The block `main.nw` calls "random init data" (`levels.html`) looks like leftover memory from when the file was saved (loader code calling the ROM and reading the disk, fill patterns, hi-res bytes), not keystrokes.
 - After step 6: how we look at what the hooks collected -- report generators in HTML, queries in Jupyter, or both; which one first. Earlier answers to the same question: the HTML browser in `a2-lode-runner` and the Excel tile lists from Robotron.
 

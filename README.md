@@ -17,6 +17,7 @@
 - [Relation to sibling projects](#relation-to-sibling-projects)
 - [Testing strategy](#testing-strategy)
 - [Data files](#data-files)
+- [Scripts & Experiments](#scripts--experiments)
 - [Running](#running)
 - [Settled decisions](#settled-decisions)
 
@@ -197,6 +198,17 @@ The manual checks are plain scripts in `scripts/`, not pytest tests: they assert
 
 Place the three binaries in `data/bin/`, the disk image in `data/do/`, and Bandits' files in `data/tr/bandits/` (all below wherever `data_dir` in your `papple2.toml` points).
 
+---
+
+## Scripts & Experiments
+
+The tools interacting with `papple2` live in the `scripts/` folder and generally fall into two categories:
+
+- **The `boot_*` scripts:** Manual, visual checks that boot the emulator with a specific game or ROM payload attached to the pygame window. These are test-bed wrappers used for visual verification (`boot_basic.py`, `boot_robotron.py`, `boot_lode_runner.py`, `boot_bandits.py`).
+- **The `lr_*` experiments:** Headless analysis routines currently focused on Lode Runner's attract play. These attach custom instrumentations (like tracing and block-mapping hooks) to analyze how the game executes. 
+  - `lr_count.py`: Builds a 256x256 visual heatmap of the memory space, indicating which addresses were fetched as opcodes vs. operands.
+  - `lr_trace_pc.py`: Tracks and records a direct trace of execution flow.
+  - `lr_tiles.py`: Discovers dynamic execution structures by mapping executed stretches of instructions (tiles). After execution, a transformer safely splits overlapping tiles into disjoint basic blocks (stretches) and maps transition edges between them, rendering a perfect mathematical ledger of control flow across millions of instructions.
 
 ---
 
@@ -211,6 +223,9 @@ make boot-lode-runner           # boot Lode Runner with the pygame window open; 
 make boot-lode-runner-throttled # the same, at the speed of a real Apple II
 make boot-lode-runner-headless  # run Lode Runner headless; save both hi-res pages as PNG
 make boot-bandits               # boot Bandits from Total Replay's ProDOS files
+make lr-count        # Experiment: map which addresses Lode Runner's attract play runs (PNG and HTML
+make lr-tiles        # Experiment: collect tiles and transitions, plus measurements (CSV and text)
+make lr-trace-pc     # Experiment: record start PC, opcode and end PC of every instruction (CSV
 ```
 
 `make setup` will happily produce a broken install if your default `python3` resolves to 3.14. If needed: `rm -rf .venv && python3.12 -m venv .venv && make setup`.
