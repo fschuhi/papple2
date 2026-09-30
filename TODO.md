@@ -15,6 +15,7 @@
 ## 1. Type hints follow-ups
 
 - Annotate the attributes `mypy` can't figure out by itself, e.g. `self.ops_dispatch = [None] * 0x100` in `core/cpu.py` (it concludes the list only ever holds `None`); likewise `CPU.PC`, `CPU.branched`, `Memory.apple2`. PyCharm doesn't mind these, so this only matters if we ever adopt `mypy`.
+- Describe the interfaces with `typing.Protocol`: first the hooks, then the breakpoints with them. Today the hook lists and `Emulator.breakpoints` are typed as `Callable`s, and `attach()`/`add_breakpoint()` rely on method names (duck typing).
 - Test files: hints are optional there. Decide whether to add them; today they're mixed (some fixtures in `conftest.py` have hints, most local fixtures don't).
 
 ## 2. Direction follow-ups (from 2026-09-23)
@@ -56,12 +57,9 @@ The old instrumentation is gone (`HISTORY.md` 2026-09-27/28); the ideas for the 
 
 - Keeping what we've learned about an address across experiments: the old tile lists in Excel showed notes from `Annotations` next to each tile (removed 2026-09-27, at the tag). Decide how learnings persist in the new design.
 - Optional, once, whenever it is of interest: the total cost of the instrumentation with all lists empty, measured against the commit before the `Memory` hook lists. Not per step (decided 2026-09-29).
-- ~~How an experiment gets its hooks into the lists~~ -- done 2026-09-29: `Emulator.attach(experiment)` and `detach()`, by method name, unknown `after_` names refused, logged at INFO; `tests/test_attach.py`.
-- Step 5: the boundary in `Emulator`: breakpoints first, then traps (terms in the design note, section 1). `until` stays a parameter of `run()` for now. Not needed for the first experiment (2026-09-29); do it when an experiment needs to stop at an address.
-- ~~Step 6: the first experiment, the execution-count map~~ -- first run done 2026-09-29, by the user: `scripts/count_lode_runner.py`, attract play, 4,000,000 instructions from the start, PNG and HTML map. Counts opcode, operand and (worked around) immediate-operand fetches.
+- ~~Step 5: the boundary in `Emulator`: breakpoints first, then traps~~ -- done 2026-09-30: `Emulator.add_breakpoint()` puts a breakpoint's `should_break(pc)` into `Emulator.breakpoints`; `run()` asks every breakpoint before the traps and stops the same way `until` does; `break_at(address)` in `stop_conditions.py`; `tests/test_breakpoints.py`. `until` stays a parameter of `run()`.
 - `read_immediate` in `core`: a kind of its own for immediate operands, with its own hook list `after_read_immediate`. `immediate_mode()` only returns the operand's address; the operation (`LDA`, `CMP`, ...) reads the byte with `read_data`. So split each of the 11 operations with immediate mode (`ORA AND EOR ADC LDY LDX LDA CPY CMP CPX SBC`) into reading the byte and working with it, e.g. `LDA(address)` -> `lda_value(read_data(address))`, and let the 11 immediate dispatch entries call `lda_value(read_immediate(...))`. The CPU tests guard each operation. Then `ExecutionCounts` drops its last-opcode workaround. Needed for detecting self-modifying code: patching an immediate operand is the classic trick.
-- HTML execution map: the browser's own tooltips need the mouse to stop on a 6-pixel cell, so they often don't appear. Replace them with a few lines of JavaScript: a fixed line at the top that shows address and counts while the mouse moves.
-- HTML execution map: change the colours; blue, orange and green together don't work.
+- ~~HTML execution map: replace the browser's tooltips~~ -- done 2026-09-30: an info line above the map shows address and counts under the mouse (black cells: address only, the script works it out from the cell's position); the map scrolls in its own box, with sticky row and column labels.
 - `scripts/count_lode_runner.py` has no `make` target. Add one if it's run often.
 - _Needs investigation:_ where the attract play's moves come from. Probably a table the demo code reads instead of the keyboard; `main.nw` may name it. A read hook on the demo code would show which table it reads. The same "script" could drive experiments. The block `main.nw` calls "random init data" (`levels.html`) looks like leftover memory from when the file was saved (loader code calling the ROM and reading the disk, fill patterns, hi-res bytes), not keystrokes.
 - After step 6: how we look at what the hooks collected -- report generators in HTML, queries in Jupyter, or both; which one first. Earlier answers to the same question: the HTML browser in `a2-lode-runner` and the Excel tile lists from Robotron.
@@ -76,4 +74,5 @@ The old instrumentation is gone (`HISTORY.md` 2026-09-27/28); the ideas for the 
 - `CPU.read_word_bug` reads pointers only now, so its name no longer fits.
 - The disassembler's `read_byte`/`read_word` (2026-09-29): an underscore, or not.
 - The indexed modes (`abs,X`, `abs,Y`, `(zp),Y`) don't wrap at `$FFFF` as the 6502 does.
+- `core/emulator.py`: the comment above `WINDOW_POLL_INTERVAL` names only traps and `until` as checked before every instruction; breakpoints are checked there too since 2026-09-30.
 - Flattening the kind methods in `Memory`, so they no longer call `read_byte`/`write_byte`. No priority.

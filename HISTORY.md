@@ -11,6 +11,11 @@
 
 ---
 
+## 2026-09-29/30 (fifth session) -- Breakpoints; a readable HTML map
+
+- Milestone, run by the user: breakpoints, step 5 of the redesign. With them, the three kinds from the design note are all in place: breakpoints and traps at the `Emulator`'s boundary, hooks inside the instruction. `Emulator.add_breakpoint(breakpoint)` puts the object's `should_break(pc)` into `Emulator.breakpoints`, just as `attach()` puts hook methods into the hook lists; the method name is the interface (duck typing). Before each instruction, before the traps, `run()` asks every breakpoint, and stops the same way `until` does if any said `True`. So a breakpoint at a trap's address stops before the trap moves PC away. PC is passed because it is about to change ("pass only what is gone afterwards"). `break_at(address)` lives in `stop_conditions.py`, outside `core`. Not in the first iteration: a hit counter ("stop on the n-th visit"). `attach()` stays reserved for hooks.
+- The HTML execution map: an info line above the map shows address and counts under the mouse, black cells included (the script works out the address from the cell's position, so the cells carry only their counts). The map scrolls in its own box, with sticky row and column labels, so the address grid stays in view. The colours stay as they are; the map does its job.
+
 ## 2026-09-29 (fourth session) -- The first execution map; `Emulator.attach()`
 
 - Milestone, run by the user: the first real output of the new instrumentation. `scripts/count_lode_runner.py` boots Lode Runner headless, runs 4,000,000 instructions from the start (the attract play), counts per address how often it was fetched as an opcode and as an operand, and saves a 256 x 256 map as a PNG (one pixel per address, row = page) and as an HTML table with tooltips. Step 5 (breakpoints at the boundary) was not needed first: the hook lists are public, and `until` already stops the run.
