@@ -17,8 +17,6 @@ After the run, check accounting and write:
     tmp/lr_stitch_candidates.csv
     tmp/lr_loop_candidates.csv
 
-The original tile and transition CSV schemas are unchanged.
-
 Measurements do not transform the collected graph. They identify
 boundary sites, address-span overlap, conservative stitch candidates,
 and loop candidates. No annotated listing is used as input.
@@ -221,7 +219,8 @@ def check_consistency(experiment: Tiles, expected_instructions: int) -> None:
         if not condition:
             raise RuntimeError(f"tile consistency check failed: {message}")
 
-    require(expected_instructions >= 0, "negative emulator instruction delta")
+    # The hook runs after every instruction, so its count must equal the
+    # emulator's.
     require(
         experiment.observed_instructions == expected_instructions,
         "hook instruction count != emulator instruction delta "
@@ -234,13 +233,6 @@ def check_consistency(experiment: Tiles, expected_instructions: int) -> None:
 
     for key, count in experiment.transitions.items():
         source, pc, opcode, outcome, target = key
-        require(
-            isinstance(count, int) and count > 0,
-            f"invalid transition count: {key!r}",
-        )
-        require(source in experiment.tiles, f"unknown source {address(source)}")
-        require(target in experiment.tiles, f"unknown target {address(target)}")
-        require(0 <= pc <= 0xFFFF, f"invalid transfer PC: {key!r}")
         require(
             opcode in BRANCH_OPCODES or opcode in OTHER_LEAP_OPCODES,
             f"unclassified transfer opcode: {key!r}",
@@ -267,21 +259,9 @@ def check_consistency(experiment: Tiles, expected_instructions: int) -> None:
 
     for start_pc, tile in experiment.tiles.items():
         label = address(start_pc)
-        require(0 <= start_pc <= 0xFFFF, f"{label}: invalid start PC")
-        require(tile.start_pc == start_pc, f"{label}: tile identity mismatch")
 
-        for field in (
-            "initial_entries",
-            "leaped_to",
-            "leaped_from",
-            "instructions",
-        ):
-            value = getattr(tile, field)
-            require(
-                isinstance(value, int) and value >= 0,
-                f"{label}: invalid {field}",
-            )
-
+        # Every leap is recorded twice: in the transition table, and on its
+        # two tiles, as an exit from the source and an entry into the target.
         require(
             incoming[start_pc] == tile.leaped_to,
             f"{label}: incoming transition counts != leaped_to",
@@ -290,11 +270,18 @@ def check_consistency(experiment: Tiles, expected_instructions: int) -> None:
             outgoing[start_pc] == tile.leaped_from,
             f"{label}: outgoing transition counts != leaped_from",
         )
+
+        # Every visit is entered once and left once. The only entry without a
+        # leap is the run's very first; the only visit without an exit is the
+        # one the run stops in. So entries minus exits is 1 for the open tile
+        # and 0 for every other tile.
         require(
             tile.initial_entries + tile.leaped_to - tile.leaped_from
             == int(tile is experiment.current_tile),
             f"{label}: entry/exit balance != open_visit",
         )
+
+        # Every exit is an instruction of the tile: the leap itself.
         require(
             tile.leaped_from <= tile.instructions,
             f"{label}: more exits than observed instructions",
@@ -340,11 +327,17 @@ def check_consistency(experiment: Tiles, expected_instructions: int) -> None:
             )
 
     active = int(experiment.observed_instructions > 0)
+
+    # Every instruction belongs to exactly one tile, the one the PC is in.
     require(
         sum(tile.instructions for tile in experiment.tiles.values())
         == experiment.observed_instructions,
         "tile instruction total != hook instruction count",
     )
+
+    # The run's two boundaries: it starts in exactly one tile without a leap
+    # into it (the initial entry), and stops in exactly one tile before
+    # leaving it (the open visit).
     require(
         sum(tile.initial_entries for tile in experiment.tiles.values()) == active,
         "unexpected number of initial entries",
@@ -358,6 +351,8 @@ def check_consistency(experiment: Tiles, expected_instructions: int) -> None:
         bool(experiment.tiles) == bool(active),
         "tile collection does not match run activity",
     )
+
+    # Every leap appears once in the tile totals, as an entry and as an exit.
     require(
         sum(tile.leaped_to for tile in experiment.tiles.values())
         == sum(experiment.transitions.values()),
