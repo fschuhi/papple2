@@ -402,6 +402,44 @@ def check_consistency(experiment: Tiles, expected_instructions: int) -> None:
     print("tile/transition consistency checks passed")
 
 
+def check_stretch_consistency(
+        original_records: list[TransitionRecord],
+        stretches_traffic: dict[tuple[int, int], int],
+        split_transitions: dict[TransitionKey, int],
+) -> None:
+    def require(condition: bool, message: str) -> None:
+        if not condition:
+            raise RuntimeError(f"stretch consistency failed: {message}")
+
+    sorted_stretches = sorted(stretches_traffic.keys())
+    for i in range(len(sorted_stretches) - 1):
+        _, end = sorted_stretches[i]
+        next_start, _ = sorted_stretches[i + 1]
+        require(
+            end <= next_start,
+            f"overlap detected between stretch ending at ${end:04X} and next starting at ${next_start:04X}"
+        )
+
+    original_traversals = sum(count for _, count in original_records)
+    split_traversals = sum(split_transitions.values())
+    require(
+        original_traversals == split_traversals,
+        f"transition traffic altered ({original_traversals} != {split_traversals})"
+    )
+
+    known_stretch_starts = {s for s, _ in stretches_traffic.keys()}
+    for key in split_transitions:
+        require(
+            key.source in known_stretch_starts,
+            f"transition source ${key.source:04X} is not a valid stretch start"
+        )
+        require(
+            key.target in known_stretch_starts,
+            f"transition target ${key.target:04X} is not a valid stretch start"
+        )
+    print("stretch consistency checks passed")
+
+
 def report_findings(experiment: Tiles) -> None:
     """Report what is unusual but not wrong.
 
@@ -607,41 +645,11 @@ def transform_to_stretches(
         new_key = TransitionKey(stretch_start, key.pc, key.opcode, key.outcome, key.target)
         split_transitions[new_key] += count
 
-    # --- CONSISTENCY CHECKS ---
-    sorted_stretches = sorted(stretches_traffic.keys())
-    for i in range(len(sorted_stretches) - 1):
-        _, end = sorted_stretches[i]
-        next_start, _ = sorted_stretches[i + 1]
-        if end > next_start:
-            raise RuntimeError(
-                f"stretch consistency failed: overlap detected between "
-                f"stretch ending at ${end:04X} and next starting at ${next_start:04X}"
-            )
-
-    original_traversals = sum(count for _, count in records)
-    split_traversals = sum(split_transitions.values())
-    if original_traversals != split_traversals:
-        raise RuntimeError(
-            f"stretch consistency failed: transition traffic altered "
-            f"({original_traversals} != {split_traversals})"
-        )
-
-    known_stretch_starts = {s for s, _ in stretches_traffic.keys()}
-    for key in split_transitions:
-        if key.source not in known_stretch_starts:
-            raise RuntimeError(
-                f"stretch consistency failed: transition source ${key.source:04X} "
-                "is not a valid stretch start"
-            )
-        if key.target not in known_stretch_starts:
-            raise RuntimeError(
-                f"stretch consistency failed: transition target ${key.target:04X} "
-                "is not a valid stretch start"
-            )
-    # --------------------------
+    # Run the consistency checks
+    check_stretch_consistency(records, stretches_traffic, split_transitions)
 
     stretch_rows = []
-    for (s, e) in sorted_stretches:
+    for (s, e) in sorted(stretches_traffic.keys()):
         stretch_rows.append(
             {
                 "stretch_start_PC": address(s),
