@@ -11,8 +11,8 @@
 **Where we are:** `papple2` is a system to disassemble and understand Apple II games by running them, with Lode Runner as the worked example (`DIRECTION.md`). The instrumentation is being rebuilt from scratch, following `docs/instrumentation-design.md`. The `scripts/lr_tiles.py` experiment now perfectly maps dynamic execution traces into strictly disjoint Basic Blocks (stretches) through a mathematically verified post-run transformer, fully resolving overlapping control flow with zero hot-loop overhead. Four boots run (`boot-basic`, `boot-robotron`, `boot-lode-runner`, `boot-bandits`), and the two disk stand-ins act as traps.
 
 **What's next:**
-- `read_immediate` in `core` (`TODO.md` section 7), the base for detecting self-modifying code.
+- `read_immediate` in `core` (`TODO.md` section "Redesign (from 2026-09-28)"), the base for detecting self-modifying code.
 - Refactor the `instrumentation-*.md` files.
 - Discuss and expand `docs/reveng-catalogue.md`. Add AFK research on Ghidra and SourceGen.
 - Generate more candidates for further experiments, to discuss: names from `main.nw` in the map (which named routines ran), the instruction count at which each address first ran (the game's phases), differential maps (with and without a dig), self-modifying code detection.
-- Alongside: the small code steps in `TODO.md` section 8.
+- Alongside: the small code steps in `TODO.md`.
