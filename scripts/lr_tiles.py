@@ -595,17 +595,6 @@ def transform_to_stretches(
         for s, e in zip(boundaries[:-1], boundaries[1:]):
             stretches_traffic[(s, e)] += traffic
 
-    stretch_rows = []
-    for (s, e), traffic in sorted(stretches_traffic.items()):
-        stretch_rows.append(
-            {
-                "stretch_start_PC": address(s),
-                "stretch_end_PC": address(e),
-                "length_bytes": e - s,
-                "executions": traffic,
-            }
-        )
-
     split_transitions = defaultdict(int)
     for key, count in records:
         # The stretch containing the leap instruction begins at the
@@ -617,6 +606,50 @@ def transform_to_stretches(
         stretch_start = max(valid_points)
         new_key = TransitionKey(stretch_start, key.pc, key.opcode, key.outcome, key.target)
         split_transitions[new_key] += count
+
+    # --- CONSISTENCY CHECKS ---
+    sorted_stretches = sorted(stretches_traffic.keys())
+    for i in range(len(sorted_stretches) - 1):
+        _, end = sorted_stretches[i]
+        next_start, _ = sorted_stretches[i + 1]
+        if end > next_start:
+            raise RuntimeError(
+                f"stretch consistency failed: overlap detected between "
+                f"stretch ending at ${end:04X} and next starting at ${next_start:04X}"
+            )
+
+    original_traversals = sum(count for _, count in records)
+    split_traversals = sum(split_transitions.values())
+    if original_traversals != split_traversals:
+        raise RuntimeError(
+            f"stretch consistency failed: transition traffic altered "
+            f"({original_traversals} != {split_traversals})"
+        )
+
+    known_stretch_starts = {s for s, _ in stretches_traffic.keys()}
+    for key in split_transitions:
+        if key.source not in known_stretch_starts:
+            raise RuntimeError(
+                f"stretch consistency failed: transition source ${key.source:04X} "
+                "is not a valid stretch start"
+            )
+        if key.target not in known_stretch_starts:
+            raise RuntimeError(
+                f"stretch consistency failed: transition target ${key.target:04X} "
+                "is not a valid stretch start"
+            )
+    # --------------------------
+
+    stretch_rows = []
+    for (s, e) in sorted_stretches:
+        stretch_rows.append(
+            {
+                "stretch_start_PC": address(s),
+                "stretch_end_PC": address(e),
+                "length_bytes": e - s,
+                "executions": stretches_traffic[(s, e)],
+            }
+        )
 
     transition_rows = []
     for key, count in sorted(split_transitions.items()):
