@@ -52,6 +52,7 @@ scripts/boot_basic.py
 scripts/boot_lode_runner.py
 scripts/boot_robotron.py
 scripts/count_lode_runner.py
+scripts/lr_tiles.py
 scripts/lr_trace_pc.py
 scripts/speed_test.py
 
