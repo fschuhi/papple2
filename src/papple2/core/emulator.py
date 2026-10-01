@@ -47,6 +47,7 @@ MEMORY_HOOKS = (
     "after_read_operand",
     "after_read_pointer",
     "after_read_data",
+    "after_read_immediate",
     "after_read_stack",
     "after_read_vector",
     "after_write_data",

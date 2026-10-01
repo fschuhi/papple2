@@ -52,7 +52,7 @@ def test_load_image_refuses_an_image_that_does_not_fit(tmp_path: Path) -> None:
 # CPU accesses a byte (docs/instrumentation-design.md, section 3). Hook lists
 # per kind will build on this.
 
-READ_KINDS = ["read_opcode", "read_operand", "read_pointer", "read_data", "read_stack", "read_vector"]
+READ_KINDS = ["read_opcode", "read_operand", "read_pointer", "read_data", "read_immediate", "read_stack", "read_vector"]
 WRITE_KINDS = ["write_data", "write_stack"]
 
 

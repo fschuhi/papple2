@@ -1,7 +1,7 @@
 """The hook lists in Memory: one list per kind of access, called after the
 access, in list order. See docs/instrumentation-design.md, section 3.
 
-One test per method, written out on purpose: the eight methods are near
+One test per method, written out on purpose: the nine methods are near
 copies of each other, and each test checks that its method calls its own
 list with the right values."""
 
@@ -48,6 +48,16 @@ def test_read_data_calls_its_hooks() -> None:
     memory.after_read_data.append(lambda address, value: seen.append((address, value)))
 
     assert memory.read_data(0x0300) == 0x42
+    assert seen == [(0x0300, 0x42)]
+
+
+def test_read_immediate_calls_its_hooks() -> None:
+    memory = Memory()
+    memory.load_test_data(0x0300, [0x42])
+    seen = []
+    memory.after_read_immediate.append(lambda address, value: seen.append((address, value)))
+
+    assert memory.read_immediate(0x0300) == 0x42
     assert seen == [(0x0300, 0x42)]
 
 

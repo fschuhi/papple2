@@ -24,6 +24,7 @@ class Memory:
         self.after_read_operand: list[Callable[[int, int], None]] = []
         self.after_read_pointer: list[Callable[[int, int], None]] = []
         self.after_read_data: list[Callable[[int, int], None]] = []
+        self.after_read_immediate: list[Callable[[int, int], None]] = []
         self.after_read_stack: list[Callable[[int, int], None]] = []
         self.after_read_vector: list[Callable[[int, int], None]] = []
         self.after_write_data: list[Callable[[int, int, int], None]] = []
@@ -122,6 +123,16 @@ class Memory:
         value = self.read_byte(address)
         if self.after_read_data:
             for hook in self.after_read_data:
+                hook(address, value)
+        return value
+
+    # the operand of an immediate instruction (the $42 in LDA #$42): the
+    # operation reads it where it would otherwise read data, but the byte
+    # is part of the instruction, so it gets a kind of its own
+    def read_immediate(self, address: int) -> int:
+        value = self.read_byte(address)
+        if self.after_read_immediate:
+            for hook in self.after_read_immediate:
                 hook(address, value)
         return value
 
