@@ -2,7 +2,7 @@
 
 (Note: "I" in the following paragraphs refer to the user, "you" to the AI model.)
 
-**Status:** working draft from the collection-mode session of 2026-09-23. Extended 2026-09-25 (oracle principle, lessons from Robotron). Nothing here is decided unless it sits under "Decided". Where this content finally lands (`GOALS.md`, `README.md`, `TODO.md`, or this document for good) is an open question at the end.
+**Status:** working draft from the collection-mode session of 2026-09-23. Extended 2026-09-25 (oracle principle, lessons from Robotron). Updated 2026-10-01: dynamic analysis with static hole-filling, the oracle as grader only, the workbench; pruned. Nothing here is decided unless it sits under "Decided". Where this content finally lands (`GOALS.md`, `README.md`, `TODO.md`, or this document for good) is an open question at the end.
 
 ---
 
@@ -10,10 +10,12 @@
 
 `papple2` becomes a system to disassemble and understand Apple II and II+ games (48k, hi-res, no aux or language card memory) by *running* them. It is not general disassembly software but a kit of fairly generic parts, put together per game. Its place in the landscape is the corner that is still mostly empty: dynamic analysis whose results accumulate into documentation, instead of evaporating when the debugger session ends. The central problem is **knowledge accumulation**, and the form it takes is **storytelling**: the path from first suspicion to understood routine should be recorded as it happens, the way Quinn Dunki's Choplifter article reads -- a sequence of experiments, each answering one question. `papple2` complements static and agent-driven approaches rather than competing with them.
 
+**Dynamic first, static fills the holes** (2026-10-01). `papple2` analyses what actually ran. Andy McFadden argued for static analysis: without seeing what is left out, the paths not taken, it is hard to build a mental model of what code does. The answer here is a hybrid: dynamic analysis finds the structure (tiles, transitions, loops, calls), and static disassembly fills the holes inside that structure, marked "not run", because a hole may be data rather than code. The bet: the 6502 and the Apple II lend themselves to dynamic analysis, and Lode Runner's attract mode exercises nearly everything the game does (sprites, guard AI, player movement) within about 4 million instructions. Every dynamic result is a hypothesis that later parts of the game may revise; the "not run" marks show where coverage is thin. If static analysis ever gave us everything the dynamic one does, we would switch -- which is also why SourceGen is not the path for now.
+
 ## 2. Worked example and targets
 
 - **Lode Runner** is the worked example. Xekri's `main.nw` tangles to `dasm` source that assembles byte-identically to the original, so it gives us both a runnable binary and an answer key (every routine, label, and data region named). Every tool can be graded against it.
-- **Oracle principle:** develop the workbench *as if* we were disassembling Lode Runner, with Xekri's code as the oracle to develop and debug our own toolchain. Which structures can our tools determine that we already know about from `a2-lode-runner`? The measure of success: an analysis run plus a few hours of manual tinkering with the binary yields a very good first draft of `main.nw`. In a way, this reverse engineers Xekri's documentation process. `papple2` is one point in a triangle with `a2-lode-runner` and, pulling weight in the short term, `a2-hires-lab`.
+- **Oracle principle:** develop the workbench *as if* we were disassembling Lode Runner, with Xekri's code as the oracle to develop and debug our own toolchain. Which structures can our tools determine that we already know about from `a2-lode-runner`? The measure of success: an analysis run plus a few hours of manual tinkering with the binary yields a very good first draft of `main.nw`. In a way, this reverse engineers Xekri's documentation process. The oracle only grades; it never feeds the tools. Labels and the listing from `main.nw` are for checking results and for debugging, not inputs to any analysis. `papple2` is one point in a triangle with `a2-lode-runner` and, pulling weight in the short term, `a2-hires-lab`.
 - **Later targets:** games without an answer key, e.g. Bandits (the dream project) or Choplifter. Both fit the 48k II/II+ focus.
 - **Robotron** stays a test case (`make boot-robotron`) and one of the three games in `README.md`. `probotron` is hibernated and stays private.
 
@@ -24,7 +26,7 @@
 - No Excel workbench and no PyXLL bridge going forward. One-way `.xlsx` reports are a dead end without a back channel.
 - MAME is not a base for `papple2` (large C++ codebase, Lua instead of Python, breaks the "emulator and tools in one language" idea). It may still serve as a reference for what real hardware does.
 - For byte-perfect reassembly, use `dasm` (the syntax of `main.nw`). `papple2`'s own assembler stays a test tool.
-- Reports are static HTML pages: run, break, inspect, generate specific reports, show them alongside other named runs, expand and collapse parts with JavaScript.
+- Maps and reports are static HTML pages, opened from the workbench.
 
 ## 4. Landscape (prior art)
 
@@ -59,7 +61,7 @@ Nothing here is prioritized yet. Established terms in parentheses.
 
 **Interpret**
 - Trace a hi-res byte back to its sources (data provenance via shadow state; see section 7).
-- Semi-automated hierarchical loop detection (natural loops, back edges).
+- Structure detection, kept modest: dominators, natural loops, and region recovery (structural analysis) over the tiles. Tiles stay as recorded; a stretch is a container of tiles that presents tile-like features to the outside (entry, exits, a span) and knows its loops, calls and holes inside.
 - Lo/hi table detection and table size reasoning (split address tables).
 - Infer table semantics from the Apple II memory layout (e.g. hi-res row base address tables).
 - Hypotheses about the game loop.
@@ -69,8 +71,10 @@ Nothing here is prioritized yet. Established terms in parentheses.
 - Findings attach to lasting artefacts: noweb chunks, basic blocks, labels, runs.
 - Snippets held lightly, so knowledge coagulates around them (stubs, provisional labels, hypotheses).
 - Generate noweb Markdown for tangling and weaving.
+- Think and annotate in chunks from the first target on (`LOAD_LEVEL`): living documentation, browsable with `a2-lode-runner`'s tools.
 
 **Interact**
+- A workbench in IPython: short commands on the recorded run, a session file under git, maps and graphs opened directly. Details in `docs/workbench-ideas.md`.
 - Interactive monitor mode (like AppleWin's debugger): break, inspect named zero page entries, ask which tile or stretch we are in, where a pixel came from; run Python at a breakpoint.
 - Complex programmable breakpoints.
 - Experiments while running, in Dunki's style: stub a routine with `RTS`, change memory, redirect a pointer, break and step out to find the main loop.
@@ -94,7 +98,7 @@ The `papple2` terms name the old instrumentation, removed 2026-09-27 (at the tag
 | `papple2` term | Established term | Match |
 |---|---|---|
 | tile | basic block | close |
-| stretch | trace; extended basic block / superblock; function chunk (IDA); translation block chaining (QEMU) | under review -- a container for tiles; may not survive, see section 9 |
+| stretch | container of tiles with entry and exits; region / abstract node (structural analysis); trace; extended basic block / superblock; function chunk (IDA); translation block chaining (QEMU) | related -- see section 1 and section 5, Interpret |
 | call tree | call graph; control-flow graph at block level | close |
 | collect tiles while executing | dynamic CFG recovery; code coverage | close |
 | heatmap of loads/saves/executions | Code/Data Logger; memory access heatmap | close |
@@ -128,22 +132,18 @@ Could-extension: run over a whole frame, every byte that ever flows to the scree
 
 ## 9. Open questions
 
-- **Stretches:** the code is gone (2026-09-27); the question continues in `docs/instrumentation-ideas.md`, section 15.
-- **Monitor form:** a web monitor in microM8's style (local web server, HTML pages, buttons), or Jupyter notebooks (cells to run, break, inspect; Markdown cells as lab journal; rich HTML output inline)? Or both: notebook as the working place, exported HTML as reports. Concerns: hidden state when cells run out of order (the Mathematica experience), JSON files in git (`jupytext`), a running emulator blocks its cell. marimo, a reactive notebook stored as plain `.py`, answers the first two -- but it tracks which cell defines a variable, not which cell changes an object like the emulator. Primer planned, see `TODO.md`.
+- **Stretches:** containers of tiles (2026-10-01); see section 5, Interpret, and the glossary. The older question is in `docs/instrumentation-ideas.md`, section 15.
+- **Monitor form:** settled for now (2026-10-01): an IPython workbench, see `docs/workbench-ideas.md`; a notebook can come later for inline pictures.
 
 - Where does this content land: `GOALS.md` (strategy), `README.md` (vision, glossary), `TODO.md` (startable items), or a document of its own?
 - Do run reports live next to `a2-lode-runner`'s HTML research browser, or in their own site?
-- ~~Levels: the game loads them through its own disk routine.~~ -- done: a trap at the game's disk routine serves reads from the disk image (2026-09-26), and all 150 levels are extracted (https://fschuhi.github.io/a2-lode-runner/levels.html).
 - Three automated tests in `make test` load `data/bin/ROBOTRON.BIN` by hard-coded path: now an item in `TODO.md` section 2 (Robotron leftovers).
 
 ## 10. Candidate next steps (unordered)
 
-- ~~Boot Lode Runner in `papple2`~~ -- done 2026-09-23, headless, demo mode on level 1; needed the stack wrap and decimal mode fixes in `cpu.py`. Real play (levels from disk) done 2026-09-26.
-- Interactive monitor mode.
+- Interactive monitor mode for a stopped machine: an Apple II-style monitor like AppleWin's, or a socket the event loop listens on.
 - Provenance prototype for the question in section 7.
 - Glossary into the documentation. Then compare each existing tool with its closest established counterpart and borrow what has proven itself (features, names, file formats) -- e.g. the filter conditions of trace loggers, for the redesigned instrumentation.
-- ~~Robotron de-emphasis in `README.md` and the `Makefile` (`make run`), plus the test decision above.~~ -- done: `make run` became `make boot-robotron` earlier, `README.md` was rewritten 2026-09-28 (Robotron as one of three games), and the test decision is in `TODO.md` section 2.
-- ~~Type hints sweep: postponed, but gained weight now that `make patch` makes many-file changes cheap.~~ -- done 2026-09-24.
 
 ## 11. Lessons from Robotron (2019)
 
@@ -173,9 +173,9 @@ The Robotron work is documented in the 6502.org thread "reverse engineering Robo
 **Ideas this led to** (2026-09-25, collected, not yet discussed):
 - Structural analysis and execution history go together in my head. Maybe that is the wrong approach, maybe not ("decoupled control flow graphs"). You suggested: the control-flow graph is one static map of the program, each execution path one walk across it; keep both, linked.
 - A folding editor instead of graphs: linear, text-block based, very fast keyboard navigation. My brain needs to become a supercharged 6502 execution system, in a many-worlds setting.
-- Relational trace logging: we need a database. Browsing experiments comes first, cross-experiment correlation later. Existing dynamic analysis tools may show how.
+- Relational trace logging: we need a database. For now the CSVs and the objects built from them are the database (2026-10-01); real databases later. Browsing experiments comes first, cross-experiment correlation later. Existing dynamic analysis tools may show how.
 - Stack-based subroutine identification as a quick win, building on what we have: pair each `RTS` with the `JSR` whose return address it pops; mismatches are candidates for Chromatix's classes 3 and 4. Open: tail calls, jump tables.
 - Data flow and taint analysis over one or more execution paths, presented in an Apple II specific memory overview. Brushing as the visualisation paradigm (selecting something in one view highlights it in all others).
-- Workbench paradigm: mark something in the noweb document (Notepad++, autosave), press a key picked up by Karabiner-Elements; the workbench determines the context by comparing the current file with the passed snippet and offers what to do. It can also generate snippets to paste into the document. Documentation and experimentation are only loosely coupled at first.
+- Workbench paradigm (the deeper point, 2026-10-01: managing the noweb source is a level of reverse engineering of its own -- see section 5, Record and tell): mark something in the noweb document (Notepad++, autosave), press a key picked up by Karabiner-Elements; the workbench determines the context by comparing the current file with the passed snippet and offers what to do. It can also generate snippets to paste into the document. Documentation and experimentation are only loosely coupled at first.
 - Overviews like the "genome sequence" of Lorenz Wiest's Star Raiders disassembly (https://github.com/lwiest/StarRaiders).
 - Reverse engineering as an artistic endeavour: mastery and beauty.
