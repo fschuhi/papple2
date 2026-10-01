@@ -14,10 +14,22 @@
 
 ## Experiments 
 
-- ~~Tile ideas (2026-09-30): stretches on top of tiles, with their own leap_from/target_stretch; tiles stay unchanged underneath. Alternative: basic blocks by resolving overlaps into further tiles, keeping the glide counts. A 64 KB map of tile IDs, colored at each leap from the tile's start to its exit. Labels, then `disassembler.py`.~~ *(Done 2026-09-30: Implemented via a post-run mathematical transformer that splits overlapping tiles into strictly disjoint stretches/Basic Blocks, conserving execution traffic perfectly without slowing the hot loop.)*
-- ~~`lr_tiles.py`: a `NamedTuple` for `TransitionKey` (fields `source`, `leap_pc`, `opcode`, `outcome`, `target`) instead of `key[0]`...`key[4]`.~~ *(Done 2026-09-30: Converted on the cold path to maintain the 4.77s hot-loop speed).*
-- ~~`lr_tiles.py`: decide what happens to the graph measurements (stitch and loop candidates) and the INTERPRETATION block -- first understand what GPT was after.~~ *(Done 2026-09-30: Graph heuristics tossed entirely; replaced with strict dynamic basic block isolation and verification.)*
-- Map the generated basic blocks in `lr_split_tiles.csv` to XekriRedmane's `main.nw` to identify which routines execute during the Lode Runner attract play.
+- The instruction count at which each address first ran: the game's phases.
+- Differential maps: a run with and without an action (e.g. a dig), showing only the difference.
+
+## Workbench (from 2026-10-01)
+
+See `docs/workbench-ideas.md`.
+
+- The first slice: a workbench module for IPython that loads `lr_split_tiles.csv` and `lr_split_transitions.csv`; `dis(start, end)` through `disassembler.py`; a session file under git with `name()` and `comment()`; `show()` to open a map in the browser or image viewer.
+- `loops(entry)`: build the graph from the two CSVs, with the call fall-through edges added (a `JSR` to its return point), then dominators and natural loops. Graded on `LOAD_LEVEL` (`$6238`) against the oracle: `.loop1`, `.loop2`, `.row_loop` and `.col_loop`.
+- `disassembler.py` in `dasm` listing style, with labels and comments.
+- An experiment that tags the tiles which write to HGR (`$2000`-`$5FFF`), from an `after_write_data` hook.
+
+## Emulator front end
+
+- HGR1/HGR2 switchable in the `pygame` window. The level is probably built sprite by sprite on HGR2.
+- A monitor for a stopped machine, instead of keys as commands: an Apple II-style monitor like AppleWin's, or a socket the event loop listens on.
 
 ## Type hints follow-ups
 
@@ -30,11 +42,12 @@
 See `DIRECTION.md` for the context of each item.
 
 - _Needs investigation:_ is there an Apple II tool that saves per-byte code/data marks to a file (like FCEUX's Code/Data Logger), or tracks data provenance? microM8's heat map comes close.
-- Jupyter primer, for a conscious decision on the monitor: Joel Grus's talk "I Don't Like Notebooks" (JupyterCon 2018), marimo's "why marimo", then a small hands-on notebook with `papple2` booting Lode Runner.
 - Robotron leftovers in `papple2` (`make boot-robotron` and its script stay, as decided 2026-09-27): the three tests in `test_emulator_silent.py` that load `ROBOTRON.BIN` -- they could use small assembled programs instead, like the trap tests. The labels, the checkpoint classes, the `$51b6` exemption and the tiles pointer went with the pruning (2026-09-28).
 - Research document with glossary (in progress, away from the keyboard): established reverse-engineering concepts, and what the tools for 6502 platforms (NES, C64, Apple II) offer to understand a game. Basis for renaming `papple2`'s concepts, or at least putting them into their proper context.
 
 ## Parked decisions
+
+- No speed sweep for `lr_count.py` (2026-10-01): its hot path is three one-line hooks, and the remaining cost is the call from `Memory` into each hook, which sits in `core`.
 
 - The window's hi-res colours ignore the NTSC neighbour rules (a pixel's colour depends on its neighbours), so they can look wrong. `a2-hires-lab` has worked out the rules; use them if accurate colour ever matters.
 - `debug/assembler.py` calls `sys.exit(1)` on an error in the source it assembles. Fine for scripts and tests (`pytest` fails just that test), but it would end an interactive session (monitor, notebook) on a typo. Decide with the monitor: keep it, or raise an `AssemblerError` (stops just as fast, but can be caught -- and swallowed).
@@ -56,17 +69,16 @@ See `DIRECTION.md` for the context of each item.
 
 Measured with `cProfile` on the headless Lode Runner run (`HISTORY.md` 2026-09-23, at the tag `pre-redesign`). Since the pruning, windowed runs reach about 3.5 times real Apple II speed unthrottled and can be throttled to it (`HISTORY.md` 2026-09-27/28), so this isn't needed today.
 
-- `is_executing()` runs about three times per instruction and asks the `pysm` state machine each time (about 8% headless, measured 2026-09-23). Since 2026-09-28, `executing` mirrors the state from construction on: Running's entry and exit actions set it, `initialize(fire_events_on_init=True)` runs the entry action, and `test_executing_follows_the_state_from_the_start` pins it down. Remaining: `return self.executing` in `is_executing()` -- decide together with the `pysm` discussion (section 7).
+- `is_executing()` runs about three times per instruction and asks the `pysm` state machine each time (about 8% headless, measured 2026-09-23). Since 2026-09-28, `executing` mirrors the state from construction on: Running's entry and exit actions set it, `initialize(fire_events_on_init=True)` runs the entry action, and `test_executing_follows_the_state_from_the_start` pins it down. Remaining: `return self.executing` in `is_executing()` -- decide together with the `pysm` discussion.
 
 ## Redesign (from 2026-09-28)
 
 The old instrumentation is gone (`HISTORY.md` 2026-09-27/28); the ideas for the new one are in `docs/instrumentation-ideas.md`.
 
-- Keeping what we've learned about an address across experiments: the old tile lists in Excel showed notes from `Annotations` next to each tile (removed 2026-09-27, at the tag). Decide how learnings persist in the new design.
 - Optional, once, whenever it is of interest: the total cost of the instrumentation with all lists empty, measured against the commit before the `Memory` hook lists. Not per step (decided 2026-09-29).
 - ~~`read_immediate` in `core`: a kind of its own for immediate operands, with its own hook list `after_read_immediate`. `immediate_mode()` only returns the operand's address; the operation (`LDA`, `CMP`, ...) reads the byte with `read_data`. So split each of the 11 operations with immediate mode (`ORA AND EOR ADC LDY LDX LDA CPY CMP CPX SBC`) into reading the byte and working with it, e.g. `LDA(address)` -> `lda_value(read_data(address))`, and let the 11 immediate dispatch entries call `lda_value(read_immediate(...))`. The CPU tests guard each operation. Then `ExecutionCounts` drops its last-opcode workaround. Needed for detecting self-modifying code: patching an immediate operand is the classic trick.~~ *(Done 2026-10-01: with an `immediate` flag in `CPU` instead of split operations -- same cost, more readable. `lr_count.py` attaches `after_read_immediate`; its workaround is gone, and the map is unchanged.)*
 - _Needs investigation:_ where the attract play's moves come from. Probably a table the demo code reads instead of the keyboard; `main.nw` may name it. A read hook on the demo code would show which table it reads. The same "script" could drive experiments. The block `main.nw` calls "random init data" (`levels.html`) looks like leftover memory from when the file was saved (loader code calling the ROM and reading the disk, fill patterns, hi-res bytes), not keystrokes.
-- After step 6: how we look at what the hooks collected -- report generators in HTML, queries in Jupyter, or both; which one first. Earlier answers to the same question: the HTML browser in `a2-lode-runner` and the Excel tile lists from Robotron.
+- Benched (2026-10-01): a detector for self-modifying code (writes into bytes that ran as opcode, operand or immediate). `read_immediate` is in place for it; it comes back with the self-modifying parts of Lode Runner, or with Bandits.
 
 ## Small code steps
 
