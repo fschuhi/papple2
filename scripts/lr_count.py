@@ -52,11 +52,6 @@ OPERAND_COLOUR = (255, 160, 40)
 IMMEDIATE_COLOUR = (90, 200, 90)
 BOTH_COLOUR = (255, 60, 60)
 
-# The CPU reads an immediate operand (the $0B in LDA #$0B) with read_data,
-# like real data, so it never reaches after_read_operand. These are the 11
-# opcodes with immediate mode (ORA AND EOR ADC LDY LDX LDA CPY CMP CPX SBC).
-IMMEDIATE_OPCODES = frozenset({0x09, 0x29, 0x49, 0x69, 0xA0, 0xA2, 0xA9, 0xC0, 0xC9, 0xE0, 0xE9})
-
 
 class ExecutionCounts:
     """Per address: how often it was fetched as an opcode, as an operand,
@@ -64,32 +59,23 @@ class ExecutionCounts:
 
     The methods are named after Memory's hook lists, so that
     Emulator.attach() puts each one into its list. A read hook gets
-    (address, value).
-
-    Immediate operands arrive as data reads. after_read_opcode remembers the
-    last opcode and its address; after_read_data counts a data read as an
-    immediate operand when that opcode has immediate mode and the read is the
-    byte right after it. All other data reads are ignored here.
+    (address, value). Immediate operands have a list of their own,
+    after_read_immediate.
     """
 
     def __init__(self) -> None:
         self.opcode: list[int] = [0] * MEMORY_SIZE
         self.operand: list[int] = [0] * MEMORY_SIZE
         self.immediate: list[int] = [0] * MEMORY_SIZE
-        self.last_opcode_address = -1
-        self.last_opcode = 0
 
     def after_read_opcode(self, address: int, value: int) -> None:
         self.opcode[address] += 1
-        self.last_opcode_address = address
-        self.last_opcode = value
 
     def after_read_operand(self, address: int, value: int) -> None:
         self.operand[address] += 1
 
-    def after_read_data(self, address: int, value: int) -> None:
-        if self.last_opcode in IMMEDIATE_OPCODES and address == (self.last_opcode_address + 1) & 0xFFFF:
-            self.immediate[address] += 1
+    def after_read_immediate(self, address: int, value: int) -> None:
+        self.immediate[address] += 1
 
     def colour(self, address: int) -> tuple[int, int, int]:
         kinds = [
