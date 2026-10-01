@@ -51,6 +51,7 @@ class CPU:
         # flags for last op
         self.branched = False
         self.operand_length = 0
+        self.immediate = False
 
         self.cycles = 0
         self.instruction_count = 0
@@ -81,6 +82,7 @@ class CPU:
         self.SP = 0xFF
         self.branched = False
         self.operand_length = 0
+        self.immediate = False
         self.cycles = 0
         self.instruction_count = 0
         self.last_opcode = None
@@ -274,6 +276,7 @@ class CPU:
         # reset flags from last op
         self.branched = False
         self.operand_length = 0
+        self.immediate = False
 
         # save pc for this op
         self.last_PC = self.PC
@@ -311,6 +314,15 @@ class CPU:
 
     def read_pc_word( self ) -> int:
         return self.memory.read_operand_word( self.get_and_inc_pc( 2 ) )
+
+    def read_data_or_immediate( self, operand_address: int ) -> int:
+        # The 11 operations with an immediate mode (ORA AND EOR ADC LDY LDX
+        # LDA CPY CMP CPX SBC) read their byte through here, so a hook sees
+        # the $42 in LDA #$42 as an immediate operand and LDA $0300 as data.
+        # immediate_mode() sets the flag; do_next_step() resets it.
+        if self.immediate:
+            return self.memory.read_immediate( operand_address )
+        return self.memory.read_data( operand_address )
 
     ####
 
@@ -352,6 +364,8 @@ class CPU:
 
     def immediate_mode( self ) -> int:
         self.operand_length = 1
+        # the operation reads this byte as an immediate operand, not as data
+        self.immediate = True
         return self.get_and_inc_pc( )
 
     def absolute_mode( self ) -> int:
@@ -426,13 +440,13 @@ class CPU:
     # LOAD / STORE
 
     def LDA( self, operand_address: int ) -> None:
-        self.A = self.update_nz( self.memory.read_data( operand_address ) )
+        self.A = self.update_nz( self.read_data_or_immediate( operand_address ) )
 
     def LDX( self, operand_address: int ) -> None:
-        self.X = self.update_nz( self.memory.read_data( operand_address ) )
+        self.X = self.update_nz( self.read_data_or_immediate( operand_address ) )
 
     def LDY( self, operand_address: int ) -> None:
-        self.Y = self.update_nz( self.memory.read_data( operand_address ) )
+        self.Y = self.update_nz( self.read_data_or_immediate( operand_address ) )
 
     def STA( self, operand_address: int ) -> None:
         self.memory.write_data( operand_address, self.A )
@@ -628,24 +642,24 @@ class CPU:
     # LOGIC
 
     def AND( self, operand_address: int ) -> None:
-        self.A = self.update_nz( self.A & self.memory.read_data( operand_address ) )
+        self.A = self.update_nz( self.A & self.read_data_or_immediate( operand_address ) )
 
     def ORA( self, operand_address: int ) -> None:
-        self.A = self.update_nz( self.A | self.memory.read_data( operand_address ) )
+        self.A = self.update_nz( self.A | self.read_data_or_immediate( operand_address ) )
 
     def EOR( self, operand_address: int ) -> None:
-        self.A = self.update_nz( self.A ^ self.memory.read_data( operand_address ) )
+        self.A = self.update_nz( self.A ^ self.read_data_or_immediate( operand_address ) )
 
     # ARITHMETIC
 
     def ADC( self, operand_address: int ) -> None:
         if self.decimal_mode_flag:
-            self.A = self.update_nz( self.decimal_add( self.memory.read_data( operand_address ) ) )
+            self.A = self.update_nz( self.decimal_add( self.read_data_or_immediate( operand_address ) ) )
             return
 
         a2 = self.A
         a1 = signed( a2 )
-        m2 = self.memory.read_data( operand_address )
+        m2 = self.read_data_or_immediate( operand_address )
         m1 = signed( m2 )
 
         # twos complement addition
@@ -661,12 +675,12 @@ class CPU:
 
     def SBC( self, operand_address: int ) -> None:
         if self.decimal_mode_flag:
-            self.A = self.update_nz( self.decimal_subtract( self.memory.read_data( operand_address ) ) )
+            self.A = self.update_nz( self.decimal_subtract( self.read_data_or_immediate( operand_address ) ) )
             return
 
         a2 = self.A
         a1 = signed( a2 )
-        m2 = self.memory.read_data( operand_address )
+        m2 = self.read_data_or_immediate( operand_address )
         m1 = signed( m2 )
 
         # twos complement subtraction
@@ -721,17 +735,17 @@ class CPU:
     # COMPARISON
 
     def CMP( self, operand_address: int ) -> None:
-        result = self.A - self.memory.read_data( operand_address )
+        result = self.A - self.read_data_or_immediate( operand_address )
         self.carry_flag = [0, 1][(result >= 0)]
         self.update_nz( result )
 
     def CPX( self, operand_address: int ) -> None:
-        result = self.X - self.memory.read_data( operand_address )
+        result = self.X - self.read_data_or_immediate( operand_address )
         self.carry_flag = [0, 1][(result >= 0)]
         self.update_nz( result )
 
     def CPY( self, operand_address: int ) -> None:
-        result = self.Y - self.memory.read_data( operand_address )
+        result = self.Y - self.read_data_or_immediate( operand_address )
         self.carry_flag = [0, 1][(result >= 0)]
         self.update_nz( result )
 
