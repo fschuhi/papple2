@@ -14,7 +14,7 @@
 ## 2026-10-01 -- `read_immediate`: immediate operands are a kind of their own
 
 - `Memory` has a ninth kind of access, `read_immediate`, with its list `after_read_immediate`; `Emulator.attach()` knows the name. The CPU reports the `$42` in `LDA #$42` there instead of through `read_data`.
-- How: a flag, not split operations. `immediate_mode()` sets `CPU.immediate`, `do_next_step()` resets it with `branched` and `operand_length`, and the 11 operations with immediate mode read their byte through `read_data_or_immediate()`. `TODO.md` had planned to split each operation into reading the byte and using it (`lda_value(...)`); that would have doubled the 11 operations for the same cost (one extra method call either way). The user found the flag more readable, and on reflection Claude agreed: it follows the flags `cpu.py` already resets per instruction, and none of the 11 operations reads its operand twice.
+- How: a flag, not split operations. `immediate_mode()` sets `CPU.immediate`, `do_next_step()` resets it with `branched` and `operand_length`, and the 11 operations with immediate mode read their byte through `read_data_or_immediate()`. `TODO.md` had planned to split each operation into reading the byte and using it (`lda_value(...)`); that would have doubled the 11 operations for the same cost (one extra method call either way). The design follows the flags `cpu.py` already resets per instruction, and none of the 11 operations reads its operand twice.
 - `scripts/lr_count.py` attaches `after_read_immediate`; the last-opcode workaround and `IMMEDIATE_OPCODES` are gone. Run by the user: 2316 addresses fetched as opcode and 2083 as operand, the same as on 2026-09-29, and 347 read as immediate (the first recorded figure); 4.18 s for the run, not compared with earlier sittings.
 - Tests: one per call site (13: the 11 opcodes, plus `ADC` and `SBC` in decimal mode), each must report to `after_read_immediate` and not to `after_read_data`; and `LDA #$42` followed by `LDA $0300` reports the second read as data, which shows the reset. `read_immediate` in the kind tests of `test_memory.py` and `test_memory_hooks.py`. All green.
 
@@ -53,7 +53,6 @@
 - `CPU` counts instructions: `instruction_count`, zeroed like `cycles` in `__init__` and `reset()`, increased at the start of `do_next_step()`, so the first instruction is number 1. Named so it is not confused with `Emulator.instructions`, which every `run()` call resets. About 2-3% slower (medians 3.32 s without, 3.38 s and 3.43 s with, in one sitting; the times rose during the sitting, so the figure is rough). Accepted: every position in the design rests on this count.
 - `CPU` has the hook list `after_instruction`, called at the end of `do_next_step()`, after the memory hooks of that instruction. A hook gets no arguments and reads `instruction_count`, `last_PC` and `last_opcode` from the `CPU`; an experiment keeps the `CPU` in `self.cpu`. `reset()` keeps the hooks. Chosen over `hook(cpu)` because it follows the design note, and a quick `timeit` (4,000,000 calls, one hook) found it slightly faster, not slower. Not measured on Lode Runner: the user decided that the cost of each small step tells us little; what counts is the total, and we pay it anyway.
 - Tests: `tests/test_instruction_count.py` and `tests/test_cpu_hooks.py`, all green.
-- Learned (process, the user's feedback at the end of the session): the steps were small, but the explanations were not. What got in the way: dense sentences and idioms, a git command (`git stash`) used without explaining it, instructions that assumed the wrong state of the repo, measurement plans without a clear question, several open threads at once, and no big picture that ties each step to something the user can see on screen and start thinking in. Suggesting a fresh conversation was not asked for and read as pressure. For next time: one thing per message, plain words, say what a step is for before how it is done, and head for something visible.
 
 ## 2026-09-29 -- Hook lists in `Memory`; a first look at the attract play
 
@@ -63,7 +62,6 @@
 - A windowed run can pause at an instruction count: `scripts/boot_lode_runner.py --instructions N` stops as if Ctrl-X had been pressed, and the next Ctrl-X continues. In `Emulator.run()`, a met `until` is dropped when a window is open; headless runs still end at it.
 - First experiment, run by the user: 4,000,000 instructions (the headless timing run) reach deep into the attract play -- iris wipe, the level being built, player and enemies moving, the first dig. No RWTS reads in that stretch: the attract play's level comes from memory.
 - `after_instructions` and `at_address` moved from `core/emulator.py` to `papple2/debug/stop_conditions.py`. The core keeps the type `Until`: the shape of a condition, not the conditions themselves.
-- Learned (process): compare old and new in the same sitting; against the baseline from an earlier sitting the cost looked like 4%, in the same sitting it was 3%. Designing how experiments get their hooks (`attach()`) before any experiment exists went in circles; decide it with the first one. Short answers, one point at a time.
 
 ## 2026-09-29 -- The instrumentation design; `CPU` and `Memory` speak in kinds
 
@@ -73,7 +71,6 @@
 - The disassembler reads the memory list directly, and no longer switches the soft switches off around its reads.
 - Speed: headless Lode Runner, 4,000,000 instructions, median of five runs 3.19 s before and 3.16 s after, so no measurable cost. `scripts/boot_lode_runner.py` now prints two decimals.
 - Tests: every kind of access reaches the same memory; word reads take the low byte first; the pointer read wraps within the page.
-- Learned (process): the noise between runs alone spans about 6%, so compare medians of five runs. Checking for callers before a change (`grep`) found the disassembler reading through the CPU before it could become a problem. A pushed commit can still be reviewed in PyCharm's Log, and `git revert` is the safe way back.
 
 ## 2026-09-27/28 -- The clean-slate redesign begins: the old instrumentation pruned
 
@@ -84,7 +81,6 @@
 - Milestone: Bandits runs past its first load of code over code, which `MemoryMap` used to refuse, into the game itself -- right up to Game Over.
 - New documents: `docs/instrumentation-ideas.md`, a braindump of the design ideas (the user's, Claude's, and two other models'); `docs/instrumentation-map.md` with diagrams of the old instrumentation and `docs/diagrams/inner-loop.html`, which traces seven instructions through the inner loop.
 - Tests: 142 before, 140 after (tile, collector and write-protect tests gone; throttle, trap, `is_code` and `executing` tests new).
-- Learned (process): a change list before every patch, naming each deletion and marking anything beyond what was agreed; `&&` between dependent shell commands; when a patch reaches the end of a file, the real file as its base, not the copy from the dump.
 
 ## Before the redesign: the road so far
 
