@@ -1,6 +1,6 @@
 # Instrumentation design
 
-**Status:** decided in the design session of 2026-09-29. This document holds decisions; the raw material they came from is `docs/instrumentation-ideas.md` (the braindump), and the old design they replace is drawn in `docs/instrumentation-map.md` (the tag `pre-redesign`). Section 9 lists what is still open. Implemented so far (2026-09-29): the `Memory` methods per kind, the CPU calling them, the hook lists in `Memory` (section 3), and on `CPU` the instruction count and the `after_instruction` list (sections 4 and 5); `Emulator.attach()` and `detach()` (section 6, rule 6), with the first experiment.
+**Status:** decided in the design session of 2026-09-29. This document holds decisions; the raw material they came from is `docs/instrumentation-ideas.md` (the braindump), and the old design they replace is drawn in `docs/instrumentation-map.md` (the tag `pre-redesign`). Section 9 lists what is still open. Implemented so far (2026-09-29): the `Memory` methods per kind, the CPU calling them, the hook lists in `Memory` (section 3), and on `CPU` the instruction count and the `after_instruction` list (sections 4 and 5); `Emulator.attach()` and `detach()` (section 6, rule 6), with the first experiment. Since 2026-10-01: `read_immediate` and its list, through the CPU's `immediate` flag (section 3).
 
     **Purpose:** one place for the rules that span `Emulator`, `CPU` and `Memory`, so that they are not spread over comments in several modules.
 
@@ -32,7 +32,7 @@ Three kinds of instrumentation, each with its own small interface. There is no c
    Memory  read_opcode, after
    Memory  read_operand, after       (0, 1 or 2 times)
    Memory  read_pointer, after       (0 or 2 times)
-   Memory  read_data / write_data / read_stack / write_stack, after
+   Memory  read_data / read_immediate / write_data / read_stack / write_stack, after
    CPU     after_instruction
 ── boundary ───────────────────
 ```
@@ -49,6 +49,7 @@ The name of the method says *why* the CPU accesses a byte, not *where* the byte 
 | `read_operand(address)` | the addressing modes | 1 or 2 |
 | `read_pointer(address)` | `JMP (abs)`, `(zp,X)`, `(zp),Y` | 2 |
 | `read_data(address)` | the operations (`LDA`, `ADC`, `INC`, ...) | 1 |
+| `read_immediate(address)` | the 11 operations with immediate mode, for their immediate operand | 1 |
 | `read_stack(address)` | `RTS`, `PLA`, `PLP`, `RTI` | 1 or 2 |
 | `read_vector(address)` | `reset()` (`$FFFC`), `BRK` (`$FFFE`) | 2 |
 | `write_data(address, value)` | the operations (`STA`, `INC`, ...) | 1 |
@@ -59,7 +60,7 @@ The name of the method says *why* the CPU accesses a byte, not *where* the byte 
 - Signatures: a read hook gets `(address, value)`, a write hook gets `(address, value, old_value)`. `Memory` keeps the old value before it overwrites it, taken straight from the memory list: going through `read_byte` would flip a soft switch at `$C0xx`.
 - The addressing mode is not passed: every opcode has exactly one addressing mode, so it follows from the opcode. Zero page and `$00xx` absolute stay distinguishable that way.
 - Only bytes reach the hooks. A 16-bit read is two byte reads of the same kind, low byte first: `read_operand_word`, `read_pointer_word` (with the page wrap: at `$xxFF` the high byte comes from `$xx00`), `read_vector_word`.
-- **Immediate operands:** the operations read their operand with the same call they use for data, so an immediate operand (the `$05` in `LDA #$05`) is reported by `read_data`. The core leaves this as it is for now; a hook that cares corrects the label from the opcode (11 opcodes use immediate mode). To be revisited when an experiment shows the need; it matters for detecting self-modifying code, because changing an immediate operand is a classic trick. The first experiment showed the need (2026-09-29): immediate operands came out as holes in the execution map. It works around it by the last opcode; a `read_immediate` kind of its own is planned in `TODO.md`, section 7.
+- **Immediate operands** (the `$05` in `LDA #$05`) are a kind of their own, `read_immediate` (since 2026-10-01). The 11 operations with immediate mode (`ORA AND EOR ADC LDY LDX LDA CPY CMP CPX SBC`) read their byte through `CPU.read_data_or_immediate()`, which picks `read_immediate` or `read_data` by the CPU's `immediate` flag. `immediate_mode()` sets the flag, and `do_next_step()` resets it with the other flags of the last instruction, so it never outlives one instruction. A flag was chosen over splitting each operation into reading the byte and using it: same cost, and a smaller, more readable change to `cpu.py`. It matters for detecting self-modifying code, because changing an immediate operand is a classic trick. The first experiment needed it (2026-09-29): immediate operands came out as holes in the execution map until it worked around them by the last opcode; that workaround is gone.
 - **Direct access to the memory list** (`mem[...]`) means "past devices and hooks, on purpose". There are no `peek` and `poke` wrappers. Loaders and traps write this way, and the disassembler reads this way; and traps log their whole task as one entry instead of reporting each byte.
 
 ## 4. The `CPU` side

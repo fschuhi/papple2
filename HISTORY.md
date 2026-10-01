@@ -11,6 +11,15 @@
 
 ---
 
+## 2026-10-01 -- `read_immediate`: immediate operands are a kind of their own
+
+- `Memory` has a ninth kind of access, `read_immediate`, with its list `after_read_immediate`; `Emulator.attach()` knows the name. The CPU reports the `$42` in `LDA #$42` there instead of through `read_data`.
+- How: a flag, not split operations. `immediate_mode()` sets `CPU.immediate`, `do_next_step()` resets it with `branched` and `operand_length`, and the 11 operations with immediate mode read their byte through `read_data_or_immediate()`. `TODO.md` had planned to split each operation into reading the byte and using it (`lda_value(...)`); that would have doubled the 11 operations for the same cost (one extra method call either way). The user found the flag more readable, and on reflection Claude agreed: it follows the flags `cpu.py` already resets per instruction, and none of the 11 operations reads its operand twice.
+- `scripts/lr_count.py` attaches `after_read_immediate`; the last-opcode workaround and `IMMEDIATE_OPCODES` are gone. Run by the user: 2316 addresses fetched as opcode and 2083 as operand, the same as on 2026-09-29, and 347 read as immediate (the first recorded figure); 4.18 s for the run, not compared with earlier sittings.
+- Tests: one per call site (13: the 11 opcodes, plus `ADC` and `SBC` in decimal mode), each must report to `after_read_immediate` and not to `after_read_data`; and `LDA #$42` followed by `LDA $0300` reports the second read as data, which shows the reset. `read_immediate` in the kind tests of `test_memory.py` and `test_memory_hooks.py`. All green.
+
+---
+
 ## 2026-09-30 -- Hot-loop optimization and dynamic Basic Blocks (Stretches)
 
 - Optimization of the `lr_tiles.py` hot path: I noticed a 4% performance hit just from packing data into `NamedTuples` on every instruction. You suggested keeping raw tuples in the hot loop and converting them on the cold path. You also bypassed method call overhead by inlining `observe_instruction` and `tile_at`, and replaced set lookups for opcodes with a precomputed 256-byte array (`OPCODE_KIND`). This brought the 4,000,000-instruction run down to 4.77 seconds.
