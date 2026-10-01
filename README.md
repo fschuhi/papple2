@@ -27,7 +27,7 @@
 
 `papple2` is a small Apple II emulator written in Python. It is not meant to compete with full emulators on speed or completeness. Its purpose is to be a debugging instrument: a machine I can stop, inspect, and script from Python while it runs Apple II code.
 
-The core comes from ApplePy by James Tauber, ported to Python 3 and stripped of what I did not need (the socket interface). Around that core sit an assembler and disassembler, stand-ins for the disk routines two of the games call, and a speed control. The instruments that made it a debugging tool -- breakpoints and hooks, a log of every memory access, a map of which instructions ran and how control flowed between them -- are being redesigned from scratch: the old ones are drawn in `docs/instrumentation-map.md`, the ideas for the new ones are collected in `docs/instrumentation-ideas.md`, and the decisions taken so far are in `docs/instrumentation-design.md`.
+The core comes from ApplePy by James Tauber, ported to Python 3 and stripped of what I did not need (the socket interface). Around that core sit an assembler and disassembler, stand-ins for the disk routines two of the games call, and a speed control. The instruments that make it a debugging tool were rebuilt from scratch between 2026-09-27 and 2026-10-01, from the tag `pre-redesign` to the tag `core-complete`: memory access by kind with hook lists, `after_instruction`, and experiments that attach by method name. The decisions are in `docs/instrumentation-design.md`; the old design is drawn in `docs/instrumentation-map.md`. Next comes a workbench for reverse engineering on top of it, in IPython (`docs/workbench-ideas.md`), following `DIRECTION.md`: dynamic analysis first, static disassembly to fill the holes.
 
 **Core philosophy:**
 
@@ -40,9 +40,9 @@ The core comes from ApplePy by James Tauber, ported to Python 3 and stripped of 
 
 ## The games
 
-Four programs boot in `papple2`: the Apple II's own Monitor and Integer BASIC, and three games that are among the best the Apple II has to offer. Only one of them has been completely disassembled so far, the way Lode Runner and Choplifter have; the other two are the challenges ahead, with enough food for thought for countless hours.
+Four programs boot in `papple2`: the Apple II's own Monitor and Integer BASIC, and three games that are among the best the Apple II has to offer. Only Lode Runner has been completely disassembled so far; the other two are the challenges ahead, with enough food for thought for countless hours.
 
-**Lode Runner** (Doug Smith, Broderbund, 1983) is the worked example. XekriRedmane's literate-source disassembly, published at https://github.com/XekriRedmane/lode_runner_reveng, assembles byte for byte into the original, so it serves as the answer key: whatever `papple2` finds out by running the game can be checked against it. `papple2` plays real games from the original disk image, through a stand-in for the game's disk routine. All 150 levels, a celebration of Doug Smith's creativity, are on a single page: https://fschuhi.github.io/a2-lode-runner/levels.html.
+**Lode Runner** (Doug Smith, Broderbund, 1983) is the worked example. XekriRedmane's literate-source disassembly, published at https://github.com/XekriRedmane/lode_runner_reveng, assembles byte for byte into the original, so it serves as the oracle: whatever `papple2` finds out by running the game is checked against it, and never fed into the tools. `papple2` plays real games from the original disk image, through a stand-in for the game's disk routine. All 150 levels, a celebration of Doug Smith's creativity, are on a single page: https://fschuhi.github.io/a2-lode-runner/levels.html.
 
 ![Lode Runner in a real game, running under papple2](docs/images/lode-runner-play.jpg)
 
@@ -106,8 +106,9 @@ graph TD
 
 ### Extension points
 
-Since the redesign began (`HISTORY.md` 2026-09-27/28), `papple2` has three deliberately small ways to act on a running program. The old ones (checkpoints, CPU read/write hooks, the memory map) are drawn in `docs/instrumentation-map.md`, pinned to the tag `pre-redesign`; the ideas for what comes next are in `docs/instrumentation-ideas.md`, and the decisions taken so far in `docs/instrumentation-design.md`.
+Since the redesign began (`HISTORY.md` 2026-09-27/28), `papple2` has four deliberately small ways to act on a running program. The old ones (checkpoints, CPU read/write hooks, the memory map) are drawn in `docs/instrumentation-map.md`, pinned to the tag `pre-redesign`; the ideas for what comes next are in `docs/instrumentation-ideas.md`, and the decisions taken so far in `docs/instrumentation-design.md`.
 
+- **Hooks** (lists in `Memory` and `CPU`) watch every instruction and memory access, and experiments attach to them by method name; see "Memory access by kind" below.
 - **Traps** (`add_trap(address, handler)`) stand in for a routine at a fixed address. Before each instruction, `run()` looks up `PC` in the trap table (only while there are any traps). A handler returns whether it *served* the address: `True`, and the run continues at whatever `PC` the handler set; `False`, and the run stops before the instruction there, via `breakpoint`. The two disk stand-ins, `RwtsHook` (Lode Runner, `$B7B5`) and `MliHook` (Bandits, `$BF00`), are traps.
 - **`until`** is a parameter of `run()`, not an attachment point: a condition checked before each instruction (`instruction_count_reaches(n)`, `at_address(a)`). When it is met, `run()` stops via `breakpoint`; without a window it then returns, with a window it pauses as if Ctrl-X had been pressed. The ready-made conditions are in `papple2/debug/stop_conditions.py`.
 - **Debug-key handlers** (`EmulatorStates.stopped_state`/`running_state`) are keyed to the window's events, not to instructions: `D` and `L` while Stopped. `tests/test_emulator_debug_keys.py` shows how to attach one from outside.
@@ -140,7 +141,7 @@ The CPU reads and writes memory through one `Memory` method per kind of access: 
 
 `CPU` counts its instructions in `instruction_count` (zeroed like `cycles`, in `__init__` and `reset()`) and, at the end of each instruction, calls the hooks in `after_instruction`. These hooks get no arguments: they read `instruction_count`, `last_PC` and `last_opcode` from the `CPU`, so an experiment keeps the `CPU` it watches in `self.cpu`. See `docs/instrumentation-design.md`, section 4.
 
-An experiment is a plain object whose methods are named after the hook lists. `Emulator.attach(experiment)` puts each such method into its list in `Memory` or `CPU`, and `detach(experiment)` takes them out again; both log one line at INFO. The first experiment is `scripts/lr_count.py`, a memory map of what Lode Runner's attract play runs as code, saved as PNG and HTML.
+An experiment is a plain object whose methods are named after the hook lists. `Emulator.attach(experiment)` puts each such method into its list in `Memory` or `CPU`, and `detach(experiment)` takes them out again; both log one line at INFO. Two experiments use them: `scripts/lr_count.py` (a map of what Lode Runner's attract play runs, as opcode, operand or immediate) and `scripts/lr_tiles.py` (tiles split into disjoint basic blocks after the run, with their transitions).
 
 ### Speed
 
@@ -150,7 +151,7 @@ Unthrottled, `papple2` runs as fast as Python allows: about 3.5 times a real App
 
 ## Relation to sibling projects
 
-**`a2-lode-runner`:** a private educational project to understand the Apple II game thoroughly, based on XekriRedmane's literate-source disassembly project published at https://github.com/XekriRedmane/lode_runner_reveng. All 150 levels are extracted and shown on one page: https://fschuhi.github.io/a2-lode-runner/levels.html. Reverse engineering the sprites and the levels built from them -- the code in chapters 3 and 6 of the disassembly -- will be among the first targets for the instrumented `papple2`.
+**`a2-lode-runner`:** a private educational project to understand the Apple II game thoroughly, based on XekriRedmane's literate-source disassembly project published at https://github.com/XekriRedmane/lode_runner_reveng. All 150 levels are extracted and shown on one page: https://fschuhi.github.io/a2-lode-runner/levels.html. The first target is the level loader (`LOAD_LEVEL`, chapter 6). `make dasm-listing` there turns XekriRedmane's source into a listing `papple2`'s workbench can grade against.
 
 **`a2-hires-lab`:** a standalone Excel/VBA lab exploring Apple II hi-res graphics mechanics, built around Chapter 3 of the `a2-lode-runner` disassembly. No shared code or repo with `papple2`. Its NTSC color decision table, once fully verified by hand against the chapter's worked examples, is meant to become test fixtures for `papple2`'s `Display.update_hires`, which currently uses a simplified per-pixel color model with no neighbor-adjacency rules. That handoff hasn't happened yet.
 
@@ -206,9 +207,9 @@ The tools interacting with `papple2` live in the `scripts/` folder and generally
 
 - **The `boot_*` scripts:** Manual, visual checks that boot the emulator with a specific game or ROM payload attached to the pygame window. These are test-bed wrappers used for visual verification (`boot_basic.py`, `boot_robotron.py`, `boot_lode_runner.py`, `boot_bandits.py`).
 - **The `lr_*` experiments:** Headless analysis routines currently focused on Lode Runner's attract play. These attach custom instrumentations (like tracing and block-mapping hooks) to analyze how the game executes. 
-  - `lr_count.py`: Builds a 256x256 visual heatmap of the memory space, indicating which addresses were fetched as opcodes vs. operands.
+  - `lr_count.py`: a 256x256 map of the memory, one cell per address, showing which addresses ran as opcode, operand or immediate (PNG and HTML).
   - `lr_trace_pc.py`: Tracks and records a direct trace of execution flow.
-  - `lr_tiles.py`: Discovers dynamic execution structures by mapping executed stretches of instructions (tiles). After execution, a transformer safely splits overlapping tiles into disjoint basic blocks (stretches) and maps transition edges between them, rendering a perfect mathematical ledger of control flow across millions of instructions.
+  - `lr_tiles.py`: collects tiles (runs of instructions from a leap target to the next leap) and the transitions between them; after the run, splits overlapping tiles into disjoint basic blocks and checks that every execution is accounted for (CSV, plus measurements as text).
 
 ---
 
@@ -223,9 +224,9 @@ make boot-lode-runner           # boot Lode Runner with the pygame window open; 
 make boot-lode-runner-throttled # the same, at the speed of a real Apple II
 make boot-lode-runner-headless  # run Lode Runner headless; save both hi-res pages as PNG
 make boot-bandits               # boot Bandits from Total Replay's ProDOS files
-make lr-count        # Experiment: map which addresses Lode Runner's attract play runs (PNG and HTML
+make lr-count        # Experiment: map which addresses Lode Runner's attract play runs (PNG and HTML)
 make lr-tiles        # Experiment: collect tiles and transitions, plus measurements (CSV and text)
-make lr-trace-pc     # Experiment: record start PC, opcode and end PC of every instruction (CSV
+make lr-trace-pc     # Experiment: record start PC, opcode and end PC of every instruction (CSV)
 ```
 
 `make setup` will happily produce a broken install if your default `python3` resolves to 3.14. If needed: `rm -rf .venv && python3.12 -m venv .venv && make setup`.
@@ -250,7 +251,6 @@ This section is more useful to an LLM picking this project back up than to me --
 - **An unserved trap or a met `until` condition dispatches `Event('breakpoint')` into the state machine, rather than hard-returning out of `run`.** Separately, a headless `run(until=...)` returns to its caller once execution stops for any reason, while with a window a met `until` only pauses, and Ctrl-X continues; a plain `run()` call (no `until`) keeps looping through pauses as before, and only stops on `halt`. Without a window, an unserved trap ends the run, since nothing could resume it.
 - **`time.monotonic()`, not `pygame.time.get_ticks()`, for frame pacing** -- works identically whether or not a window exists.
 - **`QUIT` (closing the window) and the Print key both map to the same `halt` event.** There's no separate hard-exit path. Print exists mainly for the Windows heritage of this code; on macOS, closing the window is the primary way to trigger it.
-- **`pygame` 2.6.1 does not build or run correctly under Python 3.14** -- `pygame.mixer` and `pygame.font` fail to import. Open upstream packaging issue, not specific to this machine. Use Python 3.12 for the venv until that's resolved.
 - **An unserved trap stays in the table after it fires.** Its handler left `PC` at the trap's address, so if something resumes via `ctrlx` within the same `run()` call, the trap is called again at once and stops again, unless what it depends on has changed. `until` is checked afresh in every `run()` call.
 - **`papple2.core` never imports from `papple2.debug`** (since 2026-09-27). The debugging tools use the machine, never the other way round.
 - **State changes go through events, and `executing` mirrors the state machine.** Only `Running`'s entry and exit actions set `executing`, and `initialize(fire_events_on_init=True)` runs the entry action at construction, as Harel's statecharts demand (`test_executing_follows_the_state_from_the_start`).
