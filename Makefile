@@ -11,7 +11,7 @@ RUN           = $(ACTIVATE) && python
 SETUP_STAMP   = $(VENV_DIR)/.setup_stamp
 
 # --- Phony targets ---
-.PHONY: all setup test test-verbose boot-basic boot-robotron boot-lode-runner boot-lode-runner-throttled boot-lode-runner-headless boot-bandits lr-count lr-trace-pc lr-tiles clean showtree gentree patch filesdump filesdump-detailed help
+.PHONY: all setup test test-verbose boot-basic boot-robotron boot-lode-runner boot-lode-runner-throttled boot-lode-runner-headless boot-bandits lr-count lr-trace-pc lr-tiles clean showtree gentree commit-hash patch filesdump filesdump-detailed help
 
 all: setup
 
@@ -86,6 +86,10 @@ patch: ## apply all *.patch files in the repo root, then move them to tmp/applie
 	git apply *.patch
 	mkdir -p tmp/applied-patches
 	mv *.patch tmp/applied-patches/
+
+commit-hash:
+	@printf 'Commit hash: `%s`' "$$(git rev-parse --short HEAD)" | pbcopy
+	@echo "Commit hash copied to clipboard"
 
 filesdump: $(SETUP_STAMP) gentree ## Create context dump for LLMs
 	@if [ -f manifest.lst ]; then \

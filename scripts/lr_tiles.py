@@ -105,7 +105,7 @@ OPCODE_NAMES = {
 
 
 def address(pc: int) -> str:
-    return f"${pc:04X}"
+    return f"{pc:04x}"
 
 
 def addresses(pcs) -> str:
