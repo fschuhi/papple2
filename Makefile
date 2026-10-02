@@ -11,7 +11,7 @@ RUN           = $(ACTIVATE) && python
 SETUP_STAMP   = $(VENV_DIR)/.setup_stamp
 
 # --- Phony targets ---
-.PHONY: all setup test test-verbose boot-basic boot-robotron boot-lode-runner boot-lode-runner-throttled boot-lode-runner-headless boot-bandits lr-count lr-trace-pc lr-tiles clean showtree gentree commit-hash patch filesdump filesdump-detailed help
+.PHONY: all setup test test-verbose boot-basic boot-robotron boot-lode-runner boot-lode-runner-throttled boot-lode-runner-headless boot-bandits lr-count lr-trace-pc lr-tiles lr-overview clean showtree gentree commit-hash patch filesdump filesdump-detailed help
 
 all: setup
 
@@ -65,6 +65,9 @@ lr-trace-pc: $(SETUP_STAMP) ## Experiment: record start PC, opcode and end PC of
 
 lr-tiles: $(SETUP_STAMP) ## Experiment: collect tiles and transitions, plus measurements (CSV and text)
 	$(RUN) scripts/lr_tiles.py data/bin/LODE_RUNNER.BIN
+
+lr-overview: $(SETUP_STAMP) ## Overview of the whole run: routines, loops, calls (reads tmp/lr_tiles/, run make lr-tiles first)
+	$(RUN) scripts/lr_overview.py
 
 # --- Utility Targets ---
 clean: ## Remove venv, cache, and tmp files

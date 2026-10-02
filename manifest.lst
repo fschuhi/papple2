@@ -67,6 +67,7 @@ papple2.example.toml
 scripts/boot_lode_runner.py
 #scripts/boot_robotron.py
 scripts/lr_count.py
+scripts/lr_overview.py
 scripts/lr_tiles.py
 #scripts/lr_trace_pc.py
 #scripts/speed_test.py
@@ -89,12 +90,14 @@ src/papple2/core/window.py
 #src/papple2/debug/stop_conditions.py
 
 ## workbench
+src/papple2/workbench/basic_blocks_analysis.py
 src/papple2/workbench/tiling.py
 
 ### --- Tests and fixtures data ---
 tests/conftest.py
 #tests/test_assembler.py
 #tests/test_attach.py
+test_basic_blocks_analysis.py
 #tests/test_breakpoints.py
 #tests/test_cpu_arithmetic.py
 #tests/test_cpu_branch.py
