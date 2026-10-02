@@ -86,16 +86,24 @@ def show_loops(loops: dict[int, Loop]) -> None:
         )
 
 
-def dis(emulator: Emulator, start: int, end: int) -> None:
+def dis(
+    emulator: Emulator, start: int, end: int, labels: Labels | None = None
+) -> None:
     """Print the instructions from start up to, not including, end: address,
     bytes, instruction. Read from the emulator's memory as it is now, i.e.
     after the run, past anything that watches the CPU.
+
+    With labels, an operand whose address has a name shows the name
+    (JSR SUB instead of JSR $6010). Zero-page operands keep their address:
+    Labels doesn't name them yet.
 
     An instruction that starts before end is printed whole, even if its
     operand reaches past end. A block's end always lies behind its last
     instruction, so this only shows for ranges that cut an instruction.
     """
-    disassembler = Disassembler(emulator.cpu, Labels())
+    disassembler = Disassembler(
+        emulator.cpu, labels if labels is not None else Labels()
+    )
     # disassemble() takes an inclusive end.
     for row in disassembler.disassemble(start, end - 1):
         row_address, row_bytes, _label, mnemonic, operand, _comment = row

@@ -27,13 +27,15 @@ loops) in its namespace afterwards:
 
 After %run, show_blocks(graph, loops), show_edges(graph, loops) and
 show_loops(loops) print them with hex addresses, and dis(emulator, start,
-end) disassembles a range (papple2.workbench.shell).
+end, labels) disassembles a range, with the names of NAMES
+(papple2.workbench.shell).
 """
 
 from pathlib import Path
 
 from papple2.core.emulator import Emulator
 from papple2.debug.assembler import Assembler
+from papple2.debug.labels import Labels
 from papple2.debug.stop_conditions import at_address
 from papple2.workbench.basic_blocks_analysis import (
     BlockGraph,
@@ -79,6 +81,15 @@ SUB     INC $10
         RTS
 DONE    NOP
 """
+
+# The names for PROGRAM's addresses, given by hand: the way names will
+# come for Lode Runner, from the user (the oracle protocol in README.md).
+NAMES = [
+    (0x6002, "OUTER"),
+    (0x6004, "INNER"),
+    (0x6010, "SUB"),
+    (0x6013, "DONE"),
+]
 
 
 def assemble(program: str) -> list[int]:
@@ -132,6 +143,8 @@ def walkthrough(
 
 
 if __name__ == "__main__":
-    # At module level on purpose: IPython's %run keeps these four names in
+    # At module level on purpose: IPython's %run keeps these names in
     # its namespace, so the run can be inspected afterwards.
     emulator, tiling, graph, loops = walkthrough(REPORTS_FOLDER)
+    labels = Labels()
+    labels.add_labels(NAMES)
