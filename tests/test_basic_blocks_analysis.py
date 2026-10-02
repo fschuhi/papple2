@@ -10,10 +10,14 @@ import pytest
 
 from papple2.core.cpu import BNE, JMP_absolute, JMP_indirect, JSR, RTS
 from papple2.workbench.basic_blocks_analysis import (
+    BlockGraph,
     SplitTile,
     SplitTransition,
     build_graph,
+    dominates,
+    immediate_dominators,
     read_split_reports,
+    reverse_postorder,
 )
 from papple2.workbench.tiling import (
     BRK,
@@ -167,3 +171,73 @@ def test_read_split_reports(tmp_path: Path):
         SplitTransition(0x2800, 0x2811, 0xF0, "fall_through", 0x2813, 1),
         SplitTransition(0x2813, None, None, "glide", 0x2821, 1),
     ]
+
+
+# --- Dominators ---------------------------------------------------------------
+
+# The worked example: two nested loops, blocks named in address order.
+E, H1, H2, B, L, X = 0x1000, 0x1010, 0x1020, 0x1030, 0x1040, 0x1050
+NESTED_LOOPS = [(E, H1), (H1, H2), (H2, B), (B, H2), (B, L), (L, H1), (L, X)]
+
+
+def graph_from_edges(edges: list[tuple[int, int]], entry: int) -> BlockGraph:
+    """A graph with exactly these edges: one tile per block, one JMP row
+    per edge. Enough for the dominator tests, which only look at edges."""
+    blocks = sorted({block for edge in edges for block in edge} | {entry})
+    tiles = [tile(block, block + 3) for block in blocks]
+    transitions = [leap(source, source, JMP_absolute, target) for source, target in edges]
+    return build_graph(tiles, transitions, entry)
+
+
+def test_reverse_postorder_of_nested_loops():
+    assert reverse_postorder(graph_from_edges(NESTED_LOOPS, E)) == [E, H1, H2, B, L, X]
+
+
+def test_immediate_dominators_of_nested_loops():
+    idom = immediate_dominators(graph_from_edges(NESTED_LOOPS, E))
+
+    assert idom == {E: E, H1: E, H2: H1, B: H2, L: B, X: L}
+
+
+def test_dominates_follows_the_tree():
+    idom = immediate_dominators(graph_from_edges(NESTED_LOOPS, E))
+
+    assert dominates(idom, H1, L)
+    assert not dominates(idom, L, H1)
+    assert dominates(idom, B, B)
+    assert dominates(idom, E, X)
+
+
+def test_diamond():
+    a, b, d = 0x1010, 0x1020, 0x1030
+    idom = immediate_dominators(graph_from_edges([(E, a), (E, b), (a, d), (b, d)], E))
+
+    assert idom[d] == E
+    assert not dominates(idom, a, d)
+    assert not dominates(idom, b, d)
+
+
+def test_self_loop_does_not_change_the_idom():
+    s, x = 0x1010, 0x1020
+    idom = immediate_dominators(graph_from_edges([(E, s), (s, s), (s, x)], E))
+
+    assert idom == {E: E, s: E, x: s}
+
+
+def test_loop_with_two_entries_has_no_dominating_header():
+    # Neither A nor B dominates the other, so neither edge between them is
+    # a back edge: natural-loop detection will not see this loop.
+    a, b = 0x1010, 0x1020
+    idom = immediate_dominators(graph_from_edges([(E, a), (E, b), (a, b), (b, a)], E))
+
+    assert idom == {E: E, a: E, b: E}
+    assert not dominates(idom, a, b)
+    assert not dominates(idom, b, a)
+
+
+def test_reverse_postorder_of_a_long_chain():
+    # Deeper than Python's recursion limit: the search must not recurse.
+    chain = [0x1000 + 4 * i for i in range(2000)]
+    graph = graph_from_edges(list(zip(chain[:-1], chain[1:])), chain[0])
+
+    assert reverse_postorder(graph) == chain
