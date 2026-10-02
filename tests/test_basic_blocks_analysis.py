@@ -10,6 +10,8 @@ import pytest
 
 from papple2.core.cpu import BNE, JMP_absolute, JMP_indirect, JSR, RTS
 from papple2.workbench.basic_blocks_analysis import (
+    LOOP_MEMBERS_FILE,
+    LOOPS_FILE,
     BlockGraph,
     Loop,
     SplitTile,
@@ -21,6 +23,7 @@ from papple2.workbench.basic_blocks_analysis import (
     natural_loops,
     read_split_reports,
     reverse_postorder,
+    write_loop_reports,
 )
 from papple2.workbench.tiling import (
     BRK,
@@ -296,3 +299,36 @@ def test_sibling_loops_are_not_nested():
 def test_loop_with_two_entries_is_not_found():
     a, b = 0x1010, 0x1020
     assert loops_of([(E, a), (E, b), (a, b), (b, a)], E) == {}
+
+
+# --- Loop reports -------------------------------------------------------------
+
+
+def write_reports_of_nested_loops(folder: Path) -> None:
+    graph = graph_from_edges(NESTED_LOOPS, E)
+    write_loop_reports(folder, graph, natural_loops(graph, immediate_dominators(graph)))
+
+
+def test_loops_report(tmp_path: Path):
+    write_reports_of_nested_loops(tmp_path)
+
+    assert (tmp_path / LOOPS_FILE).read_text(encoding="utf-8").splitlines() == [
+        "loop_id,header_block,back_edge_source_block,back_edge_count,"
+        "nesting_depth,outer_loop_id,member_blocks",
+        "L01,1010,1040,1,0,-,1010 1020 1030 1040",
+        "L02,1020,1030,1,1,L01,1020 1030",
+    ]
+
+
+def test_loop_members_report(tmp_path: Path):
+    write_reports_of_nested_loops(tmp_path)
+
+    assert (tmp_path / LOOP_MEMBERS_FILE).read_text(encoding="utf-8").splitlines() == [
+        "block_start_PC,block_end_PC,executions,innermost_loop,depth",
+        "1000,1003,1,-,0",  # E: before the loops
+        "1010,1013,1,L01,1",  # H1: outer header
+        "1020,1023,1,L02,2",  # H2: inner header
+        "1030,1033,1,L02,2",  # B
+        "1040,1043,1,L01,1",  # L: in the outer loop only
+        "1050,1053,1,-,0",  # X: after the loops
+    ]

@@ -2,8 +2,8 @@
 
 An analysis package: no Emulator. It reads the split reports that the
 tiling instrumentation wrote into a folder, builds a graph from them, and
-computes the dominator tree and the natural loops. The loop reports follow
-in a later step (briefing.md, section 3).
+computes the dominator tree and the natural loops, and writes the two loop
+reports into a folder (briefing.md, section 3).
 
 The tiling reports speak of tiles and transitions; the graph speaks of
 basic blocks and edges. build_graph() is the only place that translates
@@ -26,6 +26,7 @@ from papple2.workbench.tiling import (
     RTI,
     SPLIT_TILES_FILE,
     SPLIT_TRANSITIONS_FILE,
+    address,
 )
 
 # Leap rows that give no edge. A JSR's edge into the callee is replaced by
@@ -34,6 +35,27 @@ from papple2.workbench.tiling import (
 NO_EDGE_OPCODES = frozenset({JSR, RTS, RTI, BRK})
 
 GLIDE = "glide"
+
+# The loop reports this analysis writes, and their columns (briefing.md,
+# section 3.E).
+LOOPS_FILE = "lr_loops.csv"
+LOOP_MEMBERS_FILE = "lr_loop_members.csv"
+LOOPS_FIELDS = (
+    "loop_id",
+    "header_block",
+    "back_edge_source_block",
+    "back_edge_count",
+    "nesting_depth",
+    "outer_loop_id",
+    "member_blocks",
+)
+LOOP_MEMBERS_FIELDS = (
+    "block_start_PC",
+    "block_end_PC",
+    "executions",
+    "innermost_loop",
+    "depth",
+)
 
 
 @dataclass(frozen=True)
@@ -364,3 +386,63 @@ def natural_loops(graph: BlockGraph, idom: dict[int, int]) -> dict[int, Loop]:
         )
         for header in bodies
     }
+
+
+def write_rows(filename: Path, fields: tuple[str, ...], rows: list[dict]) -> None:
+    filename.parent.mkdir(parents=True, exist_ok=True)
+    with filename.open("w", newline="", encoding="utf-8") as output:
+        writer = csv.DictWriter(output, fieldnames=fields)
+        writer.writeheader()
+        writer.writerows(rows)
+    print(f"wrote {len(rows):,} records to {filename}")
+
+
+def write_loop_reports(folder: Path, graph: BlockGraph, loops: dict[int, Loop]) -> None:
+    """Write lr_loops.csv (one row per loop) and lr_loop_members.csv (one row
+    per basic block of the graph) into folder.
+
+    Loops are numbered L01, L02, ... in header-address order. A loop with
+    several back edges lists their sources and their counts as two
+    space-separated lists in the same order, so zip() pairs them up again.
+    """
+    loop_ids = {
+        header: f"L{number:02d}" for number, header in enumerate(sorted(loops), start=1)
+    }
+
+    loop_rows = []
+    for header in sorted(loops):
+        loop = loops[header]
+        loop_rows.append(
+            {
+                "loop_id": loop_ids[header],
+                "header_block": address(header),
+                "back_edge_source_block": " ".join(
+                    address(source) for source, _ in loop.back_edges
+                ),
+                "back_edge_count": " ".join(
+                    str(graph.edges[edge]) for edge in loop.back_edges
+                ),
+                "nesting_depth": loop.depth,
+                "outer_loop_id": "-" if loop.parent is None else loop_ids[loop.parent],
+                "member_blocks": " ".join(address(block) for block in sorted(loop.body)),
+            }
+        )
+
+    member_rows = []
+    for start, block in graph.blocks.items():
+        # The loops containing a block are nested in each other, so the one
+        # with the smallest body is the innermost.
+        containing = [loop for loop in loops.values() if start in loop.body]
+        innermost = min(containing, key=lambda loop: len(loop.body), default=None)
+        member_rows.append(
+            {
+                "block_start_PC": address(start),
+                "block_end_PC": address(block.end),
+                "executions": block.executions,
+                "innermost_loop": "-" if innermost is None else loop_ids[innermost.header],
+                "depth": 0 if innermost is None else innermost.depth + 1,
+            }
+        )
+
+    write_rows(folder / LOOPS_FILE, LOOPS_FIELDS, loop_rows)
+    write_rows(folder / LOOP_MEMBERS_FILE, LOOP_MEMBERS_FIELDS, member_rows)
