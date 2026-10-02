@@ -24,6 +24,10 @@ or in IPython, which keeps the run's objects (emulator, tiling, graph,
 loops) in its namespace afterwards:
 
     %run scripts/walkthrough.py
+
+After %run, show_blocks(graph, loops), show_edges(graph, loops) and
+show_loops(loops) print them with hex addresses, and dis(emulator, start,
+end) disassembles a range (papple2.workbench.shell).
 """
 
 from pathlib import Path
@@ -41,6 +45,15 @@ from papple2.workbench.basic_blocks_analysis import (
     write_loop_reports,
 )
 from papple2.workbench.tiling import Tiling, address
+
+# Not used here: imported so that IPython's %run leaves them in its
+# namespace, ready for looking at the run.
+from papple2.workbench.shell import (  # noqa: F401
+    dis,
+    show_blocks,
+    show_edges,
+    show_loops,
+)
 
 # One folder per script, named after it.
 REPORTS_FOLDER = Path("tmp/walkthrough")
