@@ -11,7 +11,7 @@ RUN           = $(ACTIVATE) && python
 SETUP_STAMP   = $(VENV_DIR)/.setup_stamp
 
 # --- Phony targets ---
-.PHONY: all setup test test-verbose boot-basic boot-robotron boot-lode-runner boot-lode-runner-throttled boot-lode-runner-headless boot-bandits lr-count lr-trace-pc lr-tiles lr-overview walkthrough ipython clean showtree gentree commit-hash patch filesdump filesdump-detailed help
+.PHONY: all setup test test-verbose boot-basic boot-robotron boot-lode-runner boot-lode-runner-throttled boot-lode-runner-headless boot-bandits lr-count lr-trace-pc lr-tiles lr-overview lr-basic-blocks-analysis walkthrough ipython clean showtree gentree commit-hash patch filesdump filesdump-detailed help
 
 all: setup
 
@@ -68,6 +68,9 @@ lr-tiles: $(SETUP_STAMP) ## Experiment: collect tiles and transitions, plus meas
 
 lr-overview: $(SETUP_STAMP) ## Overview of the whole run: routines, loops, calls (reads tmp/lr_tiles/, run make lr-tiles first)
 	$(RUN) scripts/lr_overview.py
+
+lr-basic-blocks-analysis: $(SETUP_STAMP) ## Experiment: basic blocks and loops of one routine (default LOAD_LEVEL, 6238), reports in tmp/lr_basic_blocks_analysis/
+	$(RUN) scripts/lr_basic_blocks_analysis.py data/bin/LODE_RUNNER.BIN
 
 # --- Walkthrough (a tiny program through the workbench's pipeline, output in tmp/walkthrough/) ---
 walkthrough: $(SETUP_STAMP) ## Walk a tiny program through tiling and the basic blocks analysis (reports in tmp/walkthrough/)
