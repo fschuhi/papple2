@@ -1,0 +1,24 @@
+LODE RUNNER TILE MEASUREMENTS
+
+ACCOUNTING
+  Consistency checks: passed
+  Observed instructions: 39
+  Tiles: 8
+  Transition records: 9
+  Transition traversals: 21
+  RWTS reads served: 0
+
+SPLIT TILES
+  Original tiles: 8
+  Split tiles (Basic Blocks): 8
+  Original transition records: 9
+  Split transition records: 9
+  Glide transition records: 2
+  Leaps into a tile that never ran: 0
+
+INTERPRETATION
+  All structure is observed structure from this run.
+  One observed branch outcome does not prove the other impossible.
+  Split tiles represent dynamic basic blocks: contiguous executed bytes split by observed entry points.
+  Split tile executions are reconstructed perfectly by conserving traffic across split points.
+  Accounting checks validate the raw tile hooks, not opcode semantics or trap handling.

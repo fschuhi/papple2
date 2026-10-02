@@ -1,0 +1,10 @@
+source_tile,leap_from_PC,opcode,outcome,target_tile,count
+6000,6004,$20,,6010,1
+6002,6004,$20,,6010,1
+6004,6004,$20,,6010,4
+6007,6008,$D0,fall_through,600a,2
+6007,6008,$D0,taken,6004,4
+600a,600b,$D0,fall_through,600d,1
+600a,600b,$D0,taken,6002,1
+600d,600d,$4C,,6013,1
+6010,6012,$60,,6007,6

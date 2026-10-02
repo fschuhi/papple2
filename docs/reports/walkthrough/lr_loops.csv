@@ -1,0 +1,3 @@
+loop_id,header_block,back_edge_source_block,back_edge_count,nesting_depth,outer_loop_id,member_blocks
+L01,6002,600a,1,0,-,6002 6004 6007 600a
+L02,6004,6007,4,1,L01,6004 6007
