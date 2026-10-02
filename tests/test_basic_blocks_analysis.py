@@ -11,11 +11,14 @@ import pytest
 from papple2.core.cpu import BNE, JMP_absolute, JMP_indirect, JSR, RTS
 from papple2.workbench.basic_blocks_analysis import (
     BlockGraph,
+    Loop,
     SplitTile,
     SplitTransition,
+    back_edges,
     build_graph,
     dominates,
     immediate_dominators,
+    natural_loops,
     read_split_reports,
     reverse_postorder,
 )
@@ -241,3 +244,55 @@ def test_reverse_postorder_of_a_long_chain():
     graph = graph_from_edges(list(zip(chain[:-1], chain[1:])), chain[0])
 
     assert reverse_postorder(graph) == chain
+
+
+# --- Natural loops ------------------------------------------------------------
+
+
+def loops_of(edges: list[tuple[int, int]], entry: int) -> dict[int, Loop]:
+    graph = graph_from_edges(edges, entry)
+    return natural_loops(graph, immediate_dominators(graph))
+
+
+def test_natural_loops_of_nested_loops():
+    graph = graph_from_edges(NESTED_LOOPS, E)
+    idom = immediate_dominators(graph)
+
+    assert back_edges(graph, idom) == [(B, H2), (L, H1)]
+    assert natural_loops(graph, idom) == {
+        H1: Loop(H1, ((L, H1),), frozenset({H1, H2, B, L}), parent=None, depth=0),
+        H2: Loop(H2, ((B, H2),), frozenset({H2, B}), parent=H1, depth=1),
+    }
+
+
+def test_back_edges_into_one_header_make_one_loop():
+    # Like a `continue`: both a and b branch back to h.
+    h, a, b, x = 0x1010, 0x1020, 0x1030, 0x1040
+    loops = loops_of([(E, h), (h, a), (a, h), (a, b), (b, h), (b, x)], E)
+
+    assert loops == {
+        h: Loop(h, ((a, h), (b, h)), frozenset({h, a, b}), parent=None, depth=0),
+    }
+
+
+def test_self_loop_is_a_loop_of_one_block():
+    s, x = 0x1010, 0x1020
+    loops = loops_of([(E, s), (s, s), (s, x)], E)
+
+    assert loops == {s: Loop(s, ((s, s),), frozenset({s}), parent=None, depth=0)}
+
+
+def test_sibling_loops_are_not_nested():
+    # Like .loop1 and .loop2 in LOAD_LEVEL: two loops one after the other.
+    a, b, x = 0x1010, 0x1020, 0x1030
+    loops = loops_of([(E, a), (a, a), (a, b), (b, b), (b, x)], E)
+
+    assert loops == {
+        a: Loop(a, ((a, a),), frozenset({a}), parent=None, depth=0),
+        b: Loop(b, ((b, b),), frozenset({b}), parent=None, depth=0),
+    }
+
+
+def test_loop_with_two_entries_is_not_found():
+    a, b = 0x1010, 0x1020
+    assert loops_of([(E, a), (E, b), (a, b), (b, a)], E) == {}

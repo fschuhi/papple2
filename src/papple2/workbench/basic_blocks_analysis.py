@@ -2,8 +2,8 @@
 
 An analysis package: no Emulator. It reads the split reports that the
 tiling instrumentation wrote into a folder, builds a graph from them, and
-computes the dominator tree. Natural loops follow in a later step
-(briefing.md, section 3).
+computes the dominator tree and the natural loops. The loop reports follow
+in a later step (briefing.md, section 3).
 
 The tiling reports speak of tiles and transitions; the graph speaks of
 basic blocks and edges. build_graph() is the only place that translates
@@ -65,6 +65,18 @@ class BasicBlock:
     start: int
     end: int  # exclusive
     executions: int
+
+
+@dataclass(frozen=True)
+class Loop:
+    """A natural loop. Back edges with the same header make one loop, with
+    their bodies merged, so a loop is identified by its header."""
+
+    header: int
+    back_edges: tuple[tuple[int, int], ...]  # (source, header), in address order
+    body: frozenset[int]
+    parent: int | None  # header of the enclosing loop
+    depth: int  # 0 = outermost
 
 
 @dataclass
@@ -286,3 +298,69 @@ def dominates(idom: dict[int, int], a: int, b: int) -> bool:
             return False
         b = parent
     return True
+
+
+def back_edges(graph: BlockGraph, idom: dict[int, int]) -> list[tuple[int, int]]:
+    """The edges source -> target whose target dominates their source, in
+    address order. Each target is a loop header."""
+    return [(source, target) for source, target in graph.edges if dominates(idom, target, source)]
+
+
+def loop_body(graph: BlockGraph, header: int, source: int) -> set[int]:
+    """The body of the loop closed by the back edge source -> header: the
+    header, plus every block that can reach source without passing through
+    the header. The header is in the set from the start, so the backward
+    walk stops there and never leaves the loop."""
+    body = {header}
+    stack = []
+    if source not in body:  # a self-loop's body is just the header
+        body.add(source)
+        stack.append(source)
+    while stack:
+        block = stack.pop()
+        for predecessor in graph.predecessors[block]:
+            if predecessor not in body:
+                body.add(predecessor)
+                stack.append(predecessor)
+    return body
+
+
+def natural_loops(graph: BlockGraph, idom: dict[int, int]) -> dict[int, Loop]:
+    """The natural loops of the graph, keyed by header, in address order."""
+    edges_by_header: dict[int, list[tuple[int, int]]] = defaultdict(list)
+    for edge in back_edges(graph, idom):
+        edges_by_header[edge[1]].append(edge)
+
+    bodies: dict[int, frozenset[int]] = {}
+    for header in sorted(edges_by_header):
+        body: set[int] = set()
+        for source, _ in edges_by_header[header]:
+            body |= loop_body(graph, header, source)
+        bodies[header] = frozenset(body)
+
+    # Natural loops with different headers are either disjoint or nested,
+    # never partly overlapping. So the loops that strictly contain a loop
+    # form a chain, and its parent is the smallest of them.
+    parents: dict[int, int | None] = {}
+    for header, body in bodies.items():
+        enclosing = [other for other in bodies if body < bodies[other]]
+        parents[header] = min(enclosing, key=lambda other: len(bodies[other]), default=None)
+
+    def depth_of(header: int) -> int:
+        depth = 0
+        parent = parents[header]
+        while parent is not None:
+            depth += 1
+            parent = parents[parent]
+        return depth
+
+    return {
+        header: Loop(
+            header=header,
+            back_edges=tuple(edges_by_header[header]),
+            body=bodies[header],
+            parent=parents[header],
+            depth=depth_of(header),
+        )
+        for header in bodies
+    }
