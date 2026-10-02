@@ -25,7 +25,9 @@ split tiles (Basic Blocks) by splitting tiles at any observed
 entry point. Executions are perfectly reconstructed by conserving traffic
 across split points. Where a tile is cut, the piece before the cut runs
 straight on into the piece after it, without a leap; each cut is written
-as a transition with the outcome "glide".
+as a transition with the outcome "glide". A tile that never ran (the run
+stopped right after the leap into it) gives no split tile; the leap into
+it is counted in the measurements, not kept as a split transition.
 """
 
 import csv
@@ -403,6 +405,7 @@ def check_split_consistency(
         split_transitions: dict[TransitionKey, int],
         glide_transitions: dict[tuple[int, int], int],
         split_tile_initial_entries: dict[int, int],
+        leaps_into_never_ran: int,
 ) -> None:
     def require(condition: bool, message: str) -> None:
         if not condition:
@@ -419,9 +422,11 @@ def check_split_consistency(
 
     original_traversals = sum(count for _, count in original_records)
     split_traversals = sum(split_transitions.values())
+    # The leaps into a tile that never ran are the only ones left out.
     require(
-        original_traversals == split_traversals,
-        f"transition traffic altered ({original_traversals} != {split_traversals})"
+        original_traversals == split_traversals + leaps_into_never_ran,
+        f"transition traffic altered ({original_traversals} != "
+        f"{split_traversals} + {leaps_into_never_ran} into tiles that never ran)"
     )
 
     known_split_tile_starts = {s for s, _ in split_tile_executions.keys()}
@@ -545,9 +550,21 @@ def write_table(filename: Path, fields: tuple[str, ...], rows: list[dict]) -> No
 
 def split_tiles(
         instrumentation: Tiling, records: list[TransitionRecord]
-) -> tuple[list[dict], list[dict]]:
-    """Split overlapping tiles into disjoint basic blocks (split tiles)."""
-    split_points = sorted(instrumentation.tiles.keys())
+) -> tuple[list[dict], list[dict], int]:
+    """Split overlapping tiles into disjoint basic blocks (split tiles).
+
+    Also returns how many leaps went into a tile that never ran.
+    """
+    # A tile without instructions was entered by the run's last leap, and
+    # the run stopped before anything in it ran. No code ran from there, so
+    # it is no entry point: it cuts no other tile and becomes no split tile.
+    never_ran = {
+        start for start, tile in instrumentation.tiles.items()
+        if tile.instructions == 0
+    }
+    split_points = sorted(
+        start for start in instrumentation.tiles if start not in never_ran
+    )
 
     split_tile_executions = defaultdict(int)
     glide_transitions: dict[tuple[int, int], int] = defaultdict(int)
@@ -581,7 +598,12 @@ def split_tiles(
         split_tile_initial_entries[start] += tile.initial_entries
 
     split_transitions = defaultdict(int)
+    leaps_into_never_ran = 0
     for key, count in records:
+        # A leap into a tile that never ran has no split tile to land on.
+        if key.target in never_ran:
+            leaps_into_never_ran += count
+            continue
         # The split tile containing the leap instruction begins at the
         # highest split point at or before the leap PC (but within the source tile).
         valid_points = [p for p in split_points if key.source <= p <= key.pc]
@@ -599,6 +621,7 @@ def split_tiles(
         split_transitions,
         glide_transitions,
         split_tile_initial_entries,
+        leaps_into_never_ran,
     )
 
     split_tile_rows = []
@@ -642,7 +665,7 @@ def split_tiles(
     # order; the sort is stable, so the leap rows keep their order.
     transition_rows.sort(key=lambda row: row["source_tile"])
 
-    return split_tile_rows, transition_rows
+    return split_tile_rows, transition_rows, leaps_into_never_ran
 
 
 def save_measurements(
@@ -654,7 +677,9 @@ def save_measurements(
         for key, count in instrumentation.transitions.items()
     )
 
-    split_tile_rows, transition_rows = split_tiles(instrumentation, records)
+    split_tile_rows, transition_rows, leaps_into_never_ran = split_tiles(
+        instrumentation, records
+    )
 
     write_table(
         folder / SPLIT_TILES_FILE,
@@ -698,6 +723,7 @@ def save_measurements(
         f"  Split transition records: {len(transition_rows):,}",
         f"  Glide transition records: "
         f"{sum(row['outcome'] == 'glide' for row in transition_rows):,}",
+        f"  Leaps into a tile that never ran: {leaps_into_never_ran:,}",
         "",
         "INTERPRETATION",
         "  All structure is observed structure from this run.",
@@ -712,3 +738,4 @@ def save_measurements(
     measurements_output.parent.mkdir(parents=True, exist_ok=True)
     measurements_output.write_text("\n".join(lines), encoding="utf-8")
     print(f"wrote measurement summary to {measurements_output}")
+
