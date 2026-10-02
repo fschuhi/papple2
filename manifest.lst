@@ -89,7 +89,7 @@ src/papple2/core/window.py
 #src/papple2/debug/stop_conditions.py
 
 ## workbench
-# TBA, see `briefing.md`
+src/papple2/workbench/tiling.py
 
 ### --- Tests and fixtures data ---
 tests/conftest.py
