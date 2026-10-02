@@ -9,14 +9,14 @@ does not check whether another tile starts at an address, so overlapping
 tiles remain separate.
 
 After the run, check accounting and write:
-    tmp/lr_tiles.csv
-    tmp/lr_transitions.csv
+    tmp/lr_unbroken_tiles.csv
+    tmp/lr_unbroken_transitions.csv
     tmp/lr_measurements.txt
     tmp/lr_split_tiles.csv
     tmp/lr_split_transitions.csv
 
 The transformer pass breaks overlapping tiles into strictly disjoint
-execution stretches (Basic Blocks) by splitting tiles at any observed
+split tiles (Basic Blocks) by splitting tiles at any observed
 entry point. Executions are perfectly reconstructed by conserving traffic
 across split points. Where a tile is cut, the piece before the cut runs
 straight on into the piece after it, without a leap; each cut is written
@@ -71,8 +71,8 @@ for _op in BRANCH_OPCODES:
 for _op in OTHER_LEAP_OPCODES:
     OPCODE_KIND[_op] = 2
 
-TILES_OUTPUT = Path("tmp/lr_tiles.csv")
-TRANSITIONS_OUTPUT = Path("tmp/lr_transitions.csv")
+TILES_OUTPUT = Path("tmp/lr_unbroken_tiles.csv")
+TRANSITIONS_OUTPUT = Path("tmp/lr_unbroken_transitions.csv")
 MEASUREMENTS_OUTPUT = Path("tmp/lr_measurements.txt")
 SPLIT_TILES_OUTPUT = Path("tmp/lr_split_tiles.csv")
 SPLIT_TRANSITIONS_OUTPUT = Path("tmp/lr_split_transitions.csv")
@@ -386,24 +386,24 @@ def check_consistency(experiment: Tiles, expected_instructions: int) -> None:
     print("tile/transition consistency checks passed")
 
 
-def check_stretch_consistency(
+def check_split_consistency(
         original_records: list[TransitionRecord],
-        stretches_traffic: dict[tuple[int, int], int],
+        split_tile_executions: dict[tuple[int, int], int],
         split_transitions: dict[TransitionKey, int],
         glide_transitions: dict[tuple[int, int], int],
-        stretch_initial_entries: dict[int, int],
+        split_tile_initial_entries: dict[int, int],
 ) -> None:
     def require(condition: bool, message: str) -> None:
         if not condition:
-            raise RuntimeError(f"stretch consistency failed: {message}")
+            raise RuntimeError(f"split tile consistency failed: {message}")
 
-    sorted_stretches = sorted(stretches_traffic.keys())
-    for i in range(len(sorted_stretches) - 1):
-        _, end = sorted_stretches[i]
-        next_start, _ = sorted_stretches[i + 1]
+    sorted_split_tiles = sorted(split_tile_executions.keys())
+    for i in range(len(sorted_split_tiles) - 1):
+        _, end = sorted_split_tiles[i]
+        next_start, _ = sorted_split_tiles[i + 1]
         require(
             end <= next_start,
-            f"overlap detected between stretch ending at ${end:04X} and next starting at ${next_start:04X}"
+            f"overlap detected between split tile ending at ${end:04X} and next starting at ${next_start:04X}"
         )
 
     original_traversals = sum(count for _, count in original_records)
@@ -413,32 +413,32 @@ def check_stretch_consistency(
         f"transition traffic altered ({original_traversals} != {split_traversals})"
     )
 
-    known_stretch_starts = {s for s, _ in stretches_traffic.keys()}
+    known_split_tile_starts = {s for s, _ in split_tile_executions.keys()}
     for key in split_transitions:
         require(
-            key.source in known_stretch_starts,
-            f"transition source ${key.source:04X} is not a valid stretch start"
+            key.source in known_split_tile_starts,
+            f"transition source ${key.source:04X} is not a valid split tile start"
         )
         require(
-            key.target in known_stretch_starts,
-            f"transition target ${key.target:04X} is not a valid stretch start"
+            key.target in known_split_tile_starts,
+            f"transition target ${key.target:04X} is not a valid split tile start"
         )
 
-    # Every execution of a stretch is entered once: by a leap, by a glide
+    # Every execution of a split tile is entered once: by a leap, by a glide
     # across a cut, or as the run's very first entry. So the entries of each
-    # stretch must add up to its executions.
+    # split tile must add up to its executions.
     incoming: Counter[int] = Counter()
     for key, count in split_transitions.items():
         incoming[key.target] += count
     for (_, target), count in glide_transitions.items():
         incoming[target] += count
-    for (start, _), executions in stretches_traffic.items():
-        entries = stretch_initial_entries.get(start, 0) + incoming[start]
+    for (start, _), executions in split_tile_executions.items():
+        entries = split_tile_initial_entries.get(start, 0) + incoming[start]
         require(
             entries == executions,
-            f"stretch ${start:04X}: entries ({entries}) != executions ({executions})"
+            f"split tile ${start:04X}: entries ({entries}) != executions ({executions})"
         )
-    print("stretch consistency checks passed")
+    print("split tile consistency checks passed")
 
 
 def report_findings(experiment: Tiles) -> None:
@@ -532,15 +532,15 @@ def write_table(filename: Path, fields: tuple[str, ...], rows: list[dict]) -> No
     print(f"wrote {len(rows):,} measurement records to {filename}")
 
 
-def transform_to_stretches(
+def split_tiles(
         experiment: Tiles, records: list[TransitionRecord]
 ) -> tuple[list[dict], list[dict]]:
-    """Split overlapping tiles into disjoint basic blocks (stretches)."""
+    """Split overlapping tiles into disjoint basic blocks (split tiles)."""
     split_points = sorted(experiment.tiles.keys())
 
-    stretches_traffic = defaultdict(int)
+    split_tile_executions = defaultdict(int)
     glide_transitions: dict[tuple[int, int], int] = defaultdict(int)
-    stretch_initial_entries: dict[int, int] = defaultdict(int)
+    split_tile_initial_entries: dict[int, int] = defaultdict(int)
 
     for tile in experiment.tiles.values():
         if tile.instructions == 0:
@@ -549,7 +549,7 @@ def transform_to_stretches(
         start = tile.start_pc
         end = tile.furthest_pc + tile.furthest_instruction_size
 
-        # Omit non-linear wrapping extents from stretch math
+        # Omit non-linear wrapping extents from split tile math
         if end <= start or end > 0x10000:
             continue
 
@@ -560,44 +560,44 @@ def transform_to_stretches(
         traffic = tile.initial_entries + tile.leaped_to
 
         for s, e in zip(boundaries[:-1], boundaries[1:]):
-            stretches_traffic[(s, e)] += traffic
+            split_tile_executions[(s, e)] += traffic
             # A piece that ends at a cut, not at the tile's end, runs straight
             # on into the next piece. No leap records this, so record it here.
             if e != end:
                 glide_transitions[(s, e)] += traffic
 
         # The run's first entry lands on the first piece of its tile.
-        stretch_initial_entries[start] += tile.initial_entries
+        split_tile_initial_entries[start] += tile.initial_entries
 
     split_transitions = defaultdict(int)
     for key, count in records:
-        # The stretch containing the leap instruction begins at the
+        # The split tile containing the leap instruction begins at the
         # highest split point at or before the leap PC (but within the source tile).
         valid_points = [p for p in split_points if key.source <= p <= key.pc]
         if not valid_points:
             continue
 
-        stretch_start = max(valid_points)
-        new_key = TransitionKey(stretch_start, key.pc, key.opcode, key.outcome, key.target)
+        split_tile_start = max(valid_points)
+        new_key = TransitionKey(split_tile_start, key.pc, key.opcode, key.outcome, key.target)
         split_transitions[new_key] += count
 
     # Run the consistency checks
-    check_stretch_consistency(
+    check_split_consistency(
         records,
-        stretches_traffic,
+        split_tile_executions,
         split_transitions,
         glide_transitions,
-        stretch_initial_entries,
+        split_tile_initial_entries,
     )
 
-    stretch_rows = []
-    for (s, e) in sorted(stretches_traffic.keys()):
-        stretch_rows.append(
+    split_tile_rows = []
+    for (s, e) in sorted(split_tile_executions.keys()):
+        split_tile_rows.append(
             {
-                "stretch_start_PC": address(s),
-                "stretch_end_PC": address(e),
+                "tile_start_PC": address(s),
+                "tile_end_PC": address(e),
                 "length_bytes": e - s,
-                "executions": stretches_traffic[(s, e)],
+                "executions": split_tile_executions[(s, e)],
             }
         )
 
@@ -605,11 +605,11 @@ def transform_to_stretches(
     for key, count in sorted(split_transitions.items()):
         transition_rows.append(
             {
-                "source_stretch_start": address(key.source),
+                "source_tile": address(key.source),
                 "leap_from_PC": address(key.pc),
                 "opcode": f"${key.opcode:02X}",
                 "outcome": key.outcome,
-                "target_stretch_start": address(key.target),
+                "target_tile": address(key.target),
                 "count": count,
             }
         )
@@ -617,21 +617,21 @@ def transform_to_stretches(
     for (source, target), count in glide_transitions.items():
         transition_rows.append(
             {
-                "source_stretch_start": address(source),
+                "source_tile": address(source),
                 "leap_from_PC": "",
                 "opcode": "",
                 "outcome": "glide",
-                "target_stretch_start": address(target),
+                "target_tile": address(target),
                 "count": count,
             }
         )
 
-    # A stretch that ends at a cut has no leap, so its glide row never shares
+    # A split tile that ends at a cut has no leap, so its glide row never shares
     # a source with leap rows. Sorting by source keeps the file in address
     # order; the sort is stable, so the leap rows keep their order.
-    transition_rows.sort(key=lambda row: row["source_stretch_start"])
+    transition_rows.sort(key=lambda row: row["source_tile"])
 
-    return stretch_rows, transition_rows
+    return split_tile_rows, transition_rows
 
 
 def save_measurements(experiment: Tiles, rwts_reads: int) -> None:
@@ -641,27 +641,27 @@ def save_measurements(experiment: Tiles, rwts_reads: int) -> None:
         for key, count in experiment.transitions.items()
     )
 
-    stretch_rows, transition_rows = transform_to_stretches(experiment, records)
+    split_tile_rows, transition_rows = split_tiles(experiment, records)
 
     write_table(
         SPLIT_TILES_OUTPUT,
         (
-            "stretch_start_PC",
-            "stretch_end_PC",
+            "tile_start_PC",
+            "tile_end_PC",
             "length_bytes",
             "executions",
         ),
-        stretch_rows,
+        split_tile_rows,
     )
 
     write_table(
         SPLIT_TRANSITIONS_OUTPUT,
         (
-            "source_stretch_start",
+            "source_tile",
             "leap_from_PC",
             "opcode",
             "outcome",
-            "target_stretch_start",
+            "target_tile",
             "count",
         ),
         transition_rows,
@@ -678,9 +678,9 @@ def save_measurements(experiment: Tiles, rwts_reads: int) -> None:
         f"  Transition traversals: {sum(count for _, count in records):,}",
         f"  RWTS reads served: {rwts_reads:,}",
         "",
-        "STRETCH TRANSFORM",
+        "SPLIT TILES",
         f"  Original tiles: {len(experiment.tiles):,}",
-        f"  Split stretches (Basic Blocks): {len(stretch_rows):,}",
+        f"  Split tiles (Basic Blocks): {len(split_tile_rows):,}",
         f"  Original transition records: {len(records):,}",
         f"  Split transition records: {len(transition_rows):,}",
         f"  Glide transition records: "
@@ -689,8 +689,8 @@ def save_measurements(experiment: Tiles, rwts_reads: int) -> None:
         "INTERPRETATION",
         "  All structure is observed structure from this run.",
         "  One observed branch outcome does not prove the other impossible.",
-        "  Stretches represent dynamic basic blocks: contiguous executed bytes split by observed entry points.",
-        "  Stretch executions are reconstructed perfectly by conserving traffic across split points.",
+        "  Split tiles represent dynamic basic blocks: contiguous executed bytes split by observed entry points.",
+        "  Split tile executions are reconstructed perfectly by conserving traffic across split points.",
         "  Accounting checks validate the raw tile hooks, not opcode semantics or trap handling.",
         "",
     ]
