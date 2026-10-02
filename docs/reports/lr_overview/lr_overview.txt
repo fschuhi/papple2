@@ -1,0 +1,162 @@
+WHOLE RUN
+  4,000,000 instructions
+  642 pieces of code, 4,746 bytes
+  68 routines
+  42 loops, at most 2 inside each other
+
+ROUTINES (in address order)
+  routine  pieces  bytes     called  loops  calls
+  0800         40    332          1      5  6238 64bd 6c82 75f4 79ad 8811
+  6238         16    124          1      4  630e 63b3
+  630e          4     28          1      1  
+  63b3         31    228          1      4  82b0 88a2
+  64bd         67    391         85      0  67db 6a12 6b85 6b9d 6bf4 6c02 6c13 6c26 82aa 8336 83a7 87d5 884b 885d
+  67db         24    147          1      0  6b85 6c02 6c13 6c26 82aa 8336 83a7 87d5 884b 885d
+  6a12          8     80         79      0  
+  6b85          3     24        166      0  887c 888f
+  6b9d          9     74         61      0  7a92 82b0 8336 87e1 885d
+  6bf4          4     14         76      0  
+  6c02          4     11          7      0  6b85 83a7
+  6c13         13     88          7      0  7a92 82b0 8336 87e1 885d
+  6c26          3      9         83      0  
+  6c82          9     37         84      1  6cdb
+  6cdb         18    125        112      0  70d8 75ce
+  70d8         16    129        112      1  71a2 720c 7275 743e
+  71a2         15    100        110      1  72d4 7300 739d
+  720c         15    100        110      1  72d4 7300 739d
+  7275         13     89        110      0  72d4 7300 739d
+  72d4          6     34        820      0  
+  7300         17    148        194      1  
+  739d         19    158        626      1  
+  743e         24    161        110      2  
+  74df          3     24        224      0  887c 888f
+  74f7          4     33         88      0  
+  753e          2      5         24      0  
+  7574          4     14        112      0  
+  7582          9     52         76      0  
+  7595          8     47         36      0  
+  75ce          1     38        112      0  
+  75f4          9     36         84      1  7716
+  7716          5     19         84      1  
+  79ad          6     59          1      1  7a51 7a57 86e0
+  7a31          1     13      5,654      0  
+  7a3e          1     19     30,406      0  
+  7a51          5     27          1      1  
+  7a57          5     25          1      1  
+  7a70          8     43          2      0  7af8 7b15 82aa
+  7a8c          8     45          2      0  7af8 7b15 82aa
+  7a92         14    102          1      0  7ae9 7b15 82aa
+  7ae9          1     15          8      0  
+  7af8          3     17          4      0  
+  7b15          3     15         20      0  82aa
+  7b2a          5     19         28      0  
+  7b64          5     19         28      0  7b2a 82aa
+  82aa         11    122         61      2  7a31 8438 885d 8868
+  82b0         11    120        453      2  7a31 8438 885d 8868
+  8336          9    113        202      2  7a3e 8438 8872
+  83a7          9    145        202      2  7a3e 8438 8872
+  8438          3    137        918      1  
+  86b1          5     13        156      2  
+  86b5          4      9         10      2  
+  86e0          5     28          1      1  7b64
+  87ba          7     24         13      2  
+  87d5          1     12          7      0  
+  87e1          5     42          1      1  
+  8811          9     44        169      0  86b1 86b5 87ba
+  884b          1     18         14      0  
+  885d          1     11      1,308      0  
+  8868          1     10        514      0  
+  8872          1     10        404      0  
+  887c          2     14        390      0  885d
+  888f          2     14        390      0  885d
+  88a2          6     38          1      1  7a70 7a8c 88d7
+  88d7         63    515        169      1  7a3e 8a45 8a69 8af6
+  8a45          8     36        507      1  
+  8a69         31    155     10,150      0  7a3e 8af6
+  8af6          2     14     36,839      0  
+
+PIECES IN NO ROUTINE: 65
+  6f26 6f29 6f30 6f33 6f36 6f39 6f3f 6f45 6f58 6f5c 6f63 6f66
+  6f69 6f6c 6f87 6f8a 6f94 6fae 6fb9 6fbc 6fd5 6fd9 6fe0 6fe4
+  6fe8 6ff1 6ff4 6ff7 6ffa 7002 7005 700f 701c 7026 7029 7031
+  703b 703e 7041 7044 7047 7060 7066 706d 7071 7075 707e 7081
+  7084 7087 7093 7096 70a0 70ad 70b7 70ba 70c2 70cc 70cf 70d2
+  70d5 75a8 7a25 7a28 7a2b
+
+LOOPS PER ROUTINE (runs = how often the loop's first piece ran)
+  routine 0800
+    loop 2821     33,024x
+    loop 5f34          4x
+      loop 5f4b     32,768x
+    loop 60e4         85x
+    loop 619b        290x
+  routine 6238
+    loop 6252         31x
+    loop 625a          6x
+    loop 6269         16x
+      loop 627e        448x
+  routine 630e
+    loop 6350        256x
+  routine 63b3
+    loop 63b7         16x
+      loop 63cc        448x
+    loop 6492         16x
+      loop 64a0        448x
+  routine 6c82
+    loop 6c97        112x
+  routine 70d8
+    loop 7108          4x
+  routine 71a2
+    loop 71a2        518x
+  routine 720c
+    loop 720c        960x
+  routine 7300
+    loop 7304        586x
+  routine 739d
+    loop 73a1      2,417x
+  routine 743e
+    loop 7444        464x
+    loop 7490        923x
+  routine 75f4
+    loop 7605      2,604x
+  routine 7716
+    loop 771d        252x
+  routine 79ad
+    loop 79bb         20x
+  routine 7a51
+    loop 7a64     16,384x
+  routine 7a57
+    loop 7a64     16,384x
+  routine 82aa
+    loop 82df      4,037x
+    loop 8301      1,617x
+  routine 82b0
+    loop 82df      4,037x
+    loop 8301      1,617x
+  routine 8336
+    loop 8350      1,782x
+    loop 8376        440x
+  routine 83a7
+    loop 83c3      1,782x
+    loop 83f5        440x
+  routine 8438
+    loop 8455     10,098x
+  routine 86b1
+    loop 86b5      2,206x
+      loop 86b7    397,080x
+  routine 86b5
+    loop 86b5      2,206x
+      loop 86b7    397,080x
+  routine 86e0
+    loop 86f1         29x
+  routine 87ba
+    loop 87be        248x
+      loop 87c5     10,463x
+  routine 87e1
+    loop 8802          7x
+  routine 88a2
+    loop 88cb        169x
+  routine 88d7
+    loop 8951     10,319x
+  routine 8a45
+    loop 8a4c      4,056x
