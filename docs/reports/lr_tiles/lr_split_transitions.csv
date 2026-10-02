@@ -1,4 +1,4 @@
-source_stretch_start,leap_from_PC,opcode,outcome,target_stretch_start,count
+source_tile,leap_from_PC,opcode,outcome,target_tile,count
 0800,0800,$4C,,2800,1
 2800,2811,$F0,fall_through,2813,1
 2813,,,glide,2821,1

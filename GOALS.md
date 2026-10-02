@@ -8,11 +8,18 @@
 
 ## 📍 Current Session Pointer
 
-**Where we are:** `papple2` is a system to disassemble and understand Apple II games by running them, with Lode Runner as the worked example (`DIRECTION.md`: dynamic first, static fills the holes; the oracle only grades). **Milestone 2026-10-01: the core is complete.** The instrumentation, rebuilt from scratch after the pruning of 2026-09-28, follows `docs/instrumentation-design.md`: nine kinds of memory access with hook lists, `after_instruction`, `attach()` by method name. Two experiments run on it: `lr_count.py` (the execution map) and `lr_tiles.py` (tiles split into disjoint basic blocks after the run, with their transitions). Four boots run (`boot-basic`, `boot-robotron`, `boot-lode-runner`, `boot-bandits`), and the two disk stand-ins act as traps.
+**Where we are:** `papple2` is a system to disassemble and understand Apple II games by running them, with Lode Runner as the worked example (`DIRECTION.md`: dynamic first, static fills the holes; the oracle only grades). **Milestone 2026-10-02: the workbench's first pipeline.** `Tiling` records what ran and writes its reports into a folder; the basic blocks analysis reads them and finds basic blocks, dominators and natural loops. Its first run on `LOAD_LEVEL` found the oracle's four loops, exactly. `lr_overview.py` shows the whole attract play -- 68 routines, 42 loops -- with first hypotheses: the main loop, the relocation, twin routines, a probable jump table.
 
 **What's next:**
-- The workbench's first slice (`docs/workbench-ideas.md`, section 13), with `LOAD_LEVEL` as the first target, thinking in chunks from the start.
-- Structure detection as one workbench command, graded against the oracle on `LOAD_LEVEL` (`docs/workbench-ideas.md`, sections 6 and 7).
-- Refactor the `instrumentation-*.md` files.
-- Discuss and expand `docs/reveng-catalogue.md`.
-- Alongside: the small code steps in `TODO.md`.
+- A disassembler for what ran: it reads memory after the run (the game relocates its code), shows a block, a loop or a routine in `dasm` style with the loops indented, and takes labels from the names the user gives (the oracle protocol in `README.md`). Use case: disassemble a routine while analysing its structure; put twin routines side by side.
+- The IPython workbench's first slice (`docs/workbench-ideas.md`, section 13): a session that holds the run, with the disassembler as its first command, plus `name()` and `comment()` saved in a session file under git.
+- Prune the `instrumentation-*.md` documents: the inventory was done on 2026-10-02, the decisions are open.
+- Alongside: the small code steps and the parked work in `TODO.md`.
+
+---
+
+## Strategic questions
+
+Goals that need a strategy discussion before they are actionable.
+
+- **Routines as stretches.** A routine might map onto a "stretch". Still fuzzy: stretches that contain substretches (a routine's loops, entries into shared code); how stretches get their names (the oracle protocol); and how they relate to the noweb chunks of `main.nw`, which are named, nested pieces of code as well. Note: until now "stretch" was reserved for a container of reports; this would give the word a meaning in the code. Worth settling before the IPython slice fixes its data model.

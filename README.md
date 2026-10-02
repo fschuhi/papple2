@@ -14,6 +14,7 @@
   - [Extension points](#extension-points)
   - [Memory access by kind](#memory-access-by-kind)
   - [Speed](#speed)
+  - [Workbench](#workbench)
 - [Relation to sibling projects](#relation-to-sibling-projects)
 - [Testing strategy](#testing-strategy)
 - [Data files](#data-files)
@@ -27,7 +28,7 @@
 
 `papple2` is a small Apple II emulator written in Python. It is not meant to compete with full emulators on speed or completeness. Its purpose is to be a debugging instrument: a machine I can stop, inspect, and script from Python while it runs Apple II code.
 
-The core comes from ApplePy by James Tauber, ported to Python 3 and stripped of what I did not need (the socket interface). Around that core sit an assembler and disassembler, stand-ins for the disk routines two of the games call, and a speed control. The instruments that make it a debugging tool were rebuilt from scratch between 2026-09-27 and 2026-10-01, from the tag `pre-redesign` to the tag `core-complete`: memory access by kind with hook lists, `after_instruction`, and experiments that attach by method name. The decisions are in `docs/instrumentation-design.md`; the old design is drawn in `docs/instrumentation-map.md`. Next comes a workbench for reverse engineering on top of it, in IPython (`docs/workbench-ideas.md`), following `DIRECTION.md`: dynamic analysis first, static disassembly to fill the holes.
+The core comes from ApplePy by James Tauber, ported to Python 3 and stripped of what I did not need (the socket interface). Around that core sit an assembler and disassembler, stand-ins for the disk routines two of the games call, and a speed control. The instruments that make it a debugging tool were rebuilt from scratch between 2026-09-27 and 2026-10-01, from the tag `pre-redesign` to the tag `core-complete`: memory access by kind with hook lists, `after_instruction`, and experiments that attach by method name. The decisions are in `docs/instrumentation-design.md`; the old design is drawn in `docs/instrumentation-map.md`. On top of it, a workbench for reverse engineering has begun (2026-10-02): an instrumentation records what ran, and analyses recover its structure from the recorded reports. Its first pipeline finds the routines and loops of Lode Runner's attract play (see "Workbench" below). It follows `DIRECTION.md`: dynamic analysis first, static disassembly to fill the holes; an IPython front end is planned (`docs/workbench-ideas.md`).
 
 **Core philosophy:**
 
@@ -68,17 +69,19 @@ Four programs boot in `papple2`: the Apple II's own Monitor and Integer BASIC, a
 
 ### Package split (M4, done 2026-09-12)
 
-`papple2` is split into two layers:
+`papple2` is split into three layers:
 
 ```mermaid
 graph TD
+    WORKBENCH["papple2.workbench<br/>tiling, basic_blocks_analysis"]
     DEBUG["papple2.debug<br/>assembler, disassembler, labels"]
     CORE["papple2.core<br/>cpu, memory, apple, window, emulator, disk_image"]
 
+    WORKBENCH --> CORE
     DEBUG --> CORE
 ```
 
-`papple2.core` never imports from `papple2.debug` (since 2026-09-27): the debugging tools use the machine, never the other way round. Programs that use `papple2` live outside both packages -- the boot scripts in `scripts/`, and the sibling projects below.
+`papple2.core` never imports from `papple2.debug` (since 2026-09-27): the debugging tools use the machine, never the other way round. `papple2.workbench` (since 2026-10-02) holds the reverse-engineering tools meant for reuse, and uses the machine the same way. Programs that use `papple2` live outside all three packages -- the boot scripts and experiments in `scripts/`, and the sibling projects below.
 
 ### Emulator / Window / States
 
@@ -141,11 +144,37 @@ The CPU reads and writes memory through one `Memory` method per kind of access: 
 
 `CPU` counts its instructions in `instruction_count` (zeroed like `cycles`, in `__init__` and `reset()`) and, at the end of each instruction, calls the hooks in `after_instruction`. These hooks get no arguments: they read `instruction_count`, `last_PC` and `last_opcode` from the `CPU`, so an experiment keeps the `CPU` it watches in `self.cpu`. See `docs/instrumentation-design.md`, section 4.
 
-An experiment is a plain object whose methods are named after the hook lists. `Emulator.attach(experiment)` puts each such method into its list in `Memory` or `CPU`, and `detach(experiment)` takes them out again; both log one line at INFO. Two experiments use them: `scripts/lr_count.py` (a map of what Lode Runner's attract play runs, as opcode, operand or immediate) and `scripts/lr_tiles.py` (tiles split into disjoint basic blocks after the run, with their transitions).
+An experiment is a plain object whose methods are named after the hook lists. `Emulator.attach(experiment)` puts each such method into its list in `Memory` or `CPU`, and `detach(experiment)` takes them out again; both log one line at INFO. Two experiments use them: `scripts/lr_count.py` (a map of what Lode Runner's attract play runs, as opcode, operand or immediate) and the tiling instrumentation `papple2.workbench.tiling`, which `scripts/lr_tiles.py` attaches (tiles split into disjoint basic blocks after the run, with their transitions; see "Workbench" below).
 
 ### Speed
 
 Unthrottled, `papple2` runs as fast as Python allows: about 3.5 times a real Apple II on an M4. Windowed runs take a `speed` (`Emulator(speed=...)`): 1.0 is a real Apple II (about 1.023 MHz), `None` is unthrottled, and 1.0 is the default. Every 1000 loop passes, `run()` compares the cycles the CPU has counted with the wall-clock time and sleeps the difference; after a pause it measures afresh. Headless runs and tests are never throttled. `scripts/boot_lode_runner.py` passes `None` unless it gets `--speed`, so `make boot-lode-runner` runs at full speed and `make boot-lode-runner-throttled` at the speed of a real Apple II. The display is shown 40 times per second (`frame_rate`).
+
+### Workbench
+
+Since 2026-10-02, `papple2.workbench` holds two kinds of packages, and the steps between them are files in a folder:
+
+- **Instrumentation packages** hook into a running `Emulator`: they are set up with `emulator.attach(...)`, collect while it runs, and write reports into a folder given by the caller. The `-ing` suffix marks them: `Tiling` in `tiling.py`.
+- **Analysis packages** need no `Emulator`: they read reports from a folder and return plain values or write reports of their own, so they also run on fixture files. Reading is kept apart from the logic. `basic_blocks_analysis.py` reads the split reports, builds a graph of basic blocks, finds dominators and natural loops, and writes the loop reports.
+
+```mermaid
+graph LR
+    RUN["scripts/lr_tiles.py<br/>Emulator run"] --> TILING["Tiling<br/>instrumentation"]
+    TILING --> REPORTS["tmp/lr_tiles/<br/>tiles, transitions, measurements"]
+    REPORTS --> BBA["basic_blocks_analysis<br/>graph, dominators, loops"]
+    BBA --> LOOPS["lr_loops.csv<br/>lr_loop_members.csv"]
+    BBA --> OVERVIEW["scripts/lr_overview.py<br/>routines and loops of the whole run"]
+```
+
+No script writes the loop reports yet; for now they come from `write_loop_reports()` in a Python shell. Everything the pipeline finds is observed structure: only what ran in this run.
+
+Terms:
+
+- **Tile:** a run of instructions from an entry point to the leap that leaves it, as recorded. Tiles as recorded ("unbroken") may overlap.
+- **Leap:** a branch, `JMP`, `JSR`, `RTS`, `RTI` or `BRK`. **Glide:** the CPU runs on into the next instruction, without a leap.
+- **Split tile:** a tile cut at every entry point inside it; split tiles do not overlap. Each split tile becomes one **basic block** of the graph; the graph's connections are **edges**. A **call fall-through edge** joins the block holding a `JSR` to the block behind it, instead of an edge into the callee.
+- **Routine:** for now, the code reachable from an entry -- the run's start or a `JSR` target -- without following calls. Jump tables, tail calls and shared code blur it.
+- **Stretch:** reserved for a future container of reports.
 
 ---
 
@@ -163,7 +192,7 @@ Unthrottled, `papple2` runs as fast as Python allows: about 3.5 times a real App
 
 `papple2` is verified at two tiers, deliberately:
 
-- **Automated (`make test`).** The pytest suite covers 6502 instruction semantics and the classic hardware quirks, Apple II specifics (soft switches, the hi-res memory buffer, the disk image), running headless with traps and `until`, the state machine, the throttle's calculation, and the assembler and disassembler. All of it runs with `no_display=True` -- no pygame window involved, and none of it can be, meaningfully: a headless run has no way to assert "does this look right on screen."
+- **Automated (`make test`).** The pytest suite covers 6502 instruction semantics and the classic hardware quirks, Apple II specifics (soft switches, the hi-res memory buffer, the disk image), running headless with traps and `until`, the state machine, the throttle's calculation, the assembler and disassembler, and the workbench's basic blocks analysis on small hand-made graphs. All of it runs with `no_display=True` -- no pygame window involved, and none of it can be, meaningfully: a headless run has no way to assert "does this look right on screen."
 - **Manual, with-window (`make boot-robotron`).** Runs `scripts/boot_robotron.py`, a plain script that boots `Emulator(no_display=False)` with the real `ROBOTRON.BIN` and calls `run()` with no `until` -- the same path the old in-repo Robotron showcase exercised, but with zero dependency on `probotron`'s workbench or Excel bridge.
 - **Manual, with-window, text mode (`make boot-basic`).** Runs `scripts/boot_basic.py`. Boots the Monitor and, on `Ctrl-B`, Integer BASIC -- the same real ROM path as `make boot-robotron`, but through the text page instead of hires. Catches display and keyboard bugs specific to `Display.update_text()` that a hires-only Robotron run never would.
 - **Manual, with-window, games (`make boot-lode-runner`, `make boot-lode-runner-throttled`, `make boot-bandits`).** Lode Runner's attract mode, then a real game on a key press, at full speed or at the speed of a real Apple II; Bandits from its cutscene into the game. Both reach their games through the disk stand-ins, so these runs check the traps as well.
@@ -209,7 +238,8 @@ The tools interacting with `papple2` live in the `scripts/` folder and generally
 - **The `lr_*` experiments:** Headless analysis routines currently focused on Lode Runner's attract play. These attach custom instrumentations (like tracing and block-mapping hooks) to analyze how the game executes. 
   - `lr_count.py`: a 256x256 map of the memory, one cell per address, showing which addresses ran as opcode, operand or immediate (PNG and HTML).
   - `lr_trace_pc.py`: Tracks and records a direct trace of execution flow.
-  - `lr_tiles.py`: collects tiles (runs of instructions from a leap target to the next leap) and the transitions between them; after the run, splits overlapping tiles into disjoint basic blocks and checks that every execution is accounted for (CSV, plus measurements as text).
+  - `lr_tiles.py`: attaches the tiling instrumentation (`papple2.workbench.tiling`), which collects tiles (runs of instructions from a leap target to the next leap) and the transitions between them; after the run, it splits overlapping tiles into disjoint basic blocks, checks that every execution is accounted for, and writes its reports into `tmp/lr_tiles/` (CSV, plus measurements as text).
+  - `lr_overview.py`: runs no emulator; reads the split reports from `tmp/lr_tiles/` and prints the whole run: totals, one line per routine with the routines it calls, the pieces in no routine, and each routine's loops.
 
 ---
 
@@ -225,7 +255,8 @@ make boot-lode-runner-throttled # the same, at the speed of a real Apple II
 make boot-lode-runner-headless  # run Lode Runner headless; save both hi-res pages as PNG
 make boot-bandits               # boot Bandits from Total Replay's ProDOS files
 make lr-count        # Experiment: map which addresses Lode Runner's attract play runs (PNG and HTML)
-make lr-tiles        # Experiment: collect tiles and transitions, plus measurements (CSV and text)
+make lr-tiles        # Experiment: tiling reports into tmp/lr_tiles/ (CSV and text)
+make lr-overview     # Overview of the whole run: routines, loops, calls (after make lr-tiles)
 make lr-trace-pc     # Experiment: record start PC, opcode and end PC of every instruction (CSV)
 ```
 
@@ -264,3 +295,6 @@ This section is more useful to an LLM picking this project back up than to me --
 - **`after_instruction` hooks take no arguments** (since 2026-09-29). They read what they need from the `CPU`'s fields; `reset()` keeps them. `CPU.instruction_count` is not `Emulator.instructions`: the first counts since a fresh start, the second since the current `run()` call.
 - **Every test module is plain `pytest`** (since 2026-09-29): functions and fixtures, no `unittest` classes.
 - **Experiments attach by method name** (since 2026-09-29): `Emulator.attach()` matches methods to the hook lists by name, refuses a method starting with `after_` that matches no list, and logs through Python's `logging`. No base class and no named hook types for experiments: an experiment exposes whichever hooks it needs.
+- **The workbench is a pipeline connected by files** (since 2026-10-02). Instrumentation packages (suffix `-ing`, e.g. `Tiling`) write reports into a folder the caller gives; analysis packages read them and need no `Emulator`. Each script writes into a folder of its own, `tmp/<script name>/`.
+- **The oracle protocol** (2026-10-02): form a hypothesis about an address; settle on a name that stands for the hypothesis; then look up the oracle -- same meaning: use the oracle's name; different meaning: investigate. The oracle grades; it never feeds the tools.
+- **Disassemble memory after the run, not the file** (2026-10-02). Lode Runner relocates its code at start-up: `.loop1` lies at `$2B52` in the file and runs at `$6252`.
