@@ -11,7 +11,7 @@ RUN           = $(ACTIVATE) && python
 SETUP_STAMP   = $(VENV_DIR)/.setup_stamp
 
 # --- Phony targets ---
-.PHONY: all setup test test-verbose boot-basic boot-robotron boot-lode-runner boot-lode-runner-throttled boot-lode-runner-headless boot-bandits lr-count lr-trace-pc lr-tiles lr-overview clean showtree gentree commit-hash patch filesdump filesdump-detailed help
+.PHONY: all setup test test-verbose boot-basic boot-robotron boot-lode-runner boot-lode-runner-throttled boot-lode-runner-headless boot-bandits lr-count lr-trace-pc lr-tiles lr-overview walkthrough ipython clean showtree gentree commit-hash patch filesdump filesdump-detailed help
 
 all: setup
 
@@ -69,6 +69,14 @@ lr-tiles: $(SETUP_STAMP) ## Experiment: collect tiles and transitions, plus meas
 lr-overview: $(SETUP_STAMP) ## Overview of the whole run: routines, loops, calls (reads tmp/lr_tiles/, run make lr-tiles first)
 	$(RUN) scripts/lr_overview.py
 
+# --- Walkthrough (a tiny program through the workbench's pipeline, output in tmp/walkthrough/) ---
+walkthrough: $(SETUP_STAMP) ## Walk a tiny program through tiling and the basic blocks analysis (reports in tmp/walkthrough/)
+	$(RUN) scripts/walkthrough.py
+
+# --- Interactive ---
+ipython: $(SETUP_STAMP) ## Start IPython in the venv (e.g. %run scripts/walkthrough.py)
+	$(ACTIVATE) && ipython
+
 # --- Utility Targets ---
 clean: ## Remove venv, cache, and tmp files
 	rm -rf $(VENV_DIR) .pytest_cache tmp
@@ -112,3 +120,4 @@ filesdump-detailed: $(SETUP_STAMP) gentree ## Create context dump for LLMs with 
 
 help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+
