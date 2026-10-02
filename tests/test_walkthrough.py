@@ -210,21 +210,22 @@ def test_chapter_8_one_block_disassembled(walkthrough, capsys) -> None:
 
 def test_chapter_9_the_whole_program_disassembled(walkthrough, capsys) -> None:
     # The twenty bytes, read back from memory after the run, with the names
-    # given by hand. The four operands that are named addresses show their
-    # names. INC $10 keeps its address: Labels doesn't name zero-page
-    # operands yet.
+    # given by hand. The four named addresses show their names twice: in
+    # the column before their own instruction, and in the operands that
+    # point at them. INC $10 keeps its address: Labels doesn't name
+    # zero-page operands yet.
     dis(walkthrough.emulator, 0x6000, 0x6014, walkthrough.labels)
 
     assert capsys.readouterr().out.splitlines() == [
-        "6000  a0 02     LDY #$02",
-        "6002  a2 03     LDX #$03",
-        "6004  20 10 60  JSR SUB",
-        "6007  ca        DEX",
-        "6008  d0 fa     BNE INNER",
-        "600a  88        DEY",
-        "600b  d0 f5     BNE OUTER",
-        "600d  4c 13 60  JMP DONE",
-        "6010  e6 10     INC $10",
-        "6012  60        RTS",
-        "6013  ea        NOP",
+        "6000  a0 02            LDY #$02",
+        "6002  a2 03     OUTER  LDX #$03",
+        "6004  20 10 60  INNER  JSR SUB",
+        "6007  ca               DEX",
+        "6008  d0 fa            BNE INNER",
+        "600a  88               DEY",
+        "600b  d0 f5            BNE OUTER",
+        "600d  4c 13 60         JMP DONE",
+        "6010  e6 10     SUB    INC $10",
+        "6012  60               RTS",
+        "6013  ea        DONE   NOP",
     ]

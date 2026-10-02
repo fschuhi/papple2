@@ -73,3 +73,26 @@ def test_addresses_that_are_not_code_become_a_byte_block(
     lines = disassembler.disassemble(0x0300, 0x0302)
 
     assert lines[-1][3:5] == [".byte", "a9 05 60"]
+
+
+def test_label_at_gives_the_name_or_nothing() -> None:
+    labels = Labels()
+    labels.add_labels([(0x0300, "START")])
+
+    assert labels.label_at(0x0300) == "START"
+    assert labels.label_at(0x0302) == ""
+
+
+def test_a_named_address_fills_the_label_column(
+    memory: Memory, cpu: CPU
+) -> None:
+    # The label column holds the name of the instruction's own address;
+    # addresses without a name leave it empty.
+    labels = Labels()
+    labels.add_labels([(0x0300, "START")])
+    disassembler = Disassembler(cpu, labels)
+    memory.load_test_data(0x0300, [0xA9, 0x05, 0x60])  # LDA #$05 / RTS
+
+    lines = disassembler.disassemble(0x0300, 0x0302)
+
+    assert [line[2] for line in lines] == ["START", ""]

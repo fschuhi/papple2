@@ -52,6 +52,14 @@ class Labels:
             (0xfca8, 'F8ROM:WAIT'),
         ])
 
+    def label_at(self, address: int) -> str:
+        """The name for address, or '' if it has none. Looks in the same
+        order as replace_operand_address(): first the names add_address()
+        made, then the names passed in."""
+        if address in self.labels:
+            return self.labels[address]
+        return self.passed_labels.get(address, '')
+
     def replace_operand_address(self, operand: str, operand_address: int) -> str:
         # TODO: label replacement in operands must work for all addresses, including zero page
         if operand_address in self.labels:

@@ -361,7 +361,8 @@ class Disassembler:
                     self.__disassemble_byte_blocks( byte_block_start, byte_block_end, lines )
                     byte_block_start = None
 
-                inline_label = ''
+                # the name of this instruction's own address, if it has one
+                inline_label = self.labels.label_at(address)
 
                 comments = []
 

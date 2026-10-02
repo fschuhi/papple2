@@ -95,7 +95,10 @@ def dis(
 
     With labels, an operand whose address has a name shows the name
     (JSR SUB instead of JSR $6010). Zero-page operands keep their address:
-    Labels doesn't name them yet.
+    Labels doesn't name them yet. An instruction whose own address has a
+    name shows it in a column of its own, before the instruction. The
+    column is as wide as the longest name in the range, and left out if
+    no address in the range has a name.
 
     An instruction that starts before end is printed whole, even if its
     operand reaches past end. A block's end always lies behind its last
@@ -105,9 +108,15 @@ def dis(
         emulator.cpu, labels if labels is not None else Labels()
     )
     # disassemble() takes an inclusive end.
-    for row in disassembler.disassemble(start, end - 1):
-        row_address, row_bytes, _label, mnemonic, operand, _comment = row
+    rows = disassembler.disassemble(start, end - 1)
+    width = max((len(row[2]) for row in rows), default=0)
+    for row in rows:
+        row_address, row_bytes, label, mnemonic, operand, _comment = row
         if not row_address:  # the empty line before a .byte block
             print()
             continue
-        print(f"{row_address.removeprefix('$'):<4}  {row_bytes:<8}  {mnemonic} {operand}".rstrip())
+        name_column = f"{label:<{width}}  " if width else ""
+        print(
+            f"{row_address.removeprefix('$'):<4}  {row_bytes:<8}  "
+            f"{name_column}{mnemonic} {operand}".rstrip()
+        )
