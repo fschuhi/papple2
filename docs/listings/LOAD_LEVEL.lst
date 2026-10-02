@@ -1,0 +1,700 @@
+631	61b8					
+632	61b8		.no_button_or_key_timeout			
+633	61b8	a5 a7		LDA	GAME_MODE	
+634	61ba	d0 22		BNE	.check_game_mode	"; If GAME_MODE != 0, .check_game_mode.
+"
+635	61bc					
+636	61bc					"; When GAME_MODE = 0:
+"
+637	61bc	a2 01		LDX	#$01	
+638	61be	86 a7		STX	GAME_MODE	"; Set GAME_MODE = 1
+"
+639	61c0	86 a6		STX	LEVELNUM	
+640	61c2	86 ac		STX	$AC	
+641	61c4	86 9d		STX	$9D	"; LEVELNUM = $AC = $9D = 1
+"
+642	61c6	a6 99		LDX	ENABLE_SOUND	
+643	61c8	8e d1 61		STX	.restore_enable_sound+1	"; Save previous value of DNABLE_SOUND
+"
+644	61cb	85 99		STA	ENABLE_SOUND	
+645	61cd	4c 56 60		JMP	INIT_GAME_DATA	
+646	61d0					
+647	61d0		.restore_enable_sound			
+648	61d0	a9 00		LDA	#$00	"; Fixed up above
+"
+649	61d2	85 99		STA	ENABLE_SOUND	
+650	61d4	ad 00 c0		LDA	KBD	
+651	61d7	a6 ac		LDX	$AC	
+652	61d9	f0 1b		BEQ	.key_pressed	
+653	61db	4c 8e 61		JMP	LONG_DELAY	
+654	61de					
+655	61de			ORG	$61DE	
+656	61de					
+657	61de		.check_game_mode			
+658	61de					"; For game mode 1, reset and play the game.
+"
+659	61de					"; For game mode 0, display the high score screen.
+"
+660	61de	c9 01		CMP	#$01	
+661	61e0	d0 11		BNE	.reset_game	
+662	61e2	f0 05		BEQ	.display_hi_score_screen	"; Unconditional jump
+"
+663	61e4					
+664	61e4			ORG	$61E4	
+665	61e4					
+666	61e4		.read_and_display_hi_score_screen			
+667	61e4	a9 01		LDA	#$01	
+668	61e6	20 59 63		JSR	ACCESS_HI_SCORE_DATA_FROM_DISK	"; read hi score table
+"
+669	61e9					
+670	61e9					"; fallthrough to .display_hi_score_screen
+"
+671	61e9					
+672	61e9			ORG	$61E9	
+673	61e9					
+674	61e9		.display_hi_score_screen			
+675	61e9	20 6b 78		JSR	HI_SCORE_SCREEN	
+676	61ec	a9 02		LDA	#$02	
+677	61ee	85 a7		STA	GAME_MODE	"; GAME_MODE = 2
+"
+678	61f0	4c 8e 61		JMP	LONG_DELAY	
+679	61f3					
+680	61f3			ORG	$61F3	
+681	61f3					
+682	61f3		.reset_game			
+683	61f3	4c 08 60		JMP	RESET_GAME	
+684	61f6					
+685	61f6			ORG	$61F6	
+686	61f6					
+687	61f6		.key_pressed			
+688	61f6	8d 10 c0		STA	KBDSTRB	"; Clear keyboard strobe
+"
+689	61f9	c9 85		CMP	#$85	"; if ctrl-E:
+"
+690	61fb	f0 14		BEQ	.start_level_editor	
+691	61fd	c9 8d		CMP	#$8D	"; if return key:
+"
+692	61ff	f0 e3		BEQ	.read_and_display_hi_score_screen	
+693	6201					
+694	6201					"; fall through to .button_pressed
+"
+695	6201					
+696	6201			ORG	$6201	
+697	6201					
+698	6201		.set_level_0_and_play_game			
+699	6201	a2 00		LDX	#$00	
+700	6203	86 96		STX	DISK_LEVEL_LOC	"; DISK_LEVEL_LOC = 0
+"
+701	6205	e8		INX		
+702	6206	86 a6		STX	LEVELNUM	"; LEVELNUM = 1
+"
+703	6208	86 9d		STX	$9D	
+704	620a	a9 02		LDA	#$02	
+705	620c	85 a7		STA	GAME_MODE	
+706	620e	4c 56 60		JMP	INIT_GAME_DATA	
+707	6211					
+708	6211			ORG	$6211	
+709	6211					
+710	6211		.start_level_editor			
+711	6211	4c 84 7b		JMP	LEVEL_EDITOR	
+712	6214					
+713	6214			ORG	$6214	
+714	6214		TIMES_3_TABLE			
+715	6214	00 03 06 09*		HEX	00 03 06 09 0C 0F 12 15 18	
+716	621d			ORG	$621D	
+717	621d		GUARD_GOLD_TIMER_START_VALUES			
+718	621d	26 26 2e 44*		HEX	26 26 2E 44 47 49 4A 4B 4C 4D 4E 4F 50	
+719	622a			ORG	$622A	
+720	622a		APPEND_LEVEL_CLEARED_NOTE			
+721	622a			SUBROUTINE		
+722	622a					
+723	622a	a5 5c		LDA	SCRATCH_5C	
+724	622c	0a		ASL		
+725	622d	0a		ASL		
+726	622e	0a		ASL		
+727	622f	0a		ASL		"; pitch = SCRATCH_5C * 16
+"
+728	6230	a2 06		LDX	#$06	"; duration
+"
+729	6232	20 d5 87		JSR	APPEND_NOTE	
+730	6235	4c 11 88		JMP	PLAY_SOUND	
+731	6238					
+732	6238					
+733	6238					"; Joystick routines
+"
+734	6238					
+735	6238			ORG	$6238	
+736	6238		LOAD_LEVEL			
+737	6238			SUBROUTINE		
+738	6238					"; Enter routine with X set to whether the level should be
+"
+739	6238					"; loaded verbatim or not.
+"
+740	6238					
+741	6238	86 a2		STX	VERBATIM	
+742	623a					
+743	623a	a2 ff		LDX	#$FF	
+744	623c	86 00		STX	PLAYER_COL	
+745	623e	e8		INX		
+746	623f	86 a3		STX	LADDER_COUNT	
+747	6241	86 93		STX	GOLD_COUNT	
+748	6243	86 8d		STX	GUARD_COUNT	
+749	6245	86 19		STX	GUARD_NUM	
+750	6247	86 a0		STX	DIG_ANIM_STATE	
+751	6249	86 92		STX	LEVEL_DATA_INDEX	
+752	624b	86 1a		STX	TMP	
+753	624d	86 86		STX	GAME_ROWNUM	
+754	624f	8a		TXA		
+755	6250					
+756	6250	a2 1e		LDX	#30	
+757	6252		.loop1			
+758	6252	9d e0 0c		STA	BRICK_FILL_TIMERS,X	
+759	6255	ca		DEX		
+760	6256	10 fa		BPL	.loop1	
+761	6258					
+762	6258	a2 05		LDX	#$05	
+763	625a		.loop2			
+764	625a	9d 98 0c		STA	GUARD_RESURRECTION_TIMERS,X	
+765	625d	ca		DEX		
+766	625e	10 fa		BPL	.loop2	
+767	6260					
+768	6260					
+769	6260	a9 01		LDA	#$01	
+770	6262	85 9a		STA	ALIVE	"; Set player live
+"
+771	6264					"; A happens to also be DISK_ACCESS_READ.
+"
+772	6264	20 0e 63		JSR	ACCESS_COMPRESSED_LEVEL_DATA	
+773	6267					
+774	6267	a4 86		LDY	GAME_ROWNUM	
+775	6269		.row_loop			
+776	6269	b9 05 1c		LDA	CURR_LEVEL_ROW_SPRITES_PTR_OFFSETS,Y	
+777	626c	85 06		STA	PTR1	
+778	626e	85 08		STA	PTR2	
+779	6270	b9 15 1c		LDA	CURR_LEVEL_ROW_SPRITES_PTR_PAGES,Y	
+780	6273	85 07		STA	PTR1+1	
+781	6275	b9 25 1c		LDA	CURR_LEVEL_ROW_SPRITES_PTR_PAGES2,Y	
+782	6278	85 09		STA	PTR2+1	
+783	627a					
+784	627a	a9 00		LDA	#$00	
+785	627c	85 85		STA	GAME_COLNUM	
+786	627e					
+787	627e		.col_loop			
+788	627e	a5 1a		LDA	TMP	"; odd/even counter
+"
+789	6280	4a		LSR		
+790	6281	a4 92		LDY	LEVEL_DATA_INDEX	
+791	6283	b9 00 0d		LDA	DISK_BUFFER,Y	
+792	6286	b0 04		BCS	.628c	"; odd?
+"
+793	6288	29 0f		AND	#$0F	
+794	628a	10 06		BPL	.6292	"; unconditional jump
+"
+795	628c		.628c			
+796	628c					
+797	628c	4a		LSR		
+798	628d	4a		LSR		
+799	628e	4a		LSR		
+800	628f	4a		LSR		
+801	6290	e6 92		INC	LEVEL_DATA_INDEX	
+802	6292					
+803	6292		.6292			
+804	6292	e6 1a		INC	TMP	
+805	6294					
+806	6294	a4 85		LDY	GAME_COLNUM	
+807	6296	c9 0a		CMP	#10	
+808	6298	90 02		BCC	.629c	
+809	629a	a9 00		LDA	#SPRITE_EMPTY	"; sprite >= 10 -> sprite 0
+"
+810	629c		.629c			
+811	629c					
+812	629c	91 06		STA	(PTR1),Y	
+813	629e	91 08		STA	(PTR2),Y	
+814	62a0					
+815	62a0	e6 85		INC	GAME_COLNUM	
+816	62a2	a5 85		LDA	GAME_COLNUM	
+817	62a4	c9 1c		CMP	#28	
+818	62a6	90 d6		BCC	.col_loop	"; loop while GAME_COLNUM < 28
+"
+819	62a8					
+820	62a8	e6 86		INC	GAME_ROWNUM	
+821	62aa	a4 86		LDY	GAME_ROWNUM	
+822	62ac	c0 10		CPY	#16	
+823	62ae	90 b9		BCC	.row_loop	"; loop while GAME_ROWNUM < 16
+"
+824	62b0					
+825	62b0					
+826	62b0	20 b3 63		JSR	DRAW_LEVEL_PAGE2	
+827	62b3	90 0e		BCC	.end	"; No error
+"
+828	62b5					
+829	62b5	a5 96		LDA	DISK_LEVEL_LOC	
+830	62b7	f0 0b		BEQ	.reset_game	
+831	62b9					
+832	62b9	a2 00		LDX	#$00	
+833	62bb	86 96		STX	DISK_LEVEL_LOC	
+834	62bd	e6 97		INC	GUARD_PATTERN_OFFSET	
+835	62bf	ca		DEX		
+836	62c0	4c 38 62		JMP	LOAD_LEVEL	
+837	62c3					
+838	62c3					
+839	62c3		.end			
+840	62c3	60		RTS		
+841	62c4					
+842	62c4		.reset_game			
+843	62c4	4c 08 60		JMP	RESET_GAME	
+844	62c7					
+845	62c7					
+846	62c7					
+847	62c7					"; Sound routines
+"
+848	62c7					
+849	62c7			ORG	$62C7	
+850	62c7		COMPRESS_AND_SAVE_LEVEL_DATA			
+851	62c7			SUBROUTINE		
+852	62c7					
+853	62c7	a9 00		LDA	#$00	
+854	62c9	85 92		STA	LEVEL_DATA_INDEX	
+855	62cb	85 1a		STA	TMP	
+856	62cd	85 86		STA	GAME_ROWNUM	
+857	62cf					
+858	62cf		.loop			
+859	62cf	a4 86		LDY	GAME_ROWNUM	
+860	62d1	b9 05 1c		LDA	CURR_LEVEL_ROW_SPRITES_PTR_OFFSETS,Y	
+861	62d4	85 06		STA	PTR1	
+862	62d6	b9 15 1c		LDA	CURR_LEVEL_ROW_SPRITES_PTR_PAGES,Y	
+863	62d9	85 07		STA	PTR1+1	
+864	62db					
+865	62db	a0 00		LDY	#$00	
+866	62dd	84 85		STY	GAME_COLNUM	
+867	62df					
+868	62df		.loop2			
+869	62df	a5 1a		LDA	TMP	
+870	62e1	4a		LSR		
+871	62e2	b1 06		LDA	(PTR1),Y	
+872	62e4	b0 04		BCS	.shift_left	
+873	62e6					
+874	62e6	85 1e		STA	SPRITE_NUM	
+875	62e8	10 0d		BPL	.next	
+876	62ea					
+877	62ea		.shift_left			
+878	62ea	0a		ASL		
+879	62eb	0a		ASL		
+880	62ec	0a		ASL		
+881	62ed	0a		ASL		
+882	62ee	05 1e		ORA	SPRITE_NUM	
+883	62f0	a4 92		LDY	LEVEL_DATA_INDEX	
+884	62f2	99 00 0d		STA	DISK_BUFFER,Y	
+885	62f5	e6 92		INC	LEVEL_DATA_INDEX	
+886	62f7					
+887	62f7		.next			
+888	62f7	e6 1a		INC	TMP	
+889	62f9	e6 85		INC	GAME_COLNUM	
+890	62fb	a4 85		LDY	GAME_COLNUM	
+891	62fd	c0 1c		CPY	#MAX_GAME_COL+1	
+892	62ff	90 de		BCC	.loop2	
+893	6301					
+894	6301	e6 86		INC	GAME_ROWNUM	
+895	6303	a5 86		LDA	GAME_ROWNUM	
+896	6305	c9 10		CMP	#MAX_GAME_ROW+1	
+897	6307	90 c6		BCC	.loop	
+898	6309					
+899	6309	a9 02		LDA	#DISK_ACCESS_WRITE	
+900	630b	4c 0e 63		JMP	ACCESS_COMPRESSED_LEVEL_DATA	"; tailcall
+"
+901	630e			ORG	$630E	
+902	630e		ACCESS_COMPRESSED_LEVEL_DATA			
+903	630e			SUBROUTINE		
+904	630e					"; Enter routine with A set to command: 1 = read, 2 = write, 4 = format
+"
+905	630e					
+906	630e	8d f4 b7		STA	IOB_COMMAND_CODE	
+907	6311	a5 a7		LDA	GAME_MODE	
+908	6313	4a		LSR		
+909	6314					"; If GAME_MODE is 0 or 1, copy level data from image
+"
+910	6314	f0 2f		BEQ	.copy_level_data_from_image	
+911	6316					
+912	6316					"; Otherwise, read/write/format level on disk
+"
+913	6316	a5 96		LDA	DISK_LEVEL_LOC	
+914	6318	4a		LSR		
+915	6319	4a		LSR		
+916	631a	4a		LSR		
+917	631b	4a		LSR		
+918	631c	18		CLC		
+919	631d	69 03		ADC	#$03	
+920	631f	8d ec b7		STA	IOB_TRACK_NUMBER	"; track 3 + (DISK_LEVEL_LOC >> 4)
+"
+921	6322	a5 96		LDA	DISK_LEVEL_LOC	
+922	6324	29 0f		AND	#$0F	
+923	6326	8d ed b7		STA	IOB_SECTOR_NUMBER	"; sector DISK_LEVEL_LOC & 0x0F
+"
+924	6329	a9 00		LDA	#<DISK_BUFFER	
+925	632b	8d f0 b7		STA	IOB_READ_WRITE_BUFFER_PTR	
+926	632e	a9 0d		LDA	#>DISK_BUFFER	
+927	6330	8d f1 b7		STA	IOB_READ_WRITE_BUFFER_PTR+1	"; IOB_READ_WRITE_BUFFER_PTR = 0D00
+"
+928	6333	a9 00		LDA	#$00	
+929	6335	8d eb b7		STA	IOB_VOLUME_NUMBER_EXPECTED	"; any volume
+"
+930	6338					
+931	6338		ACCESS_DISK_OR_RESET_GAME			
+932	6338	a0 e8		LDY	#<DOS_IOB	
+933	633a	a9 b7		LDA	#>DOS_IOB	
+934	633c	20 23 00		JSR	JMP_RWTS	
+935	633f	90 03		BCC	.end	
+936	6341	4c 08 60		JMP	RESET_GAME	"; On error
+"
+937	6344					
+938	6344		.end			
+939	6344	60		RTS		
+940	6345					
+941	6345		.copy_level_data_from_image			
+942	6345	a5 a6		LDA	LEVELNUM	"; 1-based
+"
+943	6347	18		CLC		
+944	6348	69 9e		ADC	#$9E	
+945	634a	85 0d		STA	ROW_ADDR+1	
+946	634c	a0 00		LDY	#$00	
+947	634e	84 0c		STY	ROW_ADDR	"; ROW_ADDR <- 9E00 + LEVELNUM * 0x100
+"
+948	6350					
+949	6350		.copyloop			
+950	6350	b1 0c		LDA	(ROW_ADDR),Y	
+951	6352	99 00 0d		STA	DISK_BUFFER,Y	
+952	6355	c8		INY		
+953	6356	d0 f8		BNE	.copyloop	
+954	6358	60		RTS		
+955	6359					
+956	6359					
+957	6359					
+958	6359			ORG	$6359	
+959	6359		ACCESS_HI_SCORE_DATA_FROM_DISK			
+960	6359			SUBROUTINE		
+961	6359					
+962	6359	8d f4 b7		STA	IOB_COMMAND_CODE	
+963	635c	a9 0c		LDA	#$0C	
+964	635e	8d ec b7		STA	IOB_TRACK_NUMBER	
+965	6361	a9 0f		LDA	#$0F	
+966	6363	8d ed b7		STA	IOB_SECTOR_NUMBER	
+967	6366	a9 00		LDA	#<HI_SCORE_DATA	
+968	6368	8d f0 b7		STA	IOB_READ_WRITE_BUFFER_PTR	
+969	636b	a9 1f		LDA	#>HI_SCORE_DATA	
+970	636d	8d f1 b7		STA	IOB_READ_WRITE_BUFFER_PTR+1	
+971	6370	a9 00		LDA	#$00	
+972	6372	8d eb b7		STA	IOB_VOLUME_NUMBER_EXPECTED	
+973	6375	a0 e8		LDY	#<DOS_IOB	
+974	6377	a9 b7		LDA	#>DOS_IOB	
+975	6379	20 a5 63		JSR	INDIRECT_RWTS	
+976	637c	90 03		BCC	.no_error	
+977	637e	4c 08 60		JMP	RESET_GAME	
+978	6381					
+979	6381		.no_error			
+980	6381	a0 0a		LDY	#$0A	
+981	6383	a9 00		LDA	#$00	
+982	6385	85 50		STA	MASK0	"; temp storage
+"
+983	6387					
+984	6387		.loop			
+985	6387	b9 f4 1f		LDA	HI_SCORE_DATA+244,Y	
+986	638a	59 a8 63		EOR	HI_SCORE_DATA_MARKER,Y	
+987	638d	05 50		ORA	MASK0	
+988	638f	85 50		STA	MASK0	
+989	6391	88		DEY		
+990	6392	10 f3		BPL	.loop	
+991	6394					
+992	6394	a5 50		LDA	MASK0	
+993	6396	f0 03		BEQ	.all_zero_data	
+994	6398					
+995	6398	a9 00		LDA	#$00	
+996	639a	60		RTS		
+997	639b					
+998	639b		.all_zero_data			
+999	639b	a9 01		LDA	#$01	
+1000	639d	ae ff 1f		LDX	$1FFF	
+1001	63a0	d0 02		BNE	.end	
+1002	63a2	a9 ff		LDA	#$FF	
+1003	63a4					
+1004	63a4		.end			
+1005	63a4	60		RTS		
+1006	63a5					
+1007	63a5			ORG	$63A5	
+1008	63a5		INDIRECT_RWTS			
+1009	63a5			SUBROUTINE		
+1010	63a5	6c 36 00		JMP	(INDIRECT_TARGET)	
+1011	63a8					
+1012	63a8			ORG	$63A8	
+1013	63a8		HI_SCORE_DATA_MARKER			
+1014	63a8					"; Spells out ""LODE RUNNER"".
+"
+1015	63a8	cc cf c4 c5*		HEX	CC CF C4 C5 A0 D2 D5 CE CE C5 D2	
+1016	63b3			ORG	$63B3	
+1017	63b3		DRAW_LEVEL_PAGE2			
+1018	63b3			SUBROUTINE		
+1019	63b3					"; Returns carry set if there was no player sprite in the level,
+"
+1020	63b3					"; or carry clear if there was.
+"
+1021	63b3					
+1022	63b3	a0 0f		LDY	#MAX_GAME_ROW	
+1023	63b5	84 86		STY	GAME_ROWNUM	
+1024	63b7					
+1025	63b7		.row_loop			
+1026	63b7	b9 05 1c		LDA	CURR_LEVEL_ROW_SPRITES_PTR_OFFSETS,Y	
+1027	63ba	85 06		STA	PTR1	
+1028	63bc	85 08		STA	PTR2	
+1029	63be	b9 15 1c		LDA	CURR_LEVEL_ROW_SPRITES_PTR_PAGES,Y	
+1030	63c1	85 07		STA	PTR1+1	
+1031	63c3	b9 25 1c		LDA	CURR_LEVEL_ROW_SPRITES_PTR_PAGES2,Y	
+1032	63c6	85 09		STA	PTR2+1	
+1033	63c8					
+1034	63c8	a0 1b		LDY	#MAX_GAME_COL	
+1035	63ca	84 85		STY	GAME_COLNUM	
+1036	63cc					
+1037	63cc		.col_loop			
+1038	63cc	b1 06		LDA	(PTR1),Y	
+1039	63ce	a6 a2		LDX	VERBATIM	
+1040	63d0	f0 1c		BEQ	.draw_sprite1	"; This will then unconditionally jump to
+"
+1041	63d2					"; .draw_sprite2. We have to do that because of
+"
+1042	63d2					"; relative jump amount limitations.
+"
+1043	63d2	c9 06		CMP	#SPRITE_INVISIBLE_LADDER	
+1044	63d4	d0 1a		BNE	.check_for_gold	
+1045	63d6					
+1046	63d6	a6 a3		LDX	LADDER_COUNT	
+1047	63d8	e0 2d		CPX	#45	
+1048	63da	b0 0c		BCS	.remove_sprite	
+1049	63dc					
+1050	63dc	e6 a3		INC	LADDER_COUNT	
+1051	63de	e8		INX		
+1052	63df	a5 86		LDA	GAME_ROWNUM	
+1053	63e1	9d 30 0c		STA	LADDER_LOCS_ROW,X	
+1054	63e4	98		TYA		
+1055	63e5	9d 00 0c		STA	LADDER_LOCS_COL,X	
+1056	63e8					
+1057	63e8		.remove_sprite			
+1058	63e8	a9 00		LDA	#SPRITE_EMPTY	
+1059	63ea	91 06		STA	(PTR1),Y	
+1060	63ec	91 08		STA	(PTR2),Y	
+1061	63ee					
+1062	63ee		.draw_sprite1			
+1063	63ee	f0 60		BEQ	.draw_sprite	"; Unconditional jump.
+"
+1064	63f0		.check_for_gold			
+1065	63f0	c9 07		CMP	#SPRITE_GOLD	
+1066	63f2	d0 04		BNE	.check_for_guard	
+1067	63f4					
+1068	63f4	e6 93		INC	GOLD_COUNT	
+1069	63f6	d0 58		BNE	.draw_sprite	"; This leads to a situation where if we wrap
+"
+1070	63f8					"; GOLD_COUNT around back to 0 (so 256 boxes)
+"
+1071	63f8					"; we end up falling through, which eventually
+"
+1072	63f8					"; just draws the sprite anyway. So this is kind
+"
+1073	63f8					"; of unconditional.
+"
+1074	63f8					
+1075	63f8		.check_for_guard			
+1076	63f8	c9 08		CMP	#SPRITE_GUARD	
+1077	63fa	d0 2e		BNE	.check_for_player	
+1078	63fc					
+1079	63fc	a6 8d		LDX	GUARD_COUNT	
+1080	63fe	e0 05		CPX	#5	
+1081	6400	b0 e6		BCS	.remove_sprite	"; If GUARD_COUNT >= 5, remove sprite.
+"
+1082	6402					
+1083	6402	e6 8d		INC	GUARD_COUNT	
+1084	6404	e8		INX		
+1085	6405	98		TYA		
+1086	6406	9d 60 0c		STA	GUARD_LOCS_COL,X	
+1087	6409	a5 86		LDA	GAME_ROWNUM	
+1088	640b	9d 68 0c		STA	GUARD_LOCS_ROW,X	
+1089	640e	a9 00		LDA	#$00	
+1090	6410	9d 70 0c		STA	GUARD_GOLD_TIMERS,X	
+1091	6413	9d 88 0c		STA	GUARD_ANIM_STATES,X	
+1092	6416	a9 02		LDA	#$02	
+1093	6418	9d 78 0c		STA	GUARD_X_ADJS,X	
+1094	641b	9d 80 0c		STA	GUARD_Y_ADJS,X	
+1095	641e					
+1096	641e	a9 00		LDA	#SPRITE_EMPTY	
+1097	6420	91 08		STA	(PTR2),Y	
+1098	6422	a9 08		LDA	#SPRITE_GUARD	
+1099	6424	d0 2a		BNE	.draw_sprite	"; Unconditional jump.
+"
+1100	6426					
+1101	6426		.next_row			
+1102	6426	10 8f		BPL	.row_loop	
+1103	6428		.next_col			
+1104	6428	10 a2		BPL	.col_loop	
+1105	642a		.check_for_player			
+1106	642a	c9 09		CMP	#SPRITE_PLAYER	
+1107	642c	d0 1c		BNE	.check_for_t_thing	
+1108	642e					
+1109	642e	a6 00		LDX	PLAYER_COL	
+1110	6430	10 b6		BPL	.remove_sprite	"; If PLAYER_COL > 0, remove sprite.
+"
+1111	6432					
+1112	6432	84 00		STY	PLAYER_COL	
+1113	6434	a6 86		LDX	GAME_ROWNUM	
+1114	6436	86 01		STX	PLAYER_ROW	
+1115	6438	a2 02		LDX	#$02	
+1116	643a	86 02		STX	PLAYER_X_ADJ	
+1117	643c	86 03		STX	PLAYER_Y_ADJ	"; Set Player X and Y movement to 0.
+"
+1118	643e	a2 08		LDX	#$08	
+1119	6440	86 04		STX	PLAYER_ANIM_STATE	"; Corresponds to sprite 9 (see SPRITE_ANIM_SEQS)
+"
+1120	6442					
+1121	6442	a9 00		LDA	#SPRITE_EMPTY	
+1122	6444	91 08		STA	(PTR2),Y	
+1123	6446	a9 09		LDA	#SPRITE_PLAYER	
+1124	6448	d0 06		BNE	.draw_sprite	"; Unconditional jump.
+"
+1125	644a		.check_for_t_thing			
+1126	644a	c9 05		CMP	#SPRITE_TRAP	
+1127	644c	d0 02		BNE	.draw_sprite	
+1128	644e	a9 01		LDA	#SPRITE_BRICK	
+1129	6450					
+1130	6450					"; fallthrough to .draw_sprite
+"
+1131	6450		.draw_sprite			
+1132	6450	20 b0 82		JSR	DRAW_SPRITE_PAGE2	
+1133	6453					
+1134	6453	c6 85		DEC	GAME_COLNUM	
+1135	6455	a4 85		LDY	GAME_COLNUM	
+1136	6457	10 cf		BPL	.next_col	"; Jumps to .col_loop
+"
+1137	6459					
+1138	6459	c6 86		DEC	GAME_ROWNUM	
+1139	645b	a4 86		LDY	GAME_ROWNUM	
+1140	645d	10 c7		BPL	.next_row	"; Jumps to .row_loop
+"
+1141	645f	a5 a2		LDA	VERBATIM	
+1142	6461	f0 06		BEQ	.copy_page2_to_page1	
+1143	6463					
+1144	6463	a5 00		LDA	PLAYER_COL	
+1145	6465	10 24		BPL	.reveal_screen	
+1146	6467					
+1147	6467	38		SEC		"; Oops, no player! Return error.
+"
+1148	6468	60		RTS		
+1149	6469		.copy_page2_to_page1			
+1150	6469	a9 20		LDA	#$20	
+1151	646b	85 0f		STA	ROW_ADDR2+1	
+1152	646d	a9 40		LDA	#$40	
+1153	646f	85 0d		STA	ROW_ADDR+1	
+1154	6471	a9 00		LDA	#$00	
+1155	6473	85 0e		STA	ROW_ADDR2	
+1156	6475	85 0c		STA	ROW_ADDR	
+1157	6477	a8		TAY		
+1158	6478					
+1159	6478		.copy_loop			
+1160	6478	b1 0c		LDA	(ROW_ADDR),Y	
+1161	647a	91 0e		STA	(ROW_ADDR2),Y	
+1162	647c	c8		INY		
+1163	647d	d0 f9		BNE	.copy_loop	
+1164	647f					
+1165	647f	e6 0f		INC	ROW_ADDR2+1	
+1166	6481	e6 0d		INC	ROW_ADDR+1	
+1167	6483	a6 0d		LDX	ROW_ADDR+1	
+1168	6485	e0 60		CPX	#$60	
+1169	6487	90 ef		BCC	.copy_loop	
+1170	6489					
+1171	6489	18		CLC		
+1172	648a	60		RTS		
+1173	648b		.reveal_screen			
+1174	648b	20 a2 88		JSR	IRIS_WIPE	
+1175	648e					
+1176	648e	a0 0f		LDY	#MAX_GAME_ROW	
+1177	6490	84 86		STY	GAME_ROWNUM	
+1178	6492					
+1179	6492		.row_loop2			
+1180	6492	b9 05 1c		LDA	CURR_LEVEL_ROW_SPRITES_PTR_OFFSETS,Y	
+1181	6495	85 06		STA	PTR1	
+1182	6497	b9 15 1c		LDA	CURR_LEVEL_ROW_SPRITES_PTR_PAGES,Y	
+1183	649a	85 07		STA	PTR1+1	
+1184	649c					
+1185	649c	a0 1b		LDY	#MAX_GAME_COL	
+1186	649e	84 85		STY	GAME_COLNUM	
+1187	64a0					
+1188	64a0		.col_loop2			
+1189	64a0	b1 06		LDA	(PTR1),Y	
+1190	64a2	c9 09		CMP	#SPRITE_PLAYER	
+1191	64a4	f0 04		BEQ	.remove	
+1192	64a6	c9 08		CMP	#SPRITE_GUARD	
+1193	64a8	d0 05		BNE	.next	
+1194	64aa					
+1195	64aa		.remove			
+1196	64aa	a9 00		LDA	#SPRITE_EMPTY	
+1197	64ac	20 b0 82		JSR	DRAW_SPRITE_PAGE2	
+1198	64af					
+1199	64af		.next			
+1200	64af	c6 85		DEC	GAME_COLNUM	
+1201	64b1	a4 85		LDY	GAME_COLNUM	
+1202	64b3	10 eb		BPL	.col_loop2	
+1203	64b5					
+1204	64b5	c6 86		DEC	GAME_ROWNUM	
+1205	64b7	a4 86		LDY	GAME_ROWNUM	
+1206	64b9	10 d7		BPL	.row_loop2	
+1207	64bb					
+1208	64bb	18		CLC		
+1209	64bc	60		RTS		
+1210	64bd					
+1211	64bd			ORG	$64BD	
+1212	64bd		MOVE_PLAYER			
+1213	64bd			SUBROUTINE		
+1214	64bd					
+1215	64bd	a9 01		LDA	#$01	
+1216	64bf	85 94		STA	DIDNT_PICK_UP_GOLD	"; Reset DIDNT_PICK_UP_GOLD
+"
+1217	64c1					
+1218	64c1					"; If we're digging, see if we can keep digging.
+"
+1219	64c1	a5 9c		LDA	DIG_DIRECTION	
+1220	64c3	f0 08		BEQ	.not_digging	
+1221	64c5	10 03		BPL	.digging_right	
+1222	64c7	4c e7 67		JMP	TRY_DIGGING_LEFT_check_can_dig_left	
+1223	64ca					
+1224	64ca		.digging_right			
+1225	64ca	4c ad 68		JMP	TRY_DIGGING_RIGHT_check_can_dig_right	
+1226	64cd					
+1227	64cd		.not_digging			
+1228	64cd	a4 01		LDY	PLAYER_ROW	
+1229	64cf	b9 05 1c		LDA	CURR_LEVEL_ROW_SPRITES_PTR_OFFSETS,Y	
+1230	64d2	85 08		STA	PTR2	
+1231	64d4	b9 25 1c		LDA	CURR_LEVEL_ROW_SPRITES_PTR_PAGES2,Y	
+1232	64d7	85 09		STA	PTR2+1	
+1233	64d9					
+1234	64d9	a4 00		LDY	PLAYER_COL	
+1235	64db	b1 08		LDA	(PTR2),Y	
+1236	64dd	c9 03		CMP	#SPRITE_LADDER	
+1237	64df	f0 41		BEQ	.check_for_keyboard_input_	"; ladder at background location?
+"
+1238	64e1	c9 04		CMP	#SPRITE_ROPE	
+1239	64e3	d0 06		BNE	.check_if_player_should_fall	"; rope at background location?
+"
+1240	64e5	a5 03		LDA	PLAYER_Y_ADJ	
+1241	64e7	c9 02		CMP	#$02	
+1242	64e9	f0 37		BEQ	.check_for_keyboard_input_	"; player at exact sprite row?
+"
+1243	64eb					
+1244	64eb					"; player is not on exact sprite row, fallthrough.
+"
+1245	64eb					
+1246	64eb		.check_if_player_should_fall			
+1247	64eb	a5 03		LDA	PLAYER_Y_ADJ	
+1248	64ed	c9 02		CMP	#$02	
+1249	64ef	90 34		BCC	.make_player_fall	"; player slightly above sprite row?
+"
+1250	64f1					
+1251	64f1	a4 01		LDY	PLAYER_ROW	
+1252	64f3	c0 0f		CPY	#MAX_GAME_ROW	
+1253	64f5	f0 2b		BEQ	.check_for_keyboard_input_	"; player exactly sprite row 15?
+"
+1254	64f7					
+1255	64f7					"; Check the sprite at the player location

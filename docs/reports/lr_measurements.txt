@@ -1,0 +1,23 @@
+LODE RUNNER TILE MEASUREMENTS
+
+ACCOUNTING
+  Consistency checks: passed
+  Observed instructions: 4,000,000
+  Tiles: 642
+  Transition records: 900
+  Transition traversals: 1,102,344
+  RWTS reads served: 0
+
+STRETCH TRANSFORM
+  Original tiles: 642
+  Split stretches (Basic Blocks): 642
+  Original transition records: 900
+  Split transition records: 896
+  Glide transition records: 53
+
+INTERPRETATION
+  All structure is observed structure from this run.
+  One observed branch outcome does not prove the other impossible.
+  Stretches represent dynamic basic blocks: contiguous executed bytes split by observed entry points.
+  Stretch executions are reconstructed perfectly by conserving traffic across split points.
+  Accounting checks validate the raw tile hooks, not opcode semantics or trap handling.

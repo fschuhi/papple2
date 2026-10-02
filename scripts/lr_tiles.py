@@ -18,7 +18,9 @@ After the run, check accounting and write:
 The transformer pass breaks overlapping tiles into strictly disjoint
 execution stretches (Basic Blocks) by splitting tiles at any observed
 entry point. Executions are perfectly reconstructed by conserving traffic
-across split points.
+across split points. Where a tile is cut, the piece before the cut runs
+straight on into the piece after it, without a leap; each cut is written
+as a transition with the outcome "glide".
 
 Run from the repo root:
 
@@ -388,6 +390,8 @@ def check_stretch_consistency(
         original_records: list[TransitionRecord],
         stretches_traffic: dict[tuple[int, int], int],
         split_transitions: dict[TransitionKey, int],
+        glide_transitions: dict[tuple[int, int], int],
+        stretch_initial_entries: dict[int, int],
 ) -> None:
     def require(condition: bool, message: str) -> None:
         if not condition:
@@ -418,6 +422,21 @@ def check_stretch_consistency(
         require(
             key.target in known_stretch_starts,
             f"transition target ${key.target:04X} is not a valid stretch start"
+        )
+
+    # Every execution of a stretch is entered once: by a leap, by a glide
+    # across a cut, or as the run's very first entry. So the entries of each
+    # stretch must add up to its executions.
+    incoming: Counter[int] = Counter()
+    for key, count in split_transitions.items():
+        incoming[key.target] += count
+    for (_, target), count in glide_transitions.items():
+        incoming[target] += count
+    for (start, _), executions in stretches_traffic.items():
+        entries = stretch_initial_entries.get(start, 0) + incoming[start]
+        require(
+            entries == executions,
+            f"stretch ${start:04X}: entries ({entries}) != executions ({executions})"
         )
     print("stretch consistency checks passed")
 
@@ -520,6 +539,8 @@ def transform_to_stretches(
     split_points = sorted(experiment.tiles.keys())
 
     stretches_traffic = defaultdict(int)
+    glide_transitions: dict[tuple[int, int], int] = defaultdict(int)
+    stretch_initial_entries: dict[int, int] = defaultdict(int)
 
     for tile in experiment.tiles.values():
         if tile.instructions == 0:
@@ -540,6 +561,13 @@ def transform_to_stretches(
 
         for s, e in zip(boundaries[:-1], boundaries[1:]):
             stretches_traffic[(s, e)] += traffic
+            # A piece that ends at a cut, not at the tile's end, runs straight
+            # on into the next piece. No leap records this, so record it here.
+            if e != end:
+                glide_transitions[(s, e)] += traffic
+
+        # The run's first entry lands on the first piece of its tile.
+        stretch_initial_entries[start] += tile.initial_entries
 
     split_transitions = defaultdict(int)
     for key, count in records:
@@ -554,7 +582,13 @@ def transform_to_stretches(
         split_transitions[new_key] += count
 
     # Run the consistency checks
-    check_stretch_consistency(records, stretches_traffic, split_transitions)
+    check_stretch_consistency(
+        records,
+        stretches_traffic,
+        split_transitions,
+        glide_transitions,
+        stretch_initial_entries,
+    )
 
     stretch_rows = []
     for (s, e) in sorted(stretches_traffic.keys()):
@@ -579,6 +613,23 @@ def transform_to_stretches(
                 "count": count,
             }
         )
+
+    for (source, target), count in glide_transitions.items():
+        transition_rows.append(
+            {
+                "source_stretch_start": address(source),
+                "leap_from_PC": "",
+                "opcode": "",
+                "outcome": "glide",
+                "target_stretch_start": address(target),
+                "count": count,
+            }
+        )
+
+    # A stretch that ends at a cut has no leap, so its glide row never shares
+    # a source with leap rows. Sorting by source keeps the file in address
+    # order; the sort is stable, so the leap rows keep their order.
+    transition_rows.sort(key=lambda row: row["source_stretch_start"])
 
     return stretch_rows, transition_rows
 
@@ -632,6 +683,8 @@ def save_measurements(experiment: Tiles, rwts_reads: int) -> None:
         f"  Split stretches (Basic Blocks): {len(stretch_rows):,}",
         f"  Original transition records: {len(records):,}",
         f"  Split transition records: {len(transition_rows):,}",
+        f"  Glide transition records: "
+        f"{sum(row['outcome'] == 'glide' for row in transition_rows):,}",
         "",
         "INTERPRETATION",
         "  All structure is observed structure from this run.",
