@@ -1,15 +1,3 @@
-# (This file is the basis of the `filesdump.txt` in which it is included, i.e. the document you are reading right now.
-# The files in this manifest are the relevant files for understanding how the project hangs together.
-# Files which are commented out exist but are not included in the `filesdump.txt`.)
-
-### --- Context & Meta ---
-# ⚠️ NON-NEGOTIABLE collaboration rules - READ FIRST
-CRITICAL_RULES.md
-
-# reading guide for bootstrapping a new session; either attached to the first message or passed as message body
-# FIRST_PROMPT.md
-
-LLM_INSTRUCTIONS.md
 manifest.lst
 tmp/project_tree.txt
 
@@ -77,12 +65,12 @@ src/papple2/debug/stop_conditions.py
 ### --- Tests and fixtures data ---
 tests/conftest.py
 #tests/test_assembler.py
-tests/test_attach.py
-tests/test_breakpoints.py
+#tests/test_attach.py
+#tests/test_breakpoints.py
 #tests/test_cpu_arithmetic.py
 #tests/test_cpu_branch.py
 #tests/test_cpu_bugs.py
-tests/test_cpu_hooks.py
+#tests/test_cpu_hooks.py
 #tests/test_cpu_inc_dec.py
 #tests/test_cpu_jump_call.py
 #tests/test_cpu_load_store.py
@@ -97,9 +85,9 @@ tests/test_cpu_hooks.py
 #tests/test_display_memory.py
 #tests/test_emulator_debug_keys.py
 #tests/test_emulator_silent.py
-tests/test_instruction_count.py
+#tests/test_instruction_count.py
 #tests/test_memory.py
-tests/test_memory_hooks.py
+#tests/test_memory_hooks.py
 #tests/test_softswitches.py
 #tests/test_throttle.py
 #tests/test_util.py
