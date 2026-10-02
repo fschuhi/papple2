@@ -84,10 +84,10 @@ src/papple2/core/memory.py
 src/papple2/core/window.py
 
 ## debug
-#src/papple2/debug/assembler.py
+src/papple2/debug/assembler.py
 src/papple2/debug/disassembler.py
 src/papple2/debug/labels.py
-#src/papple2/debug/stop_conditions.py
+src/papple2/debug/stop_conditions.py
 
 ## workbench
 src/papple2/workbench/basic_blocks_analysis.py
@@ -95,7 +95,7 @@ src/papple2/workbench/tiling.py
 
 ### --- Tests and fixtures data ---
 tests/conftest.py
-#tests/test_assembler.py
+tests/test_assembler.py
 #tests/test_attach.py
 tests/test_basic_blocks_analysis.py
 #tests/test_breakpoints.py
