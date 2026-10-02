@@ -21,7 +21,7 @@ or in IPython, which keeps the run's objects (emulator, tiling, graph,
 loops) in its namespace afterwards, together with dis() and the show_*
 functions (papple2.workbench.shell):
 
-    %run scripts/lr_basic_blocks_analysis.py data/bin/LODE_RUNNER.BIN
+    %run scripts/lr_basic_blocks_analysis.py
     show_loops(loops)
     dis(emulator, 0x6238, 0x62c4, graph=graph)
 """
@@ -61,6 +61,9 @@ from papple2.workbench.shell import (  # noqa: E402, F401
 
 # One folder per script, named after it.
 REPORTS_FOLDER = Path("tmp/lr_basic_blocks_analysis")
+
+# Relative to the repo root, where make and IPython are started.
+DEFAULT_BINARY = "data/bin/LODE_RUNNER.BIN"
 
 LOAD_LEVEL = 0x6238
 
@@ -102,7 +105,12 @@ def analyse(
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("binary", help="path to LODE_RUNNER.BIN")
+    parser.add_argument(
+        "binary",
+        nargs="?",
+        default=DEFAULT_BINARY,
+        help=f"path to LODE_RUNNER.BIN (default: {DEFAULT_BINARY})",
+    )
     parser.add_argument(
         "--instructions",
         type=int,
