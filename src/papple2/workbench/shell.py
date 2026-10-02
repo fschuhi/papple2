@@ -86,8 +86,74 @@ def show_loops(loops: dict[int, Loop]) -> None:
         )
 
 
+def assign_lanes(spans: list[tuple[int, int]]) -> list[int]:
+    """Give each arrow a lane in the gutter; lane 0 lies next to the code.
+
+    An arrow is given as the span of rows it covers, (first, last). Shorter
+    arrows are placed first, each into the lowest lane that holds no arrow
+    sharing a row with it. So an arrow inside another one gets the lane
+    nearer the code, and arrows that don't overlap can share a lane.
+    """
+    order = sorted(
+        range(len(spans)),
+        key=lambda i: (spans[i][1] - spans[i][0], spans[i][0]),
+    )
+    lanes = [0] * len(spans)
+    occupied: list[list[tuple[int, int]]] = []  # the spans in each lane
+    for i in order:
+        first, last = spans[i]
+        lane = 0
+        while lane < len(occupied) and any(
+            first <= other_last and other_first <= last
+            for other_first, other_last in occupied[lane]
+        ):
+            lane += 1
+        if lane == len(occupied):
+            occupied.append([])
+        occupied[lane].append((first, last))
+        lanes[i] = lane
+    return lanes
+
+
+def draw_gutter(
+    row_count: int, arrows: list[tuple[int, int]], lanes: list[int]
+) -> list[str]:
+    """The gutter left of the code, one string per row.
+
+    arrows are (source row, target row), lanes as assign_lanes() gives
+    them. Each lane is two characters wide, followed by two for the arrow
+    heads. An arrow starts with "+--" at its source and ends with "+->"
+    at its target, and "|" joins the two. No arrows, no gutter.
+    """
+    if not arrows:
+        return [""] * row_count
+    lane_count = max(lanes) + 1
+    width = 2 * lane_count + 2
+    cells = [[" "] * width for _ in range(row_count)]
+    # Outer lanes first, so an inner arrow's corner is drawn over an outer
+    # arrow's line where the two meet in one row.
+    for (source, target), lane in sorted(
+        zip(arrows, lanes), key=lambda item: -item[1]
+    ):
+        column = 2 * (lane_count - 1 - lane)
+        for row in range(min(source, target) + 1, max(source, target)):
+            if cells[row][column] == " ":
+                cells[row][column] = "|"
+        # The target is drawn last, so an arrow to its own row shows ">".
+        for row, head in ((source, "-"), (target, ">")):
+            cells[row][column] = "+"
+            for between in range(column + 1, width - 2):
+                cells[row][between] = "-"
+            cells[row][width - 2] = head
+    return ["".join(row) for row in cells]
+
+
 def dis(
-    emulator: Emulator, start: int, end: int, labels: Labels | None = None
+    emulator: Emulator,
+    start: int,
+    end: int,
+    labels: Labels | None = None,
+    graph: BlockGraph | None = None,
 ) -> None:
     """Print the instructions from start up to, not including, end: address,
     bytes, instruction. Read from the emulator's memory as it is now, i.e.
@@ -100,6 +166,11 @@ def dis(
     column is as wide as the longest name in the range, and left out if
     no address in the range has a name.
 
+    With graph, the jumps the run took are drawn as arrows in a gutter on
+    the left: every edge whose target is not simply the next instruction
+    (taken branches, JMPs). Glides, fall-throughs and calls are not drawn.
+    An arrow is drawn only if both of its ends lie in the range.
+
     An instruction that starts before end is printed whole, even if its
     operand reaches past end. A block's end always lies behind its last
     instruction, so this only shows for ranges that cut an instruction.
@@ -110,13 +181,42 @@ def dis(
     # disassemble() takes an inclusive end.
     rows = disassembler.disassemble(start, end - 1)
     width = max((len(row[2]) for row in rows), default=0)
-    for row in rows:
+    gutter = draw_gutter(len(rows), *arrows_in(rows, graph))
+    for row, prefix in zip(rows, gutter):
         row_address, row_bytes, label, mnemonic, operand, _comment = row
         if not row_address:  # the empty line before a .byte block
-            print()
+            print(prefix.rstrip())
             continue
         name_column = f"{label:<{width}}  " if width else ""
         print(
-            f"{row_address.removeprefix('$'):<4}  {row_bytes:<8}  "
+            f"{prefix}{row_address.removeprefix('$'):<4}  {row_bytes:<8}  "
             f"{name_column}{mnemonic} {operand}".rstrip()
         )
+
+
+def arrows_in(
+    rows: list[list[str]], graph: BlockGraph | None
+) -> tuple[list[tuple[int, int]], list[int]]:
+    """The arrows for the rows of a listing, as (source row, target row),
+    and their lanes. An arrow starts at the last instruction of an edge's
+    source block, the leap, and ends at the edge's target."""
+    if graph is None:
+        return [], []
+    # Row number of each instruction, by its address; empty lines and
+    # .byte blocks are no instructions.
+    row_of = {
+        int(row[0].removeprefix("$"), 16): number
+        for number, row in enumerate(rows)
+        if row[0] and row[3] != ".byte"
+    }
+    arrows = []
+    for (source, target), _count in graph.edges.items():
+        block = graph.blocks[source]
+        if target == block.end:  # just the next instruction: no arrow
+            continue
+        leaps = [address for address in row_of if source <= address < block.end]
+        if not leaps or target not in row_of:  # an end lies outside the range
+            continue
+        arrows.append((row_of[max(leaps)], row_of[target]))
+    spans = [(min(source, target), max(source, target)) for source, target in arrows]
+    return arrows, assign_lanes(spans)

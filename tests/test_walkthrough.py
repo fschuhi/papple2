@@ -229,3 +229,32 @@ def test_chapter_9_the_whole_program_disassembled(walkthrough, capsys) -> None:
         "6012  60               RTS",
         "6013  ea        DONE   NOP",
     ]
+
+
+def test_chapter_10_the_jumps_as_arrows(walkthrough, capsys) -> None:
+    # With the graph, dis() draws the jumps the run took: the two BNEs
+    # jumping back, and the JMP over SUB. The inner loop's arrow lies
+    # inside the outer loop's, nearer the code. The JMP's arrow shares a
+    # lane with the inner loop's, since the two don't overlap. Calls are
+    # not drawn: JSR SUB already says where it goes.
+    dis(
+        walkthrough.emulator,
+        0x6000,
+        0x6014,
+        walkthrough.labels,
+        walkthrough.graph,
+    )
+
+    assert capsys.readouterr().out.splitlines() == [
+        "      6000  a0 02            LDY #$02",
+        "+---> 6002  a2 03     OUTER  LDX #$03",
+        "| +-> 6004  20 10 60  INNER  JSR SUB",
+        "| |   6007  ca               DEX",
+        "| +-- 6008  d0 fa            BNE INNER",
+        "|     600a  88               DEY",
+        "+---- 600b  d0 f5            BNE OUTER",
+        "  +-- 600d  4c 13 60         JMP DONE",
+        "  |   6010  e6 10     SUB    INC $10",
+        "  |   6012  60               RTS",
+        "  +-> 6013  ea        DONE   NOP",
+    ]
