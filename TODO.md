@@ -12,18 +12,17 @@
 
 ---
 
-## Next step: a disassembler for what ran (from 2026-10-02)
+## Disassembler for what ran (from 2026-10-02)
 
-The first item of `GOALS.md`'s _What's next_. Specified well enough to start; the open decisions are marked.
-
-- Goal: see the code behind the address nodes -- a block, a loop, a routine -- in `dasm` style, with the loops indented by their depth. Use case: disassemble a routine while analysing its structure; put twin routines side by side (`8336`/`83a7`, `71a2`/`720c`, ...).
-- What exists: `papple2/debug/disassembler.py`. `Disassembler(cpu, labels, is_code)` reads the memory list directly, so it triggers no hooks. `disassemble(start, end)` takes an inclusive end (a block's end is exclusive: pass `end - 1`) and returns rows `[address, bytes, label, mnemonic, operand, comment]`; `disassemble_formatted()` makes text lines. The labels object only needs `replace_operand_address(operand, address)`; the 2026-10-02 shell session used a stand-in, `NoLabels`, that returns the operand unchanged. Hex is lowercase today (see the `util.py` item under "Small code steps").
-- Memory after the run, not the file: the game relocates its code (`.loop1` lies at `$2B52` in `LODE_RUNNER.BIN` and runs at `$6252`). _Decide first:_ (a) boot and run inside the session, then disassemble the emulator's memory; or (b) write the memory image after the run as one more report (`Memory.save_image()` exists), so the disassembler becomes an analysis package that needs no `Emulator` and fits the pipeline. Either way, memory after the run shows code as it is at the end: code that ran early and was overwritten later is gone (the relocation routine at `$2800`-`$2831` lies in hi-res page 1), so such blocks would disassemble as graphics.
-- Views: a block (`start`); a loop (`header`): its member blocks; a routine (`entry`): the blocks of its graph in address order, each with a line for its start and its runs, indented by its loop depth (the `depth` of `lr_loop_members.csv`). Bytes between blocks never ran: show them as a gap, don't disassemble them.
-- The listing in address order, routine after routine, with the edges drawn as arrows in a gutter on the left (as `objdump --visualize-jumps` does); block starts carry their runs and loop ids.
-- Labels: the user's names, following the oracle protocol (`README.md`, "Settled decisions"). The first slice can do without names, or mark loop headers by their loop id (`L03`).
-- Tests: small programs through the `assemble` fixture in `conftest.py`; block boundaries, gaps, indentation.
-- _Open:_ the module's name and home (`papple2.workbench`?); printed or written to a file (or both); uppercase hex first or not.
+- ~~A disassembler for what ran: a block, a loop or a routine in `dasm` style, read from memory after the run.~~ *(Done 2026-10-02, first slice: `dis(emulator, start, end, labels, graph)` in `papple2/workbench/shell.py`. It reads the emulator's memory inside the IPython session (option (a); option (b), a memory image as one more report, stays possible), takes half-open ranges like the blocks, shows names in the operands and in a column of their own (`Labels.label_at()`), and draws the jumps the run took as arrows in a gutter on the left. First real use: `LOAD_LEVEL` with `scripts/lr_basic_blocks_analysis.py`. See `HISTORY.md`.)*
+- Uppercase hex: `dis()` follows `address()` and `hexaddr()`, both lowercase today; see the `util.py` item under "Small code steps".
+- Twin routines side by side (`8336`/`83a7`, `71a2`/`720c`, ...): two listings next to each other.
+- Views beyond an address range: a loop (by its header: its member blocks) and a routine (by its entry: the blocks of its graph in address order, with gaps between them). Today `dis()` takes `start` and `end`, which `show_blocks()` provides.
+- Memory after the run shows code as it is at the end: code that ran early and was overwritten later is gone (the relocation routine at `$2800`-`$2831` lies in hi-res page 1), so such blocks disassemble as graphics.
+- Bytes between blocks never ran, but `dis()` decodes them anyway, e.g. `LOAD_LEVEL`'s `629a` (`LDA #$00`, jumped over in the whole run) and `62b5`-`62c2`. Mark them, or show them as a gap. Where they are data, the decoding may not line up with the real instructions.
+- Arrows only appear when both ends lie in the range. Arrows that leave the range: a marker at the edge, if a real routine needs it.
+- Two arrows into one row (two branches to one target) are drawn, but no test covers how that looks.
+- Shelved (2026-10-02): counts next to the listing, in two columns right of the instructions: the runs on a block's first line, how often the arrow was taken on its leap. Not needed for the walkthrough, where every count is known. The first real case: `628a BPL $6292` in `LOAD_LEVEL` always jumps (224 of 224, since `AND #$0f` clears bit 7), which an arrow cannot show. Build it when reading a real routine shows the need.
 
 ## Experiments 
 
@@ -34,19 +33,21 @@ The first item of `GOALS.md`'s _What's next_. Specified well enough to start; th
 
 See `docs/workbench-ideas.md`.
 
-- The first slice: a workbench module for IPython that loads `lr_split_tiles.csv` and `lr_split_transitions.csv`; `dis(start, end)` through `disassembler.py`; a session file under git with `name()` and `comment()`; `show()` to open a map in the browser or image viewer.
-- ~~`loops(entry)`: build the graph from the two CSVs, with the call fall-through edges added (a `JSR` to its return point), then dominators and natural loops. Graded on `LOAD_LEVEL` (`$6238`) against the oracle: `.loop1`, `.loop2`, `.row_loop` and `.col_loop`.~~ *(Done 2026-10-02: as `build_graph()`, `immediate_dominators()` and `natural_loops()` in `papple2/workbench/basic_blocks_analysis.py`, plus `write_loop_reports()`. The first run on `LOAD_LEVEL`, by the user in a Python shell, found the four loops exactly as the oracle has them.)*
-- ~~`briefing.md`, steps 1 to 3: renames in the tiling reports, `workbench/tiling.py`, `workbench/basic_blocks_analysis.py`.~~ *(Done 2026-10-02; see `HISTORY.md`. `briefing.md` is retired; its terms are in `README.md`, its open questions below. Step 4 is parked, see the next items.)*
-- Parked step 4a: `scripts/lr_basic_blocks_analysis.py` with a `make` target. Boot, attach `Tiling`, run (`--instructions`, default 4,000,000), `tiling.write_reports()`, then read the split reports back from the same folder, build the graph from `--entry` (default `6238`), find the loops, write the loop reports, print the summary; all into `tmp/lr_basic_blocks_analysis/`. The work in a function, `analyse(binary, instructions, entry, folder)`, so a test can call it.
+- The first slice: a workbench module for IPython that loads `lr_split_tiles.csv` and `lr_split_transitions.csv`; `dis(start, end)` through `disassembler.py`; a session file under git with `name()` and `comment()`; `show()` to open a map in the browser or image viewer. *(Partly done 2026-10-02: `papple2/workbench/shell.py` with `dis()` and `show_blocks()`/`show_edges()`/`show_loops()`; the session holds the run through `%run` of a script that leaves `emulator`, `tiling`, `graph` and `loops` in the namespace. Open: `name()`, `comment()`, the session file, `show()`.)*
+- Names given in IPython must persist: written to a file (JSON or similar) under git, and the file always in sync with the session. `NAMES` in `scripts/walkthrough.py` is the stand-in until then. Part of the session file above.
+- ~~Parked step 4a: `scripts/lr_basic_blocks_analysis.py` with a `make` target.~~ *(Done 2026-10-02: `analyse(binary, instructions, entry, folder)` boots, runs `Tiling`, writes the tiling and loop reports into `tmp/lr_basic_blocks_analysis/`, and builds the graph from `--entry` (default `6238`); the binary defaults to `data/bin/LODE_RUNNER.BIN`. `make lr-basic-blocks-analysis`; `%run` leaves the run, `dis()` and the `show_*` functions in the namespace.)*
 - Parked step 4b: an integration test that calls `analyse()` and compares all seven reports with goldens in `tests/fixtures/<test name>/`; skips without `LODE_RUNNER.BIN`. Before creating the goldens: two runs must give identical reports. Once the goldens exist, they are the versioned copy of the reports, and `docs/reports/` can go.
-- ~~`lr_overview.py` writes its output to `tmp/lr_overview/lr_overview.txt` as well as printing it, so it can be diffed and kept.~~ *(Done 2026-10-02: the output is collected in a buffer, printed, and written.)*
 - Reports under git: the scripts write into `docs/reports/<script>/` instead of `tmp/`. The runs are deterministic, so a tracked report works almost like a golden, and `git diff` shows every change. _Open:_ slices (one routine, like `docs/reports/load_level/`) next to complete runs, and how slice folders are named; how this relates to the goldens of step 4b; whether all scripts move at once.
 - Ways of looking at routines, all computable from the split reports: the call graph (who calls whom, how often); a profile per routine (pieces, calls, instructions run in it); leaf routines (call nothing; first candidates for names); kinds of entry (`JSR` target, `RTS`-trick target, tail-call `JMP`); blocks shared by several routines; blocks no entry reaches. Search terms: call graph recovery, function boundary detection.
 - Sharpen "routine = `JSR` target", which jump tables, tail calls and shared code blur: a shadow stack (a hook that tracks every stack operation, including direct writes to page 1) and signatures for jump tables, written as a report the basic blocks analysis reads. `docs/instrumentation-ideas.md`, section 10, has the cases.
 - The 65 pieces in no routine, 61 of them in `$6F26`-`$70D5`: check whether the "RTS targets not behind an observed JSR" lines of `make lr-tiles` point there (a jump table?).
 - Who writes the relocated code: an `after_write_data` hook on `$6252` names the instruction (probably the loop at `$2821`, which runs 33,024 times, the size of the file).
 - Loop reports: a test for a loop with two back edges (the parallel lists of sources and counts), when we look at the reports together.
-- `disassembler.py` in `dasm` listing style, with labels and comments.
+- ~~`disassembler.py` in `dasm` listing style, with labels and comments.~~ *(Done 2026-10-02 for labels: `Labels.label_at()` fills the label column, and `dis()` shows it. Comments are still open: `comment()` of the IPython slice.)*
+- A whole-run view at the prompt: `show_tiles(tiles)`, every basic block with its runs, with the pieces in no routine marked; designed together with `show_unreached()`. Today the whole run is in `lr_split_tiles.csv` and, by routine, in `make lr-overview`.
+- `lr_overview.py` takes the reports folder as an optional argument, so it can read `tmp/lr_basic_blocks_analysis/` right after the analysis, without a second run. Today it reads `tmp/lr_tiles/` only.
+- `depth` in `lr_loop_members.csv` counts from 1 (inside one loop = 1), `nesting_depth` in `lr_loops.csv` from 0 (outermost = 0). Consistent, but easy to misread; rename one of them.
+- `shell.py`'s `loop_ids()` and `innermost_loop()` repeat two pieces of `write_loop_reports()`. If they drift apart, the ids at the prompt and in the reports differ; a shared helper would prevent it.
 - An experiment that tags the tiles which write to HGR (`$2000`-`$5FFF`), from an `after_write_data` hook.
 
 ## Emulator front end
@@ -111,7 +112,9 @@ The old instrumentation is gone (`HISTORY.md` 2026-09-27/28); the ideas for the 
 ## Small code steps
 
 - `lr_count.py` as an instrumentation package, `workbench/counting.py`, the way `lr_tiles.py` became `Tiling`; then maybe `lr_trace_pc.py`. Making the experiments look alike helps the later refactoring.
-- `Tiling.write_reports()` takes `rwts_reads`, and its measurements start with "LODE RUNNER TILE MEASUREMENTS": Lode Runner details in a workbench package (kept on purpose on 2026-10-02, "no generalization yet").
+- `Tiling.write_reports()` takes `rwts_reads`, and its measurements start with "LODE RUNNER TILE MEASUREMENTS": Lode Runner details in a workbench package (kept on purpose on 2026-10-02, "no generalization yet"). The walkthrough passes `rwts_reads=0` and gets the Lode Runner header too.
+- The walkthrough program exists three times: `scripts/walkthrough.py` (`PROGRAM`), `tests/conftest.py` (`WALKTHROUGH_PROGRAM`) and `tests/test_tiling.py` (`PROGRAM`); its names twice (`NAMES`, `WALKTHROUGH_NAMES`). Tests can't import from `scripts/`, so a shared copy would live in the package.
+- `Labels` doesn't name zero-page operands (the `TODO` in `labels.py`): `INC $10` keeps its address even with a name for `$10`.
 - The column names of the split reports are a contract held by no one: `tiling.py` writes them and `basic_blocks_analysis.py` reads them, each as its own strings (only the file names are shared). The integration test (step 4b) would catch a drift.
 - `lr_measurements.txt`: the "Split tiles" line always equals the tile count, by construction (`HISTORY.md`, 2026-10-02). Drop it, or count something that varies (the cuts, the glides).
 - `split_tiles()` is an analysis by the workbench's own definition (reads tiles, writes new tables), but lives in the instrumentation. Move it only when there is a reason.
