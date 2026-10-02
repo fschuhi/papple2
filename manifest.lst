@@ -71,6 +71,7 @@ scripts/lr_overview.py
 scripts/lr_tiles.py
 #scripts/lr_trace_pc.py
 #scripts/speed_test.py
+scripts/walkthrough.py
 
 ### --- Source in `src/` ---
 src/papple2/util.py
@@ -121,6 +122,7 @@ tests/test_disassembler.py
 #tests/test_memory.py
 #tests/test_memory_hooks.py
 #tests/test_softswitches.py
+tests/test_tiling.py
 #tests/test_throttle.py
 #tests/test_util.py
 
