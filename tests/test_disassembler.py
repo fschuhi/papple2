@@ -87,6 +87,27 @@ def test_a_named_address_fills_the_label_column(
     assert [line[2] for line in lines] == ["START", ""]
 
 
+@pytest.mark.parametrize(
+    "program, operand",
+    [
+        ([0xE6, 0x10], "COUNT"),  # INC $10: zero page, two digits
+        ([0xB1, 0x10], "(COUNT),Y"),  # LDA ($10),Y: brackets and index stay
+        ([0xAD, 0x10, 0x00], "COUNT"),  # LDA $0010: absolute, four digits
+    ],
+)
+def test_a_label_replaces_the_address_in_the_operand(
+    memory: Memory, cpu: CPU, program: list[int], operand: str
+) -> None:
+    # The zero-page modes print an address with two digits, the others
+    # with four; the label replaces whichever the mode printed.
+    disassembler = Disassembler(cpu, {0x0010: "COUNT"})
+    memory.load_test_data(0x0300, program)
+
+    lines = disassembler.disassemble(0x0300, instructions=1)
+
+    assert lines[0][4] == operand
+
+
 def test_a_commented_address_fills_the_comment_column(
     memory: Memory, cpu: CPU
 ) -> None:

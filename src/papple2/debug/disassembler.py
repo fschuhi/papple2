@@ -425,9 +425,16 @@ class Disassembler:
 
 
     def __replace_operand_address(self, operand: str, operand_address: int) -> str:
-        # TODO: label replacement in operands must work for all addresses, including zero page
         if operand_address in self.labels:
-            operand = operand.replace(hexaddr(operand_address), self.labels[operand_address])
+            label = self.labels[operand_address]
+            # absolute modes print four digits ($0010), zero-page modes two ($10);
+            # try four first, so an absolute $0010 is not taken for zero page
+            four_digits = hexaddr(operand_address)
+            two_digits = "$%02x" % operand_address
+            if four_digits in operand:
+                operand = operand.replace(four_digits, label)
+            else:
+                operand = operand.replace(two_digits, label)
         return operand
 
 
