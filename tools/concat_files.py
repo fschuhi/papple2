@@ -3,10 +3,14 @@ import argparse
 from pathlib import Path
 import sys
 
-# XML Template for each file
+# XML Template for each file. The content stands verbatim between the
+# opening tag's line break and </document>: no newline is added after it.
+# Most files end with a newline, so </document> still starts its own line;
+# a file without a final newline gets </document> right after its last
+# character. Either way, a reader extracting the content gets the file back
+# byte for byte.
 FILE_TEMPLATE = """<document path="{path}">
-{content}
-</document>
+{content}</document>
 """
 
 # XML Template for error markers (unreadable or missing files)
@@ -19,7 +23,9 @@ ERROR_TEMPLATE = """<error path="{path}">{reason}</error>
 HEADER_TEMPLATE = """<!-- FILESDUMP HEADER: {count} document(s), ~{tokens:,} tokens.
      This dump ends with an 'END OF FILESDUMP' trailer stating the same
      document count. If the trailer is missing or the counts differ, the dump
-     was truncated: stop and report instead of working from partial context. -->
+     was truncated: stop and report instead of working from partial context.
+     Each document's content is verbatim: everything after the opening tag's
+     line break, up to the closing document tag. -->
 """
 
 TRAILER_TEMPLATE = """<!-- END OF FILESDUMP: {count} document(s) included. -->
