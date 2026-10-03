@@ -104,6 +104,8 @@ class Loop:
 @dataclass
 class BlockGraph:
     """The basic blocks reachable from entry, and the edges between them.
+    The run graph (build_run_graph()) is the exception: it holds every
+    block of the run, and its entry is the run's start.
 
     Blocks are keyed by their start address. edges maps (source, target)
     to how often the edge was taken; successors and predecessors list the
@@ -228,22 +230,45 @@ def build_graph(
 
     all_edges = collect_edges(transitions, set(all_blocks))
     reached = reachable_from(entry, all_edges)
+    return _graph(entry, all_blocks, all_edges, reached)
 
-    # Edges are kept if their source is reachable; their target then is too.
+
+def build_run_graph(
+        tiles: list[SplitTile], transitions: list[SplitTransition], start: int
+) -> BlockGraph:
+    """Build the graph of every basic block of the run, not only those
+    reachable from one entry, with every edge between them. For the arrows
+    of a listing, which show what the run did, wherever it was."""
+    all_blocks = {
+        tile.start: BasicBlock(tile.start, tile.end, tile.executions)
+        for tile in tiles
+    }
+    all_edges = collect_edges(transitions, set(all_blocks))
+    return _graph(start, all_blocks, all_edges, set(all_blocks))
+
+
+def _graph(
+        entry: int,
+        all_blocks: dict[int, BasicBlock],
+        all_edges: dict[tuple[int, int], int],
+        kept: set[int],
+) -> BlockGraph:
+    """The graph of the blocks in kept, with the edges between them."""
+    # Edges are kept if their source is kept; their target then is too.
     edges = {
         (source, target): count
         for (source, target), count in sorted(all_edges.items())
-        if source in reached
+        if source in kept
     }
-    successors: dict[int, list[int]] = {start: [] for start in sorted(reached)}
-    predecessors: dict[int, list[int]] = {start: [] for start in sorted(reached)}
+    successors: dict[int, list[int]] = {start: [] for start in sorted(kept)}
+    predecessors: dict[int, list[int]] = {start: [] for start in sorted(kept)}
     for source, target in edges:
         successors[source].append(target)
         predecessors[target].append(source)
 
     return BlockGraph(
         entry=entry,
-        blocks={start: all_blocks[start] for start in sorted(reached)},
+        blocks={start: all_blocks[start] for start in sorted(kept)},
         edges=edges,
         successors=successors,
         predecessors=predecessors,

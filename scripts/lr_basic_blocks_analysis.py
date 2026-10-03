@@ -38,7 +38,8 @@ after that, the script leaves its labels alone.
 show_routines() lists every routine of the run, as find_routines()
 finds them (the run's start and every JSR target);
 show_blocks(entry) shows the blocks of one of them. Both show labels.
-graph and loops stay those of --entry, and so do listing()'s arrows.
+graph and loops stay those of --entry; listing()'s arrows are the whole
+run's.
 """
 
 import argparse
@@ -60,6 +61,7 @@ from papple2.workbench.basic_blocks_analysis import (  # noqa: E402
     BlockGraph,
     Loop,
     build_graph,
+    build_run_graph,
     find_routines,
     immediate_dominators,
     natural_loops,
@@ -172,13 +174,15 @@ if __name__ == "__main__":
     uncomment = annotations.uncomment
 
     def listing(start: int, end: int) -> None:
-        """dis() with this run's graph and the dossier's labels and
-        comments."""
-        dis(emulator, start, end, annotations.labels, graph, annotations.comments)
+        """dis() with the arrows of the whole run and the dossier's labels
+        and comments."""
+        dis(emulator, start, end, annotations.labels, run_graph, annotations.comments)
 
     # Every routine of the run.
     tiles, transitions = read_split_reports(REPORTS_FOLDER)
     routines = find_routines(tiles, transitions, LOAD_ADDRESS)
+    # Every block and edge of the run, for listing()'s arrows.
+    run_graph = build_run_graph(tiles, transitions, LOAD_ADDRESS)
 
     def show_routines() -> None:
         """Every routine of the run, with the dossier's labels."""

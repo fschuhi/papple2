@@ -18,6 +18,7 @@ from papple2.workbench.basic_blocks_analysis import (
     SplitTransition,
     back_edges,
     build_graph,
+    build_run_graph,
     dominates,
     find_routines,
     immediate_dominators,
@@ -140,6 +141,30 @@ def test_only_blocks_reachable_from_entry_are_kept():
     assert sorted(graph.blocks) == [0x1000, 0x1003]
     assert graph.edges == {(0x1000, 0x1003): 1}
     assert graph.predecessors[0x1000] == []
+
+
+def test_the_run_graph_keeps_every_block_and_edge():
+    # The same rows as above: the run graph keeps what build_graph() drops,
+    # so a listing can draw the JMP from $4003, which no entry reaches.
+    tiles = [
+        tile(0x1000, 0x1003), tile(0x1003, 0x1006),
+        tile(0x4000, 0x4003), tile(0x4003, 0x4006),
+    ]
+    transitions = [
+        glide(0x1000, 0x1003),
+        glide(0x4000, 0x4003),
+        leap(0x4003, 0x4003, JMP_absolute, 0x1000),
+    ]
+    graph = build_run_graph(tiles, transitions, start=0x1000)
+
+    assert graph.entry == 0x1000
+    assert sorted(graph.blocks) == [0x1000, 0x1003, 0x4000, 0x4003]
+    assert graph.edges == {
+        (0x1000, 0x1003): 1,
+        (0x4000, 0x4003): 1,
+        (0x4003, 0x1000): 1,
+    }
+    assert graph.predecessors[0x1000] == [0x4003]
 
 
 def test_entry_must_be_a_basic_block():
