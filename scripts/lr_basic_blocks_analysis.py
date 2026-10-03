@@ -19,11 +19,20 @@ Run from the repo root:
 
 or in IPython, which keeps the run's objects (emulator, tiling, graph,
 loops) in its namespace afterwards, together with dis() and the show_*
-functions (papple2.workbench.shell):
+functions (papple2.workbench.shell). There, Lode Runner's dossier
+(dossiers/lode_runner/annotations.json, under git) is open as
+annotations: label() and comment() write to it at once, and listing()
+shows a range with this run's arrows and the dossier's labels and
+comments:
 
     %run scripts/lr_basic_blocks_analysis.py
     show_loops(loops)
-    dis(emulator, 0x6238, 0x62c4, graph=graph)
+    listing(0x6238, 0x62c4)
+    comment(0x627e, "two 4-bit values per byte")
+    label(0x6238, "LOAD_LEVEL")
+
+The dossier's first run starts it with the Apple II's standard labels;
+after that, the script leaves its labels alone.
 """
 
 import argparse
@@ -38,7 +47,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from boot_lode_runner import boot  # noqa: E402
 from papple2.core.emulator import Emulator  # noqa: E402
+from papple2.debug.disassembler import STANDARD_LABELS  # noqa: E402
 from papple2.debug.stop_conditions import instruction_count_reaches  # noqa: E402
+from papple2.workbench.annotations import Annotations  # noqa: E402
 from papple2.workbench.basic_blocks_analysis import (  # noqa: E402
     BlockGraph,
     Loop,
@@ -50,8 +61,8 @@ from papple2.workbench.basic_blocks_analysis import (  # noqa: E402
 )
 from papple2.workbench.tiling import Tiling, address  # noqa: E402
 
-# Not used here: imported so that IPython's %run leaves them in its
-# namespace, ready for looking at the run.
+# Apart from dis(), which listing() uses: imported so that IPython's %run
+# leaves them in its namespace, ready for looking at the run.
 from papple2.workbench.shell import (  # noqa: E402, F401
     dis,
     show_blocks,
@@ -61,6 +72,9 @@ from papple2.workbench.shell import (  # noqa: E402, F401
 
 # One folder per script, named after it.
 REPORTS_FOLDER = Path("tmp/lr_basic_blocks_analysis")
+
+# What we know about Lode Runner's addresses, kept across runs, under git.
+DOSSIER = Path("dossiers/lode_runner")
 
 # Relative to the repo root, where make and IPython are started.
 DEFAULT_BINARY = "data/bin/LODE_RUNNER.BIN"
@@ -136,3 +150,18 @@ if __name__ == "__main__":
     emulator, tiling, graph, loops = analyse(
         arguments.binary, arguments.instructions, arguments.entry, REPORTS_FOLDER
     )
+
+    annotations = Annotations(DOSSIER)
+    if not annotations.path.exists():
+        # The dossier's first run: start it with the Apple II's names.
+        annotations.add_labels(STANDARD_LABELS)
+
+    # Short names for the prompt. unlabel() and uncomment() are rarer:
+    # annotations.unlabel(), annotations.uncomment().
+    label = annotations.label
+    comment = annotations.comment
+
+    def listing(start: int, end: int) -> None:
+        """dis() with this run's graph and the dossier's labels and
+        comments."""
+        dis(emulator, start, end, annotations.labels, graph, annotations.comments)

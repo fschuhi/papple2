@@ -1,0 +1,18 @@
+{
+  "labels": {
+    "c000": "r:KBD w:CLR80COL",
+    "c010": "r:KBDSTRB",
+    "c030": "rw:SPKR",
+    "c050": "rw:TXTCLR",
+    "c052": "rw:MIXCLR",
+    "c054": "rw:TXTPAGE1",
+    "c057": "rw:HIRES",
+    "c061": "r:BUTN0",
+    "c062": "r:BUTN1",
+    "fb1e": "F8ROM:PREAD",
+    "fca8": "F8ROM:WAIT"
+  },
+  "comments": {
+    "6283": "ROUTINE 001"
+  }
+}
