@@ -1,12 +1,24 @@
-"""Tests for papple2.workbench.shell: the arrows in the gutter, and the
-comments behind the instructions.
+"""Tests for papple2.workbench.shell: the arrows in the gutter, the
+comments behind the instructions, and the labels in the show_* views.
 
 The arrows are given as rows, not addresses: row 0 is the listing's first
 line. A span is (first row, last row); an arrow is (source row, target
 row). Lane 0 lies next to the code.
 """
 
-from papple2.workbench.shell import assign_lanes, dis, draw_gutter
+from papple2.workbench.basic_blocks_analysis import (
+    build_graph,
+    immediate_dominators,
+    natural_loops,
+    read_split_reports,
+)
+from papple2.workbench.shell import (
+    assign_lanes,
+    dis,
+    draw_gutter,
+    show_blocks,
+    show_routines,
+)
 
 
 def test_an_arrow_inside_another_gets_the_lane_nearer_the_code() -> None:
@@ -79,4 +91,44 @@ def test_dis_lines_comments_up_after_the_widest_commented_instruction(
         "6000  a9 00     LDA #$00  ; clear",
         "6002  8d 00 03  STA $0300",
         "6005  60        RTS       ; done",
+    ]
+
+
+def test_show_blocks_shows_the_labels_of_the_blocks(walkthrough, capsys) -> None:
+    # A block whose first address has a label shows it at the end; the
+    # loop column is padded so the labels line up.
+    show_blocks(walkthrough.graph, walkthrough.loops, walkthrough.labels)
+
+    assert capsys.readouterr().out.splitlines() == [
+        "block        runs  loop  label",
+        "6000-6002       1  -",
+        "6002-6004       2  L01   OUTER",
+        "6004-6007       6  L02   INNER",
+        "6007-600a       6  L02",
+        "600a-600d       2  L01",
+        "600d-6010       1  -",
+        "6013-6014       1  -     DONE",
+    ]
+
+
+def test_show_routines_lists_every_routine_with_its_label(
+    walkthrough, capsys
+) -> None:
+    # The walkthrough has two routines: the program from 6000, and SUB,
+    # the target of the JSR, called six times (two rounds of OUTER, three
+    # of INNER each).
+    tiles, transitions = read_split_reports(walkthrough.folder)
+    sub = build_graph(tiles, transitions, entry=0x6010)
+    graphs = {0x6000: walkthrough.graph, 0x6010: sub}
+    loops_of = {
+        0x6000: walkthrough.loops,
+        0x6010: natural_loops(sub, immediate_dominators(sub)),
+    }
+
+    show_routines(graphs, loops_of, {0x6000: 1, 0x6010: 6}, walkthrough.labels)
+
+    assert capsys.readouterr().out.splitlines() == [
+        "routine  blocks  bytes  called  loops  label",
+        "6000          7     17       1      2",
+        "6010          1      3       6      0  SUB",
     ]

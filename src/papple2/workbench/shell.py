@@ -32,20 +32,56 @@ def innermost_loop(block: int, loops: dict[int, Loop]) -> Loop | None:
     return min(containing, key=lambda loop: len(loop.body), default=None)
 
 
-def show_blocks(graph: BlockGraph, loops: dict[int, Loop] | None = None) -> None:
+def show_blocks(
+    graph: BlockGraph,
+    loops: dict[int, Loop] | None = None,
+    labels: dict[int, str] | None = None,
+) -> None:
     """One line per basic block: its bytes, how often it ran, and, if loops
-    are given, the innermost loop it belongs to."""
+    are given, the innermost loop it belongs to. If labels are given, a
+    block whose first address has a label shows it at the end."""
     ids = loop_ids(loops) if loops else {}
     header = f"{'block':<9}  {'runs':>6}"
     if loops:
         header += "  loop"
+    if labels is not None:
+        header += "  label"
     print(header)
     for start, block in graph.blocks.items():
         line = f"{address(start)}-{address(block.end)}  {block.executions:>6,}"
         if loops:
             innermost = innermost_loop(start, loops)
-            line += "  " + ("-" if innermost is None else ids[innermost.header])
-        print(line)
+            loop_id = "-" if innermost is None else ids[innermost.header]
+            line += f"  {loop_id:<4}"
+        if labels is not None:
+            line += "  " + labels.get(start, "")
+        print(line.rstrip())
+
+
+def show_routines(
+    graphs: dict[int, BlockGraph],
+    loops_of: dict[int, dict[int, Loop]],
+    calls_into: dict[int, int],
+    labels: dict[int, str] | None = None,
+) -> None:
+    """One line per routine, in address order: its entry, how many basic
+    blocks and bytes it has, how often it was called, and how many loops
+    it has. If labels are given, a routine whose entry has a label shows
+    it at the end."""
+    header = f"{'routine':<7}  {'blocks':>6}  {'bytes':>5}  {'called':>6}  {'loops':>5}"
+    if labels is not None:
+        header += "  label"
+    print(header)
+    for entry in sorted(graphs):
+        blocks = graphs[entry].blocks
+        size = sum(block.end - block.start for block in blocks.values())
+        line = (
+            f"{address(entry):<7}  {len(blocks):>6}  {size:>5}"
+            f"  {calls_into[entry]:>6,}  {len(loops_of[entry]):>5}"
+        )
+        if labels is not None:
+            line += "  " + labels.get(entry, "")
+        print(line.rstrip())
 
 
 def show_edges(graph: BlockGraph, loops: dict[int, Loop] | None = None) -> None:
