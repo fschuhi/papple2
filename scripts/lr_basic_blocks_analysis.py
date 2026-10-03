@@ -2,7 +2,7 @@
 
 Boots Lode Runner headless, attaches the tiling instrumentation
 (papple2.workbench.tiling), runs the attract play, and writes the tiling
-reports into tmp/lr_basic_blocks_analysis/:
+reports into docs/reports/lr_basic_blocks_analysis/, under git:
     lr_unbroken_tiles.csv
     lr_unbroken_transitions.csv
     lr_measurements.txt
@@ -10,6 +10,12 @@ reports into tmp/lr_basic_blocks_analysis/:
     lr_split_transitions.csv
 Then the basic blocks analysis (papple2.workbench.basic_blocks_analysis)
 finds every routine of the run: the run's start and every JSR target.
+It writes the loop reports of the start, $0800, into the same folder:
+    lr_loops_0800.csv
+    lr_loop_members_0800.csv
+--loop-reports adds the pair for each routine named, e.g.
+--loop-reports 6238 for LOAD_LEVEL. Calls are not followed, so each pair
+shows the loops of its routine only, not of the routines it calls.
 
 Run from the repo root:
 
@@ -36,9 +42,8 @@ after that, the script leaves its labels alone.
 
 show_routines() lists every routine of the run; show_blocks(entry) shows
 the blocks of one of them. Both show labels. loop_reports(entry) writes
-the loop reports of one routine into the same folder, for reading outside
-IPython: lr_loops_<entry>.csv and lr_loop_members_<entry>.csv, e.g.
-lr_loops_6238.csv for LOAD_LEVEL.
+the loop reports of one more routine into the same folder:
+lr_loops_<entry>.csv and lr_loop_members_<entry>.csv.
 """
 
 import argparse
@@ -75,8 +80,9 @@ from papple2.workbench.shell import (  # noqa: E402, F401
     show_loops,
 )
 
-# One folder per script, named after it.
-REPORTS_FOLDER = Path("tmp/lr_basic_blocks_analysis")
+# One folder per script, named after it. Under git: the reports are what
+# the analysis leaves behind for reading, by us and by other LLMs.
+REPORTS_FOLDER = Path("docs/reports/lr_basic_blocks_analysis")
 
 # What we know about Lode Runner's addresses, kept across runs, under git.
 DOSSIER = Path("dossiers/lode_runner")
@@ -121,6 +127,15 @@ def parse_arguments() -> argparse.Namespace:
         type=int,
         default=4_000_000,
         help="stop after N instructions (default: 4000000)",
+    )
+    parser.add_argument(
+        "--loop-reports",
+        nargs="*",
+        type=lambda text: int(text, 16),
+        default=[],
+        metavar="ENTRY",
+        help="hex entries of further routines to write loop reports for "
+        "(those of the start, 0800, are always written)",
     )
     arguments = parser.parse_args()
     if arguments.instructions <= 0:
@@ -190,3 +205,8 @@ if __name__ == "__main__":
         write_loop_reports(
             REPORTS_FOLDER, routines.graphs[entry], routines.loops_of[entry]
         )
+
+    # The loop reports the run leaves behind: those of the start, and of
+    # every routine named with --loop-reports, each written once.
+    for entry in dict.fromkeys([LOAD_ADDRESS, *arguments.loop_reports]):
+        loop_reports(entry)
