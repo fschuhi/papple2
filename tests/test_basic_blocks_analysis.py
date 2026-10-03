@@ -19,6 +19,7 @@ from papple2.workbench.basic_blocks_analysis import (
     back_edges,
     build_graph,
     dominates,
+    find_routines,
     immediate_dominators,
     natural_loops,
     read_split_reports,
@@ -299,6 +300,61 @@ def test_sibling_loops_are_not_nested():
 def test_loop_with_two_entries_is_not_found():
     a, b = 0x1010, 0x1020
     assert loops_of([(E, a), (E, b), (a, b), (b, a)], E) == {}
+
+
+# --- Routines -----------------------------------------------------------------
+
+
+def test_routines_are_the_start_then_the_jsr_targets_in_address_order():
+    # $1000 calls $3000 first, then $2000; $2000 holds a self-loop.
+    tiles = [
+        tile(0x1000, 0x1003), tile(0x1003, 0x1006), tile(0x1006, 0x1007),
+        tile(0x2000, 0x2003, 3), tile(0x2003, 0x2004),
+        tile(0x3000, 0x3001),
+    ]
+    transitions = [
+        leap(0x1000, 0x1000, JSR, 0x3000),
+        leap(0x3000, 0x3000, RTS, 0x1003),
+        leap(0x1003, 0x1003, JSR, 0x2000),
+        leap(0x2000, 0x2001, BNE, 0x2000, 2, outcome="taken"),
+        leap(0x2000, 0x2001, BNE, 0x2003, 1, outcome="fall_through"),
+        leap(0x2003, 0x2003, RTS, 0x1006),
+    ]
+    routines = find_routines(tiles, transitions, start=0x1000)
+
+    # Address order, not the order of the calls.
+    assert list(routines.graphs) == [0x1000, 0x2000, 0x3000]
+    # Calls are not followed: the callees' blocks are not the caller's.
+    assert sorted(routines.graphs[0x1000].blocks) == [0x1000, 0x1003, 0x1006]
+    # A loop belongs to the routine that holds it.
+    assert list(routines.loops_of[0x2000]) == [0x2000]
+    assert routines.loops_of[0x1000] == {}
+
+
+def test_calls_into_counts_every_jsr_and_the_run_itself():
+    # $2000 is called from two places, the second one three times. Only
+    # the JSR rows matter here; the rest of the run is left out.
+    tiles = [tile(0x1000, 0x1003), tile(0x1003, 0x1006, 3), tile(0x2000, 0x2001, 4)]
+    transitions = [
+        leap(0x1000, 0x1000, JSR, 0x2000, 1),
+        leap(0x1003, 0x1003, JSR, 0x2000, 3),
+    ]
+    routines = find_routines(tiles, transitions, start=0x1000)
+
+    assert routines.calls_into == {0x1000: 1, 0x2000: 4}
+
+
+def test_a_start_that_is_also_called_is_one_routine():
+    # The run enters $1000 once, and a JSR enters it twice more.
+    tiles = [tile(0x1000, 0x1003, 3), tile(0x1003, 0x1006, 2)]
+    transitions = [
+        glide(0x1000, 0x1003, 2),
+        leap(0x1003, 0x1003, JSR, 0x1000, 2),
+    ]
+    routines = find_routines(tiles, transitions, start=0x1000)
+
+    assert list(routines.graphs) == [0x1000]
+    assert routines.calls_into == {0x1000: 3}
 
 
 # --- Loop reports -------------------------------------------------------------

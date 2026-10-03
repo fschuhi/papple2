@@ -118,6 +118,17 @@ class BlockGraph:
     predecessors: dict[int, list[int]]
 
 
+@dataclass
+class Routines:
+    """Every routine of a run, each analysed on its own. All three dicts
+    are keyed by entry, in the same order: the run's start first, then
+    every JSR target in address order."""
+
+    graphs: dict[int, BlockGraph]
+    loops_of: dict[int, dict[int, Loop]]
+    calls_into: dict[int, int]  # JSRs into the routine; the start gets +1
+
+
 def parse_address(text: str) -> int:
     return int(text, 16)
 
@@ -386,6 +397,32 @@ def natural_loops(graph: BlockGraph, idom: dict[int, int]) -> dict[int, Loop]:
         )
         for header in bodies
     }
+
+
+def find_routines(
+    tiles: list[SplitTile], transitions: list[SplitTransition], start: int
+) -> Routines:
+    """Find every routine of the run: the code reachable from an entry
+    without following calls. The entries are the run's start and every
+    JSR target that ran."""
+    jsr_targets = {row.target_tile for row in transitions if row.opcode == JSR}
+    entries = [start] + sorted(jsr_targets - {start})
+
+    # How often each routine was called: the counts of the JSRs into it.
+    calls_into = {entry: 0 for entry in entries}
+    for row in transitions:
+        if row.opcode == JSR:
+            calls_into[row.target_tile] += row.count
+    calls_into[start] += 1  # the run itself enters there once
+
+    graphs = {}
+    loops_of = {}
+    for entry in entries:
+        graphs[entry] = build_graph(tiles, transitions, entry)
+        loops_of[entry] = natural_loops(
+            graphs[entry], immediate_dominators(graphs[entry])
+        )
+    return Routines(graphs, loops_of, calls_into)
 
 
 def write_rows(filename: Path, fields: tuple[str, ...], rows: list[dict]) -> None:

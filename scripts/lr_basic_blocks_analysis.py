@@ -35,8 +35,8 @@ dossier's labels and comments:
 The dossier's first run starts it with the Apple II's standard labels;
 after that, the script leaves its labels alone.
 
-show_routines() lists every routine of the run, found as
-scripts/lr_overview.py finds them (the run's start and every JSR target);
+show_routines() lists every routine of the run, as find_routines()
+finds them (the run's start and every JSR target);
 show_blocks(entry) shows the blocks of one of them. Both show labels.
 graph and loops stay those of --entry, and so do listing()'s arrows.
 """
@@ -52,8 +52,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from boot_lode_runner import LOAD_ADDRESS, boot  # noqa: E402
-from lr_overview import find_entries  # noqa: E402
-from papple2.core.cpu import JSR  # noqa: E402
 from papple2.core.emulator import Emulator  # noqa: E402
 from papple2.debug.disassembler import STANDARD_LABELS  # noqa: E402
 from papple2.debug.stop_conditions import instruction_count_reaches  # noqa: E402
@@ -62,6 +60,7 @@ from papple2.workbench.basic_blocks_analysis import (  # noqa: E402
     BlockGraph,
     Loop,
     build_graph,
+    find_routines,
     immediate_dominators,
     natural_loops,
     read_split_reports,
@@ -177,32 +176,26 @@ if __name__ == "__main__":
         comments."""
         dis(emulator, start, end, annotations.labels, graph, annotations.comments)
 
-    # Every routine of the run, found as scripts/lr_overview.py finds them.
+    # Every routine of the run.
     tiles, transitions = read_split_reports(REPORTS_FOLDER)
-    entries = find_entries(transitions)
-    # How often each routine was called: the counts of the JSRs into it.
-    calls_into = {entry: 0 for entry in entries}
-    for row in transitions:
-        if row.opcode == JSR:
-            calls_into[row.target_tile] += row.count
-    calls_into[LOAD_ADDRESS] += 1  # the run itself enters there once
-    graphs = {}
-    loops_of = {}
-    for entry in entries:
-        graphs[entry] = build_graph(tiles, transitions, entry)
-        loops_of[entry] = natural_loops(
-            graphs[entry], immediate_dominators(graphs[entry])
-        )
+    routines = find_routines(tiles, transitions, LOAD_ADDRESS)
 
     def show_routines() -> None:
         """Every routine of the run, with the dossier's labels."""
-        shell.show_routines(graphs, loops_of, calls_into, annotations.labels)
+        shell.show_routines(
+            routines.graphs,
+            routines.loops_of,
+            routines.calls_into,
+            annotations.labels,
+        )
 
     def show_blocks(entry: int) -> None:
         """The blocks of the routine starting at entry, with its loops and
         the dossier's labels."""
-        if entry not in graphs:
+        if entry not in routines.graphs:
             raise ValueError(
                 f"{address(entry)} is not a routine; show_routines() lists them"
             )
-        shell.show_blocks(graphs[entry], loops_of[entry], annotations.labels)
+        shell.show_blocks(
+            routines.graphs[entry], routines.loops_of[entry], annotations.labels
+        )

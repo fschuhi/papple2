@@ -22,10 +22,7 @@ from papple2.workbench.basic_blocks_analysis import (
     BlockGraph,
     Loop,
     SplitTile,
-    SplitTransition,
-    build_graph,
-    immediate_dominators,
-    natural_loops,
+    find_routines,
     read_split_reports,
 )
 from papple2.workbench.tiling import MEASUREMENTS_FILE, address
@@ -43,12 +40,6 @@ def observed_instructions(folder: Path) -> str:
             if line.strip().startswith("Observed instructions:"):
                 return line.split(":", 1)[1].strip()
     return "?"
-
-
-def find_entries(transitions: list[SplitTransition]) -> list[int]:
-    """The run's start, then every JSR target, in address order."""
-    jsr_targets = {row.target_tile for row in transitions if row.opcode == JSR}
-    return [LOAD_ADDRESS] + sorted(jsr_targets - {LOAD_ADDRESS})
 
 
 def print_loop_tree(
@@ -69,21 +60,11 @@ def print_loop_tree(
 
 def main() -> None:
     tiles, transitions = read_split_reports(REPORTS_FOLDER)
-    entries = find_entries(transitions)
-
-    # How often each routine was called: the counts of the JSRs into it.
-    calls_into: dict[int, int] = {entry: 0 for entry in entries}
-    for row in transitions:
-        if row.opcode == JSR:
-            calls_into[row.target_tile] += row.count
-    calls_into[LOAD_ADDRESS] += 1  # the run itself enters there once
-
-    graphs: dict[int, BlockGraph] = {}
-    loops_of: dict[int, dict[int, Loop]] = {}
-    for entry in entries:
-        graph = build_graph(tiles, transitions, entry)
-        graphs[entry] = graph
-        loops_of[entry] = natural_loops(graph, immediate_dominators(graph))
+    routines = find_routines(tiles, transitions, LOAD_ADDRESS)
+    graphs = routines.graphs
+    loops_of = routines.loops_of
+    calls_into = routines.calls_into
+    entries = list(graphs)
 
     all_loops = {header: loop for loops in loops_of.values() for header, loop in loops.items()}
     covered = {start for graph in graphs.values() for start in graph.blocks}
