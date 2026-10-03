@@ -10,8 +10,6 @@ import pytest
 
 from papple2.core.cpu import BNE, JMP_absolute, JMP_indirect, JSR, RTS
 from papple2.workbench.basic_blocks_analysis import (
-    LOOP_MEMBERS_FILE,
-    LOOPS_FILE,
     BlockGraph,
     Loop,
     SplitTile,
@@ -393,7 +391,8 @@ def write_reports_of_nested_loops(folder: Path) -> None:
 def test_loops_report(tmp_path: Path):
     write_reports_of_nested_loops(tmp_path)
 
-    assert (tmp_path / LOOPS_FILE).read_text(encoding="utf-8").splitlines() == [
+    # The file name carries the graph's entry, E = $1000.
+    assert (tmp_path / "lr_loops_1000.csv").read_text(encoding="utf-8").splitlines() == [
         "loop_id,header_block,back_edge_source_block,back_edge_count,"
         "nesting_depth,outer_loop_id,member_blocks",
         "L01,1010,1040,1,0,-,1010 1020 1030 1040",
@@ -404,7 +403,7 @@ def test_loops_report(tmp_path: Path):
 def test_loop_members_report(tmp_path: Path):
     write_reports_of_nested_loops(tmp_path)
 
-    assert (tmp_path / LOOP_MEMBERS_FILE).read_text(encoding="utf-8").splitlines() == [
+    assert (tmp_path / "lr_loop_members_1000.csv").read_text(encoding="utf-8").splitlines() == [
         "block_start_PC,block_end_PC,executions,innermost_loop,depth",
         "1000,1003,1,-,0",  # E: before the loops
         "1010,1013,1,L01,1",  # H1: outer header

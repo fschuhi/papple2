@@ -10,8 +10,8 @@ reports into tmp/walkthrough/:
         lr_split_tiles.csv
         lr_split_transitions.csv
     from the basic blocks analysis (papple2.workbench.basic_blocks_analysis):
-        lr_loops.csv
-        lr_loop_members.csv
+        lr_loops_6000.csv
+        lr_loop_members_6000.csv
 
 The program is small enough to follow by hand, so each report's rows can
 be predicted before looking.

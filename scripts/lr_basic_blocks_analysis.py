@@ -1,45 +1,44 @@
-"""Find the basic blocks and loops of one routine of Lode Runner.
+"""Find every routine of Lode Runner's attract play, for the IPython prompt.
 
 Boots Lode Runner headless, attaches the tiling instrumentation
-(papple2.workbench.tiling), runs the attract play, and has the basic
-blocks analysis (papple2.workbench.basic_blocks_analysis) build the graph
-from --entry (default 6238, LOAD_LEVEL). Writes into
-tmp/lr_basic_blocks_analysis/:
+(papple2.workbench.tiling), runs the attract play, and writes the tiling
+reports into tmp/lr_basic_blocks_analysis/:
     lr_unbroken_tiles.csv
     lr_unbroken_transitions.csv
     lr_measurements.txt
     lr_split_tiles.csv
     lr_split_transitions.csv
-    lr_loops.csv
-    lr_loop_members.csv
+Then the basic blocks analysis (papple2.workbench.basic_blocks_analysis)
+finds every routine of the run: the run's start and every JSR target.
 
 Run from the repo root:
 
     make lr-basic-blocks-analysis
 
-or in IPython, which keeps the run's objects (emulator, tiling, graph,
-loops) in its namespace afterwards, together with dis() and the show_*
+or in IPython, which keeps the run's objects (emulator, tiling, routines,
+run_graph) in its namespace afterwards, together with dis() and the show_*
 functions (papple2.workbench.shell). There, Lode Runner's dossier
 (dossiers/lode_runner/annotations.json, under git) is open as
 annotations: label(), comment(), unlabel() and uncomment() write to it
-at once, and listing() shows a range with this run's arrows and the
+at once, and listing() shows a range with the whole run's arrows and the
 dossier's labels and comments:
 
     %run scripts/lr_basic_blocks_analysis.py
     show_routines()
     show_blocks(0x6238)
     listing(0x6238, 0x62c4)
+    loop_reports(0x6238)
     comment(0x627e, "two 4-bit values per byte")
     label(0x6238, "LOAD_LEVEL")
 
 The dossier's first run starts it with the Apple II's standard labels;
 after that, the script leaves its labels alone.
 
-show_routines() lists every routine of the run, as find_routines()
-finds them (the run's start and every JSR target);
-show_blocks(entry) shows the blocks of one of them. Both show labels.
-graph and loops stay those of --entry; listing()'s arrows are the whole
-run's.
+show_routines() lists every routine of the run; show_blocks(entry) shows
+the blocks of one of them. Both show labels. loop_reports(entry) writes
+the loop reports of one routine into the same folder, for reading outside
+IPython: lr_loops_<entry>.csv and lr_loop_members_<entry>.csv, e.g.
+lr_loops_6238.csv for LOAD_LEVEL.
 """
 
 import argparse
@@ -58,13 +57,8 @@ from papple2.debug.disassembler import STANDARD_LABELS  # noqa: E402
 from papple2.debug.stop_conditions import instruction_count_reaches  # noqa: E402
 from papple2.workbench.annotations import Annotations  # noqa: E402
 from papple2.workbench.basic_blocks_analysis import (  # noqa: E402
-    BlockGraph,
-    Loop,
-    build_graph,
     build_run_graph,
     find_routines,
-    immediate_dominators,
-    natural_loops,
     read_split_reports,
     write_loop_reports,
 )
@@ -90,15 +84,12 @@ DOSSIER = Path("dossiers/lode_runner")
 # Relative to the repo root, where make and IPython are started.
 DEFAULT_BINARY = "data/bin/LODE_RUNNER.BIN"
 
-LOAD_LEVEL = 0x6238
-
 
 def analyse(
-    binary: str, instructions: int, entry: int, folder: Path
-) -> tuple[Emulator, Tiling, BlockGraph, dict[int, Loop]]:
+    binary: str, instructions: int, folder: Path
+) -> tuple[Emulator, Tiling]:
     """Run Lode Runner with Tiling attached for the given number of
-    instructions, write the tiling reports into folder, then build the
-    graph from entry and write the loop reports there too."""
+    instructions, and write the tiling reports into folder."""
     emulator, rwts = boot(binary, headless=True)
     tiling = Tiling(emulator.cpu)
     emulator.attach(tiling)
@@ -114,18 +105,7 @@ def analyse(
     # run() counts from 0, so emulator.instructions is what ran while the
     # tiling was attached.
     tiling.write_reports(folder, emulator.instructions, len(rwts.log))
-
-    # The analysis reads the reports back from the folder: the files are
-    # the only connection, as in the walkthrough.
-    tiles, transitions = read_split_reports(folder)
-    graph = build_graph(tiles, transitions, entry=entry)
-    loops = natural_loops(graph, immediate_dominators(graph))
-    write_loop_reports(folder, graph, loops)
-    print(
-        f"from {address(entry)}: {len(graph.blocks)} basic blocks, "
-        f"{len(loops)} loops"
-    )
-    return emulator, tiling, graph, loops
+    return emulator, tiling
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -142,12 +122,6 @@ def parse_arguments() -> argparse.Namespace:
         default=4_000_000,
         help="stop after N instructions (default: 4000000)",
     )
-    parser.add_argument(
-        "--entry",
-        type=lambda text: int(text, 16),
-        default=LOAD_LEVEL,
-        help="hex address the graph starts from (default: 6238, LOAD_LEVEL)",
-    )
     arguments = parser.parse_args()
     if arguments.instructions <= 0:
         parser.error("--instructions must be positive")
@@ -158,8 +132,8 @@ if __name__ == "__main__":
     # At module level on purpose: IPython's %run keeps these names in its
     # namespace, so the run can be inspected afterwards.
     arguments = parse_arguments()
-    emulator, tiling, graph, loops = analyse(
-        arguments.binary, arguments.instructions, arguments.entry, REPORTS_FOLDER
+    emulator, tiling = analyse(
+        arguments.binary, arguments.instructions, REPORTS_FOLDER
     )
 
     annotations = Annotations(DOSSIER)
@@ -178,9 +152,11 @@ if __name__ == "__main__":
         and comments."""
         dis(emulator, start, end, annotations.labels, run_graph, annotations.comments)
 
-    # Every routine of the run.
+    # Every routine of the run. The analysis reads the reports back from
+    # the folder: the files are the only connection, as in the walkthrough.
     tiles, transitions = read_split_reports(REPORTS_FOLDER)
     routines = find_routines(tiles, transitions, LOAD_ADDRESS)
+    print(f"{len(routines.graphs)} routines")
     # Every block and edge of the run, for listing()'s arrows.
     run_graph = build_run_graph(tiles, transitions, LOAD_ADDRESS)
 
@@ -202,4 +178,15 @@ if __name__ == "__main__":
             )
         shell.show_blocks(
             routines.graphs[entry], routines.loops_of[entry], annotations.labels
+        )
+
+    def loop_reports(entry: int) -> None:
+        """Write the loop reports of the routine starting at entry into
+        the reports folder, with the entry in their names."""
+        if entry not in routines.graphs:
+            raise ValueError(
+                f"{address(entry)} is not a routine; show_routines() lists them"
+            )
+        write_loop_reports(
+            REPORTS_FOLDER, routines.graphs[entry], routines.loops_of[entry]
         )

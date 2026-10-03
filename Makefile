@@ -69,7 +69,7 @@ lr-tiles: $(SETUP_STAMP) ## Experiment: collect tiles and transitions, plus meas
 lr-overview: $(SETUP_STAMP) ## Overview of the whole run: routines, loops, calls (reads tmp/lr_tiles/, run make lr-tiles first)
 	$(RUN) scripts/lr_overview.py
 
-lr-basic-blocks-analysis: $(SETUP_STAMP) ## Experiment: basic blocks and loops of one routine (default LOAD_LEVEL, 6238), reports in tmp/lr_basic_blocks_analysis/
+lr-basic-blocks-analysis: $(SETUP_STAMP) ## Experiment: tiling reports of Lode Runner's attract play into tmp/lr_basic_blocks_analysis/; with %run in IPython, every routine at the prompt
 	$(RUN) scripts/lr_basic_blocks_analysis.py data/bin/LODE_RUNNER.BIN
 
 # --- Walkthrough (a tiny program through the workbench's pipeline, output in tmp/walkthrough/) ---

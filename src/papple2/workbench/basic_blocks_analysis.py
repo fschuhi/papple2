@@ -38,8 +38,10 @@ GLIDE = "glide"
 
 # The loop reports this analysis writes, and their columns (briefing.md,
 # section 3.E).
-LOOPS_FILE = "lr_loops.csv"
-LOOP_MEMBERS_FILE = "lr_loop_members.csv"
+# The loop reports describe one routine, so their names carry its entry,
+# e.g. lr_loops_6238.csv: LOOPS_FILE.format(entry=0x6238).
+LOOPS_FILE = "lr_loops_{entry:04x}.csv"
+LOOP_MEMBERS_FILE = "lr_loop_members_{entry:04x}.csv"
 LOOPS_FIELDS = (
     "loop_id",
     "header_block",
@@ -460,8 +462,9 @@ def write_rows(filename: Path, fields: tuple[str, ...], rows: list[dict]) -> Non
 
 
 def write_loop_reports(folder: Path, graph: BlockGraph, loops: dict[int, Loop]) -> None:
-    """Write lr_loops.csv (one row per loop) and lr_loop_members.csv (one row
-    per basic block of the graph) into folder.
+    """Write lr_loops_<entry>.csv (one row per loop) and
+    lr_loop_members_<entry>.csv (one row per basic block of the graph) into
+    folder, with the graph's entry in four-digit hex.
 
     Loops are numbered L01, L02, ... in header-address order. A loop with
     several back edges lists their sources and their counts as two
@@ -506,5 +509,9 @@ def write_loop_reports(folder: Path, graph: BlockGraph, loops: dict[int, Loop]) 
             }
         )
 
-    write_rows(folder / LOOPS_FILE, LOOPS_FIELDS, loop_rows)
-    write_rows(folder / LOOP_MEMBERS_FILE, LOOP_MEMBERS_FIELDS, member_rows)
+    write_rows(folder / LOOPS_FILE.format(entry=graph.entry), LOOPS_FIELDS, loop_rows)
+    write_rows(
+        folder / LOOP_MEMBERS_FILE.format(entry=graph.entry),
+        LOOP_MEMBERS_FIELDS,
+        member_rows,
+    )
