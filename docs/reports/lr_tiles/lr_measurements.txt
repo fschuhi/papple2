@@ -14,6 +14,7 @@ SPLIT TILES
   Original transition records: 900
   Split transition records: 896
   Glide transition records: 53
+  Leaps into a tile that never ran: 0
 
 INTERPRETATION
   All structure is observed structure from this run.
