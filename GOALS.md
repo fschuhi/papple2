@@ -8,14 +8,14 @@
 
 ## 📍 Current Session Pointer
 
-**Where we are:** `papple2` is a system to disassemble and understand Apple II games by running them, with Lode Runner as the worked example (`DIRECTION.md`: dynamic first, static fills the holes; the oracle only grades). **Milestones 2026-10-03:** it's a workbench now. What we learn stays: Lode Runner's dossier (`dossiers/lode_runner/annotations.json`, under git) keeps labels and comments across runs and IPython sessions, and `listing()` shows them. And the whole run is at the prompt: after `%run scripts/lr_basic_blocks_analysis.py`, `show_routines()` lists all 68 routines and `show_blocks(entry)` shows any one of them, both with the dossier's labels. Still rough around the edges; the next work streamlines it, so it's fun to work with and learning goes fast.
+**Where we are:** `papple2` is the machinery for reverse engineering Apple II games by running them, with Lode Runner as the worked example (`DIRECTION.md`: dynamic first, static fills the holes; the oracle only grades). The reverse engineering itself is meant to happen with an LLM reading reports, without `papple2`'s code: the `lr-` targets are prepackaged analyses whose reports carry meaning on their own; IPython is for ad hoc exploration, and Lode Runner's dossier (`dossiers/lode_runner/annotations.json`, under git) keeps the labels and comments given there. **2026-10-03:** the architecture review began (workbench functions, no `Workbench` class). Every routine of the run is found in one place (`find_routines()`), `listing()` draws arrows everywhere, and `make lr-basic-blocks-analysis` is the first target whose reports are under git (`docs/reports/lr_basic_blocks_analysis/`, loop reports of `$0800` on every run).
 
 **What's next:**
-- First, a quick win that has waited long: zero-page operands show their labels (`TODO.md`, "Small code steps").
-- An architecture review, before new tools: what belongs in a script and what in the workbench (the Lode Runner script now finds routines and defines the prompt's commands), `shell.py`'s growth, where routines are found (`find_entries()` in a script).
+- First: reports under git for the other `lr-` targets (`lr-tiles` first, which `lr-overview` reads), and how a report says what it is and where it came from, so an LLM can read it cold (`TODO.md`).
+- Then the rest of the architecture review: a workbench function for the standard run (`Tiling`, run, reports), used by the Lode Runner script and the walkthrough; the prompt's commands by entry (`TODO.md`, "Dossier and prompt").
 - Then the first tool priority: tail calls and stack jump tables, integrated into the structural analysis -- unclear how; the dominator analysis may not cope, and this may be where stretches begin (below, and `TODO.md`). Also the tools a spike into Bandits needs.
 - The second, a big theme: the HGR "ray" -- loads and stores into HGR1/HGR2, and which tiles and structures they fall on (`TODO.md`).
-- Alongside: the prompt items in `TODO.md` ("Dossier and prompt"), and pruning the `instrumentation-*.md` documents (inventory 2026-10-02, decisions open).
+- Alongside: pruning the `instrumentation-*.md` documents (inventory 2026-10-02, decisions open).
 
 ---
 

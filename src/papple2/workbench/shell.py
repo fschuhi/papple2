@@ -196,8 +196,7 @@ def dis(
     after the run, past anything that watches the CPU.
 
     With labels, an operand whose address has a name shows the name
-    (JSR SUB instead of JSR $6010). Zero-page operands keep their address:
-    the disassembler doesn't name them yet. An instruction whose own
+    (JSR SUB instead of JSR $6010). An instruction whose own
     address has a name shows it in a column of its own, before the
     instruction. The column is as wide as the longest name in the range,
     and left out if no address in the range has a name.

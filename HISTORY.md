@@ -11,6 +11,19 @@
 
 ---
 
+## 2026-10-03 -- Zero-page labels; the architecture review begins: routines found once, arrows everywhere, reports under git
+
+- Zero-page operands show their labels (`INC $10` with a label for `$10`). `__replace_operand_address()` looked for the address as `hexaddr()` writes it, four digits (`$0010`), but the zero-page modes print two (`$10`). It now tries four digits first, then two, so an absolute `$0010` still matches. Built first the other way, each mode returning the exact text it printed: dropped, because it repeated three lines in ten modes, and its one advantage, protection against a switch to uppercase hex, went with the next decision. One parametrized test: zero page, `(zp),Y`, absolute.
+- Decision: hex in listings is lowercase, addresses and operands, immediates included; mnemonics stay uppercase. The CPU status line keeps its uppercase. The two `TODO.md` items for uppercase were dropped.
+- The architecture review began with an inventory of the scripts and the workbench. Findings: the whole-run analysis (entries, call counts, a graph and loops per routine) existed twice, in `scripts/lr_overview.py` and `scripts/lr_basic_blocks_analysis.py`; `find_entries()` took the run's start from `boot_lode_runner.LOAD_ADDRESS`; the prompt's commands live as nested functions in a script's `__main__` block; one run was held twice, for `--entry` and for the whole run. Decisions: no `Workbench` class, but workbench functions that group a standard way of doing things, used by the scripts (a class would have become the place where everything goes); no `Dossier` class yet, until it has a second resident (snapshots).
+- `find_routines(tiles, transitions, start)` in `basic_blocks_analysis.py` returns `Routines` (`graphs`, `loops_of`, `calls_into`, keyed by entry: the start, then every `JSR` target in address order). Both scripts call it; the start is a parameter.
+- Arrows everywhere: `build_run_graph()` keeps every block and edge the run observed, not only those reachable from one entry; it shares `_graph()` with `build_graph()`. `listing()` draws from it, so arrows show in every routine and in the pieces in no routine.
+- `--entry` removed. `write_loop_reports()` puts the graph's entry into the file names (`lr_loops_6238.csv`, `lr_loop_members_6238.csv`; the walkthrough writes `lr_loops_6000.csv`). At the prompt, `loop_reports(entry)` writes them for one routine.
+- The product view, stated by the user: the `lr-` targets are prepackaged analyses. Each leaves reports behind that carry meaning on their own, so that the reverse engineering can be done with an LLM (Gemini) reading them, without `papple2`'s code. IPython is for ad hoc exploration and never replaces them. This project builds the machinery. First consequence: `make lr-basic-blocks-analysis` writes into `docs/reports/lr_basic_blocks_analysis/`, under git, with the loop reports of the start, `$0800`, on every run; `--loop-reports 6238 ...` adds further routines.
+- All green after every step.
+
+---
+
 ## 2026-10-02 -- The walkthrough as a story in tests; `dis()` with names and arrows; `LOAD_LEVEL` in IPython
 
 - Milestone, run by the user: the first look at real code with the new tools. In IPython, `%run scripts/lr_basic_blocks_analysis.py` and `dis(emulator, 0x6238, 0x62c4, graph=graph)` showed `LOAD_LEVEL` from memory after the run, with its four loops as nested arrows. What the listing shows, not yet named (oracle protocol): `6280`-`6292` picks the low or high four bits of a byte by bit 0 of `$1a` (448 runs of `627e`, 224 each way, in the committed report `docs/reports/load_level/lr_loop_members.csv`); `628a BPL $6292` always jumps, since `AND #$0f` clears bit 7; `629a LDA #$00` never ran, because every value after `CMP #$0a` was below 10.
