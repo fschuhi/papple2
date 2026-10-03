@@ -21,9 +21,9 @@ or in IPython, which keeps the run's objects (emulator, tiling, graph,
 loops) in its namespace afterwards, together with dis() and the show_*
 functions (papple2.workbench.shell). There, Lode Runner's dossier
 (dossiers/lode_runner/annotations.json, under git) is open as
-annotations: label() and comment() write to it at once, and listing()
-shows a range with this run's arrows and the dossier's labels and
-comments:
+annotations: label(), comment(), unlabel() and uncomment() write to it
+at once, and listing() shows a range with this run's arrows and the
+dossier's labels and comments:
 
     %run scripts/lr_basic_blocks_analysis.py
     show_loops(loops)
@@ -156,10 +156,11 @@ if __name__ == "__main__":
         # The dossier's first run: start it with the Apple II's names.
         annotations.add_labels(STANDARD_LABELS)
 
-    # Short names for the prompt. unlabel() and uncomment() are rarer:
-    # annotations.unlabel(), annotations.uncomment().
+    # Short names for the prompt.
     label = annotations.label
     comment = annotations.comment
+    unlabel = annotations.unlabel
+    uncomment = annotations.uncomment
 
     def listing(start: int, end: int) -> None:
         """dis() with this run's graph and the dossier's labels and
