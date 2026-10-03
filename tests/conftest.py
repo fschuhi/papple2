@@ -6,7 +6,6 @@ from papple2.core.memory import Memory
 from papple2.core.cpu import CPU
 from papple2.core.emulator import Emulator
 from papple2.debug.assembler import Assembler
-from papple2.debug.labels import Labels
 from papple2.debug.stop_conditions import at_address
 from papple2.workbench.basic_blocks_analysis import (
     BlockGraph,
@@ -86,12 +85,12 @@ WALKTHROUGH_ENTRY = 0x6000
 WALKTHROUGH_END = 0x6014  # the byte behind DONE's NOP: the run stops here
 
 # The names of scripts/walkthrough.py's NAMES.
-WALKTHROUGH_NAMES = [
-    (0x6002, "OUTER"),
-    (0x6004, "INNER"),
-    (0x6010, "SUB"),
-    (0x6013, "DONE"),
-]
+WALKTHROUGH_NAMES = {
+    0x6002: "OUTER",
+    0x6004: "INNER",
+    0x6010: "SUB",
+    0x6013: "DONE",
+}
 
 
 class Walkthrough(NamedTuple):
@@ -102,7 +101,7 @@ class Walkthrough(NamedTuple):
     tiling: Tiling
     graph: BlockGraph
     loops: dict[int, Loop]
-    labels: Labels
+    labels: dict[int, str]
     folder: Path
 
 
@@ -121,6 +120,5 @@ def walkthrough(make_emulator, tmp_path: Path) -> Walkthrough:
     tiles, transitions = read_split_reports(tmp_path)
     graph = build_graph(tiles, transitions, entry=WALKTHROUGH_ENTRY)
     loops = natural_loops(graph, immediate_dominators(graph))
-    labels = Labels()
-    labels.add_labels(WALKTHROUGH_NAMES)
+    labels = dict(WALKTHROUGH_NAMES)
     return Walkthrough(emulator, tiling, graph, loops, labels, tmp_path)

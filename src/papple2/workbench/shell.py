@@ -13,7 +13,6 @@ dis(emulator, 0x6004, 0x6007).
 
 from papple2.core.emulator import Emulator
 from papple2.debug.disassembler import Disassembler
-from papple2.debug.labels import Labels
 from papple2.workbench.basic_blocks_analysis import BlockGraph, Loop
 from papple2.workbench.tiling import address
 
@@ -152,7 +151,7 @@ def dis(
     emulator: Emulator,
     start: int,
     end: int,
-    labels: Labels | None = None,
+    labels: dict[int, str] | None = None,
     graph: BlockGraph | None = None,
 ) -> None:
     """Print the instructions from start up to, not including, end: address,
@@ -161,7 +160,7 @@ def dis(
 
     With labels, an operand whose address has a name shows the name
     (JSR SUB instead of JSR $6010). Zero-page operands keep their address:
-    Labels doesn't name them yet. An instruction whose own address has a
+    the disassembler doesn't name them yet. An instruction whose own address has a
     name shows it in a column of its own, before the instruction. The
     column is as wide as the longest name in the range, and left out if
     no address in the range has a name.
@@ -175,9 +174,7 @@ def dis(
     operand reaches past end. A block's end always lies behind its last
     instruction, so this only shows for ranges that cut an instruction.
     """
-    disassembler = Disassembler(
-        emulator.cpu, labels if labels is not None else Labels()
-    )
+    disassembler = Disassembler(emulator.cpu, labels)
     # disassemble() takes an inclusive end.
     rows = disassembler.disassemble(start, end - 1)
     width = max((len(row[2]) for row in rows), default=0)

@@ -35,7 +35,6 @@ from pathlib import Path
 
 from papple2.core.emulator import Emulator
 from papple2.debug.assembler import Assembler
-from papple2.debug.labels import Labels
 from papple2.debug.stop_conditions import at_address
 from papple2.workbench.basic_blocks_analysis import (
     BlockGraph,
@@ -84,12 +83,12 @@ DONE    NOP
 
 # The names for PROGRAM's addresses, given by hand: the way names will
 # come for Lode Runner, from the user (the oracle protocol in README.md).
-NAMES = [
-    (0x6002, "OUTER"),
-    (0x6004, "INNER"),
-    (0x6010, "SUB"),
-    (0x6013, "DONE"),
-]
+NAMES = {
+    0x6002: "OUTER",
+    0x6004: "INNER",
+    0x6010: "SUB",
+    0x6013: "DONE",
+}
 
 
 def assemble(program: str) -> list[int]:
@@ -146,5 +145,4 @@ if __name__ == "__main__":
     # At module level on purpose: IPython's %run keeps these names in
     # its namespace, so the run can be inspected afterwards.
     emulator, tiling, graph, loops = walkthrough(REPORTS_FOLDER)
-    labels = Labels()
-    labels.add_labels(NAMES)
+    labels = NAMES

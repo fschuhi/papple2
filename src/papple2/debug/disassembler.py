@@ -4,18 +4,36 @@ from collections.abc import Callable
 
 from papple2.util import signed, hexbyte, chunks, hexaddr
 from papple2.core.cpu import CPU
-from papple2.debug.labels import Labels
 
 # What an addressing mode reports about an operand: keys "operand" (the text),
 # "operand_address" / "operand_value" (int), "memory" ([address, size, value]).
 # collect_op_info adds "address" (int), "bytes" (list[int]) and "mnemonic" (str).
 type OperandInfo = dict[str, str | int | list[int]]
 
+# Names for Apple II addresses: soft switches and ROM routines. They describe
+# the machine, not a program, so the disassembler doesn't add them by itself;
+# whoever wants them passes them in with the other labels.
+STANDARD_LABELS = {
+    0xC000: 'r:KBD w:CLR80COL',
+    0xC010: 'r:KBDSTRB',
+    0xC030: 'rw:SPKR',
+    0xC050: 'rw:TXTCLR',
+    0xC052: 'rw:MIXCLR',
+
+    0xc054: 'rw:TXTPAGE1',
+    0xc057: 'rw:HIRES',
+    0xc061: 'r:BUTN0',
+    0xc062: 'r:BUTN1',
+
+    0xfb1e: 'F8ROM:PREAD',
+    0xfca8: 'F8ROM:WAIT',
+}
+
 class Disassembler:
     def __init__(
         self,
         cpu: CPU,
-        labels: Labels,
+        labels: dict[int, str] | None = None,
         is_code: Callable[[int], bool] = lambda address: True,
     ) -> None:
         self.cpu = cpu
@@ -24,7 +42,9 @@ class Disassembler:
         # address as code, which makes this a plain static disassembler
         self.is_code = is_code
         self.memory = self.cpu.memory
-        self.labels = labels
+        # labels: the name for an address, shown in the label column of the
+        # instruction at that address and in operands that point at it
+        self.labels = labels if labels is not None else {}
 
         self.ops = [(1, "???")] * 0x100
         self.setup_ops()
@@ -362,7 +382,7 @@ class Disassembler:
                     byte_block_start = None
 
                 # the name of this instruction's own address, if it has one
-                inline_label = self.labels.label_at(address)
+                inline_label = self.labels.get(address, '')
 
                 comments = []
 
@@ -372,7 +392,7 @@ class Disassembler:
                 operand = '' if 'operand' not in instruction else instruction['operand']
                 if 'operand_address' in instruction:
                     operand_address = instruction['operand_address']
-                    operand = self.labels.replace_operand_address(operand, operand_address)
+                    operand = self.__replace_operand_address(operand, operand_address)
 
                 mnemonic = instruction['mnemonic']
 
@@ -400,6 +420,13 @@ class Disassembler:
             self.__disassemble_byte_blocks( byte_block_start, byte_block_end, lines )
 
         return lines
+
+
+    def __replace_operand_address(self, operand: str, operand_address: int) -> str:
+        # TODO: label replacement in operands must work for all addresses, including zero page
+        if operand_address in self.labels:
+            operand = operand.replace(hexaddr(operand_address), self.labels[operand_address])
+        return operand
 
 
     def disassemble_formatted( self, start_address: int, end_address: int = 0xC000, instructions: int | None = None ) -> list[str]:

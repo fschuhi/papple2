@@ -3,14 +3,13 @@ import pytest
 from papple2.core.cpu import CPU
 from papple2.core.memory import Memory
 from papple2.debug.disassembler import Disassembler
-from papple2.debug.labels import Labels
 
 BNE = 0xD0
 
 
 @pytest.fixture
 def disassembler(memory: Memory, cpu: CPU) -> Disassembler:
-    return Disassembler(cpu, Labels())
+    return Disassembler(cpu)
 
 
 @pytest.mark.parametrize(
@@ -67,7 +66,7 @@ def test_addresses_that_are_not_code_become_a_byte_block(
 ) -> None:
     # is_code decides code or data per address. Here nothing is code, so
     # the three bytes come out as one .byte line.
-    disassembler = Disassembler(cpu, Labels(), is_code=lambda address: False)
+    disassembler = Disassembler(cpu, is_code=lambda address: False)
     memory.load_test_data(0x0300, [0xA9, 0x05, 0x60])
 
     lines = disassembler.disassemble(0x0300, 0x0302)
@@ -75,22 +74,12 @@ def test_addresses_that_are_not_code_become_a_byte_block(
     assert lines[-1][3:5] == [".byte", "a9 05 60"]
 
 
-def test_label_at_gives_the_name_or_nothing() -> None:
-    labels = Labels()
-    labels.add_labels([(0x0300, "START")])
-
-    assert labels.label_at(0x0300) == "START"
-    assert labels.label_at(0x0302) == ""
-
-
 def test_a_named_address_fills_the_label_column(
     memory: Memory, cpu: CPU
 ) -> None:
     # The label column holds the name of the instruction's own address;
     # addresses without a name leave it empty.
-    labels = Labels()
-    labels.add_labels([(0x0300, "START")])
-    disassembler = Disassembler(cpu, labels)
+    disassembler = Disassembler(cpu, {0x0300: "START"})
     memory.load_test_data(0x0300, [0xA9, 0x05, 0x60])  # LDA #$05 / RTS
 
     lines = disassembler.disassemble(0x0300, 0x0302)

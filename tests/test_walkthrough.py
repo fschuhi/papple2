@@ -212,7 +212,7 @@ def test_chapter_9_the_whole_program_disassembled(walkthrough, capsys) -> None:
     # The twenty bytes, read back from memory after the run, with the names
     # given by hand. The four named addresses show their names twice: in
     # the column before their own instruction, and in the operands that
-    # point at them. INC $10 keeps its address: Labels doesn't name
+    # point at them. INC $10 keeps its address: the disassembler doesn't name
     # zero-page operands yet.
     dis(walkthrough.emulator, 0x6000, 0x6014, walkthrough.labels)
 
