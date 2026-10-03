@@ -7,8 +7,8 @@ a run or an IPython session, so a label given today shows tomorrow in a
 run that covers far more code.
 
 Every change is written at once, so the file is never behind the prompt.
-Nothing is written before the first change: opening a dossier only to look
-leaves no trace.
+Nothing is written without a change: opening a dossier only to look leaves
+no trace.
 
 Addresses are the ones the code runs at, i.e. memory after relocation,
 which is what dis() reads.
@@ -50,12 +50,29 @@ class Annotations:
     def add_labels(self, labels: dict[int, str]) -> None:
         """Add many labels at once, e.g. STANDARD_LABELS in a script's setup.
         Addresses that already have a label keep it, and texts already in
-        use are skipped, so adding the same labels again changes nothing."""
+        use are skipped, so adding the same labels again changes nothing --
+        not even the file."""
         in_use = set(self.labels.values())
+        added = False
         for address, text in labels.items():
             if address not in self.labels and text not in in_use:
                 self.labels[address] = text
                 in_use.add(text)
+                added = True
+        if added:
+            self._save()
+
+    def comment(self, address: int, text: str) -> None:
+        """Give address the comment text, replacing any comment it has."""
+        self.comments[address] = text
+        self._save()
+
+    def uncomment(self, address: int) -> None:
+        """Remove address's comment. An address without one is refused,
+        as in unlabel()."""
+        if address not in self.comments:
+            raise ValueError(f"${address:04x} has no comment")
+        del self.comments[address]
         self._save()
 
     def _save(self) -> None:

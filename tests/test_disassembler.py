@@ -85,3 +85,16 @@ def test_a_named_address_fills_the_label_column(
     lines = disassembler.disassemble(0x0300, 0x0302)
 
     assert [line[2] for line in lines] == ["START", ""]
+
+
+def test_a_commented_address_fills_the_comment_column(
+    memory: Memory, cpu: CPU
+) -> None:
+    # The comment column holds the comment of the instruction's own
+    # address; addresses without a comment leave it empty.
+    disassembler = Disassembler(cpu, comments={0x0300: "five lives"})
+    memory.load_test_data(0x0300, [0xA9, 0x05, 0x60])  # LDA #$05 / RTS
+
+    lines = disassembler.disassemble(0x0300, 0x0302)
+
+    assert [line[5] for line in lines] == ["five lives", ""]

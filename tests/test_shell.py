@@ -1,11 +1,12 @@
-"""Tests for papple2.workbench.shell: the arrows in the gutter.
+"""Tests for papple2.workbench.shell: the arrows in the gutter, and the
+comments behind the instructions.
 
 The arrows are given as rows, not addresses: row 0 is the listing's first
 line. A span is (first row, last row); an arrow is (source row, target
 row). Lane 0 lies next to the code.
 """
 
-from papple2.workbench.shell import assign_lanes, draw_gutter
+from papple2.workbench.shell import assign_lanes, dis, draw_gutter
 
 
 def test_an_arrow_inside_another_gets_the_lane_nearer_the_code() -> None:
@@ -57,3 +58,25 @@ def test_a_loop_inside_a_loop() -> None:
 
 def test_no_arrows_no_gutter() -> None:
     assert draw_gutter(2, [], []) == ["", ""]
+
+
+def test_dis_lines_comments_up_after_the_widest_commented_instruction(
+    make_emulator, capsys
+) -> None:
+    # Two spaces after the widest commented instruction, then "; ".
+    # STA $0300 has no comment: its line ends with the instruction, and
+    # being the widest instruction, it doesn't push the comments out.
+    _asm, emulator = make_emulator("""
+            *=$6000
+            LDA #$00
+            STA $0300
+            RTS
+    """)
+
+    dis(emulator, 0x6000, 0x6006, comments={0x6000: "clear", 0x6005: "done"})
+
+    assert capsys.readouterr().out.splitlines() == [
+        "6000  a9 00     LDA #$00  ; clear",
+        "6002  8d 00 03  STA $0300",
+        "6005  60        RTS       ; done",
+    ]

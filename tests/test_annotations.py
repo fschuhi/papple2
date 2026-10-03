@@ -106,3 +106,68 @@ def test_the_file_has_both_sections_sorted_by_address(tmp_path: Path) -> None:
         '  "comments": {}\n'
         "}\n"
     )
+
+
+def test_add_labels_that_adds_nothing_writes_no_file(tmp_path: Path) -> None:
+    annotations = Annotations(tmp_path / "lode_runner")
+
+    annotations.add_labels({})
+
+    assert not (tmp_path / "lode_runner").exists()
+
+
+def test_add_labels_leaves_the_file_alone_when_it_adds_nothing(
+    tmp_path: Path,
+) -> None:
+    annotations = Annotations(tmp_path)
+    annotations.label(0xC000, "KBD")
+    # The same content written differently: a save would put the usual
+    # layout back.
+    compact = json.dumps(read_file(tmp_path))
+    (tmp_path / "annotations.json").write_text(compact)
+
+    annotations.add_labels({0xC000: "KBD"})
+
+    assert (tmp_path / "annotations.json").read_text() == compact
+
+
+def test_comment_writes_the_file_at_once(tmp_path: Path) -> None:
+    annotations = Annotations(tmp_path)
+
+    annotations.comment(0x627E, "two 4-bit values per byte")
+
+    assert read_file(tmp_path)["comments"] == {"627e": "two 4-bit values per byte"}
+
+
+def test_a_second_annotations_sees_the_comments(tmp_path: Path) -> None:
+    Annotations(tmp_path).comment(0x627E, "two 4-bit values per byte")
+
+    annotations = Annotations(tmp_path)
+
+    assert annotations.comments == {0x627E: "two 4-bit values per byte"}
+
+
+def test_commenting_an_address_again_replaces_its_comment(tmp_path: Path) -> None:
+    annotations = Annotations(tmp_path)
+    annotations.comment(0x627E, "two values per byte")
+
+    annotations.comment(0x627E, "two 4-bit values per byte")
+
+    assert annotations.comments == {0x627E: "two 4-bit values per byte"}
+
+
+def test_uncomment_removes_the_comment_from_the_file(tmp_path: Path) -> None:
+    annotations = Annotations(tmp_path)
+    annotations.comment(0x627E, "two 4-bit values per byte")
+
+    annotations.uncomment(0x627E)
+
+    assert annotations.comments == {}
+    assert read_file(tmp_path)["comments"] == {}
+
+
+def test_uncomment_refuses_an_address_without_a_comment(tmp_path: Path) -> None:
+    annotations = Annotations(tmp_path)
+
+    with pytest.raises(ValueError, match=r"\$627e"):
+        annotations.uncomment(0x627E)

@@ -153,6 +153,7 @@ def dis(
     end: int,
     labels: dict[int, str] | None = None,
     graph: BlockGraph | None = None,
+    comments: dict[int, str] | None = None,
 ) -> None:
     """Print the instructions from start up to, not including, end: address,
     bytes, instruction. Read from the emulator's memory as it is now, i.e.
@@ -160,10 +161,16 @@ def dis(
 
     With labels, an operand whose address has a name shows the name
     (JSR SUB instead of JSR $6010). Zero-page operands keep their address:
-    the disassembler doesn't name them yet. An instruction whose own address has a
-    name shows it in a column of its own, before the instruction. The
-    column is as wide as the longest name in the range, and left out if
-    no address in the range has a name.
+    the disassembler doesn't name them yet. An instruction whose own
+    address has a name shows it in a column of its own, before the
+    instruction. The column is as wide as the longest name in the range,
+    and left out if no address in the range has a name.
+
+    With comments, an instruction whose own address has a comment shows
+    it behind the instruction, after "; ". The comments line up two spaces
+    after the widest commented instruction in the range, so .byte lines
+    don't push them out; lines without a comment end with their
+    instruction.
 
     With graph, the jumps the run took are drawn as arrows in a gutter on
     the left: every edge whose target is not simply the next instruction
@@ -174,20 +181,26 @@ def dis(
     operand reaches past end. A block's end always lies behind its last
     instruction, so this only shows for ranges that cut an instruction.
     """
-    disassembler = Disassembler(emulator.cpu, labels)
+    disassembler = Disassembler(emulator.cpu, labels, comments)
     # disassemble() takes an inclusive end.
     rows = disassembler.disassemble(start, end - 1)
     width = max((len(row[2]) for row in rows), default=0)
+    instructions = [f"{row[3]} {row[4]}".rstrip() for row in rows]
+    instruction_width = max(
+        (len(text) for row, text in zip(rows, instructions) if row[5]), default=0
+    )
     gutter = draw_gutter(len(rows), *arrows_in(rows, graph))
-    for row, prefix in zip(rows, gutter):
-        row_address, row_bytes, label, mnemonic, operand, _comment = row
+    for row, prefix, instruction in zip(rows, gutter, instructions):
+        row_address, row_bytes, label, _mnemonic, _operand, comment = row
         if not row_address:  # the empty line before a .byte block
             print(prefix.rstrip())
             continue
         name_column = f"{label:<{width}}  " if width else ""
+        if comment:
+            instruction = f"{instruction:<{instruction_width}}  ; {comment}"
         print(
             f"{prefix}{row_address.removeprefix('$'):<4}  {row_bytes:<8}  "
-            f"{name_column}{mnemonic} {operand}".rstrip()
+            f"{name_column}{instruction}".rstrip()
         )
 
 

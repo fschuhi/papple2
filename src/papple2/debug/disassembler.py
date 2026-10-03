@@ -34,6 +34,7 @@ class Disassembler:
         self,
         cpu: CPU,
         labels: dict[int, str] | None = None,
+        comments: dict[int, str] | None = None,
         is_code: Callable[[int], bool] = lambda address: True,
     ) -> None:
         self.cpu = cpu
@@ -45,6 +46,9 @@ class Disassembler:
         # labels: the name for an address, shown in the label column of the
         # instruction at that address and in operands that point at it
         self.labels = labels if labels is not None else {}
+        # comments: the comment for an address, shown in the comment column
+        # of the instruction at that address
+        self.comments = comments if comments is not None else {}
 
         self.ops = [(1, "???")] * 0x100
         self.setup_ops()
@@ -384,8 +388,6 @@ class Disassembler:
                 # the name of this instruction's own address, if it has one
                 inline_label = self.labels.get(address, '')
 
-                comments = []
-
                 instruction, length = self.collect_op_info( address )
                 op_bytes = instruction['bytes']
 
@@ -406,7 +408,7 @@ class Disassembler:
                     inline_label,
                     mnemonic,
                     operand,
-                    ', '.join(comments) if len(comments) > 0 else '',
+                    self.comments.get(address, ''),
                 ]
                 lines.append(line)
 
