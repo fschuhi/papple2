@@ -25,6 +25,19 @@
 
 ---
 
+## 2026-10-03 -- The dossier: labels and comments that stay; every routine at the prompt
+
+- Milestone, run by the user: what we learn stays. Lode Runner's dossier, `dossiers/lode_runner/annotations.json`, under git, keeps labels and comments across runs and IPython sessions, and `listing()` shows them. In the morning the prompt showed one routine; by the evening, `show_routines()` listed all 68 routines of the attract play, and `show_blocks(entry)` showed any of them, both with the dossier's labels.
+- The word: a *dossier* is everything known about one program, in a folder of its own: `dossiers/lode_runner/` now, `dossiers/walkthrough/` and snapshots in `dossiers/<name>/snapshots/` (outside git) later. Chosen by the user for its connotation: thick binders on a subject, spying, which fits reverse engineering closely. Folder names lowercase (`lode_runner`), the subject's name in normal case (`Lode_Runner`). Words fixed: *dossier*, not "session" (transient) or "project"; *label*, not "name"; `listing()`, not `list()` (the built-in).
+- `Annotations` (`papple2/workbench/annotations.py`) keeps a program's labels and comments as plain dicts: `label()`, `unlabel()`, `comment()`, `uncomment()`, `add_labels()`. Every change is written at once, nothing without one, so opening a dossier only to look leaves no trace. The file is sorted by address, with four-digit hex keys and one entry per line, so `git diff` shows each change as one line. A label text already used at another address is refused, as `dasm` would; removing a label or comment that isn't there is refused too, since at the prompt that is almost always a mistyped address. Tests in `tests/test_annotations.py`, on temporary folders.
+- `Labels` is gone. Asked by the user from the architecture-skepticism angle: is a label object needed at all? No: the disassembler and `dis()` take plain dicts for labels and comments. Apple II names are `STANDARD_LABELS` in `disassembler.py`, never added by default; the Lode Runner script adds them on the dossier's first run only, so a removed standard label stays removed.
+- `dis()` shows comments behind the instructions, lined up two spaces after the widest commented instruction in the range.
+- At the prompt, after `%run scripts/lr_basic_blocks_analysis.py`: `listing(start, end)` (`dis()` with the run's arrows and the dossier), `label()`, `comment()`, `unlabel()`, `uncomment()`, `show_routines()` (blocks, bytes, calls and loops of every routine, with labels) and `show_blocks(entry)`. The routines came from `find_entries()` in `scripts/lr_overview.py`; it moved into the workbench in the next session (`find_routines()`, the entry above).
+- The first comments in `LOAD_LEVEL`'s loop `627e`-`629c` are Claude's hypotheses, entered unverified; the first real label by the oracle protocol is still open.
+- All green after every step.
+
+---
+
 ## 2026-10-02 -- The walkthrough as a story in tests; `dis()` with names and arrows; `LOAD_LEVEL` in IPython
 
 - Milestone, run by the user: the first look at real code with the new tools. In IPython, `%run scripts/lr_basic_blocks_analysis.py` and `dis(emulator, 0x6238, 0x62c4, graph=graph)` showed `LOAD_LEVEL` from memory after the run, with its four loops as nested arrows. What the listing shows, not yet named (oracle protocol): `6280`-`6292` picks the low or high four bits of a byte by bit 0 of `$1a` (448 runs of `627e`, 224 each way, in the committed report `docs/reports/load_level/lr_loop_members.csv`); `628a BPL $6292` always jumps, since `AND #$0f` clears bit 7; `629a LDA #$00` never ran, because every value after `CMP #$0a` was below 10.
