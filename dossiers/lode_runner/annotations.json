@@ -1,5 +1,6 @@
 {
   "labels": {
+    "6238": "ROUTINE 001",
     "c000": "r:KBD w:CLR80COL",
     "c010": "r:KBDSTRB",
     "c030": "rw:SPKR",
@@ -13,6 +14,10 @@
     "fca8": "F8ROM:WAIT"
   },
   "comments": {
-    "6283": "ROUTINE 001"
+    "627e": "parity of $1a: even -> low nibble, odd -> high nibble",
+    "6283": "byte from the buffer at $0d00, two values per byte",
+    "6288": "even: low nibble; BPL always jumps",
+    "628c": "odd: high nibble, then on to the next byte",
+    "6296": "values 10-15 are invalid: read as 0"
   }
 }
