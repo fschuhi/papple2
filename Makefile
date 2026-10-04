@@ -66,7 +66,7 @@ lr-trace-pc: $(SETUP_STAMP) ## Experiment: record start PC, opcode and end PC of
 lr-tiles: $(SETUP_STAMP) ## Experiment: collect tiles and transitions, plus measurements (CSV and text)
 	$(RUN) scripts/lr_tiles.py data/bin/LODE_RUNNER.BIN
 
-lr-overview: $(SETUP_STAMP) ## Overview of the whole run: routines, loops, calls (reads tmp/lr_tiles/, run make lr-tiles first)
+lr-overview: $(SETUP_STAMP) ## Overview of the whole run: routines, loops, calls (reads docs/reports/lr_tiles/, writes docs/reports/lr_overview/)
 	$(RUN) scripts/lr_overview.py
 
 lr-basic-blocks-analysis: $(SETUP_STAMP) ## Experiment: tiling and loop reports (start 0800) of Lode Runner's attract play into docs/reports/lr_basic_blocks_analysis/

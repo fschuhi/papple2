@@ -1,10 +1,16 @@
 """Print an overview of the whole run: routines, their loops, their calls.
 
-Reads the split reports that `make lr-tiles` wrote into tmp/lr_tiles/;
-no emulator run. Prints the overview and writes it to
-tmp/lr_overview/lr_overview.txt, so it can be kept and diffed. A routine is the code reachable from an entry without
-following calls: the run's start, or the target of any JSR that ran.
-Each routine is analysed on its own, with the basic blocks analysis.
+A recipe that works from reports alone, with no emulator run. It reads
+three reports of the tiling, each by its full path, from
+docs/reports/lr_tiles/ (written by `make lr-tiles`), prints the overview,
+and writes it into its reports folder, docs/reports/lr_overview/, as
+lr_overview.txt, so it can be kept and diffed. A routine is the code
+reachable from an entry without following calls: the run's start, or the
+target of any JSR that ran. Each routine is analysed on its own, with the
+basic blocks analysis.
+
+overview() is local to this recipe: it can be called at the prompt after
+%run, with other report files, but it is no contract of the workbench yet.
 
 Run from the repo root:
 
@@ -23,18 +29,18 @@ from papple2.workbench.basic_blocks_analysis import (
     Loop,
     SplitTile,
     find_routines,
-    read_split_reports,
+    read_split_tiles,
+    read_split_transitions,
 )
-from papple2.workbench.tiling import MEASUREMENTS_FILE, address
+from papple2.workbench.shell import use_reports_folder, write_report
+from papple2.workbench.tiling import address
 
-REPORTS_FOLDER = Path("tmp/lr_tiles")
-# One folder per script, named after it.
-OVERVIEW_OUTPUT = Path("tmp/lr_overview/lr_overview.txt")
+# The file the overview is saved as, in the reports folder.
+OVERVIEW_FILE = "lr_overview.txt"
 
 
-def observed_instructions(folder: Path) -> str:
+def observed_instructions(measurements: Path) -> str:
     """The instruction count, as the tiling's measurements state it."""
-    measurements = folder / MEASUREMENTS_FILE
     if measurements.exists():
         for line in measurements.read_text(encoding="utf-8").splitlines():
             if line.strip().startswith("Observed instructions:"):
@@ -58,9 +64,20 @@ def print_loop_tree(
             print_loop_tree(loops, graph, header, indent + 1, out)
 
 
-def main() -> None:
-    tiles, transitions = read_split_reports(REPORTS_FOLDER)
-    routines = find_routines(tiles, transitions, LOAD_ADDRESS)
+def overview(
+        start: int,
+        split_tiles: Path,
+        split_transitions: Path,
+        measurements: Path,
+        save: bool = False,
+) -> None:
+    """Print the overview of a whole run: totals, routines, pieces in no
+    routine, loops per routine. Reads the three tiling reports by their
+    full paths. start is where the run began, which no report records.
+    With save, also writes the overview into the reports folder."""
+    tiles = read_split_tiles(split_tiles)
+    transitions = read_split_transitions(split_transitions)
+    routines = find_routines(tiles, transitions, start)
     graphs = routines.graphs
     loops_of = routines.loops_of
     calls_into = routines.calls_into
@@ -73,7 +90,7 @@ def main() -> None:
     # Collect the overview in a buffer, so it can be printed and written alike.
     out = io.StringIO()
     print("WHOLE RUN", file=out)
-    print(f"  {observed_instructions(REPORTS_FOLDER)} instructions", file=out)
+    print(f"  {observed_instructions(measurements)} instructions", file=out)
     print(f"  {len(tiles):,} pieces of code, {sum(t.end - t.start for t in tiles):,} bytes", file=out)
     print(f"  {len(entries)} routines", file=out)
     deepest = max((loop.depth for loop in all_loops.values()), default=-1) + 1
@@ -112,12 +129,19 @@ def main() -> None:
             print(f"  routine {address(entry)}", file=out)
             print_loop_tree(loops_of[entry], graphs[entry], parent=None, indent=2, out=out)
 
-    overview = out.getvalue()
-    print(overview, end="")
-    OVERVIEW_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    OVERVIEW_OUTPUT.write_text(overview, encoding="utf-8")
-    print(f"wrote the overview to {OVERVIEW_OUTPUT}")
+    text = out.getvalue()
+    print(text, end="")
+    if save:
+        write_report(OVERVIEW_FILE, text)
 
 
 if __name__ == "__main__":
-    main()
+    # The recipe: the same lines could be typed at the prompt.
+    use_reports_folder(Path("docs/reports/lr_overview"))
+    overview(
+        LOAD_ADDRESS,
+        split_tiles=Path("docs/reports/lr_tiles/lr_split_tiles.csv"),
+        split_transitions=Path("docs/reports/lr_tiles/lr_split_transitions.csv"),
+        measurements=Path("docs/reports/lr_tiles/lr_measurements.txt"),
+        save=True,
+    )
