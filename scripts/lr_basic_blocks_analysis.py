@@ -69,6 +69,7 @@ from papple2.workbench.shell import (  # noqa: F401
     run,
     set_current_run,
     show_blocks,
+    show_callers,
     show_routines,
     tiling_reports,
     uncomment,
