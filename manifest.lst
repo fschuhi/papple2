@@ -17,7 +17,7 @@ tmp/project_tree.txt
 README.md
 GOALS.md
 TODO.md
-#HISTORY.md
+HISTORY.md
 
 # dossiers
 dossiers/lode_runner/annotations.json
@@ -28,6 +28,7 @@ dossiers/lode_runner/annotations.json
 docs/reports/lr_basic_blocks_analysis/lr_loop_members_0800.csv
 docs/reports/lr_basic_blocks_analysis/lr_loops_0800.csv
 docs/reports/lr_basic_blocks_analysis/lr_measurements.txt
+docs/reports/lr_basic_blocks_analysis/lr_returns.csv
 docs/reports/lr_basic_blocks_analysis/lr_split_tiles.csv
 docs/reports/lr_basic_blocks_analysis/lr_split_transitions.csv
 #docs/reports/lr_basic_blocks_analysis/lr_unbroken_tiles.csv
@@ -105,11 +106,15 @@ src/papple2/core/window.py
 src/papple2/debug/disassembler.py
 src/papple2/debug/stop_conditions.py
 
+## programs
+src/papple2/programs/lode_runner.py
+
 ## workbench
 src/papple2/workbench/annotations.py
 src/papple2/workbench/basic_blocks_analysis.py
 src/papple2/workbench/listing_editor.py
 src/papple2/workbench/shell.py
+src/papple2/workbench/stack_tracking.py
 src/papple2/workbench/tiling.py
 
 ### --- Tests and fixtures data ---
@@ -142,6 +147,7 @@ tests/test_disassembler.py
 #tests/test_memory_hooks.py
 tests/test_shell.py
 #tests/test_softswitches.py
+tests/test_stack_tracking.py
 tests/test_tiling.py
 #tests/test_throttle.py
 #tests/test_util.py
