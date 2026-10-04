@@ -1,6 +1,6 @@
 """Tests for papple2.workbench.shell: the arrows in the gutter, the
 comments behind the instructions, the labels in the print_* views, the
-reports folder, and the current dossier.
+reports folder, the current dossier, and the current run.
 
 The arrows are given as rows, not addresses: row 0 is the listing's first
 line. A span is (first row, last row); an arrow is (source row, target
@@ -26,8 +26,13 @@ from papple2.workbench.shell import (
     dis,
     draw_gutter,
     label,
+    listing,
+    loop_reports,
     print_blocks,
     print_routines,
+    set_current_run,
+    show_blocks,
+    show_routines,
     uncomment,
     unlabel,
     use_dossier,
@@ -221,4 +226,98 @@ def test_the_dossier_commands_stop_without_a_dossier(
     command, arguments, no_dossier: None
 ) -> None:
     with pytest.raises(RuntimeError, match="use_dossier"):
+        command(*arguments)
+
+
+@pytest.fixture
+def no_run(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Start without a current run, and restore the module's after the
+    test, so the tests don't see each other's run."""
+    monkeypatch.setattr(shell, "run_emulator", None)
+    monkeypatch.setattr(shell, "routines", None)
+    monkeypatch.setattr(shell, "run_graph", None)
+
+
+def make_walkthrough_current(walkthrough) -> None:
+    """The walkthrough's run as the current run, read from its reports."""
+    set_current_run(
+        walkthrough.emulator,
+        0x6000,
+        split_tiles=walkthrough.folder / "lr_split_tiles.csv",
+        split_transitions=walkthrough.folder / "lr_split_transitions.csv",
+    )
+
+
+def test_show_routines_lists_the_routines_of_the_current_run(
+    walkthrough, tmp_path: Path, capsys, no_run: None, no_dossier: None
+) -> None:
+    make_walkthrough_current(walkthrough)
+    use_dossier(tmp_path / "dossier")
+    label(0x6010, "SUB")
+    capsys.readouterr()  # what set_current_run() printed
+
+    show_routines()
+
+    lines = capsys.readouterr().out.splitlines()
+    # The program from 6000 and SUB, the target of its JSR.
+    assert [line.split()[0] for line in lines[1:]] == ["6000", "6010"]
+    assert lines[2].endswith("SUB")
+
+
+def test_show_blocks_shows_a_routine_of_the_current_run(
+    walkthrough, capsys, no_run: None, no_dossier: None
+) -> None:
+    # No dossier open: the blocks are shown without labels.
+    make_walkthrough_current(walkthrough)
+    capsys.readouterr()
+
+    show_blocks(0x6000)
+    shown = capsys.readouterr().out
+    print_blocks(walkthrough.graph, walkthrough.loops)
+    assert shown == capsys.readouterr().out
+
+
+def test_show_blocks_refuses_an_address_that_is_no_routine(
+    walkthrough, no_run: None
+) -> None:
+    make_walkthrough_current(walkthrough)
+    with pytest.raises(ValueError, match="show_routines"):
+        show_blocks(0x6002)
+
+
+def test_listing_reads_the_memory_of_the_current_run(
+    walkthrough, capsys, no_run: None, no_dossier: None
+) -> None:
+    make_walkthrough_current(walkthrough)
+    capsys.readouterr()
+
+    listing(0x6000, 0x6002)
+    assert capsys.readouterr().out.splitlines()[0].startswith("6000")
+
+
+def test_loop_reports_write_into_the_reports_folder(
+    walkthrough, tmp_path: Path, no_run: None, no_reports_folder: None
+) -> None:
+    make_walkthrough_current(walkthrough)
+    use_reports_folder(tmp_path / "experiment")
+
+    loop_reports(0x6000)
+
+    assert (tmp_path / "experiment" / "lr_loops_6000.csv").exists()
+    assert (tmp_path / "experiment" / "lr_loop_members_6000.csv").exists()
+
+
+@pytest.mark.parametrize(
+    "command, arguments",
+    [
+        (show_routines, ()),
+        (show_blocks, (0x6000,)),
+        (listing, (0x6000, 0x6002)),
+        (loop_reports, (0x6000,)),
+    ],
+)
+def test_the_run_commands_stop_without_a_current_run(
+    command, arguments, no_run: None
+) -> None:
+    with pytest.raises(RuntimeError, match="set_current_run"):
         command(*arguments)

@@ -21,6 +21,12 @@ one part of it, in annotations.json. use_dossier() makes a dossier the
 current one; label(), comment(), unlabel() and uncomment() change its
 annotations, and every change is saved at once. There is one current
 dossier at a time, kept in this module.
+
+The current run is what one run left behind: the machine, the run's
+routines, and the graph of every block it ran. set_current_run() sets it;
+show_routines(), show_blocks(), listing() and loop_reports() work on it,
+with the current dossier's labels and comments if one is open. The
+print_* functions take the objects they print instead, for any graph.
 """
 
 from pathlib import Path
@@ -28,7 +34,16 @@ from pathlib import Path
 from papple2.core.emulator import Emulator
 from papple2.debug.disassembler import STANDARD_LABELS, Disassembler
 from papple2.workbench.annotations import Annotations
-from papple2.workbench.basic_blocks_analysis import BlockGraph, Loop
+from papple2.workbench.basic_blocks_analysis import (
+    BlockGraph,
+    Loop,
+    Routines,
+    build_run_graph,
+    find_routines,
+    read_split_tiles,
+    read_split_transitions,
+    write_loop_reports,
+)
 from papple2.workbench.tiling import address
 
 # Where write_report() writes; None until use_reports_folder() is called.
@@ -95,6 +110,94 @@ def comment(address: int, text: str) -> None:
 def uncomment(address: int) -> None:
     """Remove address's comment from the current dossier."""
     current_annotations().uncomment(address)
+
+
+# The current run: the machine as the run left it (listing() reads its
+# memory), the run's routines, and the graph of every block it ran
+# (listing()'s arrows). None until set_current_run() is called.
+run_emulator: Emulator | None = None
+routines: Routines | None = None
+run_graph: BlockGraph | None = None
+
+
+def set_current_run(
+        emulator: Emulator, start: int, split_tiles: Path, split_transitions: Path
+) -> None:
+    """Make the run emulator has made the current run. Its routines and the
+    graph of every block are built from its two split reports, each read by
+    its full path: the files are the only connection, as in the walkthrough.
+    start is where the run began, which no report records."""
+    global run_emulator, routines, run_graph
+    tiles = read_split_tiles(split_tiles)
+    transitions = read_split_transitions(split_transitions)
+    run_emulator = emulator
+    routines = find_routines(tiles, transitions, start)
+    run_graph = build_run_graph(tiles, transitions, start)
+    print(f"{len(routines.graphs)} routines")
+
+
+def current_routines() -> Routines:
+    """The current run's routines. Stops if there is no current run."""
+    if routines is None:
+        raise RuntimeError("no current run; call set_current_run() first")
+    return routines
+
+
+def routine_at(entry: int) -> int:
+    """entry, if a routine of the current run starts there; stops if not."""
+    if entry not in current_routines().graphs:
+        raise ValueError(
+            f"{address(entry)} is not a routine; show_routines() lists them"
+        )
+    return entry
+
+
+def show_routines() -> None:
+    """Every routine of the current run, with the dossier's labels."""
+    found = current_routines()
+    print_routines(
+        found.graphs,
+        found.loops_of,
+        found.calls_into,
+        annotations.labels if annotations is not None else None,
+    )
+
+
+def show_blocks(entry: int) -> None:
+    """The blocks of the routine starting at entry, with its loops and the
+    dossier's labels."""
+    found = current_routines()
+    routine_at(entry)
+    print_blocks(
+        found.graphs[entry],
+        found.loops_of[entry],
+        annotations.labels if annotations is not None else None,
+    )
+
+
+def listing(start: int, end: int) -> None:
+    """dis() of the current run's memory, with the arrows of the whole run
+    and the dossier's labels and comments."""
+    current_routines()
+    dis(
+        run_emulator,
+        start,
+        end,
+        annotations.labels if annotations is not None else None,
+        run_graph,
+        annotations.comments if annotations is not None else None,
+    )
+
+
+def loop_reports(entry: int) -> None:
+    """Write the loop reports of the routine starting at entry into the
+    reports folder, with the entry in their names: lr_loops_<entry>.csv and
+    lr_loop_members_<entry>.csv."""
+    found = current_routines()
+    routine_at(entry)
+    if reports_folder is None:
+        raise RuntimeError("no reports folder set; call use_reports_folder() first")
+    write_loop_reports(reports_folder, found.graphs[entry], found.loops_of[entry])
 
 
 def loop_ids(loops: dict[int, Loop]) -> dict[int, str]:

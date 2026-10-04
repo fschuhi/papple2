@@ -21,9 +21,10 @@ Run from the repo root:
 
     make lr-basic-blocks-analysis
 
-or in IPython, which keeps the run's objects (emulator, tiling, routines,
-run_graph) in its namespace afterwards, together with dis() and the print_*
-functions (papple2.workbench.shell). There, Lode Runner's dossier
+or in IPython, which keeps the run's objects (emulator, tiling) in its
+namespace afterwards, together with the commands of papple2.workbench.shell.
+The run is the shell's current run, its routines and run graph kept as
+shell.routines and shell.run_graph. Lode Runner's dossier
 (dossiers/lode_runner/, under git) is the current dossier: label(),
 comment(), unlabel() and uncomment() change its annotations at once, and
 listing() shows a range with the whole run's arrows and the dossier's
@@ -42,7 +43,7 @@ after that, it leaves its labels alone.
 
 show_routines() lists every routine of the run; show_blocks(entry) shows
 the blocks of one of them. Both show labels. loop_reports(entry) writes
-the loop reports of one more routine into the same folder:
+the loop reports of one more routine into the reports folder:
 lr_loops_<entry>.csv and lr_loop_members_<entry>.csv.
 """
 
@@ -59,28 +60,29 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from boot_lode_runner import LOAD_ADDRESS, boot  # noqa: E402
 from papple2.core.emulator import Emulator  # noqa: E402
 from papple2.debug.stop_conditions import instruction_count_reaches  # noqa: E402
-from papple2.workbench.basic_blocks_analysis import (  # noqa: E402
-    build_run_graph,
-    find_routines,
-    read_split_reports,
-    write_loop_reports,
-)
-from papple2.workbench.tiling import Tiling, address  # noqa: E402
+from papple2.workbench.tiling import Tiling  # noqa: E402
 
-from papple2.workbench import shell  # noqa: E402
+from papple2.workbench import shell  # noqa: E402, F401
 
-# Apart from dis(), which listing() uses: imported so that IPython's %run
-# leaves them in its namespace, ready for looking at the run. show_blocks
-# and show_routines are defined below, for the routines of this run.
+# Imported so that IPython's %run leaves them in its namespace, ready for
+# looking at the run.
 from papple2.workbench.shell import (  # noqa: E402, F401
     comment,
     dis,
     label,
+    listing,
+    loop_reports,
+    print_blocks,
     print_edges,
     print_loops,
+    print_routines,
+    set_current_run,
+    show_blocks,
+    show_routines,
     uncomment,
     unlabel,
     use_dossier,
+    use_reports_folder,
 )
 
 # One folder per script, named after it. Under git: the reports are what
@@ -154,60 +156,16 @@ if __name__ == "__main__":
         arguments.binary, arguments.instructions, REPORTS_FOLDER
     )
 
+    use_reports_folder(REPORTS_FOLDER)
     use_dossier(DOSSIER)
-
-    def listing(start: int, end: int) -> None:
-        """dis() with the arrows of the whole run and the dossier's labels
-        and comments."""
-        dis(
-            emulator,
-            start,
-            end,
-            shell.current_annotations().labels,
-            run_graph,
-            shell.current_annotations().comments,
-        )
-
-    # Every routine of the run. The analysis reads the reports back from
-    # the folder: the files are the only connection, as in the walkthrough.
-    tiles, transitions = read_split_reports(REPORTS_FOLDER)
-    routines = find_routines(tiles, transitions, LOAD_ADDRESS)
-    print(f"{len(routines.graphs)} routines")
-    # Every block and edge of the run, for listing()'s arrows.
-    run_graph = build_run_graph(tiles, transitions, LOAD_ADDRESS)
-
-    def show_routines() -> None:
-        """Every routine of the run, with the dossier's labels."""
-        shell.print_routines(
-            routines.graphs,
-            routines.loops_of,
-            routines.calls_into,
-            shell.current_annotations().labels,
-        )
-
-    def show_blocks(entry: int) -> None:
-        """The blocks of the routine starting at entry, with its loops and
-        the dossier's labels."""
-        if entry not in routines.graphs:
-            raise ValueError(
-                f"{address(entry)} is not a routine; show_routines() lists them"
-            )
-        shell.print_blocks(
-            routines.graphs[entry],
-            routines.loops_of[entry],
-            shell.current_annotations().labels,
-        )
-
-    def loop_reports(entry: int) -> None:
-        """Write the loop reports of the routine starting at entry into
-        the reports folder, with the entry in their names."""
-        if entry not in routines.graphs:
-            raise ValueError(
-                f"{address(entry)} is not a routine; show_routines() lists them"
-            )
-        write_loop_reports(
-            REPORTS_FOLDER, routines.graphs[entry], routines.loops_of[entry]
-        )
+    # The analysis reads the reports back from the folder: the files are
+    # the only connection, as in the walkthrough.
+    set_current_run(
+        emulator,
+        LOAD_ADDRESS,
+        split_tiles=REPORTS_FOLDER / "lr_split_tiles.csv",
+        split_transitions=REPORTS_FOLDER / "lr_split_transitions.csv",
+    )
 
     # The loop reports the run leaves behind: those of the start, and of
     # every routine named with --loop-reports, each written once.
