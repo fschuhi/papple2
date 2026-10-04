@@ -112,7 +112,7 @@ def innermost_loop(block: int, loops: dict[int, Loop]) -> Loop | None:
     return min(containing, key=lambda loop: len(loop.body), default=None)
 
 
-def show_blocks(
+def print_blocks(
     graph: BlockGraph,
     loops: dict[int, Loop] | None = None,
     labels: dict[int, str] | None = None,
@@ -138,7 +138,7 @@ def show_blocks(
         print(line.rstrip())
 
 
-def show_routines(
+def print_routines(
     graphs: dict[int, BlockGraph],
     loops_of: dict[int, dict[int, Loop]],
     calls_into: dict[int, int],
@@ -164,7 +164,7 @@ def show_routines(
         print(line.rstrip())
 
 
-def show_edges(graph: BlockGraph, loops: dict[int, Loop] | None = None) -> None:
+def print_edges(graph: BlockGraph, loops: dict[int, Loop] | None = None) -> None:
     """One line per edge: source and target block, how often it was taken,
     and, if loops are given, which edges are back edges."""
     back_edge_of: dict[tuple[int, int], str] = {}
@@ -181,7 +181,7 @@ def show_edges(graph: BlockGraph, loops: dict[int, Loop] | None = None) -> None:
         print(line)
 
 
-def show_loops(loops: dict[int, Loop]) -> None:
+def print_loops(loops: dict[int, Loop]) -> None:
     """One line per loop, in the order and with the ids of the loop
     reports: header, nesting depth, enclosing loop, back edge sources,
     member blocks."""

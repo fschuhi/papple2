@@ -22,7 +22,7 @@ Run from the repo root:
     make lr-basic-blocks-analysis
 
 or in IPython, which keeps the run's objects (emulator, tiling, routines,
-run_graph) in its namespace afterwards, together with dis() and the show_*
+run_graph) in its namespace afterwards, together with dis() and the print_*
 functions (papple2.workbench.shell). There, Lode Runner's dossier
 (dossiers/lode_runner/, under git) is the current dossier: label(),
 comment(), unlabel() and uncomment() change its annotations at once, and
@@ -76,8 +76,8 @@ from papple2.workbench.shell import (  # noqa: E402, F401
     comment,
     dis,
     label,
-    show_edges,
-    show_loops,
+    print_edges,
+    print_loops,
     uncomment,
     unlabel,
     use_dossier,
@@ -178,7 +178,7 @@ if __name__ == "__main__":
 
     def show_routines() -> None:
         """Every routine of the run, with the dossier's labels."""
-        shell.show_routines(
+        shell.print_routines(
             routines.graphs,
             routines.loops_of,
             routines.calls_into,
@@ -192,7 +192,7 @@ if __name__ == "__main__":
             raise ValueError(
                 f"{address(entry)} is not a routine; show_routines() lists them"
             )
-        shell.show_blocks(
+        shell.print_blocks(
             routines.graphs[entry],
             routines.loops_of[entry],
             shell.current_annotations().labels,

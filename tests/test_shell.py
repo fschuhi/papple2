@@ -1,5 +1,5 @@
 """Tests for papple2.workbench.shell: the arrows in the gutter, the
-comments behind the instructions, the labels in the show_* views, the
+comments behind the instructions, the labels in the print_* views, the
 reports folder, and the current dossier.
 
 The arrows are given as rows, not addresses: row 0 is the listing's first
@@ -26,8 +26,8 @@ from papple2.workbench.shell import (
     dis,
     draw_gutter,
     label,
-    show_blocks,
-    show_routines,
+    print_blocks,
+    print_routines,
     uncomment,
     unlabel,
     use_dossier,
@@ -109,10 +109,10 @@ def test_dis_lines_comments_up_after_the_widest_commented_instruction(
     ]
 
 
-def test_show_blocks_shows_the_labels_of_the_blocks(walkthrough, capsys) -> None:
+def test_print_blocks_shows_the_labels_of_the_blocks(walkthrough, capsys) -> None:
     # A block whose first address has a label shows it at the end; the
     # loop column is padded so the labels line up.
-    show_blocks(walkthrough.graph, walkthrough.loops, walkthrough.labels)
+    print_blocks(walkthrough.graph, walkthrough.loops, walkthrough.labels)
 
     assert capsys.readouterr().out.splitlines() == [
         "block        runs  loop  label",
@@ -126,7 +126,7 @@ def test_show_blocks_shows_the_labels_of_the_blocks(walkthrough, capsys) -> None
     ]
 
 
-def test_show_routines_lists_every_routine_with_its_label(
+def test_print_routines_lists_every_routine_with_its_label(
     walkthrough, capsys
 ) -> None:
     # The walkthrough has two routines: the program from 6000, and SUB,
@@ -140,7 +140,7 @@ def test_show_routines_lists_every_routine_with_its_label(
         0x6010: natural_loops(sub, immediate_dominators(sub)),
     }
 
-    show_routines(graphs, loops_of, {0x6000: 1, 0x6010: 6}, walkthrough.labels)
+    print_routines(graphs, loops_of, {0x6000: 1, 0x6010: 6}, walkthrough.labels)
 
     assert capsys.readouterr().out.splitlines() == [
         "routine  blocks  bytes  called  loops  label",
