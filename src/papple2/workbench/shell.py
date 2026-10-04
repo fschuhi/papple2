@@ -28,16 +28,17 @@ are written, the run's routines and the graph of every block it ran.
 run() only runs, with the instrumentations it is given; what is written
 afterwards is up to the experiment, one command per kind of report, e.g.
 tiling_reports(). set_current_run() sets the routines from a run made
-elsewhere, by its reports. show_routines(), show_blocks(), listing() and
-loop_reports() work on the routines, with the current dossier's labels
-and comments if one is open. The print_* functions take the objects they
-print instead, for any graph.
+elsewhere, by its reports. show_routines(), show_blocks(), show_callers(),
+listing() and loop_reports() work on the routines, with the current
+dossier's labels and comments if one is open. The print_* functions take
+the objects they print instead, for any graph.
 """
 
 import time
 from pathlib import Path
 from types import ModuleType
 
+from papple2.core.cpu import JMP_absolute, JMP_indirect, JSR
 from papple2.core.emulator import Emulator
 from papple2.debug.disassembler import STANDARD_LABELS, Disassembler
 from papple2.debug.stop_conditions import instruction_count_reaches
@@ -46,6 +47,7 @@ from papple2.workbench.basic_blocks_analysis import (
     BlockGraph,
     Loop,
     Routines,
+    SplitTransition,
     build_run_graph,
     find_routines,
     read_split_tiles,
@@ -150,6 +152,13 @@ run_instrumentations: list = []
 # tiling_reports() or set_current_run() is called.
 routines: Routines | None = None
 run_graph: BlockGraph | None = None
+# The run's split transitions, as read from its report: who leapt where,
+# and how often. show_callers() reads them. None until tiling_reports() or
+# set_current_run() is called.
+run_transitions: list[SplitTransition] | None = None
+
+# How show_callers() names the leaps that lead into a routine.
+CALL_KINDS = {JSR: "JSR", JMP_absolute: "JMP", JMP_indirect: "JMP ()"}
 
 
 def set_current_run(
@@ -159,12 +168,13 @@ def set_current_run(
     graph of every block are built from its two split reports, each read by
     its full path: the files are the only connection, as in the walkthrough.
     start is where the run began, which no report records."""
-    global run_emulator, routines, run_graph
+    global run_emulator, routines, run_graph, run_transitions
     tiles = read_split_tiles(split_tiles)
     transitions = read_split_transitions(split_transitions)
     run_emulator = emulator
     routines = find_routines(tiles, transitions, start)
     run_graph = build_run_graph(tiles, transitions, start)
+    run_transitions = transitions
     print(f"{len(routines.graphs)} routines")
 
 
@@ -183,7 +193,7 @@ def run(
     run() writes nothing: the reports are the experiment's choice,
     afterwards. The routines of an earlier run are forgotten."""
     global run_program, run_emulator, run_rwts, run_instrumentations
-    global routines, run_graph
+    global routines, run_graph, run_transitions
     emulator, rwts = program.boot(binary or program.DEFAULT_BINARY, headless=True)
     attached = [instrumentation(emulator.cpu) for instrumentation in instrumentations]
     for instrumentation in attached:
@@ -204,6 +214,7 @@ def run(
     run_instrumentations = attached
     routines = None
     run_graph = None
+    run_transitions = None
 
 
 def tiling_reports() -> None:
@@ -273,6 +284,45 @@ def show_blocks(entry: int | str) -> None:
         found.loops_of[entry],
         annotations.labels if annotations is not None else None,
     )
+
+
+def show_callers(entry: int | str) -> None:
+    """Every place that leaps into the routine starting at entry, an
+    address or a label: one line per call site, in address order, with
+    its leap (JSR, JMP, JMP ()), how often it was taken, and the routines
+    whose blocks hold the site, with the dossier's labels.
+
+    JMPs count as callers for now: a JMP into a routine's entry may be a
+    tail call, which only a shadow stack can tell apart. A site can lie in
+    several routines, where code is shared, so all of them are listed."""
+    found = current_routines()
+    entry = routine_at(entry)
+    labels = annotations.labels if annotations is not None else {}
+
+    # Count per site and leap, adding up in case a site has several rows.
+    counts: dict[tuple[int, int], int] = {}
+    blocks_of: dict[int, int] = {}
+    for row in run_transitions or []:
+        if row.target_tile != entry or row.opcode not in CALL_KINDS:
+            continue
+        key = (row.leap_from_pc, row.opcode)
+        counts[key] = counts.get(key, 0) + row.count
+        blocks_of[row.leap_from_pc] = row.source_tile
+
+    if not counts:
+        print(f"no JSR or JMP leads into {address(entry)}")
+        return
+    print(f"{'site':<4}  {'leap':<6}  {'count':>6}  routines")
+    for (site, opcode), count in sorted(counts.items()):
+        holders = [
+            f"{address(holder)} {labels.get(holder, '')}".rstrip()
+            for holder, graph in found.graphs.items()
+            if blocks_of[site] in graph.blocks
+        ]
+        print(
+            f"{address(site)}  {CALL_KINDS[opcode]:<6}  {count:>6,}  "
+            + ", ".join(sorted(holders))
+        )
 
 
 def listing(start: int | str, end: int | str | None = None) -> None:

@@ -34,6 +34,7 @@ from papple2.workbench.shell import (
     run,
     set_current_run,
     show_blocks,
+    show_callers,
     show_routines,
     tiling_reports,
     uncomment,
@@ -243,6 +244,7 @@ def no_run(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(shell, "run_instrumentations", [])
     monkeypatch.setattr(shell, "routines", None)
     monkeypatch.setattr(shell, "run_graph", None)
+    monkeypatch.setattr(shell, "run_transitions", None)
 
 
 def make_walkthrough_current(walkthrough) -> None:
@@ -290,6 +292,39 @@ def test_show_blocks_refuses_an_address_that_is_no_routine(
     make_walkthrough_current(walkthrough)
     with pytest.raises(ValueError, match="show_routines"):
         show_blocks(0x6002)
+
+
+def test_show_callers_lists_the_call_sites_with_the_routines_holding_them(
+    walkthrough, tmp_path: Path, capsys, no_run: None, no_dossier: None
+) -> None:
+    # SUB has one caller: the JSR in INNER, taken six times, in the
+    # routine from 6000.
+    make_walkthrough_current(walkthrough)
+    use_dossier(tmp_path / "dossier")
+    label(0x6000, "MAIN")
+    label(0x6010, "SUB")
+    capsys.readouterr()
+
+    show_callers("SUB")
+
+    assert capsys.readouterr().out.splitlines() == [
+        "site  leap     count  routines",
+        "6004  JSR          6  6000 MAIN",
+    ]
+
+
+def test_show_callers_of_a_routine_nothing_leaps_into(
+    walkthrough, capsys, no_run: None, no_dossier: None
+) -> None:
+    # The run starts at 6000; no JSR or JMP leads there.
+    make_walkthrough_current(walkthrough)
+    capsys.readouterr()
+
+    show_callers(0x6000)
+
+    assert capsys.readouterr().out.splitlines() == [
+        "no JSR or JMP leads into 6000"
+    ]
 
 
 def test_listing_reads_the_memory_of_the_current_run(
@@ -382,6 +417,7 @@ def test_listing_of_an_address_alone_that_is_no_routine_stops(
     [
         (show_routines, ()),
         (show_blocks, (0x6000,)),
+        (show_callers, (0x6010,)),
         (listing, (0x6000, 0x6002)),
         (loop_reports, (0x6000,)),
     ],
@@ -496,3 +532,38 @@ def test_tiling_reports_without_a_reports_folder_stop(
     run(stand_in_program(emulator, []), 10, Tiling)
     with pytest.raises(RuntimeError, match="use_reports_folder"):
         tiling_reports()
+
+
+# SUB is called twice: by a JSR, and by a JMP at the end of TAIL, a tail
+# call. Then the program loops at DONE, so any number of instructions
+# beyond the first eight can run.
+TAIL_CALL_PROGRAM = """
+        *=$6000
+        JSR SUB
+        JSR TAIL
+DONE    JMP DONE
+TAIL    INC $11
+        JMP SUB
+SUB     INC $10
+        RTS
+"""
+
+
+def test_show_callers_counts_a_jmp_into_a_routine(
+    make_emulator, tmp_path: Path, capsys, no_run: None, no_reports_folder: None,
+    no_dossier: None
+) -> None:
+    # The JMP at 600b leads into SUB at 600e, from the routine TAIL at 6009.
+    _, emulator = make_emulator(TAIL_CALL_PROGRAM)
+    run(stand_in_program(emulator, []), 12, Tiling)
+    use_reports_folder(tmp_path)
+    tiling_reports()
+    capsys.readouterr()
+
+    show_callers(0x600e)
+
+    assert capsys.readouterr().out.splitlines() == [
+        "site  leap     count  routines",
+        "6000  JSR          1  6000",
+        "600b  JMP          1  6009",
+    ]
