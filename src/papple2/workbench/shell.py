@@ -54,6 +54,7 @@ from papple2.workbench.basic_blocks_analysis import (
     read_split_transitions,
     write_loop_reports,
 )
+from papple2.workbench.stack_tracking import StackTracking
 from papple2.workbench.tiling import (
     SPLIT_TILES_FILE,
     SPLIT_TRANSITIONS_FILE,
@@ -241,6 +242,25 @@ def tiling_reports() -> None:
         reports_folder / SPLIT_TILES_FILE,
         reports_folder / SPLIT_TRANSITIONS_FILE,
     )
+
+
+def stack_tracking_reports() -> None:
+    """Write the stack tracking report of the current run into the reports
+    folder: lr_returns.csv, how every frame of the shadow stack ended. The
+    run must have had StackTracking attached."""
+    if run_emulator is None:
+        raise RuntimeError("no run; call run() first")
+    trackings = [
+        each for each in run_instrumentations if isinstance(each, StackTracking)
+    ]
+    if not trackings:
+        raise RuntimeError(
+            "the current run had no StackTracking attached; "
+            "run(program, n, StackTracking)"
+        )
+    if reports_folder is None:
+        raise RuntimeError("no reports folder set; call use_reports_folder() first")
+    trackings[0].write_reports(reports_folder)
 
 
 def current_routines() -> Routines:

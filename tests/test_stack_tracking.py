@@ -8,11 +8,14 @@ last instruction, where the run stops.
 The programs keep their labels in column 0, as in conftest.py.
 """
 
-from papple2.debug.stop_conditions import at_address
+from pathlib import Path
+
+from papple2.debug.stop_conditions import at_address, instruction_count_reaches
 from papple2.workbench.stack_tracking import (
     ABANDONED,
     MATCHED,
     REDIRECTED,
+    RETURNS_FILE,
     UNMATCHED,
     Return,
     StackTracking,
@@ -139,3 +142,50 @@ def test_a_return_address_thrown_away_abandons_its_frame(make_emulator) -> None:
         Return(0x6000, 0x6006, 0x600C, 0x6003, MATCHED): 1,
     }
     assert tracking.frames == {}
+
+
+
+def report_lines(folder: Path) -> list[str]:
+    return (folder / RETURNS_FILE).read_text(encoding="utf-8").splitlines()
+
+
+def test_the_report_puts_the_tricks_first(make_emulator, tmp_path: Path) -> None:
+    # The abandoned frame comes before the matched return, though its
+    # addresses are higher.
+    tracking = track(make_emulator, THROWN_AWAY, end=0x600D)
+
+    tracking.write_reports(tmp_path)
+
+    assert report_lines(tmp_path) == [
+        "call_site,entry,return_site,return_target,outcome,count",
+        "6006,600a,,,abandoned,1",
+        "6000,6006,600c,6003,matched,1",
+    ]
+
+
+# WAIT never returns, so its frame is still open when the run stops.
+NEVER_RETURNS = """
+        *=$6000
+        JSR WAIT
+        NOP
+WAIT    JMP WAIT
+"""
+
+
+def test_a_frame_still_open_is_reported_as_open(
+    make_emulator, tmp_path: Path
+) -> None:
+    _, emulator = make_emulator(NEVER_RETURNS)
+    tracking = StackTracking(emulator.cpu)
+    emulator.attach(tracking)
+    emulator.run(until=instruction_count_reaches(5))
+    emulator.detach(tracking)
+
+    tracking.write_reports(tmp_path)
+
+    # Not counted as a return, but in the report.
+    assert dict(tracking.returns) == {}
+    assert report_lines(tmp_path) == [
+        "call_site,entry,return_site,return_target,outcome,count",
+        "6000,6004,,,open,1",
+    ]

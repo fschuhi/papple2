@@ -36,6 +36,7 @@ from papple2.workbench.shell import (
     show_blocks,
     show_callers,
     show_routines,
+    stack_tracking_reports,
     tiling_reports,
     uncomment,
     unlabel,
@@ -43,6 +44,7 @@ from papple2.workbench.shell import (
     use_reports_folder,
     write_report,
 )
+from papple2.workbench.stack_tracking import StackTracking
 from papple2.workbench.tiling import Tiling
 
 
@@ -567,3 +569,40 @@ def test_show_callers_counts_a_jmp_into_a_routine(
         "6000  JSR          1  6000",
         "600b  JMP          1  6009",
     ]
+
+
+
+def test_stack_tracking_reports_write_the_report(
+    make_emulator, tmp_path: Path, no_run: None, no_reports_folder: None
+) -> None:
+    _, emulator = make_emulator(ENDLESS_PROGRAM)
+    run(stand_in_program(emulator, []), 10, StackTracking)
+    use_reports_folder(tmp_path / "experiment")
+
+    stack_tracking_reports()
+
+    assert (tmp_path / "experiment" / "lr_returns.csv").exists()
+
+
+def test_stack_tracking_reports_without_a_run_stop(no_run: None) -> None:
+    with pytest.raises(RuntimeError, match="run\\(\\) first"):
+        stack_tracking_reports()
+
+
+def test_stack_tracking_reports_without_stack_tracking_stop(
+    make_emulator, tmp_path: Path, no_run: None, no_reports_folder: None
+) -> None:
+    _, emulator = make_emulator(ENDLESS_PROGRAM)
+    run(stand_in_program(emulator, []), 10, Tiling)
+    use_reports_folder(tmp_path)
+    with pytest.raises(RuntimeError, match="no StackTracking"):
+        stack_tracking_reports()
+
+
+def test_stack_tracking_reports_without_a_reports_folder_stop(
+    make_emulator, no_run: None, no_reports_folder: None
+) -> None:
+    _, emulator = make_emulator(ENDLESS_PROGRAM)
+    run(stand_in_program(emulator, []), 10, StackTracking)
+    with pytest.raises(RuntimeError, match="use_reports_folder"):
+        stack_tracking_reports()

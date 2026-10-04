@@ -19,6 +19,7 @@ looks for the frame at the SP the CPU is back at:
     frame there, PC is somewhere else       -> redirected
     no frame there                          -> unmatched
     frames deeper than that SP              -> abandoned
+    frames still open when the run stops    -> open (in the report only)
 
 Looking frames up by SP, instead of popping the top one, lets the shadow
 stack fall back into step with the real one after a trick. A JSR that
@@ -38,23 +39,45 @@ Known limits:
 - A trap that returns for the routine it stands in for (the RWTS
   stand-in's fake RTS) runs no instruction, so its frame ends up
   abandoned.
-- Frames still open when the run stops are left in frames, not counted.
 
-The report, lr_returns.csv, comes in a later step; for now the counts
-are in returns.
+The report, lr_returns.csv, has one row per frame or RTS with the same
+call site, entry, return site, return target and outcome, and how often
+it happened. The tricks come first (unmatched, redirected, abandoned),
+then the matched returns, then the frames still open when the run
+stopped: what was being called at that moment. Within each outcome, rows
+are in address order.
 """
 
+import csv
 from collections import Counter
 from collections.abc import Callable
+from pathlib import Path
 from typing import NamedTuple
 
 from papple2.core.cpu import CPU, JSR, RTS
+from papple2.workbench.tiling import address
 
 # The outcomes of a frame or an RTS, as they will appear in the report.
 MATCHED = "matched"
 REDIRECTED = "redirected"
 UNMATCHED = "unmatched"
 ABANDONED = "abandoned"
+OPEN = "open"
+
+# The order of the outcomes in the report: the tricks first.
+OUTCOME_ORDER = (UNMATCHED, REDIRECTED, ABANDONED, MATCHED, OPEN)
+
+# The report, and its columns. The folder it goes into is the caller's
+# choice.
+RETURNS_FILE = "lr_returns.csv"
+RETURNS_FIELDS = (
+    "call_site",
+    "entry",
+    "return_site",
+    "return_target",
+    "outcome",
+    "count",
+)
 
 
 class Frame(NamedTuple):
@@ -122,6 +145,43 @@ class StackTracking:
         self.returns[
             Return(frame.call_site, frame.entry, cpu.last_PC, cpu.PC, outcome)
         ] += 1
+
+    def rows(self) -> list[tuple[Return, int]]:
+        """Every row of the report with its count, in the report's order:
+        the counted returns, plus one row per frame still open."""
+        counted = Counter(self.returns)
+        for frame in self.frames.values():
+            counted[Return(frame.call_site, frame.entry, None, None, OPEN)] += 1
+
+        def order(row: Return) -> tuple:
+            # Missing addresses (None) sort before every address.
+            addresses = (
+                row.entry, row.call_site, row.return_site, row.return_target
+            )
+            return (
+                OUTCOME_ORDER.index(row.outcome),
+                *(-1 if value is None else value for value in addresses),
+            )
+
+        return sorted(counted.items(), key=lambda item: order(item[0]))
+
+    def write_reports(self, folder: Path) -> None:
+        """Write lr_returns.csv into folder, creating it if needed."""
+        path = folder / RETURNS_FILE
+        path.parent.mkdir(parents=True, exist_ok=True)
+        rows = self.rows()
+        with path.open("w", newline="", encoding="utf-8") as output:
+            writer = csv.writer(output)
+            writer.writerow(RETURNS_FIELDS)
+            for row, count in rows:
+                writer.writerow(
+                    [
+                        "" if value is None else address(value)
+                        for value in row[:4]
+                    ]
+                    + [row.outcome, count]
+                )
+        print(f"wrote {len(rows):,} records to {path}")
 
     def _abandon(self, is_gone: Callable[[int], bool]) -> None:
         """Count and drop every open frame whose key is_gone() says is
