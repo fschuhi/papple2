@@ -1,6 +1,6 @@
 """Tests for papple2.workbench.shell: the arrows in the gutter, the
-comments behind the instructions, the labels in the show_* views, and
-the reports folder.
+comments behind the instructions, the labels in the show_* views, the
+reports folder, and the current dossier.
 
 The arrows are given as rows, not addresses: row 0 is the listing's first
 line. A span is (first row, last row); an arrow is (source row, target
@@ -11,7 +11,9 @@ from pathlib import Path
 
 import pytest
 
+from papple2.debug.disassembler import STANDARD_LABELS
 from papple2.workbench import shell
+from papple2.workbench.annotations import Annotations
 from papple2.workbench.basic_blocks_analysis import (
     build_graph,
     immediate_dominators,
@@ -20,10 +22,15 @@ from papple2.workbench.basic_blocks_analysis import (
 )
 from papple2.workbench.shell import (
     assign_lanes,
+    comment,
     dis,
     draw_gutter,
+    label,
     show_blocks,
     show_routines,
+    uncomment,
+    unlabel,
+    use_dossier,
     use_reports_folder,
     write_report,
 )
@@ -162,3 +169,56 @@ def test_write_report_writes_into_the_reports_folder(
 def test_write_report_without_a_reports_folder_stops(no_reports_folder: None) -> None:
     with pytest.raises(RuntimeError, match="use_reports_folder"):
         write_report("lr_overview.txt", "WHOLE RUN\n")
+
+
+@pytest.fixture
+def no_dossier(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Start without a current dossier, and restore the module's after the
+    test, so the tests don't see each other's dossier."""
+    monkeypatch.setattr(shell, "dossier_folder", None)
+    monkeypatch.setattr(shell, "annotations", None)
+
+
+def test_a_new_dossier_starts_with_the_standard_labels(
+    tmp_path: Path, no_dossier: None
+) -> None:
+    use_dossier(tmp_path / "dossier")
+    assert Annotations(tmp_path / "dossier").labels == STANDARD_LABELS
+
+
+def test_an_existing_dossier_keeps_its_labels(
+    tmp_path: Path, no_dossier: None
+) -> None:
+    # A dossier whose only label is one of our own: no standard labels added.
+    Annotations(tmp_path).label(0x6238, "LOAD_LEVEL")
+    use_dossier(tmp_path)
+    assert Annotations(tmp_path).labels == {0x6238: "LOAD_LEVEL"}
+
+
+def test_label_and_comment_change_the_current_dossier(
+    tmp_path: Path, no_dossier: None
+) -> None:
+    Annotations(tmp_path).label(0xC000, "KBD")  # not new: no seeding
+    use_dossier(tmp_path)
+    label(0x6238, "LOAD_LEVEL")
+    comment(0x627e, "two 4-bit values per byte")
+    # A second Annotations reads the file: the changes were saved at once.
+    saved = Annotations(tmp_path)
+    assert saved.labels == {0x6238: "LOAD_LEVEL", 0xC000: "KBD"}
+    assert saved.comments == {0x627e: "two 4-bit values per byte"}
+
+
+@pytest.mark.parametrize(
+    "command, arguments",
+    [
+        (label, (0x6238, "LOAD_LEVEL")),
+        (unlabel, (0x6238,)),
+        (comment, (0x627e, "two 4-bit values per byte")),
+        (uncomment, (0x627e,)),
+    ],
+)
+def test_the_dossier_commands_stop_without_a_dossier(
+    command, arguments, no_dossier: None
+) -> None:
+    with pytest.raises(RuntimeError, match="use_dossier"):
+        command(*arguments)

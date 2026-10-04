@@ -14,12 +14,20 @@ The reports folder is the home of an experiment: write_report() writes
 there. use_reports_folder() sets it, in a recipe or at the prompt. There is
 one at a time, kept in this module; reports from other experiments are
 read by their full paths instead.
+
+The dossier is everything we know about one program, in a folder of its
+own (dossiers/lode_runner/). Its annotations, the labels and comments, are
+one part of it, in annotations.json. use_dossier() makes a dossier the
+current one; label(), comment(), unlabel() and uncomment() change its
+annotations, and every change is saved at once. There is one current
+dossier at a time, kept in this module.
 """
 
 from pathlib import Path
 
 from papple2.core.emulator import Emulator
-from papple2.debug.disassembler import Disassembler
+from papple2.debug.disassembler import STANDARD_LABELS, Disassembler
+from papple2.workbench.annotations import Annotations
 from papple2.workbench.basic_blocks_analysis import BlockGraph, Loop
 from papple2.workbench.tiling import address
 
@@ -43,6 +51,50 @@ def write_report(file_name: str, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
     print(f"wrote {path}")
+
+
+# The current dossier's folder, and the annotations read from it; None
+# until use_dossier() is called.
+dossier_folder: Path | None = None
+annotations: Annotations | None = None
+
+
+def use_dossier(folder: Path) -> None:
+    """Make folder the current dossier and open its annotations. A dossier
+    without annotations yet starts with the Apple II's standard labels;
+    after that, they are left alone, so a removed one doesn't come back."""
+    global dossier_folder, annotations
+    dossier_folder = Path(folder)
+    annotations = Annotations(dossier_folder)
+    if not annotations.path.exists():
+        annotations.add_labels(STANDARD_LABELS)
+
+
+def current_annotations() -> Annotations:
+    """The current dossier's annotations. Stops if no dossier is open."""
+    if annotations is None:
+        raise RuntimeError("no dossier open; call use_dossier() first")
+    return annotations
+
+
+def label(address: int, text: str) -> None:
+    """Give address the label text in the current dossier."""
+    current_annotations().label(address, text)
+
+
+def unlabel(address: int) -> None:
+    """Remove address's label from the current dossier."""
+    current_annotations().unlabel(address)
+
+
+def comment(address: int, text: str) -> None:
+    """Give address the comment text in the current dossier."""
+    current_annotations().comment(address, text)
+
+
+def uncomment(address: int) -> None:
+    """Remove address's comment from the current dossier."""
+    current_annotations().uncomment(address)
 
 
 def loop_ids(loops: dict[int, Loop]) -> dict[int, str]:

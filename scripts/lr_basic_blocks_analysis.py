@@ -24,10 +24,10 @@ Run from the repo root:
 or in IPython, which keeps the run's objects (emulator, tiling, routines,
 run_graph) in its namespace afterwards, together with dis() and the show_*
 functions (papple2.workbench.shell). There, Lode Runner's dossier
-(dossiers/lode_runner/annotations.json, under git) is open as
-annotations: label(), comment(), unlabel() and uncomment() write to it
-at once, and listing() shows a range with the whole run's arrows and the
-dossier's labels and comments:
+(dossiers/lode_runner/, under git) is the current dossier: label(),
+comment(), unlabel() and uncomment() change its annotations at once, and
+listing() shows a range with the whole run's arrows and the dossier's
+labels and comments:
 
     %run scripts/lr_basic_blocks_analysis.py
     show_routines()
@@ -37,8 +37,8 @@ dossier's labels and comments:
     comment(0x627e, "two 4-bit values per byte")
     label(0x6238, "LOAD_LEVEL")
 
-The dossier's first run starts it with the Apple II's standard labels;
-after that, the script leaves its labels alone.
+use_dossier() starts a new dossier with the Apple II's standard labels;
+after that, it leaves its labels alone.
 
 show_routines() lists every routine of the run; show_blocks(entry) shows
 the blocks of one of them. Both show labels. loop_reports(entry) writes
@@ -58,9 +58,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from boot_lode_runner import LOAD_ADDRESS, boot  # noqa: E402
 from papple2.core.emulator import Emulator  # noqa: E402
-from papple2.debug.disassembler import STANDARD_LABELS  # noqa: E402
 from papple2.debug.stop_conditions import instruction_count_reaches  # noqa: E402
-from papple2.workbench.annotations import Annotations  # noqa: E402
 from papple2.workbench.basic_blocks_analysis import (  # noqa: E402
     build_run_graph,
     find_routines,
@@ -75,9 +73,14 @@ from papple2.workbench import shell  # noqa: E402
 # leaves them in its namespace, ready for looking at the run. show_blocks
 # and show_routines are defined below, for the routines of this run.
 from papple2.workbench.shell import (  # noqa: E402, F401
+    comment,
     dis,
+    label,
     show_edges,
     show_loops,
+    uncomment,
+    unlabel,
+    use_dossier,
 )
 
 # One folder per script, named after it. Under git: the reports are what
@@ -151,21 +154,19 @@ if __name__ == "__main__":
         arguments.binary, arguments.instructions, REPORTS_FOLDER
     )
 
-    annotations = Annotations(DOSSIER)
-    if not annotations.path.exists():
-        # The dossier's first run: start it with the Apple II's names.
-        annotations.add_labels(STANDARD_LABELS)
-
-    # Short names for the prompt.
-    label = annotations.label
-    comment = annotations.comment
-    unlabel = annotations.unlabel
-    uncomment = annotations.uncomment
+    use_dossier(DOSSIER)
 
     def listing(start: int, end: int) -> None:
         """dis() with the arrows of the whole run and the dossier's labels
         and comments."""
-        dis(emulator, start, end, annotations.labels, run_graph, annotations.comments)
+        dis(
+            emulator,
+            start,
+            end,
+            shell.current_annotations().labels,
+            run_graph,
+            shell.current_annotations().comments,
+        )
 
     # Every routine of the run. The analysis reads the reports back from
     # the folder: the files are the only connection, as in the walkthrough.
@@ -181,7 +182,7 @@ if __name__ == "__main__":
             routines.graphs,
             routines.loops_of,
             routines.calls_into,
-            annotations.labels,
+            shell.current_annotations().labels,
         )
 
     def show_blocks(entry: int) -> None:
@@ -192,7 +193,9 @@ if __name__ == "__main__":
                 f"{address(entry)} is not a routine; show_routines() lists them"
             )
         shell.show_blocks(
-            routines.graphs[entry], routines.loops_of[entry], annotations.labels
+            routines.graphs[entry],
+            routines.loops_of[entry],
+            shell.current_annotations().labels,
         )
 
     def loop_reports(entry: int) -> None:
