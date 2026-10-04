@@ -21,10 +21,10 @@ Run from the repo root:
 
     make lr-basic-blocks-analysis
 
-or in IPython, which keeps the run's objects (emulator, tiling) in its
-namespace afterwards, together with the commands of papple2.workbench.shell.
-The run is the shell's current run, its routines and run graph kept as
-shell.routines and shell.run_graph. Lode Runner's dossier
+or in IPython, which keeps the commands of papple2.workbench.shell in its
+namespace afterwards. The run is the shell's current run: its machine,
+tiling, routines and run graph are kept as shell.run_emulator,
+shell.run_tiling, shell.routines and shell.run_graph. Lode Runner's dossier
 (dossiers/lode_runner/, under git) is the current dossier: label(),
 comment(), unlabel() and uncomment() change its annotations at once, and
 listing() shows a range with the whole run's arrows and the dossier's
@@ -48,14 +48,9 @@ lr_loops_<entry>.csv and lr_loop_members_<entry>.csv.
 """
 
 import argparse
-import time
 from pathlib import Path
 
-from papple2.core.emulator import Emulator
-from papple2.debug.stop_conditions import instruction_count_reaches
-from papple2.programs.lode_runner import LOAD_ADDRESS, boot
-from papple2.workbench.tiling import Tiling
-
+from papple2.programs import lode_runner
 from papple2.workbench import shell  # noqa: F401
 
 # Imported so that IPython's %run leaves them in its namespace, ready for
@@ -70,6 +65,7 @@ from papple2.workbench.shell import (  # noqa: F401
     print_edges,
     print_loops,
     print_routines,
+    run,
     set_current_run,
     show_blocks,
     show_routines,
@@ -86,40 +82,14 @@ REPORTS_FOLDER = Path("docs/reports/lr_basic_blocks_analysis")
 # What we know about Lode Runner's addresses, kept across runs, under git.
 DOSSIER = Path("dossiers/lode_runner")
 
-# Relative to the repo root, where make and IPython are started.
-DEFAULT_BINARY = "data/bin/LODE_RUNNER.BIN"
-
-
-def analyse(
-    binary: str, instructions: int, folder: Path
-) -> tuple[Emulator, Tiling]:
-    """Run Lode Runner with Tiling attached for the given number of
-    instructions, and write the tiling reports into folder."""
-    emulator, rwts = boot(binary, headless=True)
-    tiling = Tiling(emulator.cpu)
-    emulator.attach(tiling)
-
-    start = time.perf_counter()
-    try:
-        emulator.run(until=instruction_count_reaches(instructions))
-    finally:
-        seconds = time.perf_counter() - start
-        emulator.detach(tiling)
-    print(f"{emulator.instructions:,} instructions in {seconds:.2f} s")
-
-    # run() counts from 0, so emulator.instructions is what ran while the
-    # tiling was attached.
-    tiling.write_reports(folder, emulator.instructions, len(rwts.log))
-    return emulator, tiling
-
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
         "binary",
         nargs="?",
-        default=DEFAULT_BINARY,
-        help=f"path to LODE_RUNNER.BIN (default: {DEFAULT_BINARY})",
+        default=lode_runner.DEFAULT_BINARY,
+        help=f"path to LODE_RUNNER.BIN (default: {lode_runner.DEFAULT_BINARY})",
     )
     parser.add_argument(
         "--instructions",
@@ -143,25 +113,13 @@ def parse_arguments() -> argparse.Namespace:
 
 
 if __name__ == "__main__":
-    # At module level on purpose: IPython's %run keeps these names in its
-    # namespace, so the run can be inspected afterwards.
+    # The recipe: the same lines could be typed at the prompt.
     arguments = parse_arguments()
-    emulator, tiling = analyse(
-        arguments.binary, arguments.instructions, REPORTS_FOLDER
-    )
-
     use_reports_folder(REPORTS_FOLDER)
     use_dossier(DOSSIER)
-    # The analysis reads the reports back from the folder: the files are
-    # the only connection, as in the walkthrough.
-    set_current_run(
-        emulator,
-        LOAD_ADDRESS,
-        split_tiles=REPORTS_FOLDER / "lr_split_tiles.csv",
-        split_transitions=REPORTS_FOLDER / "lr_split_transitions.csv",
-    )
+    run(lode_runner, arguments.instructions, arguments.binary)
 
     # The loop reports the run leaves behind: those of the start, and of
     # every routine named with --loop-reports, each written once.
-    for entry in dict.fromkeys([LOAD_ADDRESS, *arguments.loop_reports]):
+    for entry in dict.fromkeys([lode_runner.LOAD_ADDRESS, *arguments.loop_reports]):
         loop_reports(entry)

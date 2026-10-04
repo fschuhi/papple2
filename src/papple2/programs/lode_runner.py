@@ -12,8 +12,10 @@ buffer, clears carry, and returns to the caller as RTS would. Anything
 else (the high-score write at game over, format) prints the request and
 stops the emulator.
 
-Used by scripts/boot_lode_runner.py (the window and the headless run)
-and by the lr_* recipes.
+Used by scripts/boot_lode_runner.py (the window and the headless run),
+by the lr_* recipes, and by run() in papple2.workbench.shell, which takes
+this module as its program: a program setup has LOAD_ADDRESS,
+DEFAULT_BINARY and boot().
 
 Needs the stack wrap and decimal mode fixes in cpu.py (2026-09-23 patch).
 """

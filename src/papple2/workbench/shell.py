@@ -23,16 +23,21 @@ annotations, and every change is saved at once. There is one current
 dossier at a time, kept in this module.
 
 The current run is what one run left behind: the machine, the run's
-routines, and the graph of every block it ran. set_current_run() sets it;
+routines, and the graph of every block it ran. run() makes one, with the
+tiling attached, and writes the tiling reports into the reports folder;
+set_current_run() sets it from a run made elsewhere, by its reports;
 show_routines(), show_blocks(), listing() and loop_reports() work on it,
 with the current dossier's labels and comments if one is open. The
 print_* functions take the objects they print instead, for any graph.
 """
 
+import time
 from pathlib import Path
+from types import ModuleType
 
 from papple2.core.emulator import Emulator
 from papple2.debug.disassembler import STANDARD_LABELS, Disassembler
+from papple2.debug.stop_conditions import instruction_count_reaches
 from papple2.workbench.annotations import Annotations
 from papple2.workbench.basic_blocks_analysis import (
     BlockGraph,
@@ -44,7 +49,12 @@ from papple2.workbench.basic_blocks_analysis import (
     read_split_transitions,
     write_loop_reports,
 )
-from papple2.workbench.tiling import address
+from papple2.workbench.tiling import (
+    SPLIT_TILES_FILE,
+    SPLIT_TRANSITIONS_FILE,
+    Tiling,
+    address,
+)
 
 # Where write_report() writes; None until use_reports_folder() is called.
 reports_folder: Path | None = None
@@ -118,6 +128,8 @@ def uncomment(address: int) -> None:
 run_emulator: Emulator | None = None
 routines: Routines | None = None
 run_graph: BlockGraph | None = None
+# The tiling of a run made by run(), with what it collected; None otherwise.
+run_tiling: Tiling | None = None
 
 
 def set_current_run(
@@ -127,13 +139,49 @@ def set_current_run(
     graph of every block are built from its two split reports, each read by
     its full path: the files are the only connection, as in the walkthrough.
     start is where the run began, which no report records."""
-    global run_emulator, routines, run_graph
+    global run_emulator, routines, run_graph, run_tiling
     tiles = read_split_tiles(split_tiles)
     transitions = read_split_transitions(split_transitions)
     run_emulator = emulator
+    run_tiling = None
     routines = find_routines(tiles, transitions, start)
     run_graph = build_run_graph(tiles, transitions, start)
     print(f"{len(routines.graphs)} routines")
+
+
+def run(program: ModuleType, instructions: int, binary: str | None = None) -> None:
+    """Run program headless with the tiling attached, for the given number
+    of instructions, and make it the current run.
+
+    program is a program setup from papple2.programs, e.g. lode_runner:
+    its boot() loads and starts it from binary, or from its DEFAULT_BINARY.
+    The tiling reports go into the reports folder, and the current run is
+    read back from them: the files are the only connection."""
+    global run_tiling
+    if reports_folder is None:
+        raise RuntimeError("no reports folder set; call use_reports_folder() first")
+    emulator, rwts = program.boot(binary or program.DEFAULT_BINARY, headless=True)
+    tiling = Tiling(emulator.cpu)
+    emulator.attach(tiling)
+
+    start = time.perf_counter()
+    try:
+        emulator.run(until=instruction_count_reaches(instructions))
+    finally:
+        seconds = time.perf_counter() - start
+        emulator.detach(tiling)
+    print(f"{emulator.instructions:,} instructions in {seconds:.2f} s")
+
+    # The emulator counts from 0, so emulator.instructions is what ran while
+    # the tiling was attached.
+    tiling.write_reports(reports_folder, emulator.instructions, len(rwts.log))
+    set_current_run(
+        emulator,
+        program.LOAD_ADDRESS,
+        reports_folder / SPLIT_TILES_FILE,
+        reports_folder / SPLIT_TRANSITIONS_FILE,
+    )
+    run_tiling = tiling
 
 
 def current_routines() -> Routines:

@@ -8,6 +8,7 @@ row). Lane 0 lies next to the code.
 """
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -30,6 +31,7 @@ from papple2.workbench.shell import (
     loop_reports,
     print_blocks,
     print_routines,
+    run,
     set_current_run,
     show_blocks,
     show_routines,
@@ -236,6 +238,7 @@ def no_run(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(shell, "run_emulator", None)
     monkeypatch.setattr(shell, "routines", None)
     monkeypatch.setattr(shell, "run_graph", None)
+    monkeypatch.setattr(shell, "run_tiling", None)
 
 
 def make_walkthrough_current(walkthrough) -> None:
@@ -321,3 +324,69 @@ def test_the_run_commands_stop_without_a_current_run(
 ) -> None:
     with pytest.raises(RuntimeError, match="set_current_run"):
         command(*arguments)
+
+
+# A stand-in for a program setup: an endless loop at $6000, so any number
+# of instructions can run. Only lines like the walkthrough's: begun with
+# INX, the program made the assembler fail (UnboundLocalError for
+# operand), which is not looked into yet.
+ENDLESS_PROGRAM = """
+        *=$6000
+LOOP    INC $10
+        JMP LOOP
+"""
+
+
+def stand_in_program(emulator, booted: list) -> SimpleNamespace:
+    """A program setup like papple2.programs.lode_runner, whose boot()
+    hands out emulator and notes how it was called."""
+
+    def boot(binary: str, headless: bool):
+        booted.append((binary, headless))
+        return emulator, SimpleNamespace(log=[])  # no RWTS reads
+
+    return SimpleNamespace(
+        LOAD_ADDRESS=0x6000, DEFAULT_BINARY="data/bin/STAND_IN.BIN", boot=boot
+    )
+
+
+def test_run_makes_the_current_run_from_its_reports(
+    make_emulator, tmp_path: Path, no_run: None, no_reports_folder: None
+) -> None:
+    _, emulator = make_emulator(ENDLESS_PROGRAM)
+    booted = []
+    use_reports_folder(tmp_path / "experiment")
+
+    run(stand_in_program(emulator, booted), 10)
+
+    # Booted headless from the program's default binary.
+    assert booted == [("data/bin/STAND_IN.BIN", True)]
+    # The tiling reports are in the reports folder, and the current run
+    # was read back from them.
+    assert (tmp_path / "experiment" / "lr_split_tiles.csv").exists()
+    assert (tmp_path / "experiment" / "lr_split_transitions.csv").exists()
+    assert list(shell.routines.graphs) == [0x6000]
+    assert shell.run_emulator is emulator
+    assert shell.run_tiling is not None
+
+
+def test_run_boots_from_the_binary_given(
+    make_emulator, tmp_path: Path, no_run: None, no_reports_folder: None
+) -> None:
+    _, emulator = make_emulator(ENDLESS_PROGRAM)
+    booted = []
+    use_reports_folder(tmp_path)
+
+    run(stand_in_program(emulator, booted), 10, "data/bin/OTHER.BIN")
+
+    assert booted == [("data/bin/OTHER.BIN", True)]
+
+
+def test_run_without_a_reports_folder_stops_before_booting(
+    make_emulator, no_run: None, no_reports_folder: None
+) -> None:
+    _, emulator = make_emulator(ENDLESS_PROGRAM)
+    booted = []
+    with pytest.raises(RuntimeError, match="use_reports_folder"):
+        run(stand_in_program(emulator, booted), 10)
+    assert booted == []
