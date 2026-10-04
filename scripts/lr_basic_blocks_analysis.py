@@ -23,12 +23,12 @@ Run from the repo root:
 
 or in IPython, which keeps the commands of papple2.workbench.shell in its
 namespace afterwards. The run is the shell's current run: its machine,
-tiling, routines and run graph are kept as shell.run_emulator,
-shell.run_tiling, shell.routines and shell.run_graph. Lode Runner's dossier
-(dossiers/lode_runner/, under git) is the current dossier: label(),
-comment(), unlabel() and uncomment() change its annotations at once, and
-listing() shows a range with the whole run's arrows and the dossier's
-labels and comments:
+instrumentations, routines and run graph are kept as shell.run_emulator,
+shell.run_instrumentations, shell.routines and shell.run_graph. Lode
+Runner's dossier (dossiers/lode_runner/, under git) is the current
+dossier: label(), comment(), unlabel() and uncomment() change its
+annotations at once, and listing() shows a range with the whole run's
+arrows and the dossier's labels and comments:
 
     %run scripts/lr_basic_blocks_analysis.py
     show_routines()
@@ -52,6 +52,7 @@ from pathlib import Path
 
 from papple2.programs import lode_runner
 from papple2.workbench import shell  # noqa: F401
+from papple2.workbench.tiling import Tiling
 
 # Imported so that IPython's %run leaves them in its namespace, ready for
 # looking at the run.
@@ -69,6 +70,7 @@ from papple2.workbench.shell import (  # noqa: F401
     set_current_run,
     show_blocks,
     show_routines,
+    tiling_reports,
     uncomment,
     unlabel,
     use_dossier,
@@ -117,7 +119,8 @@ if __name__ == "__main__":
     arguments = parse_arguments()
     use_reports_folder(REPORTS_FOLDER)
     use_dossier(DOSSIER)
-    run(lode_runner, arguments.instructions, arguments.binary)
+    run(lode_runner, arguments.instructions, Tiling, binary=arguments.binary)
+    tiling_reports()
 
     # The loop reports the run leaves behind: those of the start, and of
     # every routine named with --loop-reports, each written once.

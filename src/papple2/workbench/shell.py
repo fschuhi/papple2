@@ -22,13 +22,16 @@ current one; label(), comment(), unlabel() and uncomment() change its
 annotations, and every change is saved at once. There is one current
 dossier at a time, kept in this module.
 
-The current run is what one run left behind: the machine, the run's
-routines, and the graph of every block it ran. run() makes one, with the
-tiling attached, and writes the tiling reports into the reports folder;
-set_current_run() sets it from a run made elsewhere, by its reports;
-show_routines(), show_blocks(), listing() and loop_reports() work on it,
-with the current dossier's labels and comments if one is open. The
-print_* functions take the objects they print instead, for any graph.
+The current run is what one run left behind: the machine and the
+instrumentations that were attached to it, and, once the tiling's reports
+are written, the run's routines and the graph of every block it ran.
+run() only runs, with the instrumentations it is given; what is written
+afterwards is up to the experiment, one command per kind of report, e.g.
+tiling_reports(). set_current_run() sets the routines from a run made
+elsewhere, by its reports. show_routines(), show_blocks(), listing() and
+loop_reports() work on the routines, with the current dossier's labels
+and comments if one is open. The print_* functions take the objects they
+print instead, for any graph.
 """
 
 import time
@@ -122,14 +125,19 @@ def uncomment(address: int) -> None:
     current_annotations().uncomment(address)
 
 
-# The current run: the machine as the run left it (listing() reads its
-# memory), the run's routines, and the graph of every block it ran
-# (listing()'s arrows). None until set_current_run() is called.
+# The current run: the program setup it ran, the machine as the run left
+# it (listing() reads its memory), its RWTS stand-in, and the
+# instrumentations that were attached, in the order given to run(). None
+# (or empty) until run() is called.
+run_program: ModuleType | None = None
 run_emulator: Emulator | None = None
+run_rwts = None
+run_instrumentations: list = []
+# The run's routines and the graph of every block it ran (listing()'s
+# arrows), built from the tiling's split reports. None until
+# tiling_reports() or set_current_run() is called.
 routines: Routines | None = None
 run_graph: BlockGraph | None = None
-# The tiling of a run made by run(), with what it collected; None otherwise.
-run_tiling: Tiling | None = None
 
 
 def set_current_run(
@@ -139,55 +147,85 @@ def set_current_run(
     graph of every block are built from its two split reports, each read by
     its full path: the files are the only connection, as in the walkthrough.
     start is where the run began, which no report records."""
-    global run_emulator, routines, run_graph, run_tiling
+    global run_emulator, routines, run_graph
     tiles = read_split_tiles(split_tiles)
     transitions = read_split_transitions(split_transitions)
     run_emulator = emulator
-    run_tiling = None
     routines = find_routines(tiles, transitions, start)
     run_graph = build_run_graph(tiles, transitions, start)
     print(f"{len(routines.graphs)} routines")
 
 
-def run(program: ModuleType, instructions: int, binary: str | None = None) -> None:
-    """Run program headless with the tiling attached, for the given number
-    of instructions, and make it the current run.
+def run(
+        program: ModuleType,
+        instructions: int,
+        *instrumentations: type,
+        binary: str | None = None,
+) -> None:
+    """Run program headless for the given number of instructions, with the
+    instrumentations attached, e.g. run(lode_runner, 4_000_000, Tiling).
 
     program is a program setup from papple2.programs, e.g. lode_runner:
     its boot() loads and starts it from binary, or from its DEFAULT_BINARY.
-    The tiling reports go into the reports folder, and the current run is
-    read back from them: the files are the only connection."""
-    global run_tiling
-    if reports_folder is None:
-        raise RuntimeError("no reports folder set; call use_reports_folder() first")
+    Each instrumentation is a class, created on the booted machine's CPU.
+    run() writes nothing: the reports are the experiment's choice,
+    afterwards. The routines of an earlier run are forgotten."""
+    global run_program, run_emulator, run_rwts, run_instrumentations
+    global routines, run_graph
     emulator, rwts = program.boot(binary or program.DEFAULT_BINARY, headless=True)
-    tiling = Tiling(emulator.cpu)
-    emulator.attach(tiling)
+    attached = [instrumentation(emulator.cpu) for instrumentation in instrumentations]
+    for instrumentation in attached:
+        emulator.attach(instrumentation)
 
     start = time.perf_counter()
     try:
         emulator.run(until=instruction_count_reaches(instructions))
     finally:
         seconds = time.perf_counter() - start
-        emulator.detach(tiling)
+        for instrumentation in attached:
+            emulator.detach(instrumentation)
     print(f"{emulator.instructions:,} instructions in {seconds:.2f} s")
 
+    run_program = program
+    run_emulator = emulator
+    run_rwts = rwts
+    run_instrumentations = attached
+    routines = None
+    run_graph = None
+
+
+def tiling_reports() -> None:
+    """Write the tiling reports of the current run into the reports folder,
+    and build the run's routines and run graph from them: the files are the
+    only connection. The run must have had Tiling attached."""
+    if run_emulator is None or run_program is None:
+        raise RuntimeError("no run; call run() first")
+    tilings = [each for each in run_instrumentations if isinstance(each, Tiling)]
+    if not tilings:
+        raise RuntimeError(
+            "the current run had no Tiling attached; run(program, n, Tiling)"
+        )
+    if reports_folder is None:
+        raise RuntimeError("no reports folder set; call use_reports_folder() first")
     # The emulator counts from 0, so emulator.instructions is what ran while
     # the tiling was attached.
-    tiling.write_reports(reports_folder, emulator.instructions, len(rwts.log))
+    tilings[0].write_reports(
+        reports_folder, run_emulator.instructions, len(run_rwts.log)
+    )
     set_current_run(
-        emulator,
-        program.LOAD_ADDRESS,
+        run_emulator,
+        run_program.LOAD_ADDRESS,
         reports_folder / SPLIT_TILES_FILE,
         reports_folder / SPLIT_TRANSITIONS_FILE,
     )
-    run_tiling = tiling
 
 
 def current_routines() -> Routines:
     """The current run's routines. Stops if there is no current run."""
     if routines is None:
-        raise RuntimeError("no current run; call set_current_run() first")
+        raise RuntimeError(
+            "no routines; call tiling_reports() after run(), or set_current_run()"
+        )
     return routines
 
 

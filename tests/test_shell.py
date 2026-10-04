@@ -35,12 +35,14 @@ from papple2.workbench.shell import (
     set_current_run,
     show_blocks,
     show_routines,
+    tiling_reports,
     uncomment,
     unlabel,
     use_dossier,
     use_reports_folder,
     write_report,
 )
+from papple2.workbench.tiling import Tiling
 
 
 def test_an_arrow_inside_another_gets_the_lane_nearer_the_code() -> None:
@@ -235,10 +237,12 @@ def test_the_dossier_commands_stop_without_a_dossier(
 def no_run(monkeypatch: pytest.MonkeyPatch) -> None:
     """Start without a current run, and restore the module's after the
     test, so the tests don't see each other's run."""
+    monkeypatch.setattr(shell, "run_program", None)
     monkeypatch.setattr(shell, "run_emulator", None)
+    monkeypatch.setattr(shell, "run_rwts", None)
+    monkeypatch.setattr(shell, "run_instrumentations", [])
     monkeypatch.setattr(shell, "routines", None)
     monkeypatch.setattr(shell, "run_graph", None)
-    monkeypatch.setattr(shell, "run_tiling", None)
 
 
 def make_walkthrough_current(walkthrough) -> None:
@@ -350,43 +354,82 @@ def stand_in_program(emulator, booted: list) -> SimpleNamespace:
     )
 
 
-def test_run_makes_the_current_run_from_its_reports(
-    make_emulator, tmp_path: Path, no_run: None, no_reports_folder: None
-) -> None:
-    _, emulator = make_emulator(ENDLESS_PROGRAM)
-    booted = []
-    use_reports_folder(tmp_path / "experiment")
+class CountInstructions:
+    """An instrumentation for the tests: counts the instructions it sees."""
 
-    run(stand_in_program(emulator, booted), 10)
+    def __init__(self, cpu) -> None:
+        self.count = 0
 
-    # Booted headless from the program's default binary.
-    assert booted == [("data/bin/STAND_IN.BIN", True)]
-    # The tiling reports are in the reports folder, and the current run
-    # was read back from them.
-    assert (tmp_path / "experiment" / "lr_split_tiles.csv").exists()
-    assert (tmp_path / "experiment" / "lr_split_transitions.csv").exists()
-    assert list(shell.routines.graphs) == [0x6000]
-    assert shell.run_emulator is emulator
-    assert shell.run_tiling is not None
+    def after_instruction(self) -> None:
+        self.count += 1
 
 
-def test_run_boots_from_the_binary_given(
+def test_run_attaches_the_instrumentations_and_writes_nothing(
     make_emulator, tmp_path: Path, no_run: None, no_reports_folder: None
 ) -> None:
     _, emulator = make_emulator(ENDLESS_PROGRAM)
     booted = []
     use_reports_folder(tmp_path)
 
-    run(stand_in_program(emulator, booted), 10, "data/bin/OTHER.BIN")
+    run(stand_in_program(emulator, booted), 10, CountInstructions, Tiling)
+
+    # Booted headless from the program's default binary.
+    assert booted == [("data/bin/STAND_IN.BIN", True)]
+    # Both attached, in the order given, and each saw every instruction.
+    counter, tiling = shell.run_instrumentations
+    assert isinstance(counter, CountInstructions)
+    assert isinstance(tiling, Tiling)
+    assert counter.count == emulator.instructions
+    assert shell.run_emulator is emulator
+    # run() writes nothing, and there are no routines until the reports.
+    assert list(tmp_path.iterdir()) == []
+    assert shell.routines is None
+
+
+def test_run_boots_from_the_binary_given(
+    make_emulator, no_run: None
+) -> None:
+    _, emulator = make_emulator(ENDLESS_PROGRAM)
+    booted = []
+
+    run(stand_in_program(emulator, booted), 10, binary="data/bin/OTHER.BIN")
 
     assert booted == [("data/bin/OTHER.BIN", True)]
 
 
-def test_run_without_a_reports_folder_stops_before_booting(
+def test_tiling_reports_write_the_reports_and_find_the_routines(
+    make_emulator, tmp_path: Path, no_run: None, no_reports_folder: None
+) -> None:
+    _, emulator = make_emulator(ENDLESS_PROGRAM)
+    run(stand_in_program(emulator, []), 10, Tiling)
+    use_reports_folder(tmp_path / "experiment")
+
+    tiling_reports()
+
+    assert (tmp_path / "experiment" / "lr_split_tiles.csv").exists()
+    assert (tmp_path / "experiment" / "lr_split_transitions.csv").exists()
+    assert list(shell.routines.graphs) == [0x6000]
+
+
+def test_tiling_reports_without_a_run_stop(no_run: None) -> None:
+    with pytest.raises(RuntimeError, match="run\\(\\) first"):
+        tiling_reports()
+
+
+def test_tiling_reports_without_tiling_stop(
+    make_emulator, tmp_path: Path, no_run: None, no_reports_folder: None
+) -> None:
+    _, emulator = make_emulator(ENDLESS_PROGRAM)
+    run(stand_in_program(emulator, []), 10, CountInstructions)
+    use_reports_folder(tmp_path)
+    with pytest.raises(RuntimeError, match="no Tiling"):
+        tiling_reports()
+
+
+def test_tiling_reports_without_a_reports_folder_stop(
     make_emulator, no_run: None, no_reports_folder: None
 ) -> None:
     _, emulator = make_emulator(ENDLESS_PROGRAM)
-    booted = []
+    run(stand_in_program(emulator, []), 10, Tiling)
     with pytest.raises(RuntimeError, match="use_reports_folder"):
-        run(stand_in_program(emulator, booted), 10)
-    assert booted == []
+        tiling_reports()
