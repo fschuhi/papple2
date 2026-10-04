@@ -15,6 +15,9 @@
   - [Memory access by kind](#memory-access-by-kind)
   - [Speed](#speed)
   - [Workbench](#workbench)
+    - [Experiments and recipes](#experiments-and-recipes)
+    - [At the prompt](#at-the-prompt)
+    - [Glossary](#glossary)
 - [Relation to sibling projects](#relation-to-sibling-projects)
 - [Testing strategy](#testing-strategy)
 - [Data files](#data-files)
@@ -28,7 +31,7 @@
 
 `papple2` is a small Apple II emulator written in Python. It is not meant to compete with full emulators on speed or completeness. Its purpose is to be a debugging instrument: a machine I can stop, inspect, and script from Python while it runs Apple II code.
 
-The core comes from ApplePy by James Tauber, ported to Python 3 and stripped of what I did not need (the socket interface). Around that core sit an assembler and disassembler, stand-ins for the disk routines two of the games call, and a speed control. The instruments that make it a debugging tool were rebuilt from scratch between 2026-09-27 and 2026-10-01, from the tag `pre-redesign` to the tag `core-complete`: memory access by kind with hook lists, `after_instruction`, and experiments that attach by method name. The decisions are in `docs/instrumentation-design.md`; the old design is drawn in `docs/instrumentation-map.md`. On top of it, a workbench for reverse engineering has begun (2026-10-02): an instrumentation records what ran, and analyses recover its structure from the recorded reports. Its first pipeline finds the routines and loops of Lode Runner's attract play (see "Workbench" below). It follows `DIRECTION.md`: dynamic analysis first, static disassembly to fill the holes. An IPython front end has begun (`docs/workbench-ideas.md`): a script run with `%run` leaves the run in the session, and `papple2.workbench.shell` shows its routines, blocks, loops and code there. Since 2026-10-03 what we learn stays: labels and comments given at the prompt go into the program's dossier, a file under git, and every later listing shows them. The reverse engineering itself is meant to happen with an LLM reading reports, without `papple2`'s code: the `lr-` targets are prepackaged analyses whose reports, under git, carry meaning on their own, while IPython is for ad hoc exploration.
+The core comes from ApplePy by James Tauber, ported to Python 3 and stripped of what I did not need (the socket interface). Around that core sit an assembler and disassembler, stand-ins for the disk routines two of the games call, and a speed control. The instruments that make it a debugging tool were rebuilt from scratch between 2026-09-27 and 2026-10-01, from the tag `pre-redesign` to the tag `core-complete`: memory access by kind with hook lists, `after_instruction`, and experiments that attach by method name. The decisions are in `docs/instrumentation-design.md`; the old design is drawn in `docs/instrumentation-map.md`. On top of it, a workbench for reverse engineering has begun (2026-10-02): an instrumentation records what ran, and analyses recover its structure from the recorded reports. Its first pipeline finds the routines and loops of Lode Runner's attract play (see "Workbench" below). It follows `DIRECTION.md`: dynamic analysis first, static disassembly to fill the holes. An IPython front end has begun (`docs/workbench-ideas.md`): an experiment run with `%run` leaves its run in the session, and the commands of `papple2.workbench.shell` show its routines, blocks and code there. Since 2026-10-04 the experiments are written with the same commands, and the commands are the contract between `papple2`'s developers and its reverse engineers. Since 2026-10-03 what we learn stays: labels and comments given at the prompt go into the program's dossier, a file under git, and every later listing shows them. The reverse engineering itself is meant to happen with an LLM reading reports, without `papple2`'s code: the `lr-` targets are experiments whose reports, under git, carry meaning on their own, while IPython is for working inside one of them.
 
 **Core philosophy:**
 
@@ -69,20 +72,22 @@ Four programs boot in `papple2`: the Apple II's own Monitor and Integer BASIC, a
 
 ### Package split (M4, done 2026-09-12)
 
-`papple2` is split into three layers:
+`papple2` is split into three layers, plus the program setups:
 
 ```mermaid
 graph TD
     WORKBENCH["papple2.workbench<br/>tiling, basic_blocks_analysis, shell, annotations"]
+    PROGRAMS["papple2.programs<br/>lode_runner"]
     DEBUG["papple2.debug<br/>assembler, disassembler"]
     CORE["papple2.core<br/>cpu, memory, apple, window, emulator, disk_image"]
 
     WORKBENCH --> CORE
     WORKBENCH --> DEBUG
+    PROGRAMS --> CORE
     DEBUG --> CORE
 ```
 
-`papple2.core` never imports from `papple2.debug` (since 2026-09-27): the debugging tools use the machine, never the other way round. `papple2.workbench` (since 2026-10-02) holds the reverse-engineering tools meant for reuse, and uses the machine the same way; for disassembly, `shell.py` also uses `papple2.debug`. Programs that use `papple2` live outside all three packages -- the boot scripts and experiments in `scripts/`, and the sibling projects below.
+`papple2.core` never imports from `papple2.debug` (since 2026-09-27): the debugging tools use the machine, never the other way round. `papple2.workbench` (since 2026-10-02) holds the reverse-engineering tools meant for reuse, and uses the machine the same way; for disassembly, `shell.py` also uses `papple2.debug`. `papple2.programs` (since 2026-10-04) holds the program setups: how `papple2` loads and starts one program, e.g. `lode_runner` with its load address and its stand-in for the disk routines. The workbench does not import them; `run()` takes one as an argument. Programs that use `papple2` live outside the packages -- the boot scripts and experiments in `scripts/`, and the sibling projects below.
 
 ### Emulator / Window / States
 
@@ -153,46 +158,93 @@ Unthrottled, `papple2` runs as fast as Python allows: about 3.5 times a real App
 
 ### Workbench
 
-Since 2026-10-02, `papple2.workbench` holds two kinds of packages, connected by files in a folder, and the tools for looking at what they found:
+Since 2026-10-02, `papple2.workbench` holds two kinds of packages, connected by files in a folder, and the tools for looking at what they found. Since 2026-10-04 all of it is used through commands, by experiments and at the prompt alike.
 
-- **Instrumentation packages** hook into a running `Emulator`: they are set up with `emulator.attach(...)`, collect while it runs, and write reports into a folder given by the caller. The `-ing` suffix marks them: `Tiling` in `tiling.py`.
+- **Instrumentation packages** watch a running `Emulator` through its hooks -- after every instruction, or after reads and writes of memory -- and write reports into a folder given by the caller. The `-ing` suffix marks them: `Tiling` in `tiling.py`. `run()` attaches any number of them, as classes it builds on the booted machine.
 - **Analysis packages** need no `Emulator`: they read reports from a folder and return plain values or write reports of their own, so they also run on fixture files. Reading is kept apart from the logic. `basic_blocks_analysis.py` reads the split reports, builds a graph of basic blocks, finds dominators and natural loops, and writes the loop reports.
-- **The shell** (`shell.py`) is for looking at a run at the IPython prompt: `show_routines()`, `show_blocks()`, `show_edges()` and `show_loops()` print the analysis objects with hex addresses (the first two with labels, if given), and `dis(emulator, start, end, labels, graph, comments)` disassembles a range from memory after the run, with labels in the operands and in a column of their own, comments behind the instructions, and the jumps the run took drawn as arrows in a gutter on the left. Labels and comments are plain dicts.
-- **The dossier** (since 2026-10-03) is everything we know about one program, in a folder of its own: `dossiers/lode_runner/`, under git (unlike `data/`). Today it holds `annotations.json`, the labels and comments, kept by `Annotations` in `annotations.py`: every change is written at once, sorted by address, one entry per line. Snapshots (outside git) may follow. Unlike the reports, which every run rebuilds, the dossier only changes by hand.
+- **The shell** (`shell.py`) holds the commands: the functions meant for the prompt and for experiments. It keeps three pieces of state, one of each at a time: the reports folder, the dossier, and the current run. `dis(emulator, start, end, labels, graph, comments)` disassembles a range from memory after the run, with labels in the operands and in a column of their own, comments behind the instructions, and the jumps the run took drawn as arrows in a gutter on the left; `listing()` is `dis()` on the current run with the dossier's labels and comments.
+- **The dossier** (since 2026-10-03) is everything we know about one program, in a folder of its own: `dossiers/lode_runner/`, under git (unlike `data/`). Today it holds `annotations.json`, the labels and comments, kept by `Annotations` in `annotations.py`: every change is written at once, sorted by address, one entry per line. `use_dossier()` opens it, and starts a new one with the Apple II's standard labels. Snapshots (outside git) may follow. Unlike the reports, which every run rebuilds, the dossier only changes by hand.
 
 ```mermaid
 graph LR
-    RUN["scripts/lr_tiles.py<br/>Emulator run"] --> TILING["Tiling<br/>instrumentation"]
-    TILING --> REPORTS["tmp/lr_tiles/<br/>tiles, transitions, measurements"]
-    REPORTS --> BBA["basic_blocks_analysis<br/>graph, dominators, loops"]
-    BBA --> LOOPS["lr_loops_0800.csv<br/>lr_loop_members_0800.csv<br/>one pair per routine"]
-    BBA --> OVERVIEW["scripts/lr_overview.py<br/>routines and loops of the whole run"]
-    BBA --> SHELL["shell<br/>show_*, dis() in IPython"]
+    EXP["experiment<br/>scripts/lr_basic_blocks_analysis.py"] --> RUN["run(lode_runner, n, Tiling)"]
+    RUN --> TILING["Tiling<br/>instrumentation"]
+    TILING --> TREP["tiling_reports()"]
+    TREP --> REPORTS["docs/reports/lr_basic_blocks_analysis/<br/>tiles, transitions, measurements"]
+    REPORTS --> BBA["basic_blocks_analysis<br/>routines, graph, dominators, loops"]
+    BBA --> LOOPS["loop_reports(entry)<br/>one pair of CSVs per routine"]
+    BBA --> SHELL["show_routines(), show_blocks(), listing()<br/>at the prompt"]
     SHELL <--> DOSSIER["dossiers/lode_runner/<br/>labels, comments, under git"]
 ```
 
-`scripts/lr_basic_blocks_analysis.py` runs the attract play with `Tiling`, finds every routine of the run (`find_routines()`: the start and every `JSR` target), and writes into `docs/reports/lr_basic_blocks_analysis/`, under git: the five tiling reports, and the loop reports of the start, `lr_loops_0800.csv` and `lr_loop_members_0800.csv`; `--loop-reports 6238 ...` adds those of further routines. With `%run` in IPython it leaves `emulator`, `tiling`, `routines` and `run_graph` in the session, together with the shell's functions, and opens Lode Runner's dossier, so the prompt offers `show_routines()`, `show_blocks(entry)`, `listing(start, end)` (`dis()` with the arrows of the whole run and the dossier), `loop_reports(entry)`, and `label()`, `comment()`, `unlabel()`, `uncomment()`:
+`scripts/walkthrough.py` takes a tiny program through the same pipeline: twenty bytes, two nested loops and one `JSR`, small enough to follow by hand; its labels are still typed into `NAMES`. Everything the pipeline finds is observed structure: only what ran in this run.
+
+Ranges are half-open throughout the workbench: a block printed as `6004-6007` holds the bytes `$6004` to `$6006`, its length is `end - start`, and the next block starts where it ends. `dis()` takes the same ranges.
+
+#### Experiments and recipes
+
+An **experiment** is one `lr_` script in `scripts/`. Its **recipe** is the part that wires up the run and writes the reports: a few lines of commands, the same ones you could type at the prompt. The recipe of `lr_basic_blocks_analysis.py`, without its command-line arguments:
+
+```python
+use_reports_folder(Path("docs/reports/lr_basic_blocks_analysis"))
+use_dossier(Path("dossiers/lode_runner"))
+run(lode_runner, 4_000_000, Tiling)
+tiling_reports()
+loop_reports(0x0800)
+```
+
+The rest of an experiment can do analysis of its own, or offer functions of its own: `overview()` in `lr_overview.py`, which works from reports alone, is one. A function that proves useful beyond its experiment graduates to `shell.py`, as `show_blocks()`, `listing()` and `loop_reports()` did from `lr_basic_blocks_analysis.py`.
+
+`run()` only runs: it boots the program setup headless, builds and attaches the instrumentations, runs, and detaches them. What gets written afterwards is the experiment's choice, one command per kind of report: `tiling_reports()` writes the tiling reports into the reports folder and builds the run's routines and run graph from them, since the files are the only connection. Each experiment writes into a reports folder of its own, `docs/reports/<experiment>/`, under git. The reports of other experiments are read by their full paths, by convention, as `lr_overview.py` reads `docs/reports/lr_tiles/`.
+
+#### At the prompt
+
+The usual way in is to `%run` the experiment to work on, then use the commands:
 
 ```python
 %run scripts/lr_basic_blocks_analysis.py
 show_routines()
 show_blocks(0x6238)
-listing(0x6238, 0x62c4)
-loop_reports(0x6238)
+listing(0x7a3e)               # one argument: the whole routine
+label(0x7a3e, "lookup_hgr")
+listing("lookup_hgr")         # a label wherever a routine's address goes
 ```
 
-`scripts/walkthrough.py` does the same for a tiny program of twenty bytes, two nested loops and one `JSR`, small enough to follow by hand; its labels are still typed into `NAMES`. Everything the pipeline finds is observed structure: only what ran in this run.
+What `%run scripts/lr_basic_blocks_analysis.py` leaves in the session:
 
-Ranges are half-open throughout the workbench: a block printed as `6004-6007` holds the bytes `$6004` to `$6006`, its length is `end - start`, and the next block starts where it ends. `dis()` takes the same ranges.
+| Kind | Names |
+|---|---|
+| Commands: setting up | `use_reports_folder()`, `use_dossier()`, `run()`, `tiling_reports()` |
+| Commands: the current run | `show_routines()`, `show_blocks()`, `listing()`, `loop_reports()` |
+| Commands: the dossier | `label()`, `comment()`, `unlabel()`, `uncomment()` |
+| Commands on objects | `print_routines()`, `print_blocks()`, `print_edges()`, `print_loops()`, `dis()`, `set_current_run()` |
+| For a run of your own | `lode_runner` (a program setup, a module: lowercase), `Tiling` (an instrumentation, a class: capitalized) |
+| Machinery | `shell`, and through it `shell.run_emulator`, `shell.run_instrumentations`, `shell.routines`, `shell.run_graph`, `shell.annotations` |
+| The experiment's own | `REPORTS_FOLDER`, `DOSSIER`, `parse_arguments()`, `arguments`, `entry`, `argparse`, `Path` |
 
-Terms:
+The commands are the contract: documented here, and kept working. The machinery is there for debugging and curiosity, with no guarantee. Reach it through the module, as `shell.routines`: a name imported from the module (`from papple2.workbench.shell import routines`, or `import *`) keeps the value it had at import time.
 
+#### Glossary
+
+- **Experiment:** one `lr_` script in `scripts/`: a recipe, and whatever analysis or functions of its own it adds. Some experiments only read the reports of others (`lr_overview.py`).
+- **Recipe:** the part of an experiment that wires up the run and writes the reports: a few lines of commands, the same ones you could type at the prompt. No object of its own.
+- **Command:** a function in `shell.py` meant for the prompt and for experiments. The commands are the **contract** between `papple2`'s developers and its reverse engineers: documented, and kept working.
+- **Machinery:** everything else reachable at the prompt (`shell.run_emulator`, `shell.routines`, ...): there for debugging and curiosity, with no guarantee.
+- **Graduate:** a function moves from its experiment into `shell.py`, once it proves useful beyond it.
+- **Program setup:** how `papple2` loads and starts one program, a module in `papple2.programs`: `lode_runner`. Not the program, not its dossier.
+- **Run:** one execution of a program setup for a number of instructions, with instrumentations attached. The **current run** is the one the commands work on. There is one at a time; a second one means a second terminal.
+- **Instrumentation:** a class whose objects watch a run through the emulator's hooks: after every instruction, or after reads and writes of memory. `Tiling`, or a class typed at the prompt.
+- **Report:** a file an experiment writes. It carries meaning on its own: an LLM can read it without `papple2`'s code.
+- **Reports folder:** an experiment's home, `docs/reports/<experiment>/`: where its reports go, and where it reads its own. One at a time.
+- **Dossier:** everything we know about one program, a folder under git: `dossiers/lode_runner/`. Not its annotations: they are one part of it, and snapshots may follow.
+- **Annotations:** the labels and comments in a dossier, by address, in `annotations.json`.
+- **Label:** the name of one address; one text names one address only. Snake case: `lookup_hgr`.
+- **`show_` and `print_`:** a `show_` command works on the current run and takes at most an address or a label; a `print_` function takes the objects it prints.
 - **Tile:** a run of instructions from an entry point to the leap that leaves it, as recorded. Tiles as recorded ("unbroken") may overlap.
 - **Leap:** a branch, `JMP`, `JSR`, `RTS`, `RTI` or `BRK`. **Glide:** the CPU runs on into the next instruction, without a leap.
 - **Split tile:** a tile cut at every entry point inside it; split tiles do not overlap. Each split tile becomes one **basic block** of the graph; the graph's connections are **edges**. A **call fall-through edge** joins the block holding a `JSR` to the block behind it, instead of an edge into the callee.
 - **Routine:** for now, the code reachable from an entry -- the run's start or a `JSR` target -- without following calls. Jump tables, tail calls and shared code blur it.
 - **Stretch:** reserved for a future container of reports.
-- **Dossier:** everything known about one program, kept across runs. **Annotations** (labels, comments) are one kind of what it holds.
 
 ---
 
@@ -210,7 +262,7 @@ Terms:
 
 `papple2` is verified at two tiers, deliberately:
 
-- **Automated (`make test`).** The pytest suite covers 6502 instruction semantics and the classic hardware quirks, Apple II specifics (soft switches, the hi-res memory buffer, the disk image), running headless with traps and `until`, the state machine, the throttle's calculation, the assembler and disassembler, the workbench's basic blocks analysis on small hand-made graphs, and the dossier's annotations on temporary folders. `tests/test_walkthrough.py` tells the walkthrough as a story in chapters, one test each: the run, split tiles, transitions, graph, dominators, loops, the shell's views and `dis()`, all on the tiny program from `scripts/walkthrough.py`. All of it runs with `no_display=True` -- no pygame window involved, and none of it can be, meaningfully: a headless run has no way to assert "does this look right on screen."
+- **Automated (`make test`).** The pytest suite covers 6502 instruction semantics and the classic hardware quirks, Apple II specifics (soft switches, the hi-res memory buffer, the disk image), running headless with traps and `until`, the state machine, the throttle's calculation, the assembler and disassembler, the workbench's basic blocks analysis on small hand-made graphs, the dossier's annotations on temporary folders, and the shell's commands on the walkthrough's run and on a stand-in program. `tests/test_walkthrough.py` tells the walkthrough as a story in chapters, one test each: the run, split tiles, transitions, graph, dominators, loops, the shell's views and `dis()`, all on the tiny program from `scripts/walkthrough.py`. All of it runs with `no_display=True` -- no pygame window involved, and none of it can be, meaningfully: a headless run has no way to assert "does this look right on screen."
 - **Manual, with-window (`make boot-robotron`).** Runs `scripts/boot_robotron.py`, a plain script that boots `Emulator(no_display=False)` with the real `ROBOTRON.BIN` and calls `run()` with no `until` -- the same path the old in-repo Robotron showcase exercised, but with zero dependency on `probotron`'s workbench or Excel bridge.
 - **Manual, with-window, text mode (`make boot-basic`).** Runs `scripts/boot_basic.py`. Boots the Monitor and, on `Ctrl-B`, Integer BASIC -- the same real ROM path as `make boot-robotron`, but through the text page instead of hires. Catches display and keyboard bugs specific to `Display.update_text()` that a hires-only Robotron run never would.
 - **Manual, with-window, games (`make boot-lode-runner`, `make boot-lode-runner-throttled`, `make boot-bandits`).** Lode Runner's attract mode, then a real game on a key press, at full speed or at the speed of a real Apple II; Bandits from its cutscene into the game. Both reach their games through the disk stand-ins, so these runs check the traps as well.
@@ -252,13 +304,11 @@ Place the three binaries in `data/bin/`, the disk image in `data/do/`, and Bandi
 
 The tools interacting with `papple2` live in the `scripts/` folder and generally fall into two categories:
 
-- **The `boot_*` scripts:** Manual, visual checks that boot the emulator with a specific game or ROM payload attached to the pygame window. These are test-bed wrappers used for visual verification (`boot_basic.py`, `boot_robotron.py`, `boot_lode_runner.py`, `boot_bandits.py`).
-- **The `lr_*` experiments:** Headless analysis routines currently focused on Lode Runner's attract play. These attach custom instrumentations (like tracing and block-mapping hooks) to analyze how the game executes. 
-  - `lr_count.py`: a 256x256 map of the memory, one cell per address, showing which addresses ran as opcode, operand or immediate (PNG and HTML).
-  - `lr_trace_pc.py`: Tracks and records a direct trace of execution flow.
-  - `lr_tiles.py`: attaches the tiling instrumentation (`papple2.workbench.tiling`), which collects tiles (runs of instructions from a leap target to the next leap) and the transitions between them; after the run, it splits overlapping tiles into disjoint basic blocks, checks that every execution is accounted for, and writes its reports into `tmp/lr_tiles/` (CSV, plus measurements as text).
-  - `lr_overview.py`: runs no emulator; reads the split reports from `tmp/lr_tiles/` and prints the whole run: totals, one line per routine with the routines it calls, the pieces in no routine, and each routine's loops.
-  - `lr_basic_blocks_analysis.py`: every routine of the run; tiling reports and the loop reports of `$0800` (more with `--loop-reports`) into `docs/reports/lr_basic_blocks_analysis/`, under git; made for `%run` in IPython as well, where it also opens Lode Runner's dossier (see "Workbench").
+- **The `boot_*` scripts:** Manual, visual checks that boot the emulator with a specific game or ROM payload attached to the pygame window. These are test-bed wrappers used for visual verification (`boot_basic.py`, `boot_robotron.py`, `boot_lode_runner.py`, `boot_bandits.py`). Lode Runner's setup (the load at `$0800`, the stand-in for its disk routines) lives in `papple2.programs.lode_runner`; `boot_lode_runner.py` runs it in a window or headless.
+- **The `lr_*` experiments:** headless experiments on Lode Runner's attract play, each with a reports folder of its own (see "Workbench", "Experiments and recipes").
+  - `lr_basic_blocks_analysis.py`: written as a recipe; every routine of the run, the tiling reports and the loop reports of `$0800` (more with `--loop-reports`) into `docs/reports/lr_basic_blocks_analysis/`, under git. Made for `%run` in IPython as well, where it opens Lode Runner's dossier.
+  - `lr_overview.py`: works from reports alone. Reads three tiling reports from `docs/reports/lr_tiles/` by their full paths, and writes the whole run -- totals, one line per routine with the routines it calls, the pieces in no routine, and each routine's loops -- into `docs/reports/lr_overview/`. Its `overview()` is its own, not a command.
+  - Early experiments, frozen (2026-10-04): written before the recipes, with run code of their own, writing into `tmp/`. Kept as they are, as reminders and placeholders. `lr_count.py`: a 256x256 map of the memory, one cell per address, showing which addresses ran as opcode, operand or immediate (PNG and HTML). `lr_tiles.py`: the tiling instrumentation's reports into `tmp/lr_tiles/`; `docs/reports/lr_tiles/` is a copy made by hand, which `lr_overview.py` reads.
 - **`walkthrough.py`:** a tiny program through the whole pipeline, reports into `tmp/walkthrough/`; made for `%run` in IPython, and the model for `tests/test_walkthrough.py`.
 
 ---
@@ -274,10 +324,9 @@ make boot-lode-runner           # boot Lode Runner with the pygame window open; 
 make boot-lode-runner-throttled # the same, at the speed of a real Apple II
 make boot-lode-runner-headless  # run Lode Runner headless; save both hi-res pages as PNG
 make boot-bandits               # boot Bandits from Total Replay's ProDOS files
-make lr-count        # Experiment: map which addresses Lode Runner's attract play runs (PNG and HTML)
-make lr-tiles        # Experiment: tiling reports into tmp/lr_tiles/ (CSV and text)
-make lr-overview     # Overview of the whole run: routines, loops, calls (after make lr-tiles)
-make lr-trace-pc     # Experiment: record start PC, opcode and end PC of every instruction (CSV)
+make lr-count        # Early experiment (frozen): map which addresses Lode Runner's attract play runs (PNG and HTML)
+make lr-tiles        # Early experiment (frozen): tiling reports into tmp/lr_tiles/ (CSV and text)
+make lr-overview     # Overview of the whole run from docs/reports/lr_tiles/, into docs/reports/lr_overview/
 make lr-basic-blocks-analysis  # Every routine of the run; tiling and loop reports (start 0800) in docs/reports/lr_basic_blocks_analysis/
 make walkthrough     # A tiny program through tiling and the basic blocks analysis, reports in tmp/walkthrough/
 make ipython         # IPython in the venv; then e.g. %run scripts/lr_basic_blocks_analysis.py
@@ -318,13 +367,16 @@ This section is more useful to an LLM picking this project back up than to me --
 - **`after_instruction` hooks take no arguments** (since 2026-09-29). They read what they need from the `CPU`'s fields; `reset()` keeps them. `CPU.instruction_count` is not `Emulator.instructions`: the first counts since a fresh start, the second since the current `run()` call.
 - **Every test module is plain `pytest`** (since 2026-09-29): functions and fixtures, no `unittest` classes.
 - **Experiments attach by method name** (since 2026-09-29): `Emulator.attach()` matches methods to the hook lists by name, refuses a method starting with `after_` that matches no list, and logs through Python's `logging`. No base class and no named hook types for experiments: an experiment exposes whichever hooks it needs.
-- **The workbench is a pipeline connected by files** (since 2026-10-02). Instrumentation packages (suffix `-ing`, e.g. `Tiling`) write reports into a folder the caller gives; analysis packages read them and need no `Emulator`. Each script writes into a folder of its own, `tmp/<script name>/`; since 2026-10-03, `lr_basic_blocks_analysis.py` writes into `docs/reports/<script name>/`, under git, and the other `lr-` scripts are to follow.
+- **The workbench is a pipeline connected by files** (since 2026-10-02). Instrumentation packages (suffix `-ing`, e.g. `Tiling`) write reports into a folder the caller gives; analysis packages read them and need no `Emulator`. Each experiment writes into a reports folder of its own, `docs/reports/<experiment>/`, under git (since 2026-10-03); the frozen early experiments still write into `tmp/<script name>/`. Reports of other experiments are read by their full paths (2026-10-04).
 - **The oracle protocol** (2026-10-02): form a hypothesis about an address; settle on a name that stands for the hypothesis; then look up the oracle -- same meaning: use the oracle's name; different meaning: investigate. The oracle grades; it never feeds the tools.
 - **Disassemble memory after the run, not the file** (2026-10-02). Lode Runner relocates its code at start-up: `.loop1` lies at `$2B52` in the file and runs at `$6252`. For now the IPython session holds the run, and `dis()` reads its emulator's memory.
 - **A tile that never ran gives no split tile** (2026-10-02). If the run stops right after a leap, the target tile has no instructions: it stays in the unbroken reports, but it is no split point, and the leap into it is counted in `lr_measurements.txt` instead of kept as a split transition.
-- **Labels come by hand, following the oracle protocol** (2026-10-02, revised 2026-10-03). They show in the operands and in a column of their own. `Labels` is gone; the disassembler and `dis()` take plain dicts. Apple II names are `STANDARD_LABELS` in `disassembler.py`, never added by default.
-- **What we learn goes into the program's dossier** (2026-10-03): `dossiers/<program>/`, under git, labels and comments in `annotations.json` (`"labels"`, `"comments"`, four-digit hex keys, sorted). Written at every change, never without one. A label's text is used at one address only. The Lode Runner script adds `STANDARD_LABELS` on the dossier's first run only, so a removed standard label stays removed. Addresses are run addresses (memory after relocation). Words: *dossier*, not "session" (transient) or "project"; *label*, not "name"; `listing()`, not `list()` (the built-in).
+- **Labels come by hand, following the oracle protocol** (2026-10-02, revised 2026-10-03). They show in the operands and in a column of their own. `Labels` is gone; the disassembler and `dis()` take plain dicts. Apple II names are `STANDARD_LABELS` in `disassembler.py`; `use_dossier()` adds them to a new dossier (2026-10-04).
+- **What we learn goes into the program's dossier** (2026-10-03): `dossiers/<program>/`, under git, labels and comments in `annotations.json` (`"labels"`, `"comments"`, four-digit hex keys, sorted). Written at every change, never without one. A label's text is used at one address only. `use_dossier()` adds `STANDARD_LABELS` only when a dossier has no annotations yet, so a removed standard label stays removed. Addresses are run addresses (memory after relocation). Words: *dossier*, not "session" (transient) or "project"; *label*, not "name"; `listing()`, not `list()` (the built-in).
 - **The arrows show what the run did** (2026-10-02): the observed edges whose target is not the next instruction (taken branches, `JMP`s), not the branches written in the code. A branch that never jumped gets no arrow; calls are not drawn. Since 2026-10-03 `listing()` takes them from the run graph (`build_run_graph()`): every block and edge of the run, not only those of one routine.
 - **The reports carry meaning on their own** (2026-10-03). The `lr-` targets are prepackaged analyses; their reports are what an LLM reads to do the reverse engineering, without `papple2`'s code. A report about one routine has the routine's entry in its name (`lr_loops_6238.csv`).
-- **Workbench functions, not a `Workbench` class** (2026-10-03): functions that group a standard way of doing things, used by the scripts. No `Dossier` class until the dossier has a second resident.
+- **Commands, not classes** (2026-10-03, revised 2026-10-04): the workbench is used through commands in `shell.py`, the contract between `papple2`'s developers and its reverse engineers. Experiments are recipes of the same commands you type at the prompt; their own functions graduate to `shell.py` once they prove useful beyond them. The state the commands work on lives in module variables there: one reports folder, one dossier, one current run at a time. No `Workbench` class, and no `Dossier` class until the dossier has a second resident.
+- **`run()` only runs** (2026-10-04): it takes a program setup and any number of instrumentation classes, and writes nothing. Reports are written by commands of their own, one per kind, chosen by the experiment.
+- **`show_` and `print_`** (2026-10-04): a `show_` command works on the current run and takes at most an address or a label; a `print_` function takes the objects it prints.
+- **Labels are snake case** (2026-10-04), e.g. `lookup_hgr`: quicker to type than upper case.
 - **Hex is lowercase** in listings (2026-10-03), addresses and operands, immediates included; mnemonics are uppercase.
