@@ -105,6 +105,18 @@ def current_annotations() -> Annotations:
     return annotations
 
 
+def address_of(place: int | str) -> int:
+    """place itself if it is an address; if it is a label, the address the
+    current dossier gives it. A label names one address only: the dossier
+    refuses a text used twice."""
+    if isinstance(place, int):
+        return place
+    for labelled, text in current_annotations().labels.items():
+        if text == place:
+            return labelled
+    raise ValueError(f"no label {place} in the dossier")
+
+
 def label(address: int, text: str) -> None:
     """Give address the label text in the current dossier."""
     current_annotations().label(address, text)
@@ -229,8 +241,10 @@ def current_routines() -> Routines:
     return routines
 
 
-def routine_at(entry: int) -> int:
-    """entry, if a routine of the current run starts there; stops if not."""
+def routine_at(entry: int | str) -> int:
+    """The address of entry, an address or a label, if a routine of the
+    current run starts there; stops if not."""
+    entry = address_of(entry)
     if entry not in current_routines().graphs:
         raise ValueError(
             f"{address(entry)} is not a routine; show_routines() lists them"
@@ -249,11 +263,11 @@ def show_routines() -> None:
     )
 
 
-def show_blocks(entry: int) -> None:
-    """The blocks of the routine starting at entry, with its loops and the
-    dossier's labels."""
+def show_blocks(entry: int | str) -> None:
+    """The blocks of the routine starting at entry, an address or a label,
+    with its loops and the dossier's labels."""
     found = current_routines()
-    routine_at(entry)
+    entry = routine_at(entry)
     print_blocks(
         found.graphs[entry],
         found.loops_of[entry],
@@ -261,10 +275,22 @@ def show_blocks(entry: int) -> None:
     )
 
 
-def listing(start: int, end: int) -> None:
-    """dis() of the current run's memory, with the arrows of the whole run
-    and the dossier's labels and comments."""
-    current_routines()
+def listing(start: int | str, end: int | str | None = None) -> None:
+    """dis() of the current run's memory from start up to, not including,
+    end, with the arrows of the whole run and the dossier's labels and
+    comments. start and end are addresses or labels.
+
+    With start alone, start is a routine's entry, and the whole routine is
+    listed: from its lowest block to its highest, so any gap between its
+    blocks shows too, e.g. code the run never reached."""
+    found = current_routines()
+    if end is None:
+        blocks = found.graphs[routine_at(start)].blocks.values()
+        start = min(block.start for block in blocks)
+        end = max(block.end for block in blocks)
+    else:
+        start = address_of(start)
+        end = address_of(end)
     dis(
         run_emulator,
         start,
@@ -275,12 +301,12 @@ def listing(start: int, end: int) -> None:
     )
 
 
-def loop_reports(entry: int) -> None:
-    """Write the loop reports of the routine starting at entry into the
-    reports folder, with the entry in their names: lr_loops_<entry>.csv and
-    lr_loop_members_<entry>.csv."""
+def loop_reports(entry: int | str) -> None:
+    """Write the loop reports of the routine starting at entry, an address
+    or a label, into the reports folder, with the entry in their names:
+    lr_loops_<entry>.csv and lr_loop_members_<entry>.csv."""
     found = current_routines()
-    routine_at(entry)
+    entry = routine_at(entry)
     if reports_folder is None:
         raise RuntimeError("no reports folder set; call use_reports_folder() first")
     write_loop_reports(reports_folder, found.graphs[entry], found.loops_of[entry])

@@ -314,6 +314,69 @@ def test_loop_reports_write_into_the_reports_folder(
     assert (tmp_path / "experiment" / "lr_loop_members_6000.csv").exists()
 
 
+def test_listing_of_a_routine_alone_lists_its_whole_range(
+    walkthrough, capsys, no_run: None, no_dossier: None
+) -> None:
+    make_walkthrough_current(walkthrough)
+    capsys.readouterr()
+
+    # SUB is one block, $6010-$6013.
+    listing(0x6010)
+    alone = capsys.readouterr().out
+    listing(0x6010, 0x6013)
+    assert alone == capsys.readouterr().out
+
+
+def test_listing_of_a_routine_alone_shows_the_gaps_between_its_blocks(
+    walkthrough, capsys, no_run: None, no_dossier: None
+) -> None:
+    # The start routine runs from $6000 to DONE's NOP, $6013-$6014; SUB's
+    # code lies between its blocks, not in it, and shows all the same.
+    make_walkthrough_current(walkthrough)
+    capsys.readouterr()
+
+    listing(0x6000)
+    alone = capsys.readouterr().out
+    listing(0x6000, 0x6014)
+    assert alone == capsys.readouterr().out
+
+
+def test_the_run_commands_take_a_label_for_an_address(
+    walkthrough, tmp_path: Path, capsys, no_run: None, no_dossier: None
+) -> None:
+    make_walkthrough_current(walkthrough)
+    use_dossier(tmp_path / "dossier")
+    label(0x6010, "SUB")
+    capsys.readouterr()
+
+    listing("SUB")
+    by_label = capsys.readouterr().out
+    listing(0x6010)
+    assert by_label == capsys.readouterr().out
+
+    show_blocks("SUB")
+    by_label = capsys.readouterr().out
+    show_blocks(0x6010)
+    assert by_label == capsys.readouterr().out
+
+
+def test_an_unknown_label_stops(
+    walkthrough, tmp_path: Path, no_run: None, no_dossier: None
+) -> None:
+    make_walkthrough_current(walkthrough)
+    use_dossier(tmp_path / "dossier")
+    with pytest.raises(ValueError, match="NOWHERE"):
+        show_blocks("NOWHERE")
+
+
+def test_listing_of_an_address_alone_that_is_no_routine_stops(
+    walkthrough, no_run: None
+) -> None:
+    make_walkthrough_current(walkthrough)
+    with pytest.raises(ValueError, match="show_routines"):
+        listing(0x6002)
+
+
 @pytest.mark.parametrize(
     "command, arguments",
     [
