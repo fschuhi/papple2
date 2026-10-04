@@ -19,11 +19,9 @@ import csv
 import time
 from pathlib import Path
 
-# Python puts the folder of the started script on its search path,
-# so the sibling boot script can be imported directly.
-from boot_lode_runner import boot
 from papple2.core.cpu import CPU
 from papple2.debug.stop_conditions import instruction_count_reaches
+from papple2.programs.lode_runner import boot
 
 OUTPUT = Path("tmp/lr_trace_pc.csv")
 

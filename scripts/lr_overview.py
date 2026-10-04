@@ -20,10 +20,8 @@ Run from the repo root:
 import io
 from pathlib import Path
 
-# Python puts the folder of the started script on its search path,
-# so the sibling boot script can be imported directly.
-from boot_lode_runner import LOAD_ADDRESS
 from papple2.core.cpu import JSR
+from papple2.programs.lode_runner import LOAD_ADDRESS
 from papple2.workbench.basic_blocks_analysis import (
     BlockGraph,
     Loop,

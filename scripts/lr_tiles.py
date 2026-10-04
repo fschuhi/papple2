@@ -20,10 +20,8 @@ import argparse
 import time
 from pathlib import Path
 
-# Python puts the folder of the started script on its search path,
-# so the sibling boot script can be imported directly.
-from boot_lode_runner import boot
 from papple2.debug.stop_conditions import instruction_count_reaches
+from papple2.programs.lode_runner import boot
 from papple2.workbench.tiling import Tiling, address, report_findings
 
 # One folder per script, named after it (briefing.md, section 2).

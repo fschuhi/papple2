@@ -1,6 +1,6 @@
 """Count which addresses run as code in Lode Runner, and draw a memory map.
 
-Boots Lode Runner headless (the same boot as scripts/boot_lode_runner.py,
+Boots Lode Runner headless (its setup in papple2.programs.lode_runner,
 including the RWTS trap), runs 4,000,000 instructions from the start, and
 counts for every address how often it was fetched as an opcode, as an
 operand, and as an immediate operand. Saves a 256 x 256 map as a PNG, one pixel per address,
@@ -33,12 +33,9 @@ import logging
 import time
 from pathlib import Path
 
-# boot_lode_runner.py sits in this folder. Python puts the folder of the
-# script it starts on its search path, so this import works when the script
-# is started as shown above.
-from boot_lode_runner import boot
 from papple2.core.emulator import APPLE_II_CYCLES_PER_SECOND
 from papple2.debug.stop_conditions import instruction_count_reaches
+from papple2.programs.lode_runner import boot
 
 MEMORY_SIZE = 0x10000
 SCALE = 3

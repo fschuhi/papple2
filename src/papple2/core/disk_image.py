@@ -12,7 +12,7 @@ Checked 2026-09-26 against XekriRedmane's track files for Lode Runner: all
 
 This module stands in for the disk only, not for the drive: no nibbles, no
 disk controller, no timing. Whoever intercepts a program's disk access (for
-Lode Runner, a trap in `scripts/boot_lode_runner.py`) asks it for
+Lode Runner, a trap in `papple2.programs.lode_runner`) asks it for
 sectors. Reading only, for now.
 """
 

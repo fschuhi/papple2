@@ -48,25 +48,19 @@ lr_loops_<entry>.csv and lr_loop_members_<entry>.csv.
 """
 
 import argparse
-import sys
 import time
 from pathlib import Path
 
-# Python puts the folder of a started script on its search path, so the
-# sibling boot script can be imported. IPython's %run may not, so the
-# folder is added here as well.
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+from papple2.core.emulator import Emulator
+from papple2.debug.stop_conditions import instruction_count_reaches
+from papple2.programs.lode_runner import LOAD_ADDRESS, boot
+from papple2.workbench.tiling import Tiling
 
-from boot_lode_runner import LOAD_ADDRESS, boot  # noqa: E402
-from papple2.core.emulator import Emulator  # noqa: E402
-from papple2.debug.stop_conditions import instruction_count_reaches  # noqa: E402
-from papple2.workbench.tiling import Tiling  # noqa: E402
-
-from papple2.workbench import shell  # noqa: E402, F401
+from papple2.workbench import shell  # noqa: F401
 
 # Imported so that IPython's %run leaves them in its namespace, ready for
 # looking at the run.
-from papple2.workbench.shell import (  # noqa: E402, F401
+from papple2.workbench.shell import (  # noqa: F401
     comment,
     dis,
     label,
