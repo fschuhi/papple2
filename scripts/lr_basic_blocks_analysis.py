@@ -1,13 +1,15 @@
 """Find every routine of Lode Runner's attract play, for the IPython prompt.
 
 Boots Lode Runner headless, attaches the tiling instrumentation
-(papple2.workbench.tiling), runs the attract play, and writes the tiling
-reports into docs/reports/lr_basic_blocks_analysis/, under git:
+(papple2.workbench.tiling) and the stack tracking
+(papple2.workbench.stack_tracking), runs the attract play, and writes
+their reports into docs/reports/lr_basic_blocks_analysis/, under git:
     lr_unbroken_tiles.csv
     lr_unbroken_transitions.csv
     lr_measurements.txt
     lr_split_tiles.csv
     lr_split_transitions.csv
+    lr_returns.csv
 Then the basic blocks analysis (papple2.workbench.basic_blocks_analysis)
 finds every routine of the run: the run's start and every JSR target.
 It writes the loop reports of the start, $0800, into the same folder:
@@ -52,6 +54,7 @@ from pathlib import Path
 
 from papple2.programs import lode_runner
 from papple2.workbench import shell  # noqa: F401
+from papple2.workbench.stack_tracking import StackTracking
 from papple2.workbench.tiling import Tiling
 
 # Imported so that IPython's %run leaves them in its namespace, ready for
@@ -71,6 +74,7 @@ from papple2.workbench.shell import (  # noqa: F401
     show_blocks,
     show_callers,
     show_routines,
+    stack_tracking_reports,
     tiling_reports,
     uncomment,
     unlabel,
@@ -120,8 +124,15 @@ if __name__ == "__main__":
     arguments = parse_arguments()
     use_reports_folder(REPORTS_FOLDER)
     use_dossier(DOSSIER)
-    run(lode_runner, arguments.instructions, Tiling, binary=arguments.binary)
+    run(
+        lode_runner,
+        arguments.instructions,
+        Tiling,
+        StackTracking,
+        binary=arguments.binary,
+    )
     tiling_reports()
+    stack_tracking_reports()
 
     # The loop reports the run leaves behind: those of the start, and of
     # every routine named with --loop-reports, each written once.
