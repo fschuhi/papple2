@@ -1,11 +1,17 @@
 """Tests for papple2.workbench.shell: the arrows in the gutter, the
-comments behind the instructions, and the labels in the show_* views.
+comments behind the instructions, the labels in the show_* views, and
+the reports folder.
 
 The arrows are given as rows, not addresses: row 0 is the listing's first
 line. A span is (first row, last row); an arrow is (source row, target
 row). Lane 0 lies next to the code.
 """
 
+from pathlib import Path
+
+import pytest
+
+from papple2.workbench import shell
 from papple2.workbench.basic_blocks_analysis import (
     build_graph,
     immediate_dominators,
@@ -18,6 +24,8 @@ from papple2.workbench.shell import (
     draw_gutter,
     show_blocks,
     show_routines,
+    use_reports_folder,
+    write_report,
 )
 
 
@@ -132,3 +140,25 @@ def test_show_routines_lists_every_routine_with_its_label(
         "6000          7     17       1      2",
         "6010          1      3       6      0  SUB",
     ]
+
+
+@pytest.fixture
+def no_reports_folder(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Start without a reports folder, and restore the module's after the
+    test, so the tests don't see each other's folder."""
+    monkeypatch.setattr(shell, "reports_folder", None)
+
+
+def test_write_report_writes_into_the_reports_folder(
+    tmp_path: Path, no_reports_folder: None
+) -> None:
+    # The folder doesn't exist yet: write_report() creates it.
+    use_reports_folder(tmp_path / "lr_overview")
+    write_report("lr_overview.txt", "WHOLE RUN\n")
+    written = tmp_path / "lr_overview" / "lr_overview.txt"
+    assert written.read_text(encoding="utf-8") == "WHOLE RUN\n"
+
+
+def test_write_report_without_a_reports_folder_stops(no_reports_folder: None) -> None:
+    with pytest.raises(RuntimeError, match="use_reports_folder"):
+        write_report("lr_overview.txt", "WHOLE RUN\n")

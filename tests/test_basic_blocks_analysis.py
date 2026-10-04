@@ -22,6 +22,8 @@ from papple2.workbench.basic_blocks_analysis import (
     immediate_dominators,
     natural_loops,
     read_split_reports,
+    read_split_tiles,
+    read_split_transitions,
     reverse_postorder,
     write_loop_reports,
 )
@@ -199,6 +201,33 @@ def test_read_split_reports(tmp_path: Path):
     assert transitions == [
         SplitTransition(0x0800, 0x0800, 0x4C, "", 0x2800, 1),
         SplitTransition(0x2800, 0x2811, 0xF0, "fall_through", 0x2813, 1),
+        SplitTransition(0x2813, None, None, "glide", 0x2821, 1),
+    ]
+
+
+def test_read_split_tiles_by_its_full_path(tmp_path: Path):
+    # Any name in any folder: the reader doesn't assume lr_split_tiles.csv.
+    tiles_file = tmp_path / "elsewhere" / "tiles.csv"
+    tiles_file.parent.mkdir()
+    tiles_file.write_text(
+        "tile_start_PC,tile_end_PC,length_bytes,executions\n"
+        "0800,0803,3,1\n",
+        encoding="utf-8",
+    )
+    assert read_split_tiles(tiles_file) == [SplitTile(0x0800, 0x0803, 1)]
+
+
+def test_read_split_transitions_by_its_full_path(tmp_path: Path):
+    transitions_file = tmp_path / "elsewhere" / "transitions.csv"
+    transitions_file.parent.mkdir()
+    transitions_file.write_text(
+        "source_tile,leap_from_PC,opcode,outcome,target_tile,count\n"
+        "0800,0800,$4C,,2800,1\n"
+        "2813,,,glide,2821,1\n",
+        encoding="utf-8",
+    )
+    assert read_split_transitions(transitions_file) == [
+        SplitTransition(0x0800, 0x0800, 0x4C, "", 0x2800, 1),
         SplitTransition(0x2813, None, None, "glide", 0x2821, 1),
     ]
 

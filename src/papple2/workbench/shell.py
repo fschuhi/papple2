@@ -9,12 +9,40 @@ output line of its own.
 Ranges are half-open, as everywhere in the workbench: start is the first
 byte, end the first byte behind. So a block printed as 6004-6007 is
 dis(emulator, 0x6004, 0x6007).
+
+The reports folder is the home of an experiment: write_report() writes
+there. use_reports_folder() sets it, in a recipe or at the prompt. There is
+one at a time, kept in this module; reports from other experiments are
+read by their full paths instead.
 """
+
+from pathlib import Path
 
 from papple2.core.emulator import Emulator
 from papple2.debug.disassembler import Disassembler
 from papple2.workbench.basic_blocks_analysis import BlockGraph, Loop
 from papple2.workbench.tiling import address
+
+# Where write_report() writes; None until use_reports_folder() is called.
+reports_folder: Path | None = None
+
+
+def use_reports_folder(folder: Path) -> None:
+    """Make folder the reports folder, where write_report() writes. The
+    folder need not exist yet."""
+    global reports_folder
+    reports_folder = Path(folder)
+
+
+def write_report(file_name: str, text: str) -> None:
+    """Write text into the reports folder as file_name, creating the folder
+    if needed. Stops if no reports folder is set, rather than guessing one."""
+    if reports_folder is None:
+        raise RuntimeError("no reports folder set; call use_reports_folder() first")
+    path = reports_folder / file_name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+    print(f"wrote {path}")
 
 
 def loop_ids(loops: dict[int, Loop]) -> dict[int, str]:

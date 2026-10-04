@@ -142,9 +142,10 @@ def parse_opcode(text: str) -> int | None:
     return int(text.removeprefix("$"), 16) if text else None
 
 
-def read_split_reports(folder: Path) -> tuple[list[SplitTile], list[SplitTransition]]:
-    """Read the two split reports the tiling instrumentation wrote into folder."""
-    with (folder / SPLIT_TILES_FILE).open(newline="", encoding="utf-8") as tiles_file:
+def read_split_tiles(filename: Path) -> list[SplitTile]:
+    """Read a split tiles report (lr_split_tiles.csv) by its full path, so it
+    can be read from any experiment's folder."""
+    with filename.open(newline="", encoding="utf-8") as tiles_file:
         tiles = [
             SplitTile(
                 start=parse_address(row["tile_start_PC"]),
@@ -153,7 +154,13 @@ def read_split_reports(folder: Path) -> tuple[list[SplitTile], list[SplitTransit
             )
             for row in csv.DictReader(tiles_file)
         ]
-    with (folder / SPLIT_TRANSITIONS_FILE).open(
+    return tiles
+
+
+def read_split_transitions(filename: Path) -> list[SplitTransition]:
+    """Read a split transitions report (lr_split_transitions.csv) by its full
+    path, so it can be read from any experiment's folder."""
+    with filename.open(
             newline="", encoding="utf-8"
     ) as transitions_file:
         transitions = [
@@ -169,7 +176,15 @@ def read_split_reports(folder: Path) -> tuple[list[SplitTile], list[SplitTransit
             )
             for row in csv.DictReader(transitions_file)
         ]
-    return tiles, transitions
+    return transitions
+
+
+def read_split_reports(folder: Path) -> tuple[list[SplitTile], list[SplitTransition]]:
+    """Read the two split reports the tiling instrumentation wrote into folder."""
+    return (
+        read_split_tiles(folder / SPLIT_TILES_FILE),
+        read_split_transitions(folder / SPLIT_TRANSITIONS_FILE),
+    )
 
 
 def collect_edges(
