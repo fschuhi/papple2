@@ -17,7 +17,7 @@ tmp/project_tree.txt
 README.md
 GOALS.md
 TODO.md
-HISTORY.md
+#HISTORY.md
 
 # dossiers
 dossiers/lode_runner/annotations.json
