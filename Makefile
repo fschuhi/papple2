@@ -66,7 +66,7 @@ lr-tiles: $(SETUP_STAMP) ## Early experiment (frozen): collect tiles and transit
 lr-overview: $(SETUP_STAMP) ## Overview of the whole run: routines, loops, calls (reads docs/reports/lr_tiles/, writes docs/reports/lr_overview/)
 	$(RUN) scripts/lr_overview.py
 
-lr-basic-blocks-analysis: $(SETUP_STAMP) ## Experiment: tiling and loop reports (start 0800) of Lode Runner's attract play into docs/reports/lr_basic_blocks_analysis/
+lr-basic-blocks-analysis: $(SETUP_STAMP) ## Experiment: tiling, returns and loop reports (start 0800) of Lode Runner's attract play into docs/reports/lr_basic_blocks_analysis/
 	$(RUN) scripts/lr_basic_blocks_analysis.py data/bin/LODE_RUNNER.BIN
 
 # --- Walkthrough (a tiny program through the workbench's pipeline, output in tmp/walkthrough/) ---
