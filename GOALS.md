@@ -8,13 +8,13 @@
 
 ## 📍 Current Session Pointer
 
-**Where we are:** `papple2` is the machinery for reverse engineering Apple II games by running them, with Lode Runner as the worked example (`DIRECTION.md`: dynamic first, static fills the holes; the oracle only grades). The reverse engineering itself is meant to happen with an LLM reading reports, without `papple2`'s code: the `lr-` targets are prepackaged analyses whose reports carry meaning on their own; IPython is for ad hoc exploration, and Lode Runner's dossier (`dossiers/lode_runner/annotations.json`, under git) keeps the labels and comments given there. **2026-10-03:** the architecture review began (workbench functions, no `Workbench` class). Every routine of the run is found in one place (`find_routines()`), `listing()` draws arrows everywhere, and `make lr-basic-blocks-analysis` is the first target whose reports are under git (`docs/reports/lr_basic_blocks_analysis/`, loop reports of `$0800` on every run).
+**Where we are:** `papple2` is the machinery for reverse engineering Apple II games by running them, with Lode Runner as the worked example (`DIRECTION.md`: dynamic first, static fills the holes; the oracle only grades). **2026-10-04:** the workbench is used through commands in `shell.py`, the contract between `papple2`'s developers and its reverse engineers. Experiments (`scripts/lr_*.py`) hold recipes of the same commands I type at the prompt -- `run(lode_runner, n, Tiling)`, `tiling_reports()`, `show_routines()`, `listing()`, `label()` -- and their own functions graduate to the shell once they prove useful beyond them. My role is shifting from junior developer towards product manager and reverse engineer; `README.md` ("Workbench": experiments and recipes, the namespace at the prompt, the glossary) is the reference. The first find of my own: `lookup_hgr` at `$7a3e`, the hi-res row address on both pages, called 30,406 times. The early experiments (`lr_count`, `lr_tiles`) are frozen as they are.
 
 **What's next:**
-- First: reports under git for the other `lr-` targets (`lr-tiles` first, which `lr-overview` reads), and how a report says what it is and where it came from, so an LLM can read it cold (`TODO.md`).
-- Then the rest of the architecture review: a workbench function for the standard run (`Tiling`, run, reports), used by the Lode Runner script and the walkthrough; the prompt's commands by entry (`TODO.md`, "Dossier and prompt").
-- Then the first tool priority: tail calls and stack jump tables, integrated into the structural analysis -- unclear how; the dominator analysis may not cope, and this may be where stretches begin (below, and `TODO.md`). Also the tools a spike into Bandits needs.
-- The second, a big theme: the HGR "ray" -- loads and stores into HGR1/HGR2, and which tiles and structures they fall on (`TODO.md`).
+- Quick win: the callers of a routine at the prompt (`JSR` and `JMP`, with counts); and the labels in snake case (`LOOKUP_HGR`, `ROUTINE 001`).
+- Then the first slice of the shadow stack, observing only: an instrumentation through `run()` that records the stack operations, including direct writes to page 1, and a report of every `RTS` whose target lies behind no matching `JSR`. It also shows whether `run()` building instrumentations from the CPU is enough for memory hooks (`TODO.md`).
+- Then folding it into the routines: tail calls and stack jump tables, and what they mean for the dominator analysis and for stretches (below, and `TODO.md`).
+- Later: the listing editor (the prototype is ready), once labelling volume makes `label()` and `comment()` slow; the HGR "ray"; a spike into Bandits.
 - Alongside: pruning the `instrumentation-*.md` documents (inventory 2026-10-02, decisions open).
 
 ---
