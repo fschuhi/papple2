@@ -29,7 +29,7 @@ from papple2.workbench.basic_blocks_analysis import (
     back_edges,
     immediate_dominators,
 )
-from papple2.workbench.shell import dis, show_blocks, show_edges, show_loops
+from papple2.workbench.shell import dis, print_blocks, print_edges, print_loops
 from papple2.workbench.tiling import SPLIT_TILES_FILE, SPLIT_TRANSITIONS_FILE
 
 
@@ -168,10 +168,10 @@ def test_chapter_6_loops(walkthrough) -> None:
 
 
 def test_chapter_7_the_views_at_the_prompt(walkthrough, capsys) -> None:
-    # What show_blocks, show_edges and show_loops print, line by line.
-    show_blocks(walkthrough.graph, walkthrough.loops)
-    show_edges(walkthrough.graph, walkthrough.loops)
-    show_loops(walkthrough.loops)
+    # What print_blocks, print_edges and print_loops print, line by line.
+    print_blocks(walkthrough.graph, walkthrough.loops)
+    print_edges(walkthrough.graph, walkthrough.loops)
+    print_loops(walkthrough.loops)
 
     assert capsys.readouterr().out.splitlines() == [
         "block        runs  loop",

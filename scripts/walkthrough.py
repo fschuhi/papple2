@@ -25,8 +25,8 @@ loops) in its namespace afterwards:
 
     %run scripts/walkthrough.py
 
-After %run, show_blocks(graph, loops), show_edges(graph, loops) and
-show_loops(loops) print them with hex addresses, and dis(emulator, start,
+After %run, print_blocks(graph, loops), print_edges(graph, loops) and
+print_loops(loops) print them with hex addresses, and dis(emulator, start,
 end, labels) disassembles a range, with the names of NAMES
 (papple2.workbench.shell).
 """
@@ -51,9 +51,9 @@ from papple2.workbench.tiling import Tiling, address
 # namespace, ready for looking at the run.
 from papple2.workbench.shell import (  # noqa: F401
     dis,
-    show_blocks,
-    show_edges,
-    show_loops,
+    print_blocks,
+    print_edges,
+    print_loops,
 )
 
 # One folder per script, named after it.
