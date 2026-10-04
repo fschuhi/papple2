@@ -86,7 +86,6 @@ scripts/boot_lode_runner.py
 scripts/lr_count.py
 scripts/lr_overview.py
 scripts/lr_tiles.py
-#scripts/lr_trace_pc.py
 #scripts/speed_test.py
 scripts/walkthrough.py
 

@@ -1,6 +1,7 @@
 {
   "labels": {
     "6238": "ROUTINE 001",
+    "7a3e": "LOOKUP_HGR",
     "c000": "r:KBD w:CLR80COL",
     "c010": "r:KBDSTRB",
     "c030": "rw:SPKR",

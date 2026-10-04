@@ -4,7 +4,7 @@
 **Sources:** each idea is labelled by who brought it in: **[user]** (project owner), **[Claude]** (this `papple2` conversation), **[Astra]** (a separate conversation with GPT-6-Astra), **[Gemini]** (a separate conversation about storage speed).
 **Old code:** everything referred to as "old" is at the git tag `pre-redesign` (commit `0797250`).
 
-This document is raw material for a later design document. Order within sections is loose, and ideas may contradict each other.
+This document is raw material for a later design document. Order within sections is loose, and ideas may contradict each other. Since 2026-10-03, section 16 and the open question of how learnings persist across experiments are answered by the dossier (`README.md`, "Workbench"). Section 10 is the raw material for the shadow stack.
 
 ---
 

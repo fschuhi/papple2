@@ -2,7 +2,7 @@
 
 (Note: "I" in the following paragraphs refer to the user, "you" to the AI model.)
 
-**Status:** braindump from the session of 2026-10-01, collected, not decided. It holds the raw material for the workbench, the way `docs/instrumentation-ideas.md` held it for the instrumentation. The direction it serves is in `DIRECTION.md` (section 1: dynamic first, static fills the holes; section 2: the oracle only grades). Section 12 lists what is open.
+**Status:** braindump from the session of 2026-10-01, collected, not decided. It holds the raw material for the workbench, the way `docs/instrumentation-ideas.md` held it for the instrumentation. The direction it serves is in `DIRECTION.md` (section 1: dynamic first, static fills the holes; section 2: the oracle only grades). Section 12 lists what is open. Since 2026-10-04, `README.md` ("Workbench") describes what was built, which answers section 4 (session state: the dossier, and the commands' state in `shell.py`), section 5 (the command language: the commands, grown by use), section 12's question of where the session file lives (`dossiers/<program>/annotations.json`), and section 13 (the first slice: done, except `show()`). The dotted names of section 4 are still open.
 
 ---
 
