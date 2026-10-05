@@ -1,22 +1,22 @@
 #!/usr/bin/env python3
-"""Inline-Viewer und Editor für ein 6502-Disassembly-Listing.
+"""Inline viewer and editor for a 6502 disassembly listing.
 
-Unterstützt vertikale Navigation, Viewport-Scrolling und Inline-Editing
-von Label- und Kommentarfeldern. Verhindert Line-Wrapping durch
-Deaktivierung von Terminal-Auto-Wrap (\033[?7l) und horizontales Scrolling.
+Supports vertical navigation, viewport scrolling and inline editing of
+the label and comment fields. Prevents line wrapping by turning off the
+terminal's auto-wrap (\033[?7l) and by scrolling fields horizontally.
 
-Bedienung:
-  Im Navigationsmodus (NAV):
-    Pfeil HOCH / RUNTER : Zeilencursor bewegen (scrollt am Fensterrand)
-    Enter               : In den Editiermodus der Zeile wechseln
-    q oder Ctrl+C       : Beenden (gibt aktuelle Annotationen als JSON aus)
+Keys:
+  In navigation mode (NAV):
+    Arrow UP / DOWN     : move the line cursor (scrolls at the window edge)
+    Enter               : switch the line into edit mode
+    q or Ctrl+C         : quit (prints the current annotations as JSON)
 
-  Im Editiermodus (EDIT):
-    Tab                 : Zwischen 'Label' und 'Comment' umschalten
-    Pfeil LINKS / RECHTS: Cursor im Textfeld bewegen
-    Backspace           : Zeichen vor dem Cursor löschen
-    Zeicheneingabe      : Text an Cursor-Position einfügen
-    Esc oder Enter      : Editiermodus verlassen, zurück zu NAV
+  In edit mode (EDIT):
+    Tab                 : switch between 'Label' and 'Comment'
+    Arrow LEFT / RIGHT  : move the cursor in the text field
+    Backspace           : delete the character before the cursor
+    Typing              : insert text at the cursor
+    Esc or Enter        : leave edit mode, back to NAV
 """
 
 import json
@@ -115,7 +115,7 @@ DATA: list[ListingRow] = [
 
 
 def read_key(fd: int) -> str:
-    """Liest einen Tastendruck ungebuffert aus stdin."""
+    """Read one key press from stdin, unbuffered."""
     ch = os.read(fd, 1).decode("latin1", errors="ignore")
     if ch == "\x1b":
         seq = ""
@@ -150,30 +150,30 @@ def read_key(fd: int) -> str:
 
 
 def render_field(text: str, max_width: int, cursor_pos: int, active: bool) -> str:
-    """Rendert ein Textfeld auf exakt max_width Zeichen.
+    """Render a text field as exactly max_width characters.
 
-    Schneidet bei Bedarf ab, scrollt horizontal mit dem Cursor und hebt die
-    aktuelle Cursor-Position hervor, ohne dass Spalten nach rechts wegrutschen.
+    Cuts the text if needed, scrolls horizontally with the cursor and
+    highlights the cursor position, without pushing later columns to the right.
     """
     if max_width <= 0:
         return ""
 
     if not active:
-        # Im inaktiven Modus: linksbündig und exakt auf max_width auffüllen
+        # Inactive: left-aligned, padded to exactly max_width
         return text[:max_width].ljust(max_width)
 
-    # Im aktiven Modus: Cursor immer im sichtbaren Bereich halten
+    # Active: keep the cursor inside the visible part
     if cursor_pos < max_width:
         window_start = 0
     else:
         window_start = cursor_pos - max_width + 1
 
-    # Puffer mit Leerzeichen am Ende, damit der Cursor auch hinter dem letzten Zeichen steht
+    # One space at the end, so the cursor can also stand behind the last character
     extended_text = text + " "
     slice_end = window_start + max_width
     visible_chars = list(extended_text[window_start:slice_end])
 
-    # Auf exakt max_width auffüllen, falls der Text kürzer als die Spalte ist
+    # Pad to exactly max_width if the text is shorter than the column
     while len(visible_chars) < max_width:
         visible_chars.append(" ")
 
@@ -194,13 +194,13 @@ def run_editor(rows: list[ListingRow], window_size: int = 14) -> None:
     cursor_idx = 0
     top_offset = 0
 
-    mode = "NAV"  # "NAV" oder "EDIT"
+    mode = "NAV"  # "NAV" or "EDIT"
     edit_field = 0  # 0: Label, 1: Comment
     edit_pos = 0
 
     code_width = 16
 
-    # Platz unter der Prompt-Zeile reservieren
+    # Reserve space below the prompt line
     sys.stdout.write("\n" * window_size)
     sys.stdout.flush()
 
@@ -214,17 +214,17 @@ def run_editor(rows: list[ListingRow], window_size: int = 14) -> None:
         while True:
             cols = shutil.get_terminal_size((80, 24)).columns
 
-            # Label-Breite dynamisch nach dem längsten vorhandenen Label im Datensatz
+            # The label column follows the longest label in the rows
             max_label_len = max(len(r.label) for r in rows)
             label_width = max(12, max_label_len + 2)
 
-            # Viewport vertikal nachführen
+            # Move the viewport so the cursor stays visible
             if cursor_idx < top_offset:
                 top_offset = cursor_idx
             elif cursor_idx >= top_offset + window_size:
                 top_offset = cursor_idx - window_size + 1
 
-            # Zurück zum Anfang des Ausgabefensters springen
+            # Jump back to the top of the output window
             sys.stdout.write(f"\033[{window_size}A\r")
 
             for i in range(window_size):
@@ -240,7 +240,7 @@ def run_editor(rows: list[ListingRow], window_size: int = 14) -> None:
                 addr_str = f"{row.address:04x}  "
                 bytes_str = f"{row.hex_bytes:<8}  "
 
-                # Label-Feld
+                # Label field
                 is_label_active = is_current and mode == "EDIT" and edit_field == 0
                 label_disp = render_field(
                     row.label, label_width, edit_pos, is_label_active
@@ -248,11 +248,11 @@ def run_editor(rows: list[ListingRow], window_size: int = 14) -> None:
 
                 code_str = f"  {row.code:<{code_width}}"
 
-                # Restliche Breite für Kommentar-Feld ermitteln
+                # Width left for the comment field
                 fixed_prefix_len = 2 + len(row.prefix) + len(addr_str) + len(bytes_str) + label_width + len(code_str)
-                available_for_comment = max(0, cols - fixed_prefix_len - 4)  # 4 Zeichen für '  ; '
+                available_for_comment = max(0, cols - fixed_prefix_len - 4)  # 4 characters for '  ; '
 
-                # Kommentar-Feld
+                # Comment field
                 is_comment_active = is_current and mode == "EDIT" and edit_field == 1
                 if is_comment_active:
                     comment_disp = "  ; " + render_field(
@@ -269,7 +269,7 @@ def run_editor(rows: list[ListingRow], window_size: int = 14) -> None:
 
             sys.stdout.flush()
 
-            # Tastatur-Eingabe abfragen
+            # Read the next key
             key = read_key(fd)
 
             if mode == "NAV":
@@ -341,7 +341,7 @@ def run_editor(rows: list[ListingRow], window_size: int = 14) -> None:
     comments = {f"{r.address:04x}": r.comment for r in rows if r.comment}
     result = {"labels": labels, "comments": comments}
 
-    print("\n--- Aktueller Stand (kompatibel mit annotations.json) ---")
+    print("\n--- Current state (in the format of annotations.json) ---")
     print(json.dumps(result, indent=2))
 
 

@@ -61,12 +61,13 @@ from papple2.workbench.tiling import Tiling
 # looking at the run.
 from papple2.workbench.shell import (  # noqa: F401
     comment,
-    dis,
     label,
     listing,
+    listing_rows,
     loop_reports,
     print_blocks,
     print_edges,
+    print_listing,
     print_loops,
     print_routines,
     run,

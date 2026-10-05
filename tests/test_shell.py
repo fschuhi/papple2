@@ -24,12 +24,13 @@ from papple2.workbench.basic_blocks_analysis import (
 from papple2.workbench.shell import (
     assign_lanes,
     comment,
-    dis,
     draw_gutter,
     label,
     listing,
+    listing_rows,
     loop_reports,
     print_blocks,
+    print_listing,
     print_routines,
     run,
     set_current_run,
@@ -99,7 +100,7 @@ def test_no_arrows_no_gutter() -> None:
     assert draw_gutter(2, [], []) == ["", ""]
 
 
-def test_dis_lines_comments_up_after_the_widest_commented_instruction(
+def test_print_listing_lines_comments_up_after_the_widest_commented_instruction(
     make_emulator, capsys
 ) -> None:
     # Two spaces after the widest commented instruction, then "; ".
@@ -112,7 +113,11 @@ def test_dis_lines_comments_up_after_the_widest_commented_instruction(
             RTS
     """)
 
-    dis(emulator, 0x6000, 0x6006, comments={0x6000: "clear", 0x6005: "done"})
+    print_listing(
+        listing_rows(
+            emulator, 0x6000, 0x6006, comments={0x6000: "clear", 0x6005: "done"}
+        )
+    )
 
     assert capsys.readouterr().out.splitlines() == [
         "6000  a9 00     LDA #$00  ; clear",

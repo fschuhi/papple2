@@ -8,7 +8,7 @@ output line of its own.
 
 Ranges are half-open, as everywhere in the workbench: start is the first
 byte, end the first byte behind. So a block printed as 6004-6007 is
-dis(emulator, 0x6004, 0x6007).
+listing_rows(emulator, 0x6004, 0x6007).
 
 The reports folder is the home of an experiment: write_report() writes
 there. use_reports_folder() sets it, in a recipe or at the prompt. There is
@@ -35,6 +35,7 @@ the objects they print instead, for any graph.
 """
 
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
 
@@ -346,7 +347,7 @@ def show_callers(entry: int | str) -> None:
 
 
 def listing(start: int | str, end: int | str | None = None) -> None:
-    """dis() of the current run's memory from start up to, not including,
+    """The listing of the current run's memory from start up to, not including,
     end, with the arrows of the whole run and the dossier's labels and
     comments. start and end are addresses or labels.
 
@@ -361,7 +362,7 @@ def listing(start: int | str, end: int | str | None = None) -> None:
     else:
         start = address_of(start)
         end = address_of(end)
-    dis(
+    rows = listing_rows(
         run_emulator,
         start,
         end,
@@ -369,6 +370,7 @@ def listing(start: int | str, end: int | str | None = None) -> None:
         run_graph,
         annotations.comments if annotations is not None else None,
     )
+    print_listing(rows)
 
 
 def loop_reports(entry: int | str) -> None:
@@ -548,58 +550,98 @@ def draw_gutter(
     return ["".join(row) for row in cells]
 
 
-def dis(
+@dataclass
+class ListingRow:
+    """One line of a listing, its pieces kept apart, so that each caller
+    lays them out as it needs: print_listing() prints them, the listing
+    editor shows them in columns of its own. address is None for the empty
+    line before a .byte block; there, every field but the gutter is empty."""
+
+    address: int | None
+    gutter: str
+    hex_bytes: str
+    label: str
+    instruction: str
+    comment: str
+
+
+def listing_rows(
     emulator: Emulator,
     start: int,
     end: int,
     labels: dict[int, str] | None = None,
     graph: BlockGraph | None = None,
     comments: dict[int, str] | None = None,
-) -> None:
-    """Print the instructions from start up to, not including, end: address,
-    bytes, instruction. Read from the emulator's memory as it is now, i.e.
-    after the run, past anything that watches the CPU.
+) -> list[ListingRow]:
+    """The rows of a listing from start up to, not including, end, one per
+    instruction: address, bytes, instruction. Read from the emulator's
+    memory as it is now, i.e. after the run, past anything that watches the
+    CPU. Prints nothing; print_listing() prints the rows.
 
     With labels, an operand whose address has a name shows the name
-    (JSR SUB instead of JSR $6010). An instruction whose own
-    address has a name shows it in a column of its own, before the
-    instruction. The column is as wide as the longest name in the range,
-    and left out if no address in the range has a name.
+    (JSR SUB instead of JSR $6010), and an instruction whose own address
+    has a name carries it in its label.
 
-    With comments, an instruction whose own address has a comment shows
-    it behind the instruction, after "; ". The comments line up two spaces
-    after the widest commented instruction in the range, so .byte lines
-    don't push them out; lines without a comment end with their
-    instruction.
+    With comments, an instruction whose own address has a comment carries
+    it in its comment.
 
-    With graph, the jumps the run took are drawn as arrows in a gutter on
-    the left: every edge whose target is not simply the next instruction
-    (taken branches, JMPs). Glides, fall-throughs and calls are not drawn.
-    An arrow is drawn only if both of its ends lie in the range.
+    With graph, the jumps the run took are drawn as arrows in the gutter:
+    every edge whose target is not simply the next instruction (taken
+    branches, JMPs). Glides, fall-throughs and calls are not drawn. An
+    arrow is drawn only if both of its ends lie in the range.
 
-    An instruction that starts before end is printed whole, even if its
+    An instruction that starts before end is listed whole, even if its
     operand reaches past end. A block's end always lies behind its last
     instruction, so this only shows for ranges that cut an instruction.
     """
     disassembler = Disassembler(emulator.cpu, labels, comments)
     # disassemble() takes an inclusive end.
     rows = disassembler.disassemble(start, end - 1)
-    width = max((len(row[2]) for row in rows), default=0)
-    instructions = [f"{row[3]} {row[4]}".rstrip() for row in rows]
-    instruction_width = max(
-        (len(text) for row, text in zip(rows, instructions) if row[5]), default=0
-    )
     gutter = draw_gutter(len(rows), *arrows_in(rows, graph))
-    for row, prefix, instruction in zip(rows, gutter, instructions):
-        row_address, row_bytes, label, _mnemonic, _operand, comment = row
-        if not row_address:  # the empty line before a .byte block
-            print(prefix.rstrip())
+    result = []
+    for row, prefix in zip(rows, gutter):
+        row_address, row_bytes, label, mnemonic, operand, comment = row
+        if row_address:
+            # The disassembler gives "$6004": four hex digits behind the "$".
+            address = int(row_address.removeprefix("$"), 16)
+        else:  # the empty line before a .byte block
+            address = None
+        result.append(
+            ListingRow(
+                address=address,
+                gutter=prefix,
+                hex_bytes=row_bytes,
+                label=label,
+                instruction=f"{mnemonic} {operand}".rstrip(),
+                comment=comment,
+            )
+        )
+    return result
+
+
+def print_listing(rows: list[ListingRow]) -> None:
+    """Print the rows listing_rows() gives: gutter, address, bytes, label,
+    instruction, comment.
+
+    The label column is as wide as the longest label in the rows, and left
+    out if no row has a label. The comments line up two spaces after the
+    widest commented instruction, so .byte lines don't push them out; lines
+    without a comment end with their instruction.
+    """
+    width = max((len(row.label) for row in rows), default=0)
+    instruction_width = max(
+        (len(row.instruction) for row in rows if row.comment), default=0
+    )
+    for row in rows:
+        if row.address is None:  # the empty line before a .byte block
+            print(row.gutter.rstrip())
             continue
-        name_column = f"{label:<{width}}  " if width else ""
-        if comment:
-            instruction = f"{instruction:<{instruction_width}}  ; {comment}"
+        name_column = f"{row.label:<{width}}  " if width else ""
+        instruction = row.instruction
+        if row.comment:
+            instruction = f"{instruction:<{instruction_width}}  ; {row.comment}"
         print(
-            f"{prefix}{row_address.removeprefix('$'):<4}  {row_bytes:<8}  "
+            f"{row.gutter}{row.address:04x}  {row.hex_bytes:<8}  "
             f"{name_column}{instruction}".rstrip()
         )
 

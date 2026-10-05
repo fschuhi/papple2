@@ -26,9 +26,9 @@ loops) in its namespace afterwards:
     %run scripts/walkthrough.py
 
 After %run, print_blocks(graph, loops), print_edges(graph, loops) and
-print_loops(loops) print them with hex addresses, and dis(emulator, start,
-end, labels) disassembles a range, with the names of NAMES
-(papple2.workbench.shell).
+print_loops(loops) print them with hex addresses, and
+print_listing(listing_rows(emulator, start, end, labels)) disassembles a
+range, with the names of NAMES (papple2.workbench.shell).
 """
 
 from pathlib import Path
@@ -50,9 +50,10 @@ from papple2.workbench.tiling import Tiling, address
 # Not used here: imported so that IPython's %run leaves them in its
 # namespace, ready for looking at the run.
 from papple2.workbench.shell import (  # noqa: F401
-    dis,
+    listing_rows,
     print_blocks,
     print_edges,
+    print_listing,
     print_loops,
 )
 

@@ -29,7 +29,13 @@ from papple2.workbench.basic_blocks_analysis import (
     back_edges,
     immediate_dominators,
 )
-from papple2.workbench.shell import dis, print_blocks, print_edges, print_loops
+from papple2.workbench.shell import (
+    listing_rows,
+    print_blocks,
+    print_edges,
+    print_listing,
+    print_loops,
+)
 from papple2.workbench.tiling import SPLIT_TILES_FILE, SPLIT_TRANSITIONS_FILE
 
 
@@ -199,9 +205,9 @@ def test_chapter_7_the_views_at_the_prompt(walkthrough, capsys) -> None:
 
 def test_chapter_8_one_block_disassembled(walkthrough, capsys) -> None:
     # The block 6004-6007 is one instruction: the JSR. The range is
-    # half-open, so the end the block shows is the end dis() takes.
+    # half-open, so the end the block shows is the end listing_rows() takes.
     # Without names, the operand shows the address.
-    dis(walkthrough.emulator, 0x6004, 0x6007)
+    print_listing(listing_rows(walkthrough.emulator, 0x6004, 0x6007))
 
     assert capsys.readouterr().out.splitlines() == [
         "6004  20 10 60  JSR $6010",
@@ -214,7 +220,8 @@ def test_chapter_9_the_whole_program_disassembled(walkthrough, capsys) -> None:
     # the column before their own instruction, and in the operands that
     # point at them. INC $10 keeps its address: the disassembler doesn't name
     # zero-page operands yet.
-    dis(walkthrough.emulator, 0x6000, 0x6014, walkthrough.labels)
+    rows = listing_rows(walkthrough.emulator, 0x6000, 0x6014, walkthrough.labels)
+    print_listing(rows)
 
     assert capsys.readouterr().out.splitlines() == [
         "6000  a0 02            LDY #$02",
@@ -232,18 +239,19 @@ def test_chapter_9_the_whole_program_disassembled(walkthrough, capsys) -> None:
 
 
 def test_chapter_10_the_jumps_as_arrows(walkthrough, capsys) -> None:
-    # With the graph, dis() draws the jumps the run took: the two BNEs
+    # With the graph, listing_rows() draws the jumps the run took: the two BNEs
     # jumping back, and the JMP over SUB. The inner loop's arrow lies
     # inside the outer loop's, nearer the code. The JMP's arrow shares a
     # lane with the inner loop's, since the two don't overlap. Calls are
     # not drawn: JSR SUB already says where it goes.
-    dis(
+    rows = listing_rows(
         walkthrough.emulator,
         0x6000,
         0x6014,
         walkthrough.labels,
         walkthrough.graph,
     )
+    print_listing(rows)
 
     assert capsys.readouterr().out.splitlines() == [
         "      6000  a0 02            LDY #$02",
