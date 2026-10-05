@@ -33,6 +33,7 @@ from papple2.workbench.shell import (
     print_listing,
     print_routines,
     run,
+    save_edit,
     set_current_run,
     show_blocks,
     show_callers,
@@ -239,6 +240,59 @@ def test_the_dossier_commands_stop_without_a_dossier(
 ) -> None:
     with pytest.raises(RuntimeError, match="use_dossier"):
         command(*arguments)
+
+
+def test_save_edit_saves_a_label_and_a_comment_at_once(
+    tmp_path: Path, no_dossier: None
+) -> None:
+    Annotations(tmp_path).label(0xC000, "KBD")  # not new: no seeding
+    use_dossier(tmp_path)
+    assert save_edit(0x6238, "label", "LOAD_LEVEL") is None
+    assert save_edit(0x627e, "comment", "two 4-bit values per byte") is None
+    # A second Annotations reads the file: the changes were saved at once.
+    saved = Annotations(tmp_path)
+    assert saved.labels == {0x6238: "LOAD_LEVEL", 0xC000: "KBD"}
+    assert saved.comments == {0x627e: "two 4-bit values per byte"}
+
+
+def test_save_edit_with_empty_text_removes_the_label_or_comment(
+    tmp_path: Path, no_dossier: None
+) -> None:
+    Annotations(tmp_path).label(0x6238, "LOAD_LEVEL")
+    Annotations(tmp_path).comment(0x627e, "two 4-bit values per byte")
+    use_dossier(tmp_path)
+    assert save_edit(0x6238, "label", "") is None
+    assert save_edit(0x627e, "comment", "") is None
+    saved = Annotations(tmp_path)
+    assert saved.labels == {}
+    assert saved.comments == {}
+
+
+def test_save_edit_with_unchanged_text_writes_nothing(
+    tmp_path: Path, no_dossier: None
+) -> None:
+    # Leaving a field as it was is no change, also for an empty field:
+    # uncomment() would refuse an address without a comment.
+    Annotations(tmp_path).label(0x6238, "LOAD_LEVEL")
+    use_dossier(tmp_path)
+    # Removed after opening: any write would bring the file back.
+    (tmp_path / "annotations.json").unlink()
+    assert save_edit(0x6238, "label", "LOAD_LEVEL") is None
+    assert save_edit(0x627e, "comment", "") is None
+    assert not (tmp_path / "annotations.json").exists()
+
+
+def test_save_edit_returns_why_a_label_was_refused(
+    tmp_path: Path, no_dossier: None
+) -> None:
+    # The text is already the label of another address: refused, and the
+    # reason comes back for the editor's message line.
+    Annotations(tmp_path).label(0x6238, "LOAD_LEVEL")
+    use_dossier(tmp_path)
+    assert save_edit(0x6000, "label", "LOAD_LEVEL") == (
+        "LOAD_LEVEL is already the label of $6238"
+    )
+    assert Annotations(tmp_path).labels == {0x6238: "LOAD_LEVEL"}
 
 
 @pytest.fixture

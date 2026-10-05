@@ -361,24 +361,32 @@ class ListingRow:
     comment: str
 
 
-def current_listing_rows(
+def listing_range(
     start: int | str, end: int | str | None = None
-) -> list[ListingRow]:
-    """The rows of the current run's memory from start up to, not including,
-    end, with the arrows of the whole run and the dossier's labels and
-    comments. start and end are addresses or labels.
+) -> tuple[int, int]:
+    """The addresses from start up to, not including, end. start and end are
+    addresses or labels.
 
-    With start alone, start is a routine's entry, and the rows cover the
+    With start alone, start is a routine's entry, and the range covers the
     whole routine: from its lowest block to its highest, so any gap between
     its blocks shows too, e.g. code the run never reached."""
     found = current_routines()
     if end is None:
         blocks = found.graphs[routine_at(start)].blocks.values()
-        start = min(block.start for block in blocks)
-        end = max(block.end for block in blocks)
-    else:
-        start = address_of(start)
-        end = address_of(end)
+        return (
+            min(block.start for block in blocks),
+            max(block.end for block in blocks),
+        )
+    return address_of(start), address_of(end)
+
+
+def current_listing_rows(
+    start: int | str, end: int | str | None = None
+) -> list[ListingRow]:
+    """The rows of the current run's memory in the range listing_range()
+    gives, with the arrows of the whole run and the dossier's labels and
+    comments."""
+    start, end = listing_range(start, end)
     return listing_rows(
         run_emulator,
         start,
@@ -397,15 +405,47 @@ def listing(start: int | str, end: int | str | None = None) -> None:
 
 def edit(start: int | str, end: int | str | None = None) -> None:
     """Open the listing editor on the same lines listing() prints. start and
-    end as for current_listing_rows(). Labels and comments can be changed in
-    place; nothing is saved yet: on quitting, the editor prints them.
+    end as for current_listing_rows(). Every label and comment changed there
+    is saved to the current dossier at once, through save_edit().
 
     Needs a real terminal, so it doesn't work on Windows or under pytest."""
     # Imported here, not at the top: the editor needs termios, which Windows
     # doesn't have, and shell.py must load there too.
     from papple2.workbench.listing_editor import run_editor
 
-    run_editor(current_listing_rows(start, end))
+    # Stop before the editor opens, not at the first save.
+    current_annotations()
+    # Turned into addresses once: the editor reloads the rows after every
+    # save, and a label given as start could be the one just renamed.
+    first, behind = listing_range(start, end)
+
+    def load_rows() -> list[ListingRow]:
+        return current_listing_rows(first, behind)
+
+    run_editor(load_rows, save_edit)
+
+
+def save_edit(address: int, field: str, text: str) -> str | None:
+    """Save one field the listing editor changed: field is "label" or
+    "comment". Empty text removes the field's entry; text equal to the
+    dossier's changes nothing, not even the file. Returns why the dossier
+    refused the change (a label already used elsewhere), or None."""
+    dossier = current_annotations()
+    entries = dossier.labels if field == "label" else dossier.comments
+    if text == entries.get(address, ""):
+        return None
+    try:
+        if field == "label" and text:
+            dossier.label(address, text)
+        elif field == "label":
+            dossier.unlabel(address)
+        elif text:
+            dossier.comment(address, text)
+        else:
+            dossier.uncomment(address)
+    except ValueError as refusal:
+        return str(refusal)
+    return None
 
 
 def loop_reports(entry: int | str) -> None:

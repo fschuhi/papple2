@@ -1,7 +1,11 @@
 {
   "labels": {
     "6238": "ROUTINE 001",
-    "7a3e": "LOOKUP_HGR",
+    "6252": ".loop1",
+    "625a": ".loop2",
+    "6269": ".loop3",
+    "627e": ".loop4",
+    "7a3e": "lookup_hgr",
     "8a69": "four_blocks",
     "8af2": "first_tail_call",
     "c000": "r:KBD w:CLR80COL",

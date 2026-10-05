@@ -9,25 +9,33 @@ Keys:
   In navigation mode (NAV):
     Arrow UP / DOWN     : move the line cursor (scrolls at the window edge)
     Enter               : switch the line into edit mode
-    q or Ctrl+C         : quit (prints the current annotations as JSON)
+    q or Ctrl+C         : quit
 
   In edit mode (EDIT):
-    Tab                 : switch between 'Label' and 'Comment'
+    Tab                 : save the field, switch between 'Label' and 'Comment'
     Arrow LEFT / RIGHT  : move the cursor in the text field
     Backspace           : delete the character before the cursor
     Typing              : insert text at the cursor
-    Esc or Enter        : leave edit mode, back to NAV
+    Enter               : save the field, back to NAV
+    Esc                 : back to NAV without saving: the old text returns
+
+Saving goes through the save_edit function run_editor() is given, and after
+every save the rows are loaded again, so a new label also shows in the
+operands that point at its address. A refused change (e.g. a label already
+used elsewhere) shows its reason in a line under the window, until the next
+key; the field keeps the typed text, to fix it or to leave with Esc.
 
 The empty line before a .byte block is drawn empty; the cursor skips it.
 """
 
-import json
+import copy
 import os
 import select
 import shutil
 import sys
 import termios
 import tty
+from collections.abc import Callable
 
 from papple2.workbench.shell import ListingRow
 
@@ -194,7 +202,15 @@ def next_row(rows: list[ListingRow], index: int, step: int) -> int:
     return index
 
 
-def run_editor(rows: list[ListingRow], window_size: int = 14) -> None:
+def run_editor(
+    load_rows: Callable[[], list[ListingRow]],
+    save_edit: Callable[[int, str, str], str | None],
+    window_size: int = 14,
+) -> None:
+    """Show the rows load_rows() gives and let labels and comments be
+    edited. save_edit(address, field, text) saves one field ("label" or
+    "comment") and returns why it refused, or None."""
+    rows = load_rows()
     if not any(row.address is not None for row in rows):
         print("Nothing to edit: no lines in this range.")
         return
@@ -207,11 +223,16 @@ def run_editor(rows: list[ListingRow], window_size: int = 14) -> None:
     mode = "NAV"  # "NAV" or "EDIT"
     edit_field = 0  # 0: Label, 1: Comment
     edit_pos = 0
+    # Why the last save was refused; shown under the window until the next key.
+    message = ""
 
     code_width = 16
 
+    # The window plus one line for the message.
+    screen_lines = window_size + 1
+
     # Reserve space below the prompt line
-    sys.stdout.write("\n" * window_size)
+    sys.stdout.write("\n" * screen_lines)
     sys.stdout.flush()
 
     fd = sys.stdin.fileno()
@@ -235,7 +256,7 @@ def run_editor(rows: list[ListingRow], window_size: int = 14) -> None:
                 top_offset = cursor_idx - window_size + 1
 
             # Jump back to the top of the output window
-            sys.stdout.write(f"\033[{window_size}A\r")
+            sys.stdout.write(f"\033[{screen_lines}A\r")
 
             for i in range(window_size):
                 row_idx = top_offset + i
@@ -281,10 +302,12 @@ def run_editor(rows: list[ListingRow], window_size: int = 14) -> None:
                 line_content = f"{indicator}{row.gutter}{addr_str}{bytes_str}{label_disp}{code_str}{comment_disp}"
                 sys.stdout.write(f"\033[2K{line_content}\r\n")
 
+            sys.stdout.write(f"\033[2K  {message[: max(0, cols - 3)]}\r\n")
             sys.stdout.flush()
 
             # Read the next key
             key = read_key(fd)
+            message = ""
 
             if mode == "NAV":
                 if key in ("q", "CTRL_C"):
@@ -301,12 +324,25 @@ def run_editor(rows: list[ListingRow], window_size: int = 14) -> None:
             elif mode == "EDIT":
                 current_row = rows[cursor_idx]
 
-                if key in ("ESC", "ENTER"):
+                if key in ("ENTER", "TAB"):
+                    field = "label" if edit_field == 0 else "comment"
+                    text = current_row.label if edit_field == 0 else current_row.comment
+                    message = save_edit(current_row.address, field, text) or ""
+                    if not message:
+                        # Saved: load again, so operands show a new label. A
+                        # label never changes the number of rows, so
+                        # cursor_idx stays on the same line.
+                        rows = load_rows()
+                        if key == "ENTER":
+                            mode = "NAV"
+                        else:
+                            edit_field = 1 - edit_field
+                            current_text = rows[cursor_idx].label if edit_field == 0 else rows[cursor_idx].comment
+                            edit_pos = len(current_text)
+                elif key == "ESC":
+                    # Not saved: loading again brings the old text back.
+                    rows = load_rows()
                     mode = "NAV"
-                elif key == "TAB":
-                    edit_field = 1 - edit_field
-                    current_text = current_row.label if edit_field == 0 else current_row.comment
-                    edit_pos = len(current_text)
                 elif key == "LEFT":
                     if edit_pos > 0:
                         edit_pos -= 1
@@ -349,14 +385,22 @@ def run_editor(rows: list[ListingRow], window_size: int = 14) -> None:
         termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
         sys.stdout.flush()
 
-    labels = {f"{r.address:04x}": r.label for r in rows if r.label}
-    comments = {f"{r.address:04x}": r.comment for r in rows if r.comment}
-    result = {"labels": labels, "comments": comments}
 
-    print("\n--- Current state (in the format of annotations.json) ---")
-    print(json.dumps(result, indent=2))
+def load_data() -> list[ListingRow]:
+    """Stand-in for edit()'s load_rows: copies of DATA, so that Esc brings
+    the saved text back, not the typed one."""
+    return [copy.copy(row) for row in DATA]
+
+
+def save_into_data(address: int, field: str, text: str) -> str | None:
+    """Stand-in for edit()'s save_edit: keeps the change in DATA, refuses
+    nothing. Operands don't change: DATA has no disassembler behind it."""
+    for row in DATA:
+        if row.address == address:
+            setattr(row, field, text)
+    return None
 
 
 if __name__ == "__main__":
     height = int(sys.argv[1]) if len(sys.argv) > 1 else 14
-    run_editor(DATA, window_size=height)
+    run_editor(load_data, save_into_data, window_size=height)
