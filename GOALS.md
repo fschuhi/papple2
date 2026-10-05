@@ -8,14 +8,13 @@
 
 ## 📍 Current Session Pointer
 
-**Where we are:** `papple2` is the machinery for reverse engineering Apple II games by running them, with Lode Runner as the worked example (`DIRECTION.md`: dynamic first, static fills the holes; the oracle only grades). The workbench is used through commands in `shell.py`, the contract between `papple2`'s developers and its reverse engineers; experiments (`scripts/lr_*.py`) are recipes of the same commands I type at the prompt (`README.md`, "Workbench"). Finds of my own: `lookup_hgr` (`$7a3e`), and through `show_callers()` its four callers, the twins `8336`/`83a7`, `88d7` and `four_blocks` (`8a69`) with its `first_tail_call` at `8af2`. **2026-10-04, second session:** a first shadow stack, observing only (`StackTracking`, `lr_returns.csv`), built, tested and run -- and unreadable for me: addresses only, no labels, and code I don't understand. The same path that ended Robotron (`HISTORY.md`, 2026-10-04). Orientation comes before more analysis.
+**Where we are:** `papple2` is the machinery for reverse engineering Apple II games by running them, with Lode Runner as the worked example (`DIRECTION.md`: dynamic first, static fills the holes; the oracle only grades). The workbench is used through commands in `shell.py`, the contract between `papple2`'s developers and its reverse engineers; experiments (`scripts/lr_*.py`) are recipes of the same commands I type at the prompt (`README.md`, "Workbench"). Finds of my own: `lookup_hgr` (`$7a3e`), and through `show_callers()` its four callers, the twins `8336`/`83a7`, `88d7` and `four_blocks` (`8a69`) with its `first_tail_call` at `8af2`. **2026-10-05:** the listing editor works: `edit()` at the IPython prompt, labels and comments saved to the dossier at once, local labels (`.loop1`) and routine labels (`routine_6238`). The project documents have grown past use.
 
 **What's next:**
-- First, orientation: the listing editor (`TODO.md`, "Dossier and prompt": the prototype is ready, steps 1 to 4 are specified), so that labels and comments come at the speed of reading. Confirm at the start of the session that this is the next step, and size its first slice small.
-- With it, small views that give a sense of location: `routine_of(address)` (the routine or routines an address lies in), and labels wherever an address is printed.
+- First, a clean-up session that advances nothing: cut the project artefacts down hard -- `TODO.md`, `DIRECTION.md`, `docs/instrumentation-design.md`, `docs/instrumentation-ideas.md`, `docs/instrumentation-map.md`, `docs/workbench-ideas.md`.
+- Then, small views that give a sense of location: `routine_of(address)` (the routine or routines an address lies in), and labels wherever an address is printed.
 - The shadow stack stays as it is: observing, tested, its report under git. Before it is extended, `stack_tracking.py` is rewritten in plain style and read together, line by line (`TODO.md`, "Workbench").
 - Later: folding the shadow stack into the routines (tail calls, stack jump tables); the HGR "ray"; a spike into Bandits.
-- Alongside: pruning the `instrumentation-*.md` documents (inventory 2026-10-02, decisions open).
 
 ---
 

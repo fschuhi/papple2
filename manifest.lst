@@ -17,7 +17,7 @@ tmp/project_tree.txt
 README.md
 GOALS.md
 TODO.md
-#HISTORY.md
+HISTORY.md
 
 # dossiers
 dossiers/lode_runner/annotations.json
@@ -52,9 +52,9 @@ docs/reports/lr_overview/lr_overview.txt
 
 # working documents for finding the direction `papple2` wants to take
 DIRECTION.md
-#docs/instrumentation-design.md
+docs/instrumentation-design.md
 docs/instrumentation-ideas.md
-#docs/instrumentation-map.md
+docs/instrumentation-map.md
 docs/workbench-ideas.md
 #docs/diagrams/inner-loop.html
 #docs/diagrams/memory-access.svg

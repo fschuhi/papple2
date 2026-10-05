@@ -11,6 +11,16 @@
 
 ---
 
+## 2026-10-05 -- The listing editor: labels and comments at the speed of reading; local labels
+
+- The user's prototype, an editor in the raw terminal (`termios`), became a command in steps. First translated to English. Then `dis()` split into `listing_rows()`, which returns `ListingRow`s (gutter, address, bytes, label, instruction, comment) and prints nothing, and `print_listing()`, which prints them exactly as `dis()` did: the four tests that pin the output kept their expected lines. `listing()` prints `current_listing_rows()`; `edit(start, end=None, height=25)` opens the editor on the same rows. `edit()` imports the editor only when called, since Windows has no `termios`. The prototype's run inside IPython, by the user, answered the open question first: a raw terminal works while IPython runs.
+- Saving through: `edit()` hands `run_editor()` two functions, `load_rows` and `save_edit`. `Enter` saves the field (`Tab` too, and switches to the other field), then the rows are loaded again, so an operand pointing at a new label shows it at once. `Esc` leaves without saving: the reload brings the old text back. A refusal shows in a message line under the window until the next key; the field keeps the typed text. Empty text removes a label or comment; unchanged text writes nothing. The empty line before a `.byte` block is drawn empty and skipped. The user's first saves, watched in PyCharm's Commit view: one line per change in `annotations.json`, and `BPL .loop1` in the listing.
+- The label rule, in `Annotations.label()`: a global label starts with a letter or `_`, then letters, digits, `_` and `:` (the colon groups, as in `rw:HIRES`); a local label is stored by its full name, a global label, one dot, then letters, digits and `_`. No spaces. `r:KBD w:CLR80COL` became `r:KBD:w:CLR80COL`.
+- Local labels, decided by the user: stored as unique full names (`routine_6238.loop1`), so the dossier doesn't change when the rules for typing or showing them change; typed and shown as `.loop1`. A local label belongs to the nearest global label above it, right now: `with_owners()` rebuilds every local name on every label change, stateless. Adding a global label splits a scope, renaming one carries its locals along, and a removal (or a global label turned local) that would give two labels one name is refused. The listing shows `.loop1` in the label column and in operands within the same scope, the full name across scopes. A full name typed with the wrong owner is refused, tentatively.
+- Routine labels: `set_current_run()` gives every routine entry without a label `routine_` plus its address, e.g. `routine_6238`, through `add_labels()`, so names given by hand stay. A global label at every entry keeps local labels from falling into the routine above. Named by address, not by number, so the names survive changes to the analysis 
+
+---
+
 ## 2026-10-04 -- `show_callers()`; a first shadow stack, and the lesson: orientation before analysis
 
 - `show_callers(entry)` in `shell.py`: one line per call site that leaps into a routine (`JSR`, `JMP`, `JMP ()`), with its count and the routines whose blocks hold the site, with labels. `set_current_run()` now keeps the run's split transitions (`shell.run_transitions`); `run()` forgets them. `JMP`s count as callers for now, so the shadow stack's later view can be compared with this one. The first run, by the user: `LOOKUP_HGR` is called from eight sites in four routines, the twins `8336` and `83a7`, and `88d7` and `8a69`, which share their four sites. The user read the listings of all three and labelled `8a69` `four_blocks` and `8af2` `first_tail_call` (a `JMP` into `8af6`, which is also called by `JSR`). The command was missing from the experiment's import list at first; the hand-picked list stays, as a feature: each experiment chooses what it offers at the prompt.
@@ -18,8 +28,6 @@
 - The shadow stack's first slice, observing only, in three steps. `StackTracking` (`papple2.workbench.stack_tracking`, named by the `-ing` convention) uses `after_instruction` only and reacts to `JSR` and `RTS`. A `JSR` opens a frame (call site, entry, expected return), keyed by `SP` before the call; an `RTS` looks for the frame at the `SP` the CPU is back at: matched, redirected (the return address was rewritten), unmatched (no frame there, e.g. `PHA`/`PHA`/`RTS`); frames deeper than that are abandoned. `write_reports()` writes `lr_returns.csv`, one row per (call site, entry, return site, return target, outcome) with a count, the tricks first, then matched, then the frames still open when the run stopped. `stack_tracking_reports()` in `shell.py`, the twin of `tiling_reports()`. `lr_basic_blocks_analysis.py` runs `StackTracking` next to `Tiling` and writes the report. Tests on small programs, one per outcome, plus a tail call.
 - The first `lr_returns.csv` of the attract play: 243 rows, 146 matched, 51 unmatched, 43 abandoned, 1 redirected, 2 open. In it: `lookup_hgr`'s eight call sites, all matched; `four_blocks` returns 2,468 times by its own `RTS` at `8af5` and 7,682 times by `8af6`'s `RTS` at `8b0b`, which is the tail call at `8af2` -- but only by inference, since the report records no `JMP`; one `RTS` at `7b23` going to fourteen places, a dispatcher. Unexplained: most unmatched rows pair with an abandoned frame of the same count, whose expected return is the unmatched row's target (the frame `88cb -> 88d7`, abandoned 169 times; unmatched returns to `88ce`, 86 + 23 + 60 times). Either Lode Runner moves return addresses in those routines, or the rule for abandoning frames is too eager.
 - Direction reversed: orientation before analysis; see `GOALS.md`, "Strategic questions".
-- Working agreements: every patch comes with its `git add` and `git commit` lines; the project documents are updated at the end of the session.
-- All green at every commit.
 
 ---
 
@@ -30,7 +38,6 @@
 - An instrumentation typed at the prompt (`Visits`, counting where instructions start) went through `run()` next to `Tiling`, with no change to `papple2`. It counts opcode fetches only; operands need the instruction's length, which `lr_count.py` knows.
 - Direction, decided together: the shadow stack before the listing editor. Finding `lookup_hgr` was slow at spotting and reading, not at typing the label; the shadow stack makes the routines trustworthy that every tool stands on (tail calls pull a callee's blocks into the caller's graph, stack jumps leave their targets among the pieces in no routine). Order: the callers list as a quick win, a first observing slice of the shadow stack, then folding it into the routines. The editor follows when labelling volume makes `label()` slow; its prototype is ready.
 - Roles named: the user works in three hats, reverse engineer, product manager and developer, each with its own question and its own artefacts (`README.md`, glossary). In conversation a prefix names the hat ("RE:", "PM:", "Dev:").
-- All green at every commit that stayed.
 
 ---
 
@@ -45,7 +52,6 @@
 - Step 3 benched by the user: `lr_count.py` and `lr_tiles.py` stay as frozen early experiments, as reminders and placeholders; `lr_trace_pc.py` and its `make` target removed.
 - `README.md`: the Workbench section around experiments, recipes and commands, the namespace after `%run` as a table, and a glossary.
 - Incidents. `make patch` applies every patch in the repo root at once; two patches delivered together got applied together, so the per-patch commits split differently: `b661307` and `8994080` hold the `print_` rename under the current run's message (pushed, left as they are), and a local commit mixing both 2c patches was reset (hard, to `29610ab`) and the patches applied again one at a time. Since then one patch per message, with its `git add` and `git commit`. A test's stand-in program hit the known assembler bug (`TODO.md`, 2026-09-28) twice; Claude guessed at the cause instead of reading `TODO.md` first.
-- All green at every commit that stayed.
 
 ---
 
@@ -59,7 +65,6 @@
 - `--entry` removed. `write_loop_reports()` puts the graph's entry into the file names (`lr_loops_6238.csv`, `lr_loop_members_6238.csv`; the walkthrough writes `lr_loops_6000.csv`). At the prompt, `loop_reports(entry)` writes them for one routine.
 - The product view, stated by the user: the `lr-` targets are prepackaged analyses. Each leaves reports behind that carry meaning on their own, so that the reverse engineering can be done with an LLM (Gemini) reading them, without `papple2`'s code. IPython is for ad hoc exploration and never replaces them. This project builds the machinery. First consequence: `make lr-basic-blocks-analysis` writes into `docs/reports/lr_basic_blocks_analysis/`, under git, with the loop reports of the start, `$0800`, on every run; `--loop-reports 6238 ...` adds further routines.
 - The listing editor, a first prototype by the user, in half an hour: `src/papple2/workbench/listing_editor.py` opens inline below the prompt on `LOAD_LEVEL` (typed in as data, with its arrows), scrolls, edits a line's label and comment, and prints the result in the dossier's format. It shows that the `fzf`-style editor of `TODO.md` works in practice; it feels like SourceGen, nearer to the machine. Next steps in `TODO.md`: `Esc` cancels, lines generated from the disassembler, changes through `Annotations`, started from the prompt.
-- All green after every step.
 
 ---
 
@@ -72,7 +77,6 @@
 - `dis()` shows comments behind the instructions, lined up two spaces after the widest commented instruction in the range.
 - At the prompt, after `%run scripts/lr_basic_blocks_analysis.py`: `listing(start, end)` (`dis()` with the run's arrows and the dossier), `label()`, `comment()`, `unlabel()`, `uncomment()`, `show_routines()` (blocks, bytes, calls and loops of every routine, with labels) and `show_blocks(entry)`. The routines came from `find_entries()` in `scripts/lr_overview.py`; it moved into the workbench in the next session (`find_routines()`, the entry above).
 - The first comments in `LOAD_LEVEL`'s loop `627e`-`629c` are Claude's hypotheses, entered unverified; the first real label by the oracle protocol is still open.
-- All green after every step.
 
 ---
 
