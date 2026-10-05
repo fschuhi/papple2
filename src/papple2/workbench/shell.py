@@ -171,7 +171,9 @@ def set_current_run(
     """Make the run emulator has made the current run. Its routines and the
     graph of every block are built from its two split reports, each read by
     its full path: the files are the only connection, as in the walkthrough.
-    start is where the run began, which no report records."""
+    start is where the run began, which no report records. Every routine
+    entry without a label gets one in the current dossier, see
+    label_routines()."""
     global run_emulator, routines, run_graph, run_transitions
     tiles = read_split_tiles(split_tiles)
     transitions = read_split_transitions(split_transitions)
@@ -180,6 +182,18 @@ def set_current_run(
     run_graph = build_run_graph(tiles, transitions, start)
     run_transitions = transitions
     print(f"{len(routines.graphs)} routines")
+    label_routines()
+
+
+def label_routines() -> None:
+    """Give every entry of the current run's routines that has no label the
+    name routine_6238, after its address, in the current dossier. Entries
+    with a label keep it, so names given by hand stay. A global label at
+    every entry keeps local labels from belonging to the routine above.
+    Without an open dossier, nothing happens."""
+    if annotations is None or routines is None:
+        return
+    annotations.add_labels({entry: f"routine_{entry:04x}" for entry in routines.graphs})
 
 
 def run(

@@ -395,6 +395,19 @@ def test_show_routines_lists_the_routines_of_the_current_run(
     assert lines[2].endswith("SUB")
 
 
+def test_set_current_run_labels_the_routine_entries_without_a_label(
+    walkthrough, tmp_path: Path, no_run: None, no_dossier: None
+) -> None:
+    # The walkthrough's routines start at 6000 and 6010. 6010 has a label
+    # given by hand, which stays; 6000 gets the default name.
+    Annotations(tmp_path).label(0x6010, "SUB")  # not new: no seeding
+    use_dossier(tmp_path)
+
+    make_walkthrough_current(walkthrough)
+
+    assert Annotations(tmp_path).labels == {0x6000: "routine_6000", 0x6010: "SUB"}
+
+
 def test_show_blocks_shows_a_routine_of_the_current_run(
     walkthrough, capsys, no_run: None, no_dossier: None
 ) -> None:
