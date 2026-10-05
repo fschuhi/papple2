@@ -61,6 +61,7 @@ from papple2.workbench.tiling import Tiling
 # looking at the run.
 from papple2.workbench.shell import (  # noqa: F401
     comment,
+    edit,
     label,
     listing,
     listing_rows,

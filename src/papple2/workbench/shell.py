@@ -346,14 +346,31 @@ def show_callers(entry: int | str) -> None:
         )
 
 
-def listing(start: int | str, end: int | str | None = None) -> None:
-    """The listing of the current run's memory from start up to, not including,
+@dataclass
+class ListingRow:
+    """One line of a listing, its pieces kept apart, so that each caller
+    lays them out as it needs: print_listing() prints them, the listing
+    editor shows them in columns of its own. address is None for the empty
+    line before a .byte block; there, every field but the gutter is empty."""
+
+    address: int | None
+    gutter: str
+    hex_bytes: str
+    label: str
+    instruction: str
+    comment: str
+
+
+def current_listing_rows(
+    start: int | str, end: int | str | None = None
+) -> list[ListingRow]:
+    """The rows of the current run's memory from start up to, not including,
     end, with the arrows of the whole run and the dossier's labels and
     comments. start and end are addresses or labels.
 
-    With start alone, start is a routine's entry, and the whole routine is
-    listed: from its lowest block to its highest, so any gap between its
-    blocks shows too, e.g. code the run never reached."""
+    With start alone, start is a routine's entry, and the rows cover the
+    whole routine: from its lowest block to its highest, so any gap between
+    its blocks shows too, e.g. code the run never reached."""
     found = current_routines()
     if end is None:
         blocks = found.graphs[routine_at(start)].blocks.values()
@@ -362,7 +379,7 @@ def listing(start: int | str, end: int | str | None = None) -> None:
     else:
         start = address_of(start)
         end = address_of(end)
-    rows = listing_rows(
+    return listing_rows(
         run_emulator,
         start,
         end,
@@ -370,7 +387,25 @@ def listing(start: int | str, end: int | str | None = None) -> None:
         run_graph,
         annotations.comments if annotations is not None else None,
     )
-    print_listing(rows)
+
+
+def listing(start: int | str, end: int | str | None = None) -> None:
+    """Print the listing of the current run's memory from start up to, not
+    including, end. start and end as for current_listing_rows()."""
+    print_listing(current_listing_rows(start, end))
+
+
+def edit(start: int | str, end: int | str | None = None) -> None:
+    """Open the listing editor on the same lines listing() prints. start and
+    end as for current_listing_rows(). Labels and comments can be changed in
+    place; nothing is saved yet: on quitting, the editor prints them.
+
+    Needs a real terminal, so it doesn't work on Windows or under pytest."""
+    # Imported here, not at the top: the editor needs termios, which Windows
+    # doesn't have, and shell.py must load there too.
+    from papple2.workbench.listing_editor import run_editor
+
+    run_editor(current_listing_rows(start, end))
 
 
 def loop_reports(entry: int | str) -> None:
@@ -548,21 +583,6 @@ def draw_gutter(
                 cells[row][between] = "-"
             cells[row][width - 2] = head
     return ["".join(row) for row in cells]
-
-
-@dataclass
-class ListingRow:
-    """One line of a listing, its pieces kept apart, so that each caller
-    lays them out as it needs: print_listing() prints them, the listing
-    editor shows them in columns of its own. address is None for the empty
-    line before a .byte block; there, every field but the gutter is empty."""
-
-    address: int | None
-    gutter: str
-    hex_bytes: str
-    label: str
-    instruction: str
-    comment: str
 
 
 def listing_rows(
