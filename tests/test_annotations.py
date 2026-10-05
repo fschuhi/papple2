@@ -56,7 +56,7 @@ def test_label_refuses_a_text_used_at_another_address(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize(
     "text",
-    ["LOAD_LEVEL", "routine_001", "_start", "r:KBD:w:CLR80COL", "routine_001.loop2"],
+    ["LOAD_LEVEL", "routine_001", "_start", "r:KBD:w:CLR80COL"],
 )
 def test_label_takes_global_and_full_local_labels(tmp_path: Path, text: str) -> None:
     annotations = Annotations(tmp_path)
@@ -70,7 +70,6 @@ def test_label_takes_global_and_full_local_labels(tmp_path: Path, text: str) -> 
     "text",
     [
         "ROUTINE 001",  # a space
-        ".loop2",  # a local label without its global part
         "1st",  # starts with a digit
         "a.b.c",  # more than one dot
         "loop.",  # nothing behind the dot
@@ -86,6 +85,121 @@ def test_label_refuses_a_text_that_breaks_the_rule(tmp_path: Path, text: str) ->
         annotations.label(0x6238, text)
 
     assert annotations.labels == {}
+    assert not (tmp_path / "annotations.json").exists()
+
+
+# Local labels. Throughout: routine_6238 at 6238, and local labels below it.
+
+
+def test_a_local_label_typed_short_gets_the_global_label_above(
+    tmp_path: Path,
+) -> None:
+    annotations = Annotations(tmp_path)
+    annotations.label(0x6238, "routine_6238")
+
+    annotations.label(0x6252, ".loop1")
+
+    assert annotations.labels[0x6252] == "routine_6238.loop1"
+    assert read_file(tmp_path)["labels"]["6252"] == "routine_6238.loop1"
+
+
+def test_a_local_label_typed_by_its_full_name_must_fit(tmp_path: Path) -> None:
+    annotations = Annotations(tmp_path)
+    annotations.label(0x6238, "routine_6238")
+    annotations.label(0x6250, "bla_bla")
+
+    annotations.label(0x6240, "routine_6238.loop1")
+    # Under bla_bla, the same short part would be bla_bla.loop2.
+    with pytest.raises(ValueError, match="type .loop2"):
+        annotations.label(0x6252, "routine_6238.loop2")
+
+    assert annotations.labels[0x6240] == "routine_6238.loop1"
+    assert 0x6252 not in annotations.labels
+
+
+def test_a_local_label_without_a_global_label_above_is_refused(
+    tmp_path: Path,
+) -> None:
+    annotations = Annotations(tmp_path)
+    annotations.label(0x6300, "routine_6300")
+
+    with pytest.raises(ValueError, match=r"no global label above \$6252"):
+        annotations.label(0x6252, ".loop1")
+
+    assert annotations.labels == {0x6300: "routine_6300"}
+
+
+def test_a_new_global_label_takes_over_the_local_labels_below_it(
+    tmp_path: Path,
+) -> None:
+    annotations = Annotations(tmp_path)
+    annotations.label(0x6238, "routine_6238")
+    annotations.label(0x6240, ".loop1")
+    annotations.label(0x6252, ".loop4")
+
+    annotations.label(0x6250, "bla_bla")
+
+    assert annotations.labels[0x6240] == "routine_6238.loop1"
+    assert annotations.labels[0x6252] == "bla_bla.loop4"
+
+
+def test_removing_a_global_label_gives_its_local_labels_to_the_one_above(
+    tmp_path: Path,
+) -> None:
+    annotations = Annotations(tmp_path)
+    annotations.label(0x6238, "routine_6238")
+    annotations.label(0x6250, "bla_bla")
+    annotations.label(0x6252, ".loop4")
+
+    annotations.unlabel(0x6250)
+
+    assert annotations.labels == {
+        0x6238: "routine_6238",
+        0x6252: "routine_6238.loop4",
+    }
+
+
+def test_renaming_a_global_label_renames_its_local_labels(tmp_path: Path) -> None:
+    annotations = Annotations(tmp_path)
+    annotations.label(0x6238, "routine_6238")
+    annotations.label(0x6252, ".loop1")
+
+    annotations.label(0x6238, "load_level")
+
+    assert annotations.labels[0x6252] == "load_level.loop1"
+
+
+def test_a_change_that_merges_two_scopes_with_one_short_name_is_refused(
+    tmp_path: Path,
+) -> None:
+    # .loop1 under routine_6238, bla_bla below it, .loop1 again under
+    # bla_bla. Removing bla_bla, or making it a local label, would put both
+    # .loop1 under routine_6238.
+    annotations = Annotations(tmp_path)
+    annotations.label(0x6238, "routine_6238")
+    annotations.label(0x6252, ".loop1")
+    annotations.label(0x6260, "bla_bla")
+    annotations.label(0x6270, ".loop1")
+    before = dict(annotations.labels)
+
+    with pytest.raises(ValueError, match=r"routine_6238.loop1 would be .* \$6252"):
+        annotations.unlabel(0x6260)
+    with pytest.raises(ValueError, match="routine_6238.loop1 would be"):
+        annotations.label(0x6260, ".inner")
+
+    assert annotations.labels == before
+    assert read_file(tmp_path)["labels"]["6270"] == "bla_bla.loop1"
+
+
+def test_typing_a_local_label_again_writes_nothing(tmp_path: Path) -> None:
+    annotations = Annotations(tmp_path)
+    annotations.label(0x6238, "routine_6238")
+    annotations.label(0x6252, ".loop1")
+    # Removed: any write would bring the file back.
+    (tmp_path / "annotations.json").unlink()
+
+    annotations.label(0x6252, ".loop1")
+
     assert not (tmp_path / "annotations.json").exists()
 
 

@@ -34,7 +34,9 @@ dossier's labels and comments if one is open. The print_* functions take
 the objects they print instead, for any graph.
 """
 
+import re
 import time
+from bisect import bisect_right
 from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
@@ -403,10 +405,11 @@ def listing(start: int | str, end: int | str | None = None) -> None:
     print_listing(current_listing_rows(start, end))
 
 
-def edit(start: int | str, end: int | str | None = None) -> None:
+def edit(start: int | str, end: int | str | None = None, height: int = 25) -> None:
     """Open the listing editor on the same lines listing() prints. start and
     end as for current_listing_rows(). Every label and comment changed there
-    is saved to the current dossier at once, through save_edit().
+    is saved to the current dossier at once, through save_edit(). height is
+    the number of lines the editor shows at a time.
 
     Needs a real terminal, so it doesn't work on Windows or under pytest."""
     # Imported here, not at the top: the editor needs termios, which Windows
@@ -422,7 +425,7 @@ def edit(start: int | str, end: int | str | None = None) -> None:
     def load_rows() -> list[ListingRow]:
         return current_listing_rows(first, behind)
 
-    run_editor(load_rows, save_edit)
+    run_editor(load_rows, save_edit, window_size=height)
 
 
 def save_edit(address: int, field: str, text: str) -> str | None:
@@ -431,14 +434,9 @@ def save_edit(address: int, field: str, text: str) -> str | None:
     dossier's changes nothing, not even the file. Returns why the change
     was refused (e.g. a label already used elsewhere), or None.
 
-    A label typed as .name is a local label: it is saved by its full name,
-    with the nearest global label above it, e.g. routine_001.loop1."""
+    A label typed as .name is a local label: the dossier saves it by its
+    full name, with the global label above it, e.g. routine_6238.loop1."""
     dossier = current_annotations()
-    if field == "label" and text.startswith("."):
-        owner = global_label_above(address)
-        if owner is None:
-            return f"{text}: no global label above ${address:04x} to belong to"
-        text = owner + text
     entries = dossier.labels if field == "label" else dossier.comments
     if text == entries.get(address, ""):
         return None
@@ -455,18 +453,6 @@ def save_edit(address: int, field: str, text: str) -> str | None:
         return str(refusal)
     return None
 
-
-def global_label_above(address: int) -> str | None:
-    """The label of the nearest lower address, i.e. above address in a
-    listing, that is a global label (no dot in it); None if there is none.
-    Local labels in between are skipped."""
-    labels = current_annotations().labels
-    above = [
-        other for other, text in labels.items() if other < address and "." not in text
-    ]
-    if not above:
-        return None
-    return labels[max(above)]
 
 
 def loop_reports(entry: int | str) -> None:
@@ -661,7 +647,11 @@ def listing_rows(
 
     With labels, an operand whose address has a name shows the name
     (JSR SUB instead of JSR $6010), and an instruction whose own address
-    has a name carries it in its label.
+    has a name carries it in its label. A local label (routine_6238.loop1)
+    shows by its short part, .loop1: always in the label column, since the
+    dossier keeps every local label under the global label above it; in an
+    operand only if the line lies in the same scope, i.e. under the same
+    global label. An operand leading into another scope shows the full name.
 
     With comments, an instruction whose own address has a comment carries
     it in its comment.
@@ -679,12 +669,22 @@ def listing_rows(
     # disassemble() takes an inclusive end.
     rows = disassembler.disassemble(start, end - 1)
     gutter = draw_gutter(len(rows), *arrows_in(rows, graph))
+    # The addresses of the global labels, sorted, to find each line's scope.
+    global_addresses = sorted(
+        address for address, text in (labels or {}).items() if "." not in text
+    )
     result = []
     for row, prefix in zip(rows, gutter):
         row_address, row_bytes, label, mnemonic, operand, comment = row
+        instruction = f"{mnemonic} {operand}".rstrip()
         if row_address:
             # The disassembler gives "$6004": four hex digits behind the "$".
             address = int(row_address.removeprefix("$"), 16)
+            if "." in label:
+                label = label[label.index(".") :]
+            owner = scope_of(address, global_addresses, labels or {})
+            if owner is not None:
+                instruction = shorten_locals(instruction, owner)
         else:  # the empty line before a .byte block
             address = None
         result.append(
@@ -693,11 +693,34 @@ def listing_rows(
                 gutter=prefix,
                 hex_bytes=row_bytes,
                 label=label,
-                instruction=f"{mnemonic} {operand}".rstrip(),
+                instruction=instruction,
                 comment=comment,
             )
         )
     return result
+
+
+def scope_of(
+    address: int, global_addresses: list[int], labels: dict[int, str]
+) -> str | None:
+    """The global label whose scope address lies in: the one at address
+    itself or the nearest above it. None above the first global label.
+    global_addresses holds the addresses of labels' global labels, sorted."""
+    index = bisect_right(global_addresses, address) - 1
+    if index < 0:
+        return None
+    return labels[global_addresses[index]]
+
+
+def shorten_locals(instruction: str, owner: str) -> str:
+    """instruction with owner's local labels shown short: BNE
+    routine_6238.loop1 -> BNE .loop1, if owner is routine_6238. A name that
+    only ends in the owner's name (xroutine_6238.loop1) is left alone."""
+    return re.sub(
+        rf"(?<![A-Za-z0-9_:.]){re.escape(owner)}\.(?=[A-Za-z0-9_])",
+        ".",
+        instruction,
+    )
 
 
 def print_listing(rows: list[ListingRow]) -> None:

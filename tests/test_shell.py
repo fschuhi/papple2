@@ -127,6 +127,39 @@ def test_print_listing_lines_comments_up_after_the_widest_commented_instruction(
     ]
 
 
+# main's loop at 6002, and a JMP into it from sub at 6008. The label LOOP
+# sits on an instruction with an operand, as in ENDLESS_PROGRAM below.
+LOCAL_LABELS_PROGRAM = """
+        *=$6000
+        LDX #$03
+LOOP    INC $10
+        DEX
+        BNE LOOP
+        RTS
+        JMP LOOP
+"""
+
+
+def test_listing_rows_show_local_labels_short_within_their_scope(
+    make_emulator, capsys
+) -> None:
+    # main.loop shows as .loop in its own line and in the BNE inside main;
+    # the JMP from sub leads into another scope, so it shows the full name.
+    _asm, emulator = make_emulator(LOCAL_LABELS_PROGRAM)
+    labels = {0x6000: "main", 0x6002: "main.loop", 0x6008: "sub"}
+
+    print_listing(listing_rows(emulator, 0x6000, 0x600B, labels))
+
+    assert capsys.readouterr().out.splitlines() == [
+        "6000  a2 03     main   LDX #$03",
+        "6002  e6 10     .loop  INC $10",
+        "6004  ca               DEX",
+        "6005  d0 fb            BNE .loop",
+        "6007  60               RTS",
+        "6008  4c 02 60  sub    JMP main.loop",
+    ]
+
+
 def test_print_blocks_shows_the_labels_of_the_blocks(walkthrough, capsys) -> None:
     # A block whose first address has a label shows it at the end; the
     # loop column is padded so the labels line up.

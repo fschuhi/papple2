@@ -1,11 +1,10 @@
 {
   "labels": {
-    "6238": "routine_001",
-    "6252": "routine_001.loop1",
-    "625a": "routine_001.loop2",
-    "6269": "routine_001.loop3",
-    "6275": "some_label",
-    "627e": "some_label.loop4",
+    "6238": "routine_6238",
+    "6252": "routine_6238.loop1",
+    "625a": "routine_6238.loop2",
+    "6269": "routine_6238.loop3",
+    "627e": "routine_6238.loop4",
     "7a3e": "lookup_hgr",
     "8a69": "four_blocks",
     "8af2": "first_tail_call",
