@@ -295,6 +295,34 @@ def test_save_edit_returns_why_a_label_was_refused(
     assert Annotations(tmp_path).labels == {0x6238: "LOAD_LEVEL"}
 
 
+def test_save_edit_gives_a_dotted_label_the_nearest_global_label_above(
+    tmp_path: Path, no_dossier: None
+) -> None:
+    # 6252 is nearer to 6250 than to 6238, but 6250's label is local, so
+    # it is skipped; 6300 lies below 6252 in the listing, not above.
+    annotations = Annotations(tmp_path)
+    annotations.label(0x6238, "routine_001")
+    annotations.label(0x6250, "routine_001.start")
+    annotations.label(0x6300, "routine_002")
+    use_dossier(tmp_path)
+
+    assert save_edit(0x6252, "label", ".loop1") is None
+
+    assert Annotations(tmp_path).labels[0x6252] == "routine_001.loop1"
+
+
+def test_save_edit_refuses_a_dotted_label_without_a_global_label_above(
+    tmp_path: Path, no_dossier: None
+) -> None:
+    Annotations(tmp_path).label(0x6300, "routine_002")
+    use_dossier(tmp_path)
+
+    assert save_edit(0x6252, "label", ".loop1") == (
+        ".loop1: no global label above $6252 to belong to"
+    )
+    assert Annotations(tmp_path).labels == {0x6300: "routine_002"}
+
+
 @pytest.fixture
 def no_run(monkeypatch: pytest.MonkeyPatch) -> None:
     """Start without a current run, and restore the module's after the

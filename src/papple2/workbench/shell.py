@@ -428,9 +428,17 @@ def edit(start: int | str, end: int | str | None = None) -> None:
 def save_edit(address: int, field: str, text: str) -> str | None:
     """Save one field the listing editor changed: field is "label" or
     "comment". Empty text removes the field's entry; text equal to the
-    dossier's changes nothing, not even the file. Returns why the dossier
-    refused the change (a label already used elsewhere), or None."""
+    dossier's changes nothing, not even the file. Returns why the change
+    was refused (e.g. a label already used elsewhere), or None.
+
+    A label typed as .name is a local label: it is saved by its full name,
+    with the nearest global label above it, e.g. routine_001.loop1."""
     dossier = current_annotations()
+    if field == "label" and text.startswith("."):
+        owner = global_label_above(address)
+        if owner is None:
+            return f"{text}: no global label above ${address:04x} to belong to"
+        text = owner + text
     entries = dossier.labels if field == "label" else dossier.comments
     if text == entries.get(address, ""):
         return None
@@ -446,6 +454,19 @@ def save_edit(address: int, field: str, text: str) -> str | None:
     except ValueError as refusal:
         return str(refusal)
     return None
+
+
+def global_label_above(address: int) -> str | None:
+    """The label of the nearest lower address, i.e. above address in a
+    listing, that is a global label (no dot in it); None if there is none.
+    Local labels in between are skipped."""
+    labels = current_annotations().labels
+    above = [
+        other for other, text in labels.items() if other < address and "." not in text
+    ]
+    if not above:
+        return None
+    return labels[max(above)]
 
 
 def loop_reports(entry: int | str) -> None:
