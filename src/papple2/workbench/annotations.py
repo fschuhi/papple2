@@ -15,7 +15,15 @@ which is what dis() reads.
 """
 
 import json
+import re
 from pathlib import Path
+
+# A global label: a letter or _, then letters, digits, _ and : (the colon
+# groups labels, as in rw:HIRES). A local label is stored by its full name:
+# a global label, one dot, then letters, digits and _, e.g.
+# routine_001.loop2. Stored names stay full and unique, so they don't change
+# when the rules for typing or showing .loop2 change. No spaces anywhere.
+VALID_LABEL = re.compile(r"[A-Za-z_][A-Za-z0-9_:]*(\.[A-Za-z0-9_]+)?")
 
 
 class Annotations:
@@ -31,8 +39,14 @@ class Annotations:
 
     def label(self, address: int, text: str) -> None:
         """Give address the label text, replacing any label it has. A text
-        used at another address is refused: dasm would refuse it too, and
-        at the prompt it's almost always a typo."""
+        that breaks VALID_LABEL's rule is refused. A text used at another
+        address is refused: dasm would refuse it too, and at the prompt it's
+        almost always a typo."""
+        if not VALID_LABEL.fullmatch(text):
+            raise ValueError(
+                f"{text} is no valid label: letters, digits, _ and :,"
+                " and one . for a local label"
+            )
         for other, other_text in self.labels.items():
             if other_text == text and other != address:
                 raise ValueError(f"{text} is already the label of ${other:04x}")

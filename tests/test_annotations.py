@@ -54,6 +54,41 @@ def test_label_refuses_a_text_used_at_another_address(tmp_path: Path) -> None:
     assert annotations.labels == {0x6238: "LOAD_LEVEL"}
 
 
+@pytest.mark.parametrize(
+    "text",
+    ["LOAD_LEVEL", "routine_001", "_start", "r:KBD:w:CLR80COL", "routine_001.loop2"],
+)
+def test_label_takes_global_and_full_local_labels(tmp_path: Path, text: str) -> None:
+    annotations = Annotations(tmp_path)
+
+    annotations.label(0x6238, text)
+
+    assert annotations.labels == {0x6238: text}
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "ROUTINE 001",  # a space
+        ".loop2",  # a local label without its global part
+        "1st",  # starts with a digit
+        "a.b.c",  # more than one dot
+        "loop.",  # nothing behind the dot
+        "a.b:c",  # a colon in the local part
+        "a-b",  # a character outside the rule
+        "",
+    ],
+)
+def test_label_refuses_a_text_that_breaks_the_rule(tmp_path: Path, text: str) -> None:
+    annotations = Annotations(tmp_path)
+
+    with pytest.raises(ValueError, match="no valid label"):
+        annotations.label(0x6238, text)
+
+    assert annotations.labels == {}
+    assert not (tmp_path / "annotations.json").exists()
+
+
 def test_unlabel_removes_the_label_from_the_file(tmp_path: Path) -> None:
     annotations = Annotations(tmp_path)
     annotations.label(0x6238, "LOAD_LEVEL")

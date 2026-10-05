@@ -14,7 +14,7 @@ type OperandInfo = dict[str, str | int | list[int]]
 # the machine, not a program, so the disassembler doesn't add them by itself;
 # whoever wants them passes them in with the other labels.
 STANDARD_LABELS = {
-    0xC000: 'r:KBD w:CLR80COL',
+    0xC000: 'r:KBD:w:CLR80COL',
     0xC010: 'r:KBDSTRB',
     0xC030: 'rw:SPKR',
     0xC050: 'rw:TXTCLR',
