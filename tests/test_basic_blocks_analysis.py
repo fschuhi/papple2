@@ -25,6 +25,7 @@ from papple2.workbench.basic_blocks_analysis import (
     read_split_tiles,
     read_split_transitions,
     reverse_postorder,
+    routine_calls,
     write_loop_reports,
 )
 from papple2.workbench.tiling import (
@@ -407,6 +408,78 @@ def test_a_start_that_is_also_called_is_one_routine():
 
     assert list(routines.graphs) == [0x1000]
     assert routines.calls_into == {0x1000: 3}
+
+
+def test_routine_calls_count_the_jsrs_between_routines():
+    # $1000 calls $3000 once, then $2000 three times.
+    tiles = [
+        tile(0x1000, 0x1003), tile(0x1003, 0x1006, 3), tile(0x1006, 0x1007),
+        tile(0x2000, 0x2001, 3), tile(0x3000, 0x3001),
+    ]
+    transitions = [
+        leap(0x1000, 0x1000, JSR, 0x3000),
+        leap(0x3000, 0x3000, RTS, 0x1003),
+        leap(0x1003, 0x1003, JSR, 0x2000, 3),
+        leap(0x2000, 0x2000, RTS, 0x1006, 3),
+    ]
+    routines = find_routines(tiles, transitions, start=0x1000)
+
+    assert routine_calls(routines, transitions) == {
+        (0x1000, 0x2000): 3,
+        (0x1000, 0x3000): 1,
+    }
+
+
+def test_a_jmp_into_a_routine_gives_no_call():
+    # A tail call: $3000 ends in JMP $2000, so $2000's RTS returns to
+    # $1006, behind the JSR into $3000. Only the two JSRs give calls.
+    tiles = [
+        tile(0x1000, 0x1003), tile(0x1003, 0x1006), tile(0x1006, 0x1007),
+        tile(0x2000, 0x2001, 2), tile(0x3000, 0x3003),
+    ]
+    transitions = [
+        leap(0x1000, 0x1000, JSR, 0x2000),
+        leap(0x2000, 0x2000, RTS, 0x1003),
+        leap(0x1003, 0x1003, JSR, 0x3000),
+        leap(0x3000, 0x3000, JMP_absolute, 0x2000),
+        leap(0x2000, 0x2000, RTS, 0x1006),
+    ]
+    routines = find_routines(tiles, transitions, start=0x1000)
+
+    assert routine_calls(routines, transitions) == {
+        (0x1000, 0x2000): 1,
+        (0x1000, 0x3000): 1,
+    }
+
+
+def test_a_jsr_in_shared_code_is_a_call_from_every_routine_holding_it():
+    # $2000 and $3000 both JMP into $4000, whose JSR calls $5000. The run
+    # doesn't record through which routine $4000 was reached, so each one
+    # gets the site's whole count.
+    tiles = [
+        tile(0x1000, 0x1003), tile(0x1003, 0x1006), tile(0x1006, 0x1007),
+        tile(0x2000, 0x2003), tile(0x3000, 0x3003),
+        tile(0x4000, 0x4003, 2), tile(0x4003, 0x4004, 2),
+        tile(0x5000, 0x5001, 2),
+    ]
+    transitions = [
+        leap(0x1000, 0x1000, JSR, 0x2000),
+        leap(0x1003, 0x1003, JSR, 0x3000),
+        leap(0x2000, 0x2000, JMP_absolute, 0x4000),
+        leap(0x3000, 0x3000, JMP_absolute, 0x4000),
+        leap(0x4000, 0x4000, JSR, 0x5000, 2),
+        leap(0x5000, 0x5000, RTS, 0x4003, 2),
+        leap(0x4003, 0x4003, RTS, 0x1003),
+        leap(0x4003, 0x4003, RTS, 0x1006),
+    ]
+    routines = find_routines(tiles, transitions, start=0x1000)
+
+    assert routine_calls(routines, transitions) == {
+        (0x1000, 0x2000): 1,
+        (0x1000, 0x3000): 1,
+        (0x2000, 0x5000): 2,
+        (0x3000, 0x5000): 2,
+    }
 
 
 # --- Loop reports -------------------------------------------------------------

@@ -467,6 +467,27 @@ def find_routines(
     return Routines(graphs, loops_of, calls_into)
 
 
+def routine_calls(
+    routines: Routines, transitions: list[SplitTransition]
+) -> dict[tuple[int, int], int]:
+    """How often each routine called another: (caller entry, callee entry)
+    -> calls, in address order. Only JSRs count: a JMP into an entry may be
+    a tail call, which only a shadow stack can tell apart.
+
+    The callers of a JSR are all routines whose blocks hold the JSR's
+    block. Code shared by several routines gives a call from each of them,
+    each with the site's whole count: the run does not record through
+    which routine the shared code was reached."""
+    calls: dict[tuple[int, int], int] = defaultdict(int)
+    for row in transitions:
+        if row.opcode != JSR:
+            continue
+        for caller, graph in routines.graphs.items():
+            if row.source_tile in graph.blocks:
+                calls[(caller, row.target_tile)] += row.count
+    return dict(sorted(calls.items()))
+
+
 def write_rows(filename: Path, fields: tuple[str, ...], rows: list[dict]) -> None:
     filename.parent.mkdir(parents=True, exist_ok=True)
     with filename.open("w", newline="", encoding="utf-8") as output:
