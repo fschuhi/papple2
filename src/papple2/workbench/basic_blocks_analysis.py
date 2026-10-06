@@ -218,8 +218,13 @@ def collect_edges(
     return dict(edges)
 
 
-def reachable_from(entry: int, edges: dict[tuple[int, int], int]) -> set[int]:
-    """The blocks reachable from entry along edges, entry included."""
+def reachable_from(
+        entry: int,
+        edges: dict[tuple[int, int], int],
+        stop_at: frozenset[int] = frozenset(),
+) -> set[int]:
+    """The blocks reachable from entry along edges, entry included. An edge
+    into a block in stop_at is not followed."""
     successors: dict[int, list[int]] = defaultdict(list)
     for source, target in edges:
         successors[source].append(target)
@@ -228,16 +233,21 @@ def reachable_from(entry: int, edges: dict[tuple[int, int], int]) -> set[int]:
     while queue:
         block = queue.popleft()
         for target in successors[block]:
-            if target not in reached:
+            if target not in reached and target not in stop_at:
                 reached.add(target)
                 queue.append(target)
     return reached
 
 
 def build_graph(
-        tiles: list[SplitTile], transitions: list[SplitTransition], entry: int
+        tiles: list[SplitTile],
+        transitions: list[SplitTransition],
+        entry: int,
+        stop_at: frozenset[int] = frozenset(),
 ) -> BlockGraph:
-    """Build the graph of the basic blocks reachable from entry."""
+    """Build the graph of the basic blocks reachable from entry. An edge
+    into a block in stop_at is not followed, and is left out of the graph;
+    entry itself is never a stop, so a jump back to it stays a loop."""
     all_blocks = {
         tile.start: BasicBlock(tile.start, tile.end, tile.executions)
         for tile in tiles
@@ -246,7 +256,7 @@ def build_graph(
         raise ValueError(f"entry {entry:04x} is not the start of a basic block")
 
     all_edges = collect_edges(transitions, set(all_blocks))
-    reached = reachable_from(entry, all_edges)
+    reached = reachable_from(entry, all_edges, stop_at - {entry})
     return _graph(entry, all_blocks, all_edges, reached)
 
 
@@ -271,11 +281,12 @@ def _graph(
         kept: set[int],
 ) -> BlockGraph:
     """The graph of the blocks in kept, with the edges between them."""
-    # Edges are kept if their source is kept; their target then is too.
+    # Edges are kept if both ends are kept: an edge into a stop leaves
+    # its source behind.
     edges = {
         (source, target): count
         for (source, target), count in sorted(all_edges.items())
-        if source in kept
+        if source in kept and target in kept
     }
     successors: dict[int, list[int]] = {start: [] for start in sorted(kept)}
     predecessors: dict[int, list[int]] = {start: [] for start in sorted(kept)}
@@ -446,7 +457,9 @@ def find_routines(
 ) -> Routines:
     """Find every routine of the run: the code reachable from an entry
     without following calls. The entries are the run's start and every
-    JSR target that ran."""
+    JSR target that ran. A routine ends where another begins: an edge
+    into another routine's entry, by JMP, branch or glide, is not
+    followed."""
     jsr_targets = {row.target_tile for row in transitions if row.opcode == JSR}
     entries = [start] + sorted(jsr_targets - {start})
 
@@ -459,8 +472,11 @@ def find_routines(
 
     graphs = {}
     loops_of = {}
+    all_entries = frozenset(entries)
     for entry in entries:
-        graphs[entry] = build_graph(tiles, transitions, entry)
+        graphs[entry] = build_graph(
+            tiles, transitions, entry, stop_at=all_entries - {entry}
+        )
         loops_of[entry] = natural_loops(
             graphs[entry], immediate_dominators(graphs[entry])
         )

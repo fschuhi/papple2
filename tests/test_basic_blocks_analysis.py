@@ -430,6 +430,83 @@ def test_routine_calls_count_the_jsrs_between_routines():
     }
 
 
+def test_a_routine_ends_at_a_jmp_into_another_routine():
+    # A tail call: $3000 ends in JMP $2000. $2000 is a routine of its own,
+    # so its block is not part of $3000.
+    tiles = [
+        tile(0x1000, 0x1003), tile(0x1003, 0x1006), tile(0x1006, 0x1007),
+        tile(0x2000, 0x2001, 2), tile(0x3000, 0x3003),
+    ]
+    transitions = [
+        leap(0x1000, 0x1000, JSR, 0x2000),
+        leap(0x2000, 0x2000, RTS, 0x1003),
+        leap(0x1003, 0x1003, JSR, 0x3000),
+        leap(0x3000, 0x3000, JMP_absolute, 0x2000),
+        leap(0x2000, 0x2000, RTS, 0x1006),
+    ]
+    routines = find_routines(tiles, transitions, start=0x1000)
+
+    assert sorted(routines.graphs[0x3000].blocks) == [0x3000]
+    assert routines.graphs[0x3000].edges == {}
+
+
+def test_a_routine_ends_at_a_branch_into_another_routine():
+    # $3000 branches straight into $2000, a routine of its own.
+    tiles = [
+        tile(0x1000, 0x1003), tile(0x1003, 0x1006), tile(0x1006, 0x1007),
+        tile(0x2000, 0x2001, 2), tile(0x3000, 0x3002),
+    ]
+    transitions = [
+        leap(0x1000, 0x1000, JSR, 0x2000),
+        leap(0x2000, 0x2000, RTS, 0x1003),
+        leap(0x1003, 0x1003, JSR, 0x3000),
+        leap(0x3000, 0x3000, BNE, 0x2000, outcome="taken"),
+        leap(0x2000, 0x2000, RTS, 0x1006),
+    ]
+    routines = find_routines(tiles, transitions, start=0x1000)
+
+    assert sorted(routines.graphs[0x3000].blocks) == [0x3000]
+    assert routines.graphs[0x3000].edges == {}
+
+
+def test_a_routine_ends_where_it_runs_on_into_another_routine():
+    # $2000 has no leap at its end: it glides on into $2003, which is
+    # called on its own as well.
+    tiles = [
+        tile(0x1000, 0x1003), tile(0x1003, 0x1006), tile(0x1006, 0x1007),
+        tile(0x2000, 0x2003), tile(0x2003, 0x2004, 2),
+    ]
+    transitions = [
+        leap(0x1000, 0x1000, JSR, 0x2000),
+        glide(0x2000, 0x2003),
+        leap(0x2003, 0x2003, RTS, 0x1003),
+        leap(0x1003, 0x1003, JSR, 0x2003),
+        leap(0x2003, 0x2003, RTS, 0x1006),
+    ]
+    routines = find_routines(tiles, transitions, start=0x1000)
+
+    assert sorted(routines.graphs[0x2000].blocks) == [0x2000]
+    assert sorted(routines.graphs[0x2003].blocks) == [0x2003]
+
+
+def test_a_branch_back_to_the_routines_own_entry_stays_a_loop():
+    # $2000 branches back to its own start twice: its entry is no stop.
+    tiles = [
+        tile(0x1000, 0x1003), tile(0x1003, 0x1004),
+        tile(0x2000, 0x2002, 3), tile(0x2002, 0x2003),
+    ]
+    transitions = [
+        leap(0x1000, 0x1000, JSR, 0x2000),
+        leap(0x2000, 0x2000, BNE, 0x2000, 2, outcome="taken"),
+        leap(0x2000, 0x2000, BNE, 0x2002, 1, outcome="fall_through"),
+        leap(0x2002, 0x2002, RTS, 0x1003),
+    ]
+    routines = find_routines(tiles, transitions, start=0x1000)
+
+    assert sorted(routines.graphs[0x2000].blocks) == [0x2000, 0x2002]
+    assert list(routines.loops_of[0x2000]) == [0x2000]
+
+
 def test_a_jmp_into_a_routine_gives_no_call():
     # A tail call: $3000 ends in JMP $2000, so $2000's RTS returns to
     # $1006, behind the JSR into $3000. Only the two JSRs give calls.
