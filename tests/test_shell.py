@@ -483,6 +483,20 @@ def test_routine_graph_has_a_box_per_routine_and_an_arrow_per_call(
     ]
 
 
+def test_routine_graph_draws_an_exit_in_the_look_of_its_kind(
+    walkthrough, no_run: None
+) -> None:
+    # The walkthrough has no exits, so one is made up: a JMP from 6000
+    # into SUB, taken twice. It is drawn dashed and blue, its kind named.
+    make_walkthrough_current(walkthrough)
+
+    graph = routine_graph(shell.routines, {}, exits={(0x6000, 0x6010, "jmp"): 2})
+
+    assert graph.body[-1] == (
+        '\t6000 -> 6010 [label="JMP 2" color=blue style=dashed]\n'
+    )
+
+
 def test_listing_reads_the_memory_of_the_current_run(
     walkthrough, capsys, no_run: None, no_dossier: None
 ) -> None:

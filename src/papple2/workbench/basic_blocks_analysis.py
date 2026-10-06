@@ -16,12 +16,13 @@ from collections import defaultdict, deque
 from dataclasses import dataclass
 from pathlib import Path
 
-from papple2.core.cpu import JSR, RTS
+from papple2.core.cpu import JMP_absolute, JMP_indirect, JSR, RTS
 
 # A "speaking" import: the analysis names the instrumentation whose reports
 # it reads. How an analysis states what it needs upstream is still open
 # (briefing.md, section 7).
 from papple2.workbench.tiling import (
+    BRANCH_OPCODES,
     BRK,
     RTI,
     SPLIT_TILES_FILE,
@@ -502,6 +503,36 @@ def routine_calls(
             if row.source_tile in graph.blocks:
                 calls[(caller, row.target_tile)] += row.count
     return dict(sorted(calls.items()))
+
+
+def routine_exits(
+    routines: Routines, transitions: list[SplitTransition]
+) -> dict[tuple[int, int, str], int]:
+    """The edges that leave a routine into another routine's entry, which
+    find_routines() does not follow: (routine entry, entered routine,
+    kind) -> how often, in address order. kind is "jmp", "branch" or
+    "glide". JSRs are calls, see routine_calls(); RTS, RTI and BRK are
+    left out.
+
+    As for calls, every routine whose blocks hold an edge's source block
+    gets the edge, each with its whole count."""
+    exits: dict[tuple[int, int, str], int] = defaultdict(int)
+    for row in transitions:
+        if row.target_tile not in routines.graphs:
+            continue
+        if row.outcome == GLIDE:
+            kind = "glide"
+        elif row.opcode in (JMP_absolute, JMP_indirect):
+            kind = "jmp"
+        elif row.opcode in BRANCH_OPCODES:
+            kind = "branch"
+        else:
+            continue
+        for holder, graph in routines.graphs.items():
+            # A jump back to a routine's own entry is a loop, not an exit.
+            if holder != row.target_tile and row.source_tile in graph.blocks:
+                exits[(holder, row.target_tile, kind)] += row.count
+    return dict(sorted(exits.items()))
 
 
 def write_rows(filename: Path, fields: tuple[str, ...], rows: list[dict]) -> None:

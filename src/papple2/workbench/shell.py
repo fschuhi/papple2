@@ -58,6 +58,7 @@ from papple2.workbench.basic_blocks_analysis import (
     read_split_tiles,
     read_split_transitions,
     routine_calls,
+    routine_exits,
     write_loop_reports,
 )
 from papple2.workbench.stack_tracking import StackTracking
@@ -171,6 +172,15 @@ CALL_KINDS = {JSR: "JSR", JMP_absolute: "JMP", JMP_indirect: "JMP ()"}
 # labels, not a report, so it goes into tmp/, not the reports folder. The
 # file is tmp/routine_graph.svg.
 ROUTINE_GRAPH_FILE = Path("tmp/routine_graph")
+
+# How routine_graph() draws an exit into another routine's entry, by its
+# kind: the word in front of the count, and the arrow's look. Calls (JSR)
+# are drawn plain, with the count alone.
+EXIT_LOOKS = {
+    "jmp": ("JMP", {"style": "dashed", "color": "blue"}),
+    "branch": ("branch", {"style": "dotted", "color": "darkorange"}),
+    "glide": ("glide", {"style": "dashed", "color": "gray50"}),
+}
 
 
 def set_current_run(
@@ -371,14 +381,16 @@ def show_callers(entry: int | str) -> None:
 
 
 def show_routine_graph() -> None:
-    """Draw every routine of the current run and the JSRs between them,
-    with the dossier's labels, into tmp/routine_graph.svg, and open it.
+    """Draw every routine of the current run, the JSRs between them and
+    the edges from one into another's entry, with the dossier's labels,
+    into tmp/routine_graph.svg, and open it.
     Needs Graphviz's dot program."""
     found = current_routines()
     graph = routine_graph(
         found,
         routine_calls(found, run_transitions or []),
         annotations.labels if annotations is not None else None,
+        routine_exits(found, run_transitions or []),
     )
     path = graph.render(ROUTINE_GRAPH_FILE, format="svg", cleanup=True, view=True)
     print(f"wrote {path}")
@@ -610,11 +622,14 @@ def routine_graph(
     routines: Routines,
     calls: dict[tuple[int, int], int],
     labels: dict[int, str] | None = None,
+    exits: dict[tuple[int, int, str], int] | None = None,
 ) -> graphviz.Digraph:
     """The routine graph: one box per routine, in address order, and one
     arrow per caller and callee, with how often the calls were made, as
     routine_calls() gives them. If labels are given, a routine whose entry
-    has a label shows it above its address. Draws nothing: render() does."""
+    has a label shows it above its address. If exits are given, as
+    routine_exits() gives them, each one is one more arrow, drawn in the
+    look of its kind (EXIT_LOOKS). Draws nothing: render() does."""
     labels = labels or {}
     graph = graphviz.Digraph("routines")
     graph.attr("node", shape="box", fontname="Menlo")
@@ -626,6 +641,11 @@ def routine_graph(
         graph.node(address(entry), text)
     for (caller, callee), count in calls.items():
         graph.edge(address(caller), address(callee), label=f"{count:,}")
+    for (source, target, kind), count in (exits or {}).items():
+        word, look = EXIT_LOOKS[kind]
+        graph.edge(
+            address(source), address(target), label=f"{word} {count:,}", **look
+        )
     return graph
 
 

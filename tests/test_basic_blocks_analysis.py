@@ -26,6 +26,7 @@ from papple2.workbench.basic_blocks_analysis import (
     read_split_transitions,
     reverse_postorder,
     routine_calls,
+    routine_exits,
     write_loop_reports,
 )
 from papple2.workbench.tiling import (
@@ -448,6 +449,8 @@ def test_a_routine_ends_at_a_jmp_into_another_routine():
 
     assert sorted(routines.graphs[0x3000].blocks) == [0x3000]
     assert routines.graphs[0x3000].edges == {}
+    # The JMP that was not followed is an exit.
+    assert routine_exits(routines, transitions) == {(0x3000, 0x2000, "jmp"): 1}
 
 
 def test_a_routine_ends_at_a_branch_into_another_routine():
@@ -467,6 +470,7 @@ def test_a_routine_ends_at_a_branch_into_another_routine():
 
     assert sorted(routines.graphs[0x3000].blocks) == [0x3000]
     assert routines.graphs[0x3000].edges == {}
+    assert routine_exits(routines, transitions) == {(0x3000, 0x2000, "branch"): 1}
 
 
 def test_a_routine_ends_where_it_runs_on_into_another_routine():
@@ -487,6 +491,7 @@ def test_a_routine_ends_where_it_runs_on_into_another_routine():
 
     assert sorted(routines.graphs[0x2000].blocks) == [0x2000]
     assert sorted(routines.graphs[0x2003].blocks) == [0x2003]
+    assert routine_exits(routines, transitions) == {(0x2000, 0x2003, "glide"): 1}
 
 
 def test_a_branch_back_to_the_routines_own_entry_stays_a_loop():
@@ -505,6 +510,7 @@ def test_a_branch_back_to_the_routines_own_entry_stays_a_loop():
 
     assert sorted(routines.graphs[0x2000].blocks) == [0x2000, 0x2002]
     assert list(routines.loops_of[0x2000]) == [0x2000]
+    assert routine_exits(routines, transitions) == {}
 
 
 def test_a_jmp_into_a_routine_gives_no_call():
