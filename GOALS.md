@@ -20,6 +20,8 @@
 
 **Alongside:** the small views (`routine_of()`, labels wherever an address is printed).
 
+**Still to prune:** `README.md`. The Dev parts and the data files move out, `docs/decisions.md` gets thinned, and the Vision is rewritten (remember, appreciate, tinker, create; no history).
+
 ---
 
 ## Strategic questions
