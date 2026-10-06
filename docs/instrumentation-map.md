@@ -1,6 +1,6 @@
 # Map of the instrumentation at `pre-redesign`
 
-**Status:** describes `papple2`'s code at the git tag `pre-redesign` (commit `0797250`), drawn 2026-09-27. Evidence for the redesign, not a design. Ideas for the new design are in `instrumentation-ideas.md`.
+**Status:** describes `papple2`'s code at the git tag `pre-redesign` (commit `0797250`), drawn 2026-09-27. Evidence for the redesign, not a design.
 
 "Instrumentation" here covers everything that watches or steers execution: checkpoints, breakpoints, hooks, the state machine, and what runs after the run.
 
@@ -71,4 +71,4 @@ Emulator     instructions += 1
 ## 5. What the maps show
 
 - Instrumentation hangs at five points, each with its own timing, its own return convention and its own blind spots. There is no common event the five share, so how they interact depends on order and on which path a change takes.
-- Every byte passes through `Memory`: opcode, operand bytes, pointer bytes, stack bytes, data. `Memory` is the one place that sees everything, but not why. Only the `CPU` knows whether a read is an opcode fetch, an operand, a pointer or data, and it reports only some of that. A complete seam without meaning, and a meaningful seam without completeness: see "The machine seam" in `instrumentation-ideas.md`.
+- Every byte passes through `Memory`: opcode, operand bytes, pointer bytes, stack bytes, data. `Memory` is the one place that sees everything, but not why. Only the `CPU` knows whether a read is an opcode fetch, an operand, a pointer or data, and it reports only some of that.

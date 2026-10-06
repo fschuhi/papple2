@@ -23,6 +23,9 @@
 *.yaml          text eol=lf
 Makefile        text eol=lf
 
+# --- CSV reports: Python's csv module writes CRLF; keep CRLF in the working tree ---
+*.csv           text eol=crlf
+
 # --- Binary: never convert line endings, never attempt a line diff ---
 *.xlsm          binary
 *.xlsx          binary
