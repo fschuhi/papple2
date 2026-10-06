@@ -75,6 +75,7 @@ from papple2.workbench.shell import (  # noqa: F401
     set_current_run,
     show_blocks,
     show_callers,
+    show_routine_graph,
     show_routines,
     stack_tracking_reports,
     tiling_reports,

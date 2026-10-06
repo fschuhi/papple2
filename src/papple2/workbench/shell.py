@@ -41,6 +41,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
 
+import graphviz
+
 from papple2.core.cpu import JMP_absolute, JMP_indirect, JSR
 from papple2.core.emulator import Emulator
 from papple2.debug.disassembler import STANDARD_LABELS, Disassembler
@@ -55,6 +57,7 @@ from papple2.workbench.basic_blocks_analysis import (
     find_routines,
     read_split_tiles,
     read_split_transitions,
+    routine_calls,
     write_loop_reports,
 )
 from papple2.workbench.stack_tracking import StackTracking
@@ -163,6 +166,11 @@ run_transitions: list[SplitTransition] | None = None
 
 # How show_callers() names the leaps that lead into a routine.
 CALL_KINDS = {JSR: "JSR", JMP_absolute: "JMP", JMP_indirect: "JMP ()"}
+
+# Where show_routine_graph() renders its picture: a view with the dossier's
+# labels, not a report, so it goes into tmp/, not the reports folder. The
+# file is tmp/routine_graph.svg.
+ROUTINE_GRAPH_FILE = Path("tmp/routine_graph")
 
 
 def set_current_run(
@@ -360,6 +368,20 @@ def show_callers(entry: int | str) -> None:
             f"{address(site)}  {CALL_KINDS[opcode]:<6}  {count:>6,}  "
             + ", ".join(sorted(holders))
         )
+
+
+def show_routine_graph() -> None:
+    """Draw every routine of the current run and the JSRs between them,
+    with the dossier's labels, into tmp/routine_graph.svg, and open it.
+    Needs Graphviz's dot program."""
+    found = current_routines()
+    graph = routine_graph(
+        found,
+        routine_calls(found, run_transitions or []),
+        annotations.labels if annotations is not None else None,
+    )
+    path = graph.render(ROUTINE_GRAPH_FILE, format="svg", cleanup=True, view=True)
+    print(f"wrote {path}")
 
 
 @dataclass
@@ -582,6 +604,29 @@ def print_loops(loops: dict[int, Loop]) -> None:
             f"{ids[header]:<4}  {address(header):<6}  {loop.depth:>5}  "
             f"{outer:<5}  {sources:<9}  {members}"
         )
+
+
+def routine_graph(
+    routines: Routines,
+    calls: dict[tuple[int, int], int],
+    labels: dict[int, str] | None = None,
+) -> graphviz.Digraph:
+    """The routine graph: one box per routine, in address order, and one
+    arrow per caller and callee, with how often the calls were made, as
+    routine_calls() gives them. If labels are given, a routine whose entry
+    has a label shows it above its address. Draws nothing: render() does."""
+    labels = labels or {}
+    graph = graphviz.Digraph("routines")
+    graph.attr("node", shape="box", fontname="Menlo")
+    for entry in sorted(routines.graphs):
+        text = address(entry)
+        if entry in labels:
+            # \n, two characters: dot's own line break, centred
+            text = labels[entry] + "\\n" + text
+        graph.node(address(entry), text)
+    for (caller, callee), count in calls.items():
+        graph.edge(address(caller), address(callee), label=f"{count:,}")
+    return graph
 
 
 def assign_lanes(spans: list[tuple[int, int]]) -> list[int]:

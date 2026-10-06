@@ -20,6 +20,7 @@ from papple2.workbench.basic_blocks_analysis import (
     immediate_dominators,
     natural_loops,
     read_split_reports,
+    routine_calls,
 )
 from papple2.workbench.shell import (
     assign_lanes,
@@ -32,11 +33,13 @@ from papple2.workbench.shell import (
     print_blocks,
     print_listing,
     print_routines,
+    routine_graph,
     run,
     save_edit,
     set_current_run,
     show_blocks,
     show_callers,
+    show_routine_graph,
     show_routines,
     stack_tracking_reports,
     tiling_reports,
@@ -462,6 +465,24 @@ def test_show_callers_of_a_routine_nothing_leaps_into(
     ]
 
 
+def test_routine_graph_has_a_box_per_routine_and_an_arrow_per_call(
+    walkthrough, no_run: None
+) -> None:
+    # Two routines: the program from 6000, without a label, and SUB. One
+    # arrow: the JSR in INNER, taken six times.
+    make_walkthrough_current(walkthrough)
+    calls = routine_calls(shell.routines, shell.run_transitions)
+
+    graph = routine_graph(shell.routines, calls, {0x6010: "SUB"})
+
+    assert graph.body == [
+        "\tnode [fontname=Menlo shape=box]\n",
+        "\t6000 [label=6000]\n",
+        '\t6010 [label="SUB\\n6010"]\n',
+        "\t6000 -> 6010 [label=6]\n",
+    ]
+
+
 def test_listing_reads_the_memory_of_the_current_run(
     walkthrough, capsys, no_run: None, no_dossier: None
 ) -> None:
@@ -553,6 +574,7 @@ def test_listing_of_an_address_alone_that_is_no_routine_stops(
         (show_routines, ()),
         (show_blocks, (0x6000,)),
         (show_callers, (0x6010,)),
+        (show_routine_graph, ()),
         (listing, (0x6000, 0x6002)),
         (loop_reports, (0x6000,)),
     ],

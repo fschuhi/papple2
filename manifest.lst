@@ -125,10 +125,10 @@ src/papple2/workbench/stack_tracking.py
 src/papple2/workbench/tiling.py
 
 ### --- Tests and fixtures data ---
-#tests/conftest.py
+tests/conftest.py
 #tests/test_assembler.py
 ##tests/test_attach.py
-#tests/test_basic_blocks_analysis.py
+tests/test_basic_blocks_analysis.py
 ##tests/test_breakpoints.py
 #tests/test_annotations.py
 ##tests/test_cpu_arithmetic.py
@@ -152,7 +152,7 @@ src/papple2/workbench/tiling.py
 ##tests/test_instruction_count.py
 ##tests/test_memory.py
 ##tests/test_memory_hooks.py
-#tests/test_shell.py
+tests/test_shell.py
 ##tests/test_softswitches.py
 #tests/test_stack_tracking.py
 #tests/test_tiling.py

@@ -15,7 +15,7 @@
 
 ## Routine structure (in this order)
 
-- The routine graph: every routine of the run (about 70) in one `graphviz` picture, with `JSR` edges and the dossier's labels on the nodes. Routines only; loops stay in `listing()` and `edit()`. Made before the next item, so that the picture shows what the shadow stack changes.
+- ~~The routine graph: every routine of the run (about 70) in one `graphviz` picture, with `JSR` edges and the dossier's labels on the nodes. Routines only; loops stay in `listing()` and `edit()`. Made before the next item, so that the picture shows what the shadow stack changes.~~ *(Done 2026-10-06: `show_routine_graph()`, `JSR` edges only, SVG in `tmp/`. Shared code gives each routine holding it the site's whole count.)*
 - The shadow stack goes into the structure detection: tail calls and stack jumps (`PHA`/`PHA`/`RTS`) become edges of their own kind, each in its own colour in the routine graph. Why: `build_graph()` keeps the edge of a `JMP` but drops the one of an `RTS`, so a tail call pulls the callee's blocks into the caller's graph, and a stack jump leaves its target unreached. Before that: `stack_tracking.py` rewritten in plain style and read together, line by line. Not recorded yet: `TXS`, direct writes to page 1, `RTI` and `BRK`; today only their effect shows (frames abandoned or redirected), not the instruction that caused it.
 - Chromatix's four subroutine classes (sorted by what a routine does to the stack between entry and `RTS`) need to be implemented; they have surfaced several times now.
 - Cases the new structure must explain, from `lr_returns.csv`:

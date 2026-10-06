@@ -8,16 +8,14 @@
 
 ## 📍 Current Session Pointer
 
-**Where we are:** `papple2` is the workbench for reverse engineering Apple II games by running them, with Lode Runner as the worked example. Dynamic first; the oracle only grades. I can run a game, see its routines, blocks and loops at the prompt, and label and comment its code in `edit()`. What I learn stays in the dossier.
+**Where we are:** `papple2` is the workbench for reverse engineering Apple II games by running them, with Lode Runner as the worked example. Dynamic first; the oracle only grades. I can run a game, see its routines, blocks and loops at the prompt, and all its routines in one picture, and label and comment its code in `edit()`. What I learn stays in the dossier.
 
 **What's next, in this order:**
 
-1. The routine graph: one picture of all routines.
+1. The small views: `routine_of()`, labels wherever an address is printed.
 2. HGR: tag what writes to the screen. My first longer piece of reverse engineering with the editor.
 3. The shadow stack goes into the structure detection; then the graph again.
 4. Region recovery.
-
-**Alongside:** the small views (`routine_of()`, labels wherever an address is printed).
 
 **Still to prune:** `README.md`. The Dev parts and the data files move out, `docs/decisions.md` gets thinned, and the Vision is rewritten (remember, appreciate, tinker, create; no history).
 
