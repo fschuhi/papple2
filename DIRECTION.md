@@ -1,34 +1,62 @@
-# papple2 -- Direction (working draft)
+# papple2 -- Direction
 
 (Note: "I" in the following paragraphs refer to the user, "you" to the AI model.)
 
-**Status:** working draft from the collection-mode session of 2026-09-23. Extended 2026-09-25 (oracle principle, lessons from Robotron). Updated 2026-10-01: dynamic analysis with static hole-filling, the oracle as grader only, the workbench; pruned. Nothing here is decided unless it sits under "Decided". Where this content finally lands (`GOALS.md`, `README.md`, `TODO.md`, or this document for good) is an open question at the end.
+**What this is.** Where my reverse engineering work is headed, and the material I collect on the way. I write it as the book author. It may grow, and it is not part of the per-session dump.
+
+**The Book.** I want to turn `papple2`, `a2-hires-lab` and `a2-lode-runner` into a series: posts, a blog or videos. The form is open. It is about Apple II games, how they work under the hood, and how to find that out.
+
+**Why.** I love learning and I love teaching. I want to pass on my appreciation of the games, of the platform, and of reverse engineering itself. The dominator algorithms gave me goosebumps, and a reader should get the chance to feel that too.
+
+**For whom.** The reverse engineering and retro crowds, first of all 6502.org, where my Robotron thread of 2019 lives. I want the connection to these people.
+
+**Why I do the work myself.** A model can produce a disassembly in an afternoon. That is not what this is about.
+
+- **Remember.** I was in high school, in the computer room. Nobody can go down that lane for me.
+- **Appreciate.** Doug, the Ngo brothers, Jordan and countless others made the impossible possible. Putting in the time, with my own tools, is how I pay homage, as XekriRedmane and Quinn Dunki did.
+- **Tinker.** Knowing how a game works lets me change it: sprites, texts, keys, levels, lives.
+- **Create.** Knowing how Lode Runner's sprites work lets me build a game of my own.
+
+**What follows for the projects.**
+
+- I make the finds. Tools and models help me see; they do not hand me answers.
+- What I cannot explain, I have not understood. So I ask for pictures and small examples.
+- A story is recorded when it happens: how I found out, not only what the code does.
 
 ---
 
-## 1. Direction in one paragraph
+## Lessons from Robotron (2019)
 
-`papple2` becomes a system to disassemble and understand Apple II and II+ games (48k, hi-res, no aux or language card memory) by *running* them. It is not general disassembly software but a kit of fairly generic parts, put together per game. Its place in the landscape is the corner that is still mostly empty: dynamic analysis whose results accumulate into documentation, instead of evaporating when the debugger session ends. The central problem is **knowledge accumulation**, and the form it takes is **storytelling**: the path from first suspicion to understood routine should be recorded as it happens, the way Quinn Dunki's Choplifter article reads -- a sequence of experiments, each answering one question. `papple2` complements static and agent-driven approaches rather than competing with them.
+The Robotron work is documented in the 6502.org thread "reverse engineering Robotron 2084 for the Apple II" (https://6502.org/forum/viewtopic.php?t=5517, 98 posts, February 2019 to June 2020). The flame flickered and then went out: lack of expertise, all-consuming work projects, lack of collaboration. We are in a different place today.
 
-**Dynamic first, static fills the holes** (2026-10-01). `papple2` analyses what actually ran. Andy McFadden argued for static analysis: without seeing what is left out, the paths not taken, it is hard to build a mental model of what code does. The answer here is a hybrid: dynamic analysis finds the structure (tiles, transitions, loops, calls), and static disassembly fills the holes inside that structure, marked "not run", because a hole may be data rather than code. The bet: the 6502 and the Apple II lend themselves to dynamic analysis, and Lode Runner's attract mode exercises nearly everything the game does (sprites, guard AI, player movement) within about 4 million instructions. Every dynamic result is a hypothesis that later parts of the game may revise; the "not run" marks show where coverage is thin. If static analysis ever gave us everything the dynamic one does, we would switch -- which is also why SourceGen is not the path for now.
+**What worked** (what I deemed presentable in the thread):
+- Dynamic execution tracking.
+- Tiles and stretches for automatic grouping.
+- Subtractive analysis, BigEd's "opposite of instrumentation, removing code": poke an `RTS` into a stretch, rerun, see what disappears.
+- Saving and loading snapshots.
+- Cycle-indexed memory heatmaps -- a functional equivalent to time-travel debugging?
+- Chronological call trees: nodes ordered by the cycle of their first execution (White Flame: "a readable flowchart").
 
-## 2. Worked example and targets
+**What hurt:**
+- I couldn't see the forest for the trees.
+- Handling different binaries was necessary, but it was easy to lose oversight.
+- Intent vs. mechanics: what an instruction did mechanically was straightforward; deducing why a specific comparison was made or a literal value was used was a massive conceptual leap.
+- Incomplete understanding of 6502 idioms. Chromatix's four subroutine classes (sorted by what a routine does to the stack between entry and `RTS`) need to be implemented; they have surfaced several times now. I lacked Leventhal-level knowledge to recognise standard routines like multiplication (see Chromatix's analysis of `closed03`).
+- No way to deal with self-modifying code. Lode Runner has some, which we will use to test our tools.
+- Cause and effect separated: 6502 status flags are not updated by all instructions, so a branch taken or not taken is often the consequence of an operation several steps earlier.
+- Steep learning curve for SourceGen and other tools; not-invented-here syndrome.
+- Visual clutter: automated call graphs produced unwieldy webs of nodes and arrows, readable only after aggressive pruning and cycle-timed vertical realignment. No clear idea how to keep the lessons learned about pruning. Graphviz: impressive eye candy, but useless for understanding.
+- Stretches: a single tile can belong to several logical stretches, depending on the game's runtime state. Fusing tiles onto an execution path only worked in easy cases; different states route through the same tiles in a different order.
+- The data bottleneck: fine-grained load/store tracking in Python produced datasets too slow to process and too large to comprehend. It might be necessary to say goodbye to an IDE approach and work with professional tools on `papple2`-generated dumps.
+- No native time-travel debugging: no register and status flag logging (performance). Scrolling backwards did not work; only incomplete ideas about synchronising memory changes with the program counter.
 
-- **Lode Runner** is the worked example. Xekri's `main.nw` tangles to `dasm` source that assembles byte-identically to the original, so it gives us both a runnable binary and an answer key (every routine, label, and data region named). Every tool can be graded against it.
-- **Oracle principle:** develop the workbench *as if* we were disassembling Lode Runner, with Xekri's code as the oracle to develop and debug our own toolchain. Which structures can our tools determine that we already know about from `a2-lode-runner`? The measure of success: an analysis run plus a few hours of manual tinkering with the binary yields a very good first draft of `main.nw`. In a way, this reverse engineers Xekri's documentation process. The oracle only grades; it never feeds the tools. Labels and the listing from `main.nw` are for checking results and for debugging, not inputs to any analysis. `papple2` is one point in a triangle with `a2-lode-runner` and, pulling weight in the short term, `a2-hires-lab`.
-- **Later targets:** games without an answer key, e.g. Bandits (the dream project) or Choplifter. Both fit the 48k II/II+ focus.
-- **Robotron** stays a test case (`make boot-robotron`) and one of the three games in `README.md`. `probotron` is hibernated and stays private.
+**Lessons from the Robotron workbench's heat map and time machine** (nice to look at, disappointing for learning; raw counts differed by orders of magnitude, and the display showed frequency, not evidence):
+- Binary marks instead of counts: a Code/Data Logger only records *whether* a byte was executed or read.
+- Log scale or rank coloring when counts are shown at all.
+- Differential runs (coverage diffing): record a run with and without an action (e.g. digging a hole), show only the difference -- evidence is change relative to a baseline.
+- Scrubbing for the time machine: drag a cursor along a timeline; jump from a line of code to each moment it ran, or from a value to the moment it was written (as in omniscient debuggers).
 
-## 3. Decided this session
-
-- `papple2` accepts patches via `make patch` (done: `Makefile` target, `*.patch` in `.gitignore`).
-- Work is fully macOS native.
-- No Excel workbench and no PyXLL bridge going forward. One-way `.xlsx` reports are a dead end without a back channel.
-- MAME is not a base for `papple2` (large C++ codebase, Lua instead of Python, breaks the "emulator and tools in one language" idea). It may still serve as a reference for what real hardware does.
-- For byte-perfect reassembly, use `dasm` (the syntax of `main.nw`). `papple2`'s own assembler stays a test tool.
-- Maps and reports are static HTML pages, opened from the workbench.
-
-## 4. Landscape (prior art)
+## Landscape (prior art)
 
 Two axes: static (reads the bytes) vs. dynamic (runs the game), and knowledge thrown away vs. knowledge accumulated.
 
@@ -47,135 +75,49 @@ Two axes: static (reads the bytes) vs. dynamic (runs the game), and knowledge th
 - _Needs investigation:_ microM8's heat map comes close to a Code/Data Logger. Is there an Apple II tool that saves per-byte code/data marks to a file for a disassembler to use, or that tracks provenance? Not known to us yet.
 - The Robotron workbench independently arrived at two of these ideas: the memory heatmap (a Code/Data Logger) and "record everything, step through the recording" (omniscient debugging). "Mem of interest" corresponds to logging filters / trace conditions.
 
-## 5. Vision (curated brain dump, grouped)
-
-Nothing here is prioritized yet. Established terms in parentheses.
-
-**Observe**
-- Collect tiles while executing (dynamic CFG recovery, code coverage).
-- Mark bytes as executed / read / written (Code/Data Logger, access heatmap).
-- Which addresses are loaded from (memory access trace, with logging filters).
-- Detect self-modifying code (writes into bytes that were executed).
-- Track `JSR`/`RTS` and tail calls to identify subroutines (function boundary detection).
-- Complex tracers, watchers, listeners, loggers via hooks (instrumentation).
-
-**Interpret**
-- Trace a hi-res byte back to its sources (data provenance via shadow state; see section 7).
-- Structure detection, kept modest: dominators, natural loops, and region recovery (structural analysis) over the tiles. Tiles stay as recorded; a stretch is a container of tiles that presents tile-like features to the outside (entry, exits, a span) and knows its loops, calls and holes inside.
-- Lo/hi table detection and table size reasoning (split address tables).
-- Infer table semantics from the Apple II memory layout (e.g. hi-res row base address tables).
-- Hypotheses about the game loop.
-
-**Record and tell**
-- Storytelling: record the path of discovery (question, experiment, result) as it happens, not only the final result. Two layers: the lab journal (how we found out, like Dunki's article) and `main.nw` (what the code does, like Xekri's document).
-- Findings attach to lasting artefacts: noweb chunks, basic blocks, labels, runs.
-- Snippets held lightly, so knowledge coagulates around them (stubs, provisional labels, hypotheses).
-- Generate noweb Markdown for tangling and weaving.
-- Think and annotate in chunks from the first target on (`LOAD_LEVEL`): living documentation, browsable with `a2-lode-runner`'s tools.
-
-**Interact**
-- A workbench in IPython: short commands on the recorded run, a session file under git, maps and graphs opened directly. Details in `docs/workbench-ideas.md`.
-- Interactive monitor mode (like AppleWin's debugger): break, inspect named zero page entries, ask which tile or stretch we are in, where a pixel came from; run Python at a breakpoint.
-- Complex programmable breakpoints.
-- Experiments while running, in Dunki's style: stub a routine with `RTS`, change memory, redirect a pointer, break and step out to find the main loop.
-- Save and load complex state; time machine (reverse debugging).
-
-**Report**
-- Static HTML reports per named run, side by side, collapsible.
-
-**Lessons from the Robotron workbench's heat map and time machine** (nice to look at, disappointing for learning; raw counts differed by orders of magnitude, and the display showed frequency, not evidence):
-- Binary marks instead of counts: a Code/Data Logger only records *whether* a byte was executed or read.
-- Log scale or rank coloring when counts are shown at all.
-- Differential runs (coverage diffing): record a run with and without an action (e.g. digging a hole), show only the difference -- evidence is change relative to a baseline.
-- Scrubbing for the time machine: drag a cursor along a timeline; jump from a line of code to each moment it ran, or from a value to the moment it was written (as in omniscient debuggers).
-
-## 6. Glossary (first pass)
+## Glossary (first pass)
 
 "Close" = same concept. "Related" = overlapping, forcing the standard name would mislead.
 
 The `papple2` terms name the old instrumentation, removed 2026-09-27 (at the tag `pre-redesign`); they stay here as vocabulary for the redesign.
 
-| `papple2` term | Established term | Match |
-|---|---|---|
-| tile | basic block | close |
-| stretch | container of tiles with entry and exits; region / abstract node (structural analysis); trace; extended basic block / superblock; function chunk (IDA); translation block chaining (QEMU) | related -- see section 1 and section 5, Interpret |
-| call tree | call graph; control-flow graph at block level | close |
-| collect tiles while executing | dynamic CFG recovery; code coverage | close |
-| heatmap of loads/saves/executions | Code/Data Logger; memory access heatmap | close |
-| time machine | reverse debugging; time-travel debugging; record/replay | close |
+| `papple2` term                     | Established term | Match |
+|------------------------------------|---|---|
+| tile                               | basic block | close |
+| stretch                            | container of tiles with entry and exits; region / abstract node (structural analysis); trace; extended basic block / superblock; function chunk (IDA); translation block chaining (QEMU) | related -- see section 1 and section 5, Interpret |
+| call tree                          | call graph; control-flow graph at block level | close |
+| collect tiles while executing      | dynamic CFG recovery; code coverage | close |
+| heatmap of loads/saves/executions  | Code/Data Logger; memory access heatmap | close |
+| time machine                       | reverse debugging; time-travel debugging; record/replay | close |
 | record everything, step through it | omniscient debugging | close |
-| `MemAccessCollector` | memory access trace | close |
-| mem of interest | logging filter; trace condition; watch range | close |
-| hooks | instrumentation; taps (MAME); probes | close |
-| where did this byte come from | data provenance; dynamic taint tracking; backward slicing | close |
-| JMP instead of JSR + RTS | tail call | close |
-| lo/hi tables | split address tables; "RTS trick" for jump tables | close |
-| snippet held lightly | stub; provisional label | related |
-| _(none yet)_ | chunk (noweb / literate programming): a named piece of code or text that tangling assembles into the source | -- `papple2` has no concept that links findings to chunks yet |
+| `MemAccessCollector` (deprecated)  | memory access trace | close |
+| mem of interest                    | logging filter; trace condition; watch range | close |
+| hooks                              | instrumentation; taps (MAME); probes | close |
+| where did this byte come from      | data provenance; dynamic taint tracking; backward slicing | close |
+| JMP instead of JSR + RTS           | tail call | close |
+| lo/hi tables                       | split address tables; "RTS trick" for jump tables | close |
+| snippet held lightly               | stub; provisional label | related |
+| _(none yet)_                       | chunk (noweb / literate programming): a named piece of code or text that tangling assembles into the source | -- `papple2` has no concept that links findings to chunks yet |
 
-## 7. First concrete question (candidate)
+## Stories
 
-Assume a memory range looks like sprite data (from hex and binary viewing). When a single byte in HGR1 changes: which `STA` wrote it, which tiles led there, and did the written value originate in the suspected sprite range?
+One line each for now.
 
-Approach: next to each register and memory byte, keep a set of source addresses (shadow state). Loads set the source, combining instructions (`ORA`, `EOR`, `AND`) merge sets, stores pass the set on. The changed screen byte then carries its sources; the tile path comes from the recorded instructions before the store. Lode Runner's `main.nw` provides the answer to check against.
+- The unnecessary double indirection in Doug's sprite placement code (it is in `a2-hires-lab`).
+- Bandits, in my high school times.
+- The ill-fated Robotron project.
 
-Could-extension: run over a whole frame, every byte that ever flows to the screen is marked -- automatic sprite data detection without hex viewing.
+## Technical direction (moves to `README.md`)
 
-## 8. Critique notes (collected, not brakes)
+### Direction in one paragraph
 
-- Collecting everything produces floods (Robotron, Excel). Question-driven reports and logging filters keep output readable.
-- Domain knowledge did the heavy lifting in Dunki's Choplifter work (game-dev patterns, knowing the gameplay). Tools support that recognition; they do not replace it.
-- Breadth: answer one real question end-to-end before building the next tool, so tools get graded by use.
-- Provenance through lookup tables mixes sprite data with table addresses; reports must separate them, probably by frequency.
-- Some glossary mappings are loose; keep the "related" column honest.
-- Renaming existing classes touches the tests; glossary first, code renames later (or never, where our term earns its keep).
+`papple2` becomes a system to disassemble and understand Apple II and II+ games (48k, hi-res, no aux or language card memory) by *running* them. It is not general disassembly software but a kit of fairly generic parts, put together per game. Its place in the landscape is the corner that is still mostly empty: dynamic analysis whose results accumulate into documentation, instead of evaporating when the debugger session ends. The central problem is **knowledge accumulation**, and the form it takes is **storytelling**: the path from first suspicion to understood routine should be recorded as it happens, the way Quinn Dunki's Choplifter article reads -- a sequence of experiments, each answering one question. `papple2` complements static and agent-driven approaches rather than competing with them.
 
-## 9. Open questions
+**Dynamic first, static fills the holes** (2026-10-01). `papple2` analyses what actually ran. Andy McFadden argued for static analysis: without seeing what is left out, the paths not taken, it is hard to build a mental model of what code does. The answer here is a hybrid: dynamic analysis finds the structure (tiles, transitions, loops, calls), and static disassembly fills the holes inside that structure, marked "not run", because a hole may be data rather than code. The bet: the 6502 and the Apple II lend themselves to dynamic analysis, and Lode Runner's attract mode exercises nearly everything the game does (sprites, guard AI, player movement) within about 4 million instructions. Every dynamic result is a hypothesis that later parts of the game may revise; the "not run" marks show where coverage is thin. If static analysis ever gave us everything the dynamic one does, we would switch -- which is also why SourceGen is not the path for now.
 
-- **Stretches:** containers of tiles (2026-10-01); see section 5, Interpret, and the glossary. The older question is in `docs/instrumentation-ideas.md`, section 15.
-- **Monitor form:** settled for now (2026-10-01): an IPython workbench, see `docs/workbench-ideas.md`; a notebook can come later for inline pictures.
+### Worked example and targets
 
-- Where does this content land: `GOALS.md` (strategy), `README.md` (vision, glossary), `TODO.md` (startable items), or a document of its own?
-- Do run reports live next to `a2-lode-runner`'s HTML research browser, or in their own site?
-- Three automated tests in `make test` load `data/bin/ROBOTRON.BIN` by hard-coded path: now an item in `TODO.md` section 2 (Robotron leftovers).
-
-## 10. Candidate next steps (unordered)
-
-- Interactive monitor mode for a stopped machine: an Apple II-style monitor like AppleWin's, or a socket the event loop listens on.
-- Provenance prototype for the question in section 7.
-- Glossary into the documentation. Then compare each existing tool with its closest established counterpart and borrow what has proven itself (features, names, file formats) -- e.g. the filter conditions of trace loggers, for the redesigned instrumentation.
-
-## 11. Lessons from Robotron (2019)
-
-The Robotron work is documented in the 6502.org thread "reverse engineering Robotron 2084 for the Apple II" (https://6502.org/forum/viewtopic.php?t=5517, 98 posts, February 2019 to June 2020). The flame flickered and then went out: lack of expertise, all-consuming work projects, lack of collaboration. We are in a different place today. The lessons from the heat map and the time machine are in section 5, the open question about stretches in section 9.
-
-**What worked** (what I deemed presentable in the thread):
-- Dynamic execution tracking.
-- Tiles and stretches for automatic grouping.
-- Subtractive analysis, BigEd's "opposite of instrumentation, removing code": poke an `RTS` into a stretch, rerun, see what disappears.
-- Saving and loading snapshots.
-- Cycle-indexed memory heatmaps -- a functional equivalent to time-travel debugging?
-- Chronological call trees: nodes ordered by the cycle of their first execution (White Flame: "a readable flowchart").
-
-**What hurt:**
-- I couldn't see the forest for the trees.
-- Handling different binaries was necessary, but it was easy to lose oversight.
-- Intent vs. mechanics: what an instruction did mechanically was straightforward; deducing why a specific comparison was made or a literal value was used was a massive conceptual leap.
-- Incomplete understanding of 6502 idioms. Chromatix's four subroutine classes (sorted by what a routine does to the stack between entry and `RTS`) need to be implemented; they have surfaced several times now. I lacked Leventhal-level knowledge to recognise standard routines like multiplication (see Chromatix's analysis of `closed03`).
-- No way to deal with self-modifying code. Lode Runner has some, which we will use to test our tools; Bandits reportedly has lots.
-- Cause and effect separated: 6502 status flags are not updated by all instructions, so a branch taken or not taken is often the consequence of an operation several steps earlier.
-- Steep learning curve for SourceGen and other tools; not-invented-here syndrome.
-- Visual clutter: automated call graphs produced unwieldy webs of nodes and arrows, readable only after aggressive pruning and cycle-timed vertical realignment. No clear idea how to keep the lessons learned about pruning. Graphviz: impressive eye candy, but useless for understanding.
-- Stretches: a single tile can belong to several logical stretches, depending on the game's runtime state. Fusing tiles onto an execution path only worked in easy cases; different states route through the same tiles in a different order.
-- The data bottleneck: fine-grained load/store tracking in Python produced datasets too slow to process and too large to comprehend. It might be necessary to say goodbye to an IDE approach and work with professional tools on `papple2`-generated dumps.
-- No native time-travel debugging: no register and status flag logging (performance). Scrolling backwards did not work; only incomplete ideas about synchronising memory changes with the program counter.
-
-**Ideas this led to** (2026-09-25, collected, not yet discussed):
-- Structural analysis and execution history go together in my head. Maybe that is the wrong approach, maybe not ("decoupled control flow graphs"). You suggested: the control-flow graph is one static map of the program, each execution path one walk across it; keep both, linked.
-- A folding editor instead of graphs: linear, text-block based, very fast keyboard navigation. My brain needs to become a supercharged 6502 execution system, in a many-worlds setting.
-- Relational trace logging: we need a database. For now the CSVs and the objects built from them are the database (2026-10-01); real databases later. Browsing experiments comes first, cross-experiment correlation later. Existing dynamic analysis tools may show how.
-- Stack-based subroutine identification as a quick win, building on what we have: pair each `RTS` with the `JSR` whose return address it pops; mismatches are candidates for Chromatix's classes 3 and 4. Open: tail calls, jump tables.
-- Data flow and taint analysis over one or more execution paths, presented in an Apple II specific memory overview. Brushing as the visualisation paradigm (selecting something in one view highlights it in all others).
-- Workbench paradigm (the deeper point, 2026-10-01: managing the noweb source is a level of reverse engineering of its own -- see section 5, Record and tell): mark something in the noweb document (Notepad++, autosave), press a key picked up by Karabiner-Elements; the workbench determines the context by comparing the current file with the passed snippet and offers what to do. It can also generate snippets to paste into the document. Documentation and experimentation are only loosely coupled at first.
-- Overviews like the "genome sequence" of Lorenz Wiest's Star Raiders disassembly (https://github.com/lwiest/StarRaiders).
-- Reverse engineering as an artistic endeavour: mastery and beauty.
+- **Lode Runner** is the worked example. Xekri's `main.nw` tangles to `dasm` source that assembles byte-identically to the original, so it gives us both a runnable binary and an answer key (every routine, label, and data region named). Every tool can be graded against it.
+- **Oracle principle:** develop the workbench *as if* we were disassembling Lode Runner, with Xekri's code as the oracle to develop and debug our own toolchain. Which structures can our tools determine that we already know about from `a2-lode-runner`? The measure of success: an analysis run plus a few hours of manual tinkering with the binary yields a very good first draft of `main.nw`. In a way, this reverse engineers Xekri's documentation process. The oracle only grades; it never feeds the tools. Labels and the listing from `main.nw` are for checking results and for debugging, not inputs to any analysis. `papple2` is one point in a triangle with `a2-lode-runner` and, pulling weight in the short term, `a2-hires-lab`.
+- **Later targets:** games without an answer key, e.g. Choplifter, which fits the 48k II/II+ focus.
+- **Robotron** stays a test case (`make boot-robotron`) and one of the three games in `README.md`. `probotron` is hibernated and stays private.

@@ -67,12 +67,6 @@ class Memory:
     def read_word(self, address: int) -> int:
         return self.read_byte(address) + (self.read_byte(address + 1) << 8)
 
-    def read_word_bug(self, address: int) -> int:
-        if address % 0x100 == 0xFF:
-            return self.read_byte(address) + (self.read_byte(address & 0xFF00) << 8)
-        else:
-            return self.read_word(address)
-
     def write_byte(self, address: int, value: int) -> None:
         # We do not restrict access to the soft-switch page $C0.
         # Note that we will never be able to access a value on $C0 if it is

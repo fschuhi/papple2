@@ -8,13 +8,17 @@
 
 ## 📍 Current Session Pointer
 
-**Where we are:** `papple2` is the machinery for reverse engineering Apple II games by running them, with Lode Runner as the worked example (`DIRECTION.md`: dynamic first, static fills the holes; the oracle only grades). The workbench is used through commands in `shell.py`, the contract between `papple2`'s developers and its reverse engineers; experiments (`scripts/lr_*.py`) are recipes of the same commands I type at the prompt (`README.md`, "Workbench"). Finds of my own: `lookup_hgr` (`$7a3e`), and through `show_callers()` its four callers, the twins `8336`/`83a7`, `88d7` and `four_blocks` (`8a69`) with its `first_tail_call` at `8af2`. **2026-10-05:** the listing editor works: `edit()` at the IPython prompt, labels and comments saved to the dossier at once, local labels (`.loop1`) and routine labels (`routine_6238`). The project documents have grown past use.
+**Where we are:** `papple2` is the workbench for reverse engineering Apple II games by running them, with Lode Runner as the worked example. Dynamic first; the oracle only grades. I can run a game, see its routines, blocks and loops at the prompt, and label and comment its code in `edit()`. What I learn stays in the dossier.
 
-**What's next:**
-- First, a clean-up session that advances nothing: cut the project artefacts down hard -- `TODO.md`, `DIRECTION.md`, `docs/instrumentation-design.md`, `docs/instrumentation-ideas.md`, `docs/instrumentation-map.md`, `docs/workbench-ideas.md`.
-- Then, small views that give a sense of location: `routine_of(address)` (the routine or routines an address lies in), and labels wherever an address is printed.
-- The shadow stack stays as it is: observing, tested, its report under git. Before it is extended, `stack_tracking.py` is rewritten in plain style and read together, line by line (`TODO.md`, "Workbench").
-- Later: folding the shadow stack into the routines (tail calls, stack jump tables); the HGR "ray"; a spike into Bandits.
+**What's next, in this order:**
+
+1. The inner loop of the new design as a page (see "Explaining `papple2`" in `TODO.md`).
+2. The routine graph: one picture of all routines.
+3. HGR: tag what writes to the screen. My first longer piece of reverse engineering with the editor.
+4. The shadow stack goes into the structure detection; then the graph again.
+5. Region recovery.
+
+**Alongside:** the small views (`routine_of()`, labels wherever an address is printed).
 
 ---
 
@@ -24,4 +28,4 @@ Goals that need a strategy discussion before they are actionable.
 
 - **Orientation before analysis** (2026-10-04, from the first shadow stack report, and from Robotron before it). An analysis only helps when its result arrives where I can read it: at the prompt, in a listing, with labels, ideally as a picture of trees and woods. A report only an LLM can read does not advance my understanding. Open: how each new analysis is checked against this before it is built -- e.g. by asking first what I will see at the prompt, and in which listing, when it is done.
 
-- **Routines as stretches.** A routine might map onto a "stretch". Still fuzzy: stretches that contain substretches (a routine's loops, entries into shared code); how stretches get their names (the oracle protocol); and how they relate to the noweb chunks of `main.nw`, which are named, nested pieces of code as well. Note: until now "stretch" was reserved for a container of reports; this would give the word a meaning in the code. Since 2026-10-03, the dossier keys labels and comments by address; stretches would add named, nested ranges to it. The first case may come with tail calls and stack jump tables (`TODO.md`), where routines stop being "the blocks reachable from a `JSR` target".
+- **Routines as stretches.** What goes into the dossier apart from the annotations? How things hang together. A stretch is an entity that persists, and that collects and presents what I know about a piece of code: where it reads from, where it writes, its parameters, how it returns its value, how it changes state, its side effects. Comments cannot carry this: they nail the understanding down at a very fine-grained level. Routines cannot either: they are nodes of one run and do not persist. Three steps: first, stretches that map 1:1 to routines; second, superstretches, composed of regions that may overlap; third, substretches, which make room for the noweb chunks of `main.nw`.

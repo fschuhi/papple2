@@ -52,7 +52,9 @@ docs/reports/lr_overview/lr_overview.txt
 
 # working documents for finding the direction `papple2` wants to take
 DIRECTION.md
+docs/decisions.md
 docs/instrumentation-design.md
+docs/workbench.md
 
 # old instrumentation architecture
 #docs/instrumentation-map.md
