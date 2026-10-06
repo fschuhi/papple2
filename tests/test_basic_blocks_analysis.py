@@ -12,6 +12,7 @@ from papple2.core.cpu import BNE, JMP_absolute, JMP_indirect, JSR, RTS
 from papple2.workbench.basic_blocks_analysis import (
     BlockGraph,
     Loop,
+    ReturnRow,
     SplitTile,
     SplitTransition,
     back_edges,
@@ -21,12 +22,14 @@ from papple2.workbench.basic_blocks_analysis import (
     find_routines,
     immediate_dominators,
     natural_loops,
+    read_returns,
     read_split_reports,
     read_split_tiles,
     read_split_transitions,
     reverse_postorder,
     routine_calls,
     routine_exits,
+    stack_jumps,
     write_loop_reports,
 )
 from papple2.workbench.tiling import (
@@ -511,6 +514,80 @@ def test_a_branch_back_to_the_routines_own_entry_stays_a_loop():
     assert sorted(routines.graphs[0x2000].blocks) == [0x2000, 0x2002]
     assert list(routines.loops_of[0x2000]) == [0x2000]
     assert routine_exits(routines, transitions) == {}
+
+
+# --- Stack jumps --------------------------------------------------------------
+
+
+def test_read_returns(tmp_path: Path):
+    # One row of each shape: a matched return, an unmatched one (no frame:
+    # no call site, no entry), an abandoned frame (no return site, no
+    # target).
+    returns_file = tmp_path / "lr_returns.csv"
+    returns_file.write_text(
+        "call_site,entry,return_site,return_target,outcome,count\n"
+        ",,7b23,6f33,unmatched,2\n"
+        "88cb,88d7,,,abandoned,169\n"
+        "1000,2000,2003,1003,matched,4\n",
+        encoding="utf-8",
+    )
+    assert read_returns(returns_file) == [
+        ReturnRow(None, None, 0x7B23, 0x6F33, "unmatched", 2),
+        ReturnRow(0x88CB, 0x88D7, None, None, "abandoned", 169),
+        ReturnRow(0x1000, 0x2000, 0x2003, 0x1003, "matched", 4),
+    ]
+
+
+def test_stack_jumps_need_the_shadow_stack_and_no_jsr_in_front():
+    # The JSR at $88cb makes $88ce an ordinary return point, whatever the
+    # shadow stack says. Matched and abandoned rows are no jumps.
+    transitions = [leap(0x88CB, 0x88CB, JSR, 0x88D7)]
+    returns = [
+        ReturnRow(None, None, 0x7B23, 0x6F33, "unmatched", 2),
+        ReturnRow(None, None, 0x7B23, 0x6F39, "unmatched", 1),
+        ReturnRow(0x1000, 0x2000, 0x7B23, 0x6F33, "redirected", 3),
+        ReturnRow(None, None, 0x88E0, 0x88CE, "unmatched", 86),
+        ReturnRow(0x1000, 0x2000, 0x2003, 0x1003, "matched", 4),
+        ReturnRow(0x88CB, 0x88D7, None, None, "abandoned", 169),
+    ]
+    assert stack_jumps(returns, transitions) == {
+        (0x7B23, 0x6F33): 5,
+        (0x7B23, 0x6F39): 1,
+    }
+
+
+def test_a_stack_jump_target_is_a_routine():
+    # $2000 pushes $2fff (PHA, PHA) and "returns" to $3000 with its RTS at
+    # $2003; $3000's own RTS then goes back to $1003, behind the JSR.
+    tiles = [
+        tile(0x1000, 0x1003), tile(0x1003, 0x1004),
+        tile(0x2000, 0x2004), tile(0x3000, 0x3001),
+    ]
+    transitions = [
+        leap(0x1000, 0x1000, JSR, 0x2000),
+        leap(0x2000, 0x2003, RTS, 0x3000),
+        leap(0x3000, 0x3000, RTS, 0x1003),
+    ]
+    without = find_routines(tiles, transitions, start=0x1000)
+    routines = find_routines(
+        tiles, transitions, start=0x1000, extra_entries={0x3000: 1}
+    )
+
+    assert list(without.graphs) == [0x1000, 0x2000]
+    assert list(routines.graphs) == [0x1000, 0x2000, 0x3000]
+    assert routines.calls_into == {0x1000: 1, 0x2000: 1, 0x3000: 1}
+    # The RTS into $3000 is an exit of $2000 only when it is a stack jump.
+    assert routine_exits(routines, transitions) == {}
+    assert routine_exits(routines, transitions, {(0x2003, 0x3000): 1}) == {
+        (0x2000, 0x3000, "stack jump"): 1
+    }
+
+
+def test_an_extra_entry_that_starts_no_block_is_left_out():
+    tiles = [tile(0x1000, 0x1003)]
+    routines = find_routines(tiles, [], start=0x1000, extra_entries={0x3000: 1})
+
+    assert list(routines.graphs) == [0x1000]
 
 
 def test_a_jmp_into_a_routine_gives_no_call():

@@ -35,6 +35,7 @@ the objects they print instead, for any graph.
 """
 
 import re
+import subprocess
 import time
 from bisect import bisect_right
 from dataclasses import dataclass
@@ -56,12 +57,14 @@ from papple2.workbench.basic_blocks_analysis import (
     build_run_graph,
     find_routines,
     read_split_tiles,
+    read_returns,
     read_split_transitions,
     routine_calls,
     routine_exits,
+    stack_jumps,
     write_loop_reports,
 )
-from papple2.workbench.stack_tracking import StackTracking
+from papple2.workbench.stack_tracking import RETURNS_FILE, StackTracking
 from papple2.workbench.tiling import (
     SPLIT_TILES_FILE,
     SPLIT_TRANSITIONS_FILE,
@@ -164,6 +167,10 @@ run_graph: BlockGraph | None = None
 # and how often. show_callers() reads them. None until tiling_reports() or
 # set_current_run() is called.
 run_transitions: list[SplitTransition] | None = None
+# The run's stack jumps, (address of the RTS, target) -> how often, as
+# stack_jumps() finds them in the stack tracking's report. None until
+# set_current_run() is given that report.
+run_stack_jumps: dict[tuple[int, int], int] | None = None
 
 # How show_callers() names the leaps that lead into a routine.
 CALL_KINDS = {JSR: "JSR", JMP_absolute: "JMP", JMP_indirect: "JMP ()"}
@@ -180,23 +187,36 @@ EXIT_LOOKS = {
     "jmp": ("JMP", {"style": "dashed", "color": "blue"}),
     "branch": ("branch", {"style": "dotted", "color": "darkorange"}),
     "glide": ("glide", {"style": "dashed", "color": "gray50"}),
+    "stack jump": ("RTS", {"style": "bold", "color": "purple"}),
 }
 
 
 def set_current_run(
-        emulator: Emulator, start: int, split_tiles: Path, split_transitions: Path
+        emulator: Emulator,
+        start: int,
+        split_tiles: Path,
+        split_transitions: Path,
+        returns: Path | None = None,
 ) -> None:
     """Make the run emulator has made the current run. Its routines and the
     graph of every block are built from its two split reports, each read by
     its full path: the files are the only connection, as in the walkthrough.
-    start is where the run began, which no report records. Every routine
-    entry without a label gets one in the current dossier, see
-    label_routines()."""
-    global run_emulator, routines, run_graph, run_transitions
+    start is where the run began, which no report records. With returns,
+    the stack tracking's report, the targets of the run's stack jumps
+    become routines too. Every routine entry without a label gets one in
+    the current dossier, see label_routines()."""
+    global run_emulator, routines, run_graph, run_transitions, run_stack_jumps
     tiles = read_split_tiles(split_tiles)
     transitions = read_split_transitions(split_transitions)
+    run_stack_jumps = (
+        stack_jumps(read_returns(returns), transitions) if returns else None
+    )
+    # How often each target was entered by a stack jump.
+    entered: dict[int, int] = {}
+    for (_, target), count in (run_stack_jumps or {}).items():
+        entered[target] = entered.get(target, 0) + count
     run_emulator = emulator
-    routines = find_routines(tiles, transitions, start)
+    routines = find_routines(tiles, transitions, start, entered)
     run_graph = build_run_graph(tiles, transitions, start)
     run_transitions = transitions
     print(f"{len(routines.graphs)} routines")
@@ -229,7 +249,7 @@ def run(
     run() writes nothing: the reports are the experiment's choice,
     afterwards. The routines of an earlier run are forgotten."""
     global run_program, run_emulator, run_rwts, run_instrumentations
-    global routines, run_graph, run_transitions
+    global routines, run_graph, run_transitions, run_stack_jumps
     emulator, rwts = program.boot(binary or program.DEFAULT_BINARY, headless=True)
     attached = [instrumentation(emulator.cpu) for instrumentation in instrumentations]
     for instrumentation in attached:
@@ -251,6 +271,7 @@ def run(
     routines = None
     run_graph = None
     run_transitions = None
+    run_stack_jumps = None
 
 
 def tiling_reports() -> None:
@@ -282,7 +303,9 @@ def tiling_reports() -> None:
 def stack_tracking_reports() -> None:
     """Write the stack tracking report of the current run into the reports
     folder: lr_returns.csv, how every frame of the shadow stack ended. The
-    run must have had StackTracking attached."""
+    run must have had StackTracking attached. If tiling_reports() has
+    already built the run's routines, they are built again with the
+    report, so that the targets of stack jumps become routines too."""
     if run_emulator is None:
         raise RuntimeError("no run; call run() first")
     trackings = [
@@ -296,6 +319,14 @@ def stack_tracking_reports() -> None:
     if reports_folder is None:
         raise RuntimeError("no reports folder set; call use_reports_folder() first")
     trackings[0].write_reports(reports_folder)
+    if routines is not None:
+        set_current_run(
+            run_emulator,
+            run_program.LOAD_ADDRESS,
+            reports_folder / SPLIT_TILES_FILE,
+            reports_folder / SPLIT_TRANSITIONS_FILE,
+            returns=reports_folder / RETURNS_FILE,
+        )
 
 
 def current_routines() -> Routines:
@@ -383,17 +414,26 @@ def show_callers(entry: int | str) -> None:
 def show_routine_graph() -> None:
     """Draw every routine of the current run, the JSRs between them and
     the edges from one into another's entry, with the dossier's labels,
-    into tmp/routine_graph.svg, and open it.
+    into tmp/routine_graph.svg, and put its link on the clipboard, to
+    paste into a browser. It doesn't open the picture itself: the system's
+    viewer for SVG may be the wrong one, e.g. Edge in the Windows VM.
     Needs Graphviz's dot program."""
     found = current_routines()
     graph = routine_graph(
         found,
         routine_calls(found, run_transitions or []),
         annotations.labels if annotations is not None else None,
-        routine_exits(found, run_transitions or []),
+        routine_exits(found, run_transitions or [], run_stack_jumps),
     )
-    path = graph.render(ROUTINE_GRAPH_FILE, format="svg", cleanup=True, view=True)
+    path = graph.render(ROUTINE_GRAPH_FILE, format="svg", cleanup=True)
     print(f"wrote {path}")
+    link = Path(path).resolve().as_uri()
+    try:
+        # pbcopy is macOS's clipboard, as in make commit-hash
+        subprocess.run(["pbcopy"], input=link, text=True, check=True)
+        print(f"link on the clipboard: {link}")
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        print(f"link (not copied, no pbcopy): {link}")
 
 
 @dataclass

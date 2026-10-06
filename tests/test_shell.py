@@ -370,6 +370,7 @@ def no_run(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(shell, "routines", None)
     monkeypatch.setattr(shell, "run_graph", None)
     monkeypatch.setattr(shell, "run_transitions", None)
+    monkeypatch.setattr(shell, "run_stack_jumps", None)
 
 
 def make_walkthrough_current(walkthrough) -> None:
@@ -751,6 +752,43 @@ def test_stack_tracking_reports_write_the_report(
     stack_tracking_reports()
 
     assert (tmp_path / "experiment" / "lr_returns.csv").exists()
+
+
+# A dispatcher: DISPATCH pushes $600c (high byte first) and "returns"
+# with RTS to $600d, TARGET, which no JSR calls. TARGET's own RTS then
+# returns behind the JSR at 6000. Then the program loops at DONE.
+#   6000 JSR DISPATCH   6003 JMP DONE      6006 LDA #$60   6008 PHA
+#   6009 LDA #$0C       600b PHA           600c RTS
+#   600d INC $10        600f RTS
+STACK_JUMP_PROGRAM = """
+        *=$6000
+        JSR DISPATCH
+DONE    JMP DONE
+DISPATCH LDA #$60
+        PHA
+        LDA #$0C
+        PHA
+        RTS
+TARGET  INC $10
+        RTS
+"""
+
+
+def test_stack_tracking_reports_make_stack_jump_targets_routines(
+    make_emulator, tmp_path: Path, capsys, no_run: None, no_reports_folder: None
+) -> None:
+    _, emulator = make_emulator(STACK_JUMP_PROGRAM)
+    run(stand_in_program(emulator, []), 12, Tiling, StackTracking)
+    use_reports_folder(tmp_path)
+
+    tiling_reports()
+    # Before the returns: TARGET belongs to no routine.
+    assert list(shell.routines.graphs) == [0x6000, 0x6006]
+
+    stack_tracking_reports()
+    # After: the RTS at 600c is a stack jump, and TARGET a routine.
+    assert shell.run_stack_jumps == {(0x600C, 0x600D): 1}
+    assert list(shell.routines.graphs) == [0x6000, 0x6006, 0x600D]
 
 
 def test_stack_tracking_reports_without_a_run_stop(no_run: None) -> None:

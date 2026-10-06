@@ -13,6 +13,7 @@ build_graph() returns basic blocks and edges.
 
 import csv
 from collections import defaultdict, deque
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -21,6 +22,7 @@ from papple2.core.cpu import JMP_absolute, JMP_indirect, JSR, RTS
 # A "speaking" import: the analysis names the instrumentation whose reports
 # it reads. How an analysis states what it needs upstream is still open
 # (briefing.md, section 7).
+from papple2.workbench.stack_tracking import REDIRECTED, UNMATCHED
 from papple2.workbench.tiling import (
     BRANCH_OPCODES,
     BRK,
@@ -131,11 +133,16 @@ class Routines:
 
     graphs: dict[int, BlockGraph]
     loops_of: dict[int, dict[int, Loop]]
-    calls_into: dict[int, int]  # JSRs into the routine; the start gets +1
+    calls_into: dict[int, int]  # JSRs and stack jumps in; the start gets +1
 
 
 def parse_address(text: str) -> int:
     return int(text, 16)
+
+
+def parse_optional_address(text: str) -> int | None:
+    """'6f33' -> 0x6F33; '' (a field the row doesn't have) -> None."""
+    return parse_address(text) if text else None
 
 
 def parse_opcode(text: str) -> int | None:
@@ -186,6 +193,59 @@ def read_split_reports(folder: Path) -> tuple[list[SplitTile], list[SplitTransit
         read_split_tiles(folder / SPLIT_TILES_FILE),
         read_split_transitions(folder / SPLIT_TRANSITIONS_FILE),
     )
+
+
+@dataclass(frozen=True)
+class ReturnRow:
+    """One row of lr_returns.csv, the stack tracking's report. Abandoned
+    and open rows have no return site and no target; unmatched rows have
+    no call site and no entry."""
+
+    call_site: int | None
+    entry: int | None
+    return_site: int | None
+    return_target: int | None
+    outcome: str
+    count: int
+
+
+def read_returns(filename: Path) -> list[ReturnRow]:
+    """Read a returns report (lr_returns.csv) by its full path."""
+    with filename.open(newline="", encoding="utf-8") as returns_file:
+        returns = [
+            ReturnRow(
+                call_site=parse_optional_address(row["call_site"]),
+                entry=parse_optional_address(row["entry"]),
+                return_site=parse_optional_address(row["return_site"]),
+                return_target=parse_optional_address(row["return_target"]),
+                outcome=row["outcome"],
+                count=int(row["count"]),
+            )
+            for row in csv.DictReader(returns_file)
+        ]
+    return returns
+
+
+def stack_jumps(
+    returns: list[ReturnRow], transitions: list[SplitTransition]
+) -> dict[tuple[int, int], int]:
+    """The RTSs that jumped rather than returned, e.g. after PHA/PHA:
+    (address of the RTS, target) -> how often, in address order.
+
+    Two pieces of evidence are needed. The shadow stack found no frame
+    there, or one that expected another return (unmatched, redirected);
+    and the target does not lie right behind a JSR the run made. The
+    second test keeps out ordinary returns whose frame the shadow stack
+    dropped too early."""
+    jsr_sites = {row.leap_from_pc for row in transitions if row.opcode == JSR}
+    jumps: dict[tuple[int, int], int] = defaultdict(int)
+    for row in returns:
+        if row.outcome not in (UNMATCHED, REDIRECTED):
+            continue
+        if (row.return_target - 3) & 0xFFFF in jsr_sites:
+            continue
+        jumps[(row.return_site, row.return_target)] += row.count
+    return dict(sorted(jumps.items()))
 
 
 def collect_edges(
@@ -454,21 +514,35 @@ def natural_loops(graph: BlockGraph, idom: dict[int, int]) -> dict[int, Loop]:
 
 
 def find_routines(
-    tiles: list[SplitTile], transitions: list[SplitTransition], start: int
+    tiles: list[SplitTile],
+    transitions: list[SplitTransition],
+    start: int,
+    extra_entries: Mapping[int, int] | None = None,
 ) -> Routines:
     """Find every routine of the run: the code reachable from an entry
-    without following calls. The entries are the run's start and every
-    JSR target that ran. A routine ends where another begins: an edge
-    into another routine's entry, by JMP, branch or glide, is not
-    followed."""
+    without following calls. The entries are the run's start, every JSR
+    target that ran, and the extra entries, e.g. the targets of stack
+    jumps, each with how often it was entered that way. An extra entry
+    that starts no basic block is left out: no code ran from there. A
+    routine ends where another begins: an edge into another routine's
+    entry, by JMP, branch or glide, is not followed."""
+    block_starts = {tile.start for tile in tiles}
+    extra = {
+        entry: count
+        for entry, count in (extra_entries or {}).items()
+        if entry in block_starts
+    }
     jsr_targets = {row.target_tile for row in transitions if row.opcode == JSR}
-    entries = [start] + sorted(jsr_targets - {start})
+    entries = [start] + sorted((jsr_targets | set(extra)) - {start})
 
-    # How often each routine was called: the counts of the JSRs into it.
+    # How often each routine was entered: the counts of the JSRs into it,
+    # plus those of the extra entries.
     calls_into = {entry: 0 for entry in entries}
     for row in transitions:
         if row.opcode == JSR:
             calls_into[row.target_tile] += row.count
+    for entry, count in extra.items():
+        calls_into[entry] += count
     calls_into[start] += 1  # the run itself enters there once
 
     graphs = {}
@@ -506,13 +580,16 @@ def routine_calls(
 
 
 def routine_exits(
-    routines: Routines, transitions: list[SplitTransition]
+    routines: Routines,
+    transitions: list[SplitTransition],
+    jumps: Mapping[tuple[int, int], int] | None = None,
 ) -> dict[tuple[int, int, str], int]:
     """The edges that leave a routine into another routine's entry, which
     find_routines() does not follow: (routine entry, entered routine,
-    kind) -> how often, in address order. kind is "jmp", "branch" or
-    "glide". JSRs are calls, see routine_calls(); RTS, RTI and BRK are
-    left out.
+    kind) -> how often, in address order. kind is "jmp", "branch",
+    "glide", or "stack jump" for an RTS that is one of jumps, as
+    stack_jumps() gives them. JSRs are calls, see routine_calls(); other
+    RTSs, RTI and BRK are left out.
 
     As for calls, every routine whose blocks hold an edge's source block
     gets the edge, each with its whole count."""
@@ -526,6 +603,10 @@ def routine_exits(
             kind = "jmp"
         elif row.opcode in BRANCH_OPCODES:
             kind = "branch"
+        elif row.opcode == RTS and (row.leap_from_pc, row.target_tile) in (
+            jumps or {}
+        ):
+            kind = "stack jump"
         else:
             continue
         for holder, graph in routines.graphs.items():
