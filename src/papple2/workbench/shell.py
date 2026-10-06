@@ -673,6 +673,7 @@ def routine_graph(
     labels = labels or {}
     graph = graphviz.Digraph("routines")
     graph.attr("node", shape="box", fontname="Menlo")
+    #graph.attr(rankdir="LR")
     for entry in sorted(routines.graphs):
         text = address(entry)
         if entry in labels:
