@@ -12,11 +12,10 @@
 
 **What's next, in this order:**
 
-1. The inner loop of the new design as a page (see "Explaining `papple2`" in `TODO.md`).
-2. The routine graph: one picture of all routines.
-3. HGR: tag what writes to the screen. My first longer piece of reverse engineering with the editor.
-4. The shadow stack goes into the structure detection; then the graph again.
-5. Region recovery.
+1. The routine graph: one picture of all routines.
+2. HGR: tag what writes to the screen. My first longer piece of reverse engineering with the editor.
+3. The shadow stack goes into the structure detection; then the graph again.
+4. Region recovery.
 
 **Alongside:** the small views (`routine_of()`, labels wherever an address is printed).
 

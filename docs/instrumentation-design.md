@@ -23,19 +23,7 @@ Three kinds of instrumentation, each with its own small interface. There is no c
 
 ## 2. The order at each instruction
 
-```text
-── boundary ─────────────────── Emulator
-   breakpoints                  may stop: the instruction does not run
-   traps                        served: continue at the PC the trap set
-                                not served: stop, and say why
-── do_next_step() ───────────── CPU and Memory
-   Memory  read_opcode, after
-   Memory  read_operand, after       (0, 1 or 2 times)
-   Memory  read_pointer, after       (0 or 2 times)
-   Memory  read_data / read_immediate / write_data / read_stack / write_stack, after
-   CPU     after_instruction
-── boundary ───────────────────
-```
+The page `docs/diagrams/inner-loop-hooks.html` shows this order for seven instructions, call by call: the boundary (breakpoints, traps, `until`), then every `Memory` method with the hook list that hears it, then `after_instruction`.
 
 Only the `Emulator` stops execution, and only at the boundary, when its state machine receives an event. A hook runs inside `do_next_step()`, below the `Emulator`, and cannot stop anything; the machine cannot be halted in the middle of an instruction.
 

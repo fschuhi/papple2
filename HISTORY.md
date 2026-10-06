@@ -11,6 +11,7 @@
 
 ---
 
+- **2026-10-06:** The inner-loop page for the new design: the same seven instructions, every byte with the hook list that hears it. The immediate operand was the eye-opener: the addressing mode reads nothing, the operation reads it as an immediate.
 - **2026-10-06:** The Book. I know now where all of this is headed: a series about Apple II games, how they work under the hood, and how to find that out. Remember, appreciate, tinker, create.
 - **2026-10-05:** The listing editor. I label and comment Lode Runner's code in the terminal as fast as I read it, and every change is saved at once. It began as my own half-hour prototype.
 - **2026-10-04:** `lookup_hgr`, the first routine of Lode Runner I found, read and named without help. Then its four callers, and my first tail call.

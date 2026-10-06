@@ -52,7 +52,7 @@
 
 ## Explaining `papple2`
 
-- The inner loop of the new design as a page, the sibling of `docs/diagrams/inner-loop.html`: the same seven instructions, each call with the hook list that hears it. Built together, one instruction first. It then replaces the sketch in `docs/instrumentation-design.md`, section 2.
+- ~~The inner loop of the new design as a page, the sibling of `docs/diagrams/inner-loop.html`: the same seven instructions, each call with the hook list that hears it. Built together, one instruction first. It then replaces the sketch in `docs/instrumentation-design.md`, section 2.~~ *(Done 2026-10-06: `docs/diagrams/inner-loop-hooks.html`, all seven instructions; section 2 now points to it.)*
 - The walkthrough as an experiment with a recipe: a program setup for its twenty bytes in `papple2.programs`, then `run()` and `tiling_reports()` like Lode Runner. Today `scripts/walkthrough.py` still wires its run by hand.
 - The walkthrough gets its own dossier (`dossiers/walkthrough/`) instead of `NAMES`. Tests: the fixture opens a dossier in `tmp_path`, seeded with the four names, and a chapter shows that labels given in one session are there in the next.
 - The walkthrough program exists three times: `scripts/walkthrough.py` (`PROGRAM`), `tests/conftest.py` (`WALKTHROUGH_PROGRAM`) and `tests/test_tiling.py` (`PROGRAM`); its names twice (`NAMES`, `WALKTHROUGH_NAMES`). Tests can't import from `scripts/`, so a shared copy would live in the package.
