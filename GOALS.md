@@ -12,9 +12,11 @@
 
 **What's next, in this order:**
 
-1. The routine graph, readable again: the neighbourhood of one routine first (see `TODO.md`).
-2. HGR: tag what writes to the screen. My first longer piece of reverse engineering with the editor.
-3. Region recovery.
+1. `TODO.md` Scratchpad: always write through and refresh annotations
+2. `TODO.md` Scratchpad: edit zero page labels in `edit()`.
+3. The routine graph, readable again: the neighbourhood of one routine first (see `TODO.md`).
+4. HGR: tag what writes to the screen. My first longer piece of reverse engineering with the editor.
+5. Region recovery.
 
 **Still to prune:** `README.md`. The Dev parts and the data files move out, `docs/decisions.md` gets thinned, and the Vision is rewritten (remember, appreciate, tinker, create; no history).
 

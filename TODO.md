@@ -13,6 +13,13 @@
 
 ---
 
+## Scratchpad (waiting to be assigned to sections)
+
+- I need some support for massaging labels and comments in different Terminal sessions. Any `listing` or `edit` (and potentially also other shell methods) should read the annotations before executing the main functionality. Otherwise something I enter in another Terminal session is not picked up, even though it is in the `annotations.json`. 
+- Should be possible in the `edit()` to also edit zero page labels.
+- Save last output to clipboard (for e.g. listings).
+- Labels for `#$0b`.
+
 ## Routine structure (in this order)
 
 - The routine graph is complete but hard to read (2026-10-07). Directions: the neighbourhood of one routine, `show_routine_graph("lookup_hgr")` with only its callers and callees (the cheapest); a dispatcher's fan-out merged into one arrow ("`RTS` to 14 routines"); the layout, left to right, or boxes grouped by address range.

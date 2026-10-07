@@ -1,6 +1,15 @@
 {
   "labels": {
+    "000c": "zp_hgr1_row_ptr",
+    "000d": "zp_hgr1_row_ptr_hi",
+    "000e": "zp_hgr2_row_ptr",
+    "000f": "zp_hgr2_row_ptr_hi",
+    "001b": "sprite_row",
+    "001d": "ix_sprite_row",
+    "001e": "param_A",
     "0800": "routine_0800",
+    "1a85": "hgr_rows_lo",
+    "1b45": "hgr_rows_hi",
     "6238": "routine_6238",
     "6252": "routine_6238.loop1",
     "625a": "routine_6238.loop2",
@@ -56,8 +65,10 @@
     "7b64": "routine_7b64",
     "82aa": "routine_82aa",
     "82b0": "routine_82b0",
-    "8336": "routine_8336",
-    "83a7": "routine_83a7",
+    "8336": "r_11x2_1",
+    "8350": "r_11x2_1.loop1",
+    "8376": "r_11x2_1.loop2",
+    "83a7": "r_11x2_2",
     "8438": "routine_8438",
     "86b1": "routine_86b1",
     "86b5": "routine_86b5",
@@ -69,7 +80,7 @@
     "884b": "routine_884b",
     "885d": "routine_885d",
     "8868": "routine_8868",
-    "8872": "routine_8872",
+    "8872": "load_ax_from_table",
     "887c": "routine_887c",
     "888f": "routine_888f",
     "88a2": "routine_88a2",
@@ -95,6 +106,12 @@
     "6283": "byte from the buffer at $0d00, two values per byte",
     "6288": "even: low nibble; BPL always jumps",
     "628c": "odd: high nibble, then on to the next byte",
-    "6296": "values 10-15 are invalid: read as 0"
+    "6296": "values 10-15 are invalid: read as 0",
+    "7a3e": "row index (0-191) in Y",
+    "7a48": "HGR1 starts at $2000",
+    "7a4c": "HGR2 starts at $4000, so toggle bits 5 and 6",
+    "833a": "returns A, X",
+    "8872": "X = ?",
+    "887b": "return A ($1c9a,X), X ($1d26,X)"
   }
 }

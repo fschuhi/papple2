@@ -55,16 +55,17 @@ docs/reports/lr_overview/lr_overview.txt
 #docs/listings/LOAD_LEVEL.lst
 
 # working documents for finding the direction `papple2` wants to take
-#DIRECTION.md
+DIRECTION.md
 #docs/decisions.md
-#docs/instrumentation-design.md
+docs/instrumentation-design.md
 docs/workbench.md
 
 # old instrumentation architecture
 #docs/instrumentation-map.md
 #docs/diagrams/inner-loop.html
-docs/diagrams/inner-loop-hooks.html
+#docs/diagrams/inner-loop-hooks.html
 #docs/diagrams/memory-access.svg
+docs/diagrams/routine_graph.svg
 #docs/diagrams/run-loop.svg
 
 ### --- Build & Python Configuration ---
@@ -102,33 +103,33 @@ scripts/lr_basic_blocks_analysis.py
 
 ## core
 #src/papple2/core/apple.py
-src/papple2/core/cpu.py
+#src/papple2/core/cpu.py
 #src/papple2/core/disk_image.py
-src/papple2/core/emulator.py
-src/papple2/core/memory.py
+#src/papple2/core/emulator.py
+#src/papple2/core/memory.py
 #src/papple2/core/window.py
 
 ## debug
-src/papple2/debug/assembler.py
+#src/papple2/debug/assembler.py
 #src/papple2/debug/disassembler.py
 #src/papple2/debug/stop_conditions.py
 
 ## programs
-src/papple2/programs/lode_runner.py
+#src/papple2/programs/lode_runner.py
 
 ## workbench
 #src/papple2/workbench/annotations.py
-src/papple2/workbench/basic_blocks_analysis.py
-#src/papple2/workbench/listing_editor.py
+#src/papple2/workbench/basic_blocks_analysis.py
+src/papple2/workbench/listing_editor.py
 src/papple2/workbench/shell.py
-src/papple2/workbench/stack_tracking.py
-src/papple2/workbench/tiling.py
+#src/papple2/workbench/stack_tracking.py
+#src/papple2/workbench/tiling.py
 
 ### --- Tests and fixtures data ---
 tests/conftest.py
 #tests/test_assembler.py
 ##tests/test_attach.py
-tests/test_basic_blocks_analysis.py
+#tests/test_basic_blocks_analysis.py
 ##tests/test_breakpoints.py
 #tests/test_annotations.py
 ##tests/test_cpu_arithmetic.py
@@ -152,7 +153,7 @@ tests/test_basic_blocks_analysis.py
 ##tests/test_instruction_count.py
 ##tests/test_memory.py
 ##tests/test_memory_hooks.py
-tests/test_shell.py
+#tests/test_shell.py
 ##tests/test_softswitches.py
 #tests/test_stack_tracking.py
 #tests/test_tiling.py
