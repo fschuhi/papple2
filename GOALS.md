@@ -8,15 +8,13 @@
 
 ## 📍 Current Session Pointer
 
-**Where we are:** `papple2` is the workbench for reverse engineering Apple II games by running them, with Lode Runner as the worked example. Dynamic first; the oracle only grades. I can run a game, see its routines, blocks and loops at the prompt, and all its routines in one picture, and label and comment its code in `edit()`. A routine ends where another begins, and every way into it is an arrow of its kind, stack jumps included: no code that ran is left without a routine. What I learn stays in the dossier.
+**Where we are:** `papple2` is the workbench for reverse engineering Apple II games by running them, with Lode Runner as the worked example. Dynamic first; the oracle only grades. I can run a game, see its routines, blocks and loops at the prompt, and all its routines in one picture, and label and comment its code in `edit()`. A routine ends where another begins, and every way into it is an arrow of its kind, stack jumps included: no code that ran is left without a routine. What I learn stays in the dossier. Two terminals can work on one dossier, `edit()` labels what operands point at, zero page included, `hexdump()` shows data tables, and `clip()` copies what a command showed.
 
 **What's next, in this order:**
 
-1. `TODO.md` Scratchpad: always write through and refresh annotations
-2. `TODO.md` Scratchpad: edit zero page labels in `edit()`.
-3. The routine graph, readable again: the neighbourhood of one routine first (see `TODO.md`).
-4. HGR: tag what writes to the screen. My first longer piece of reverse engineering with the editor.
-5. Region recovery.
+1. The listing editor's layout: the instruction column follows its widest instruction (see `TODO.md`).
+2. HGR: tag what writes to the screen. My first longer piece of reverse engineering with the editor; it decides which tool comes next, colored ranges first.
+3. Region recovery.
 
 **Still to prune:** `README.md`. The Dev parts and the data files move out, `docs/decisions.md` gets thinned, and the Vision is rewritten (remember, appreciate, tinker, create; no history).
 

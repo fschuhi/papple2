@@ -10,8 +10,8 @@ Since 2026-10-02, `papple2.workbench` holds two kinds of packages, connected by 
 
 - **Instrumentation packages** watch a running `Emulator` through its hooks -- after every instruction, or after reads and writes of memory -- and write reports into a folder given by the caller. The `-ing` suffix marks them: `Tiling` in `tiling.py`; `StackTracking` in `stack_tracking.py` (since 2026-10-04), a shadow stack that sorts every `RTS` by the frame its `JSR` opened and writes `lr_returns.csv`. `run()` attaches any number of them, as classes it builds on the booted machine.
 - **Analysis packages** need no `Emulator`: they read reports from a folder and return plain values or write reports of their own, so they also run on fixture files. Reading is kept apart from the logic. `basic_blocks_analysis.py` reads the split reports, builds a graph of basic blocks, finds dominators and natural loops, and writes the loop reports.
-- **The shell** (`shell.py`) holds the commands: the functions meant for the prompt and for experiments. It keeps three pieces of state, one of each at a time: the reports folder, the dossier, and the current run. `dis(emulator, start, end, labels, graph, comments)` disassembles a range from memory after the run, with labels in the operands and in a column of their own, comments behind the instructions, and the jumps the run took drawn as arrows in a gutter on the left; `listing()` and `edit()` are `dis()` on the current run with the dossier's labels and comments.
-- **The dossier** (since 2026-10-03) is everything we know about one program, in a folder of its own: `dossiers/lode_runner/`, under git (unlike `data/`). Today it holds `annotations.json`, the labels and comments, kept by `Annotations` in `annotations.py`: every change is written at once, sorted by address, one entry per line. `use_dossier()` opens it, and starts a new one with the Apple II's standard labels. Snapshots (outside git) may follow. Unlike the reports, which every run rebuilds, the dossier only changes by hand.
+- **The shell** (`shell.py`) holds the commands: the functions meant for the prompt and for experiments. It keeps three pieces of state, one of each at a time: the reports folder, the dossier, and the current run. `dis(emulator, start, end, labels, graph, comments)` disassembles a range from memory after the run, with labels in the operands and in a column of their own, comments behind the instructions, and the jumps the run took drawn as arrows in a gutter on the left; `listing()` and `edit()` are `dis()` on the current run with the dossier's labels and comments; in `edit()`, the Operand field labels the address an operand names, zero page included. `hexdump()` shows the memory as bytes and text. The commands that show something return it as text, which IPython shows as `Out[n]` and keeps in `_`; `clip()` copies it.
+- **The dossier** (since 2026-10-03) is everything we know about one program, in a folder of its own: `dossiers/lode_runner/`, under git (unlike `data/`). Today it holds `annotations.json`, the labels and comments, kept by `Annotations` in `annotations.py`: every change is written at once, sorted by address, one entry per line. Every change reads the file first, and every command that shows labels reads it before it shows, so two IPython sessions can work on one dossier. `use_dossier()` opens it, and starts a new one with the Apple II's standard labels. Snapshots (outside git) may follow. Unlike the reports, which every run rebuilds, the dossier only changes by hand.
 
 ```mermaid
 graph LR
@@ -61,6 +61,8 @@ edit(0x7a3e)                  # edit the whole routine, i.e. add labels and comm
 label(0x7a3e, "lookup_hgr")
 listing("lookup_hgr")         # a label wherever a routine's address goes
 show_callers("lookup_hgr")    # every call site that leaps into it
+hexdump("hgr_rows_lo")        # one page of memory, as bytes and text
+clip()                        # the last output to the clipboard
 ```
 
 What `%run scripts/lr_basic_blocks_analysis.py` leaves in the session:
@@ -68,7 +70,8 @@ What `%run scripts/lr_basic_blocks_analysis.py` leaves in the session:
 | Kind | Names                                                                                                                                                         |
 |---|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Commands: setting up | `use_reports_folder()`, `use_dossier()`, `run()`, `tiling_reports()`, `stack_tracking_reports()`                                                              |
-| Commands: the current run | `show_routines()`, `show_blocks()`, `show_callers()`, `show_routine_graph()`, `listing()`, `hexdump()`, `edit(), `loop_reports()`                             |
+| Commands: the current run | `show_routines()`, `show_blocks()`, `show_callers()`, `show_routine_graph()`, `listing()`, `hexdump()`, `edit()`, `loop_reports()`                        |
+| Commands: the clipboard | `clip()`                                                                                                                                                    |
 | Commands: the dossier | `label()`, `comment()`, `unlabel()`, `uncomment()`                                                                                                            |
 | Commands on objects | `print_routines()`, `print_blocks()`, `print_edges()`, `print_loops()`, `dis()`, `set_current_run()`                                                          |
 | For a run of your own | `lode_runner` (a program setup, a module: lowercase), `Tiling` and `StackTracking` (instrumentations, classes: capitalized)                                   |
@@ -101,8 +104,9 @@ The commands are the contract: documented here, and kept working. The machinery 
 - **Dossier:** everything we know about one program, a folder under git: `dossiers/lode_runner/`. Not its annotations: they are one part of it, and snapshots may follow.
 - **Annotations:** the labels and comments in a dossier, by address, in `annotations.json`.
 - **Label:** the name of one address; one text names one address only. Snake case: `lookup_hgr`; the Apple II's standard labels stay uppercase (`r:KBD`), so they stand out.
-- **`show_` and `print_`:** a `show_` command works on the current run and takes at most an address or a label; a `print_` function takes the objects it prints.
+- **`show_` and `print_`:** a `show_` command works on the current run and takes at most an address or a label; a `print_` function takes the objects it prints. A `show_` command returns what it shows as text, as `listing()` and `hexdump()` do, for IPython to show as `Out[n]` and `clip()` to copy; a `print_` function prints.
 - **Tile:** a run of instructions from an entry point to the leap that leaves it, as recorded. Tiles as recorded ("unbroken") may overlap.
+- **Target:** the address an operand names: `$1a85` in `LDA $1a85,Y`, the pointer `$1b` in `STA ($1b),Y`, a branch's target. `edit()`'s Operand field labels it.
 - **Leap:** a branch, `JMP`, `JSR`, `RTS`, `RTI` or `BRK`. **Glide:** the CPU runs on into the next instruction, without a leap.
 - **Split tile:** a tile cut at every entry point inside it; split tiles do not overlap. Each split tile becomes one **basic block** of the graph; the graph's connections are **edges**. A **call fall-through edge** joins the block holding a `JSR` to the block behind it, instead of an edge into the callee.
 - **Routine:** the code reachable from an entry -- the run's start, a `JSR` target, or a stack jump's target -- without following calls, and ending where another routine begins. Shared code still blurs it.
