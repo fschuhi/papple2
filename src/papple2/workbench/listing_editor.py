@@ -2,7 +2,7 @@
 """Inline viewer and editor for a 6502 disassembly listing.
 
 Supports vertical navigation, viewport scrolling and inline editing of
-the label and comment fields. Prevents line wrapping by turning off the
+the label, operand and comment fields. Prevents line wrapping by turning off the
 terminal's auto-wrap (\033[?7l) and by scrolling fields horizontally.
 
 Keys:
@@ -12,7 +12,8 @@ Keys:
     q or Ctrl+C         : quit
 
   In edit mode (EDIT):
-    Tab                 : save the field, switch between 'Label' and 'Comment'
+    Tab                 : save the field, go on to the next: Label, Operand,
+                          Comment
     Arrow LEFT / RIGHT  : move the cursor in the text field
     Backspace           : delete the character before the cursor
     Typing              : insert text at the cursor
@@ -24,6 +25,12 @@ every save the rows are loaded again, so a new label also shows in the
 operands that point at its address. A refused change (e.g. a label already
 used elsewhere) shows its reason in a line under the window, until the next
 key; the field keeps the typed text, to fix it or to leave with Esc.
+
+The Operand field labels the address the operand names (row.target), not
+the line's own: $1a85 in LDA $1a85,Y, the pointer $1b in STA ($1b),Y. While
+it is edited, it stands in for everything after the mnemonic and holds the
+target's label; the line under the window says whose. Lines whose operand
+names no address (implied, immediate) have no Operand field: Tab skips it.
 
 The empty line before a .byte block is drawn empty; the cursor skips it.
 """
@@ -191,6 +198,17 @@ def render_field(text: str, max_width: int, cursor_pos: int, active: bool) -> st
     return "".join(result)
 
 
+# The fields of a line, in the order Tab goes through them.
+FIELDS = ("label", "operand", "comment")
+
+
+def next_field(row: ListingRow, field: str) -> str:
+    """The field Tab moves on to from field, round again after the last.
+    A row whose operand names no address has no Operand field."""
+    order = [each for each in FIELDS if each != "operand" or row.target is not None]
+    return order[(order.index(field) + 1) % len(order)]
+
+
 def next_row(rows: list[ListingRow], index: int, step: int) -> int:
     """The index of the next row from index in direction step (+1 or -1)
     that has an address; index itself if there is none."""
@@ -206,10 +224,14 @@ def run_editor(
     load_rows: Callable[[], list[ListingRow]],
     save_edit: Callable[[int, str, str], str | None],
     window_size: int = 14,
+    label_of: Callable[[int], str] = lambda address: "",
 ) -> None:
     """Show the rows load_rows() gives and let labels and comments be
     edited. save_edit(address, field, text) saves one field ("label" or
-    "comment") and returns why it refused, or None."""
+    "comment") and returns why it refused, or None. label_of(address) gives
+    the label an address has now: the Operand field starts with the label
+    of the operand's target, and saves through save_edit(target, "label",
+    text)."""
     rows = load_rows()
     if not any(row.address is not None for row in rows):
         print("Nothing to edit: no lines in this range.")
@@ -221,8 +243,35 @@ def run_editor(
     top_offset = 0
 
     mode = "NAV"  # "NAV" or "EDIT"
-    edit_field = 0  # 0: Label, 1: Comment
+    edit_field = "label"  # one of FIELDS
     edit_pos = 0
+    # The Operand field's text while it is edited: the label of the
+    # operand's target. Unlike label and comment, it has no place in a row.
+    operand_text = ""
+
+    def field_text(row: ListingRow) -> str:
+        """The text of the field being edited."""
+        if edit_field == "operand":
+            return operand_text
+        return row.label if edit_field == "label" else row.comment
+
+    def set_field_text(row: ListingRow, text: str) -> None:
+        """Change the text of the field being edited."""
+        nonlocal operand_text
+        if edit_field == "operand":
+            operand_text = text
+        elif edit_field == "label":
+            row.label = text
+        else:
+            row.comment = text
+
+    def start_field(row: ListingRow) -> None:
+        """Put the cursor behind the text of the field being edited. The
+        Operand field first takes the target's label."""
+        nonlocal operand_text, edit_pos
+        if edit_field == "operand":
+            operand_text = label_of(row.target)
+        edit_pos = len(field_text(row))
     # Why the last save was refused; shown under the window until the next key.
     message = ""
 
@@ -276,19 +325,32 @@ def run_editor(
                 bytes_str = f"{row.hex_bytes:<8}  "
 
                 # Label field
-                is_label_active = is_current and mode == "EDIT" and edit_field == 0
+                is_label_active = is_current and mode == "EDIT" and edit_field == "label"
                 label_disp = render_field(
                     row.label, label_width, edit_pos, is_label_active
                 )
 
-                code_str = f"  {row.instruction:<{code_width}}"
+                is_operand_active = is_current and mode == "EDIT" and edit_field == "operand"
+                if is_operand_active:
+                    # The field stands in for everything after the mnemonic,
+                    # and grows with its text. Its width is counted without
+                    # the cursor's escape codes, which take no room.
+                    mnemonic = row.instruction.split(" ", 1)[0]
+                    field_width = max(code_width - len(mnemonic) - 1, len(operand_text) + 1)
+                    code_str = f"  {mnemonic} " + render_field(
+                        operand_text, field_width, edit_pos, True
+                    )
+                    code_len = 2 + len(mnemonic) + 1 + field_width
+                else:
+                    code_str = f"  {row.instruction:<{code_width}}"
+                    code_len = len(code_str)
 
                 # Width left for the comment field
-                fixed_prefix_len = 2 + len(row.gutter) + len(addr_str) + len(bytes_str) + label_width + len(code_str)
+                fixed_prefix_len = 2 + len(row.gutter) + len(addr_str) + len(bytes_str) + label_width + code_len
                 available_for_comment = max(0, cols - fixed_prefix_len - 4)  # 4 characters for '  ; '
 
                 # Comment field
-                is_comment_active = is_current and mode == "EDIT" and edit_field == 1
+                is_comment_active = is_current and mode == "EDIT" and edit_field == "comment"
                 if is_comment_active:
                     comment_disp = "  ; " + render_field(
                         row.comment, available_for_comment, edit_pos, True
@@ -302,7 +364,12 @@ def run_editor(
                 line_content = f"{indicator}{row.gutter}{addr_str}{bytes_str}{label_disp}{code_str}{comment_disp}"
                 sys.stdout.write(f"\033[2K{line_content}\r\n")
 
-            sys.stdout.write(f"\033[2K  {message[: max(0, cols - 3)]}\r\n")
+            # While the Operand field is edited, and nothing else is to be
+            # said: whose label it is.
+            shown = message
+            if not shown and mode == "EDIT" and edit_field == "operand":
+                shown = f"label of ${rows[cursor_idx].target:04x}"
+            sys.stdout.write(f"\033[2K  {shown[: max(0, cols - 3)]}\r\n")
             sys.stdout.flush()
 
             # Read the next key
@@ -318,16 +385,22 @@ def run_editor(
                     cursor_idx = next_row(rows, cursor_idx, 1)
                 elif key == "ENTER":
                     mode = "EDIT"
-                    current_text = rows[cursor_idx].label if edit_field == 0 else rows[cursor_idx].comment
-                    edit_pos = len(current_text)
+                    # The field edited last, unless this line has no Operand field.
+                    if edit_field == "operand" and rows[cursor_idx].target is None:
+                        edit_field = "label"
+                    start_field(rows[cursor_idx])
 
             elif mode == "EDIT":
                 current_row = rows[cursor_idx]
 
                 if key in ("ENTER", "TAB"):
-                    field = "label" if edit_field == 0 else "comment"
-                    text = current_row.label if edit_field == 0 else current_row.comment
-                    message = save_edit(current_row.address, field, text) or ""
+                    if edit_field == "operand":
+                        # The Operand field labels the operand's target.
+                        message = save_edit(current_row.target, "label", operand_text) or ""
+                    else:
+                        message = save_edit(
+                            current_row.address, edit_field, field_text(current_row)
+                        ) or ""
                     if not message:
                         # Saved: load again, so operands show a new label. A
                         # label never changes the number of rows, so
@@ -336,9 +409,8 @@ def run_editor(
                         if key == "ENTER":
                             mode = "NAV"
                         else:
-                            edit_field = 1 - edit_field
-                            current_text = rows[cursor_idx].label if edit_field == 0 else rows[cursor_idx].comment
-                            edit_pos = len(current_text)
+                            edit_field = next_field(rows[cursor_idx], edit_field)
+                            start_field(rows[cursor_idx])
                 elif key == "ESC":
                     # Not saved: loading again brings the old text back.
                     rows = load_rows()
@@ -347,38 +419,22 @@ def run_editor(
                     if edit_pos > 0:
                         edit_pos -= 1
                 elif key == "RIGHT":
-                    current_text = current_row.label if edit_field == 0 else current_row.comment
+                    current_text = field_text(current_row)
                     if edit_pos < len(current_text):
                         edit_pos += 1
                 elif key == "BACKSPACE":
-                    if edit_field == 0:
-                        text = current_row.label
-                        if edit_pos > 0:
-                            current_row.label = text[: edit_pos - 1] + text[edit_pos:]
-                            edit_pos -= 1
-                    else:
-                        text = current_row.comment
-                        if edit_pos > 0:
-                            current_row.comment = text[: edit_pos - 1] + text[edit_pos:]
-                            edit_pos -= 1
+                    text = field_text(current_row)
+                    if edit_pos > 0:
+                        set_field_text(current_row, text[: edit_pos - 1] + text[edit_pos:])
+                        edit_pos -= 1
                 elif key == "DELETE":
-                    if edit_field == 0:
-                        text = current_row.label
-                        if edit_pos < len(text):
-                            current_row.label = text[:edit_pos] + text[edit_pos + 1 :]
-                    else:
-                        text = current_row.comment
-                        if edit_pos < len(text):
-                            current_row.comment = text[:edit_pos] + text[edit_pos + 1 :]
+                    text = field_text(current_row)
+                    if edit_pos < len(text):
+                        set_field_text(current_row, text[:edit_pos] + text[edit_pos + 1 :])
                 elif len(key) == 1 and key.isprintable():
-                    if edit_field == 0:
-                        text = current_row.label
-                        current_row.label = text[:edit_pos] + key + text[edit_pos:]
-                        edit_pos += 1
-                    else:
-                        text = current_row.comment
-                        current_row.comment = text[:edit_pos] + key + text[edit_pos:]
-                        edit_pos += 1
+                    text = field_text(current_row)
+                    set_field_text(current_row, text[:edit_pos] + key + text[edit_pos:])
+                    edit_pos += 1
 
     finally:
         sys.stdout.write("\033[?25h\033[?7h")

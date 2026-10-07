@@ -131,6 +131,30 @@ def test_print_listing_lines_comments_up_after_the_widest_commented_instruction(
     ]
 
 
+def test_listing_rows_carry_the_address_each_operand_names(make_emulator) -> None:
+    # Loaded as bytes, not assembled, so that every addressing mode is sure:
+    #   6000 LDA $1a85,Y   6003 STA ($1b),Y   6005 LDA #$0b
+    #   6007 BNE $6000     6009 JMP ($0036)   600c ASL   600d RTS
+    _asm, emulator = make_emulator(ENDLESS_PROGRAM)
+    emulator.apple2.memory.load_test_data(
+        0x6000,
+        [0xB9, 0x85, 0x1A, 0x91, 0x1B, 0xA9, 0x0B, 0xD0, 0xF7,
+         0x6C, 0x36, 0x00, 0x0A, 0x60],
+    )
+
+    rows = listing_rows(emulator, 0x6000, 0x600E)
+
+    assert [row.target for row in rows] == [
+        0x1A85,  # indexed: the table's start
+        0x1B,  # indirect: the pointer, not where it points
+        None,  # immediate: a value, no address
+        0x6000,  # branch: its target
+        0x0036,  # JMP (): the pointer
+        None,  # accumulator
+        None,  # implied
+    ]
+
+
 # main's loop at 6002, and a JMP into it from sub at 6008. The label LOOP
 # sits on an instruction with an operand, as in ENDLESS_PROGRAM below.
 LOCAL_LABELS_PROGRAM = """

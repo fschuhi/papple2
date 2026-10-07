@@ -453,7 +453,12 @@ class ListingRow:
     """One line of a listing, its pieces kept apart, so that each caller
     lays them out as it needs: print_listing() prints them, the listing
     editor shows them in columns of its own. address is None for the empty
-    line before a .byte block; there, every field but the gutter is empty."""
+    line before a .byte block; there, every field but the gutter is empty.
+
+    target is the address the operand names, the one a label in the operand
+    stands for: $1a85 in LDA $1a85,Y, the pointer $1b in STA ($1b),Y, a
+    branch's target. None where the operand names no address: implied,
+    accumulator and immediate operands, and .byte lines."""
 
     address: int | None
     gutter: str
@@ -461,6 +466,7 @@ class ListingRow:
     label: str
     instruction: str
     comment: str
+    target: int | None = None
 
 
 def listing_range(
@@ -511,8 +517,9 @@ def listing(start: int | str, end: int | str | None = None) -> None:
 def edit(start: int | str, end: int | str | None = None, height: int = 25) -> None:
     """Open the listing editor on the same lines listing() prints. start and
     end as for current_listing_rows(). Every label and comment changed there
-    is saved to the current dossier at once, through save_edit(). height is
-    the number of lines the editor shows at a time.
+    is saved to the current dossier at once, through save_edit(). The
+    Operand field labels the address an operand names, wherever the line
+    is. height is the number of lines the editor shows at a time.
 
     Needs a real terminal, so it doesn't work on Windows or under pytest."""
     # Imported here, not at the top: the editor needs termios, which Windows
@@ -528,7 +535,10 @@ def edit(start: int | str, end: int | str | None = None, height: int = 25) -> No
     def load_rows() -> list[ListingRow]:
         return current_listing_rows(first, behind)
 
-    run_editor(load_rows, save_edit, window_size=height)
+    def label_of(address: int) -> str:
+        return current_annotations().labels.get(address, "")
+
+    run_editor(load_rows, save_edit, window_size=height, label_of=label_of)
 
 
 def save_edit(address: int, field: str, text: str) -> str | None:
@@ -865,6 +875,9 @@ def listing_rows(
     An instruction that starts before end is listed whole, even if its
     operand reaches past end. A block's end always lies behind its last
     instruction, so this only shows for ranges that cut an instruction.
+
+    Each instruction's row carries the address its operand names in target,
+    as the disassembler works it out, so the listing editor can label it.
     """
     disassembler = Disassembler(emulator.cpu, labels, comments)
     # disassemble() takes an inclusive end.
@@ -878,6 +891,7 @@ def listing_rows(
     for row, prefix in zip(rows, gutter):
         row_address, row_bytes, label, mnemonic, operand, comment = row
         instruction = f"{mnemonic} {operand}".rstrip()
+        target = None
         if row_address:
             # The disassembler gives "$6004": four hex digits behind the "$".
             address = int(row_address.removeprefix("$"), 16)
@@ -886,6 +900,9 @@ def listing_rows(
             owner = scope_of(address, global_addresses, labels or {})
             if owner is not None:
                 instruction = shorten_locals(instruction, owner)
+            if mnemonic != ".byte":
+                info, _length = disassembler.collect_op_info(address)
+                target = info.get("operand_address")
         else:  # the empty line before a .byte block
             address = None
         result.append(
@@ -896,6 +913,7 @@ def listing_rows(
                 label=label,
                 instruction=instruction,
                 comment=comment,
+                target=target,
             )
         )
     return result
