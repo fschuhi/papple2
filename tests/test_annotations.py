@@ -320,3 +320,42 @@ def test_uncomment_refuses_an_address_without_a_comment(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match=r"\$627e"):
         annotations.uncomment(0x627E)
+
+
+# Two sessions on one dossier, e.g. two terminals: each change reads the
+# file first, so neither overwrites what the other saved.
+
+
+def test_a_label_from_another_session_is_kept(tmp_path: Path) -> None:
+    first = Annotations(tmp_path)
+    second = Annotations(tmp_path)
+
+    first.label(0x6238, "LOAD_LEVEL")
+    second.label(0x627E, "NIBBLE_LOOP")
+
+    assert read_file(tmp_path)["labels"] == {
+        "6238": "LOAD_LEVEL",
+        "627e": "NIBBLE_LOOP",
+    }
+    assert second.labels == {0x6238: "LOAD_LEVEL", 0x627E: "NIBBLE_LOOP"}
+
+
+def test_a_comment_keeps_a_label_from_another_session(tmp_path: Path) -> None:
+    first = Annotations(tmp_path)
+    second = Annotations(tmp_path)
+
+    first.label(0x6238, "LOAD_LEVEL")
+    second.comment(0x627E, "two 4-bit values per byte")
+
+    assert read_file(tmp_path)["labels"] == {"6238": "LOAD_LEVEL"}
+    assert read_file(tmp_path)["comments"] == {"627e": "two 4-bit values per byte"}
+
+
+def test_a_label_used_in_another_session_is_refused(tmp_path: Path) -> None:
+    first = Annotations(tmp_path)
+    second = Annotations(tmp_path)
+
+    first.label(0x6238, "LOAD_LEVEL")
+
+    with pytest.raises(ValueError, match=r"\$6238"):
+        second.label(0x627E, "LOAD_LEVEL")

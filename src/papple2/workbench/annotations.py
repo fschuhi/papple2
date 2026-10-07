@@ -7,8 +7,9 @@ a run or an IPython session, so a label given today shows tomorrow in a
 run that covers far more code.
 
 Every change is written at once, so the file is never behind the prompt.
-Nothing is written without a change: opening a dossier only to look leaves
-no trace.
+Every change reads the file first, so a change made in another session in
+the meantime is kept, not overwritten. Nothing is written without a change:
+opening a dossier only to look leaves no trace.
 
 Addresses are the ones the code runs at, i.e. memory after relocation,
 which is what dis() reads.
@@ -36,6 +37,12 @@ class Annotations:
         # Plain dicts, so dis() takes them as they are.
         self.labels: dict[int, str] = {}
         self.comments: dict[int, str] = {}
+        self.reload()
+
+    def reload(self) -> None:
+        """Read the labels and comments from the file, which another
+        session may have changed. Without a file, what is in memory stays:
+        nobody has saved anything that could replace it."""
         if self.path.exists():
             data = json.loads(self.path.read_text())
             self.labels = _from_file(data["labels"])
@@ -52,6 +59,7 @@ class Annotations:
         it would get anyway; otherwise it's refused. Any label change can
         move local labels to another owner: refused if that gives two labels
         the same name."""
+        self.reload()
         if not VALID_LABEL.fullmatch(text):
             raise ValueError(
                 f"{text} is no valid label: letters, digits, _ and :,"
@@ -74,6 +82,7 @@ class Annotations:
     def unlabel(self, address: int) -> None:
         """Remove address's label. An address without one is refused:
         at the prompt that's almost always a mistyped address."""
+        self.reload()
         if address not in self.labels:
             raise ValueError(f"${address:04x} has no label")
         changed = dict(self.labels)
@@ -87,6 +96,7 @@ class Annotations:
         Addresses that already have a label keep it, and texts already in
         use are skipped, so adding the same labels again changes nothing --
         not even the file."""
+        self.reload()
         in_use = set(self.labels.values())
         changed = dict(self.labels)
         added = False
@@ -100,12 +110,14 @@ class Annotations:
 
     def comment(self, address: int, text: str) -> None:
         """Give address the comment text, replacing any comment it has."""
+        self.reload()
         self.comments[address] = text
         self._save()
 
     def uncomment(self, address: int) -> None:
         """Remove address's comment. An address without one is refused,
         as in unlabel()."""
+        self.reload()
         if address not in self.comments:
             raise ValueError(f"${address:04x} has no comment")
         del self.comments[address]

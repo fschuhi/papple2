@@ -118,6 +118,14 @@ def current_annotations() -> Annotations:
     return annotations
 
 
+def refresh_annotations() -> None:
+    """Read the current dossier's annotations from the file again, so that
+    labels and comments given in another session show too. Without an open
+    dossier, nothing happens."""
+    if annotations is not None:
+        annotations.reload()
+
+
 def address_of(place: int | str) -> int:
     """place itself if it is an address; if it is a label, the address the
     current dossier gives it. A label names one address only: the dossier
@@ -351,6 +359,7 @@ def routine_at(entry: int | str) -> int:
 
 def show_routines() -> None:
     """Every routine of the current run, with the dossier's labels."""
+    refresh_annotations()
     found = current_routines()
     print_routines(
         found.graphs,
@@ -363,6 +372,7 @@ def show_routines() -> None:
 def show_blocks(entry: int | str) -> None:
     """The blocks of the routine starting at entry, an address or a label,
     with its loops and the dossier's labels."""
+    refresh_annotations()
     found = current_routines()
     entry = routine_at(entry)
     print_blocks(
@@ -381,6 +391,7 @@ def show_callers(entry: int | str) -> None:
     JMPs count as callers for now: a JMP into a routine's entry may be a
     tail call, which only a shadow stack can tell apart. A site can lie in
     several routines, where code is shared, so all of them are listed."""
+    refresh_annotations()
     found = current_routines()
     entry = routine_at(entry)
     labels = annotations.labels if annotations is not None else {}
@@ -418,6 +429,7 @@ def show_routine_graph() -> None:
     paste into a browser. It doesn't open the picture itself: the system's
     viewer for SVG may be the wrong one, e.g. Edge in the Windows VM.
     Needs Graphviz's dot program."""
+    refresh_annotations()
     found = current_routines()
     graph = routine_graph(
         found,
@@ -475,7 +487,10 @@ def current_listing_rows(
 ) -> list[ListingRow]:
     """The rows of the current run's memory in the range listing_range()
     gives, with the arrows of the whole run and the dossier's labels and
-    comments."""
+    comments. The annotations are read from the file first, so a listing,
+    and the editor after every save or Esc, shows what another session
+    has given."""
+    refresh_annotations()
     start, end = listing_range(start, end)
     return listing_rows(
         run_emulator,
