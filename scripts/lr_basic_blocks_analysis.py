@@ -62,6 +62,7 @@ from papple2.workbench.tiling import Tiling
 from papple2.workbench.shell import (  # noqa: F401
     comment,
     edit,
+    hexdump,
     label,
     listing,
     listing_rows,

@@ -68,7 +68,7 @@ What `%run scripts/lr_basic_blocks_analysis.py` leaves in the session:
 | Kind | Names                                                                                                                                                         |
 |---|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Commands: setting up | `use_reports_folder()`, `use_dossier()`, `run()`, `tiling_reports()`, `stack_tracking_reports()`                                                              |
-| Commands: the current run | `show_routines()`, `show_blocks()`, `show_callers()`, `show_routine_graph()`, `listing()`, `edit(), `loop_reports()`                                          |
+| Commands: the current run | `show_routines()`, `show_blocks()`, `show_callers()`, `show_routine_graph()`, `listing()`, `hexdump()`, `edit(), `loop_reports()`                             |
 | Commands: the dossier | `label()`, `comment()`, `unlabel()`, `uncomment()`                                                                                                            |
 | Commands on objects | `print_routines()`, `print_blocks()`, `print_edges()`, `print_loops()`, `dis()`, `set_current_run()`                                                          |
 | For a run of your own | `lode_runner` (a program setup, a module: lowercase), `Tiling` and `StackTracking` (instrumentations, classes: capitalized)                                   |

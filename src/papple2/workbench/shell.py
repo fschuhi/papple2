@@ -557,6 +557,72 @@ def save_edit(address: int, field: str, text: str) -> str | None:
     return None
 
 
+# How hexdump() lays out memory: 16 bytes per line, and 16 lines, one page,
+# when no end is given.
+HEXDUMP_WIDTH = 16
+HEXDUMP_LINES = 16
+
+
+@dataclass
+class HexdumpRow:
+    """One line of a hexdump: the address of its first byte, and its bytes."""
+
+    address: int
+    values: list[int]
+
+
+def hexdump(start: int | str, end: int | str | None = None) -> None:
+    """Print the current run's memory from start up to, not including, end,
+    16 bytes per line: hex on the left, text on the right. start and end are
+    addresses or labels. start may lie anywhere in the first line, and end
+    is rounded up to a full line, see hexdump_rows(). Without end, 16
+    lines: one page, 256 bytes."""
+    refresh_annotations()
+    if run_emulator is None:
+        raise RuntimeError("no run; call run() or set_current_run() first")
+    first = address_of(start)
+    if end is None:
+        behind = first - first % HEXDUMP_WIDTH + HEXDUMP_WIDTH * HEXDUMP_LINES
+    else:
+        behind = address_of(end)
+    print_hexdump(hexdump_rows(run_emulator, first, behind))
+
+
+def hexdump_rows(emulator: Emulator, start: int, end: int) -> list[HexdumpRow]:
+    """The lines of a hexdump from start up to, not including, end. start
+    is rounded down to the start of its line, end up to a full line, and
+    neither goes past $FFFF. Prints nothing; print_hexdump() prints them.
+
+    The bytes come straight from the memory list, past soft switches and
+    hooks: read_byte() would flip a soft switch at $C0xx."""
+    # Memory's own list, read from outside on purpose, as the disassembler does.
+    memory = emulator.apple2.memory._mem
+    first = start - start % HEXDUMP_WIDTH
+    behind = min(-(-end // HEXDUMP_WIDTH) * HEXDUMP_WIDTH, len(memory))
+    return [
+        HexdumpRow(address, list(memory[address : address + HEXDUMP_WIDTH]))
+        for address in range(first, behind, HEXDUMP_WIDTH)
+    ]
+
+
+def apple_char(value: int) -> str:
+    """The character a byte stands for in a hexdump's text column. Bit 7 is
+    dropped, so Apple's normal text ($C1, the high bit set) and plain ASCII
+    ($41) both show as A. What is not printable then shows as a dot."""
+    low = value & 0x7F
+    return chr(low) if 0x20 <= low < 0x7F else "."
+
+
+def print_hexdump(rows: list[HexdumpRow]) -> None:
+    """Print the rows hexdump_rows() gives: address, the bytes in two groups
+    of eight, and the text between bars."""
+    for row in rows:
+        left = " ".join(f"{value:02x}" for value in row.values[:8])
+        right = " ".join(f"{value:02x}" for value in row.values[8:])
+        text = "".join(apple_char(value) for value in row.values)
+        print(f"{row.address:04x}  {left}  {right}  |{text}|")
+
+
 
 def loop_reports(entry: int | str) -> None:
     """Write the loop reports of the routine starting at entry, an address

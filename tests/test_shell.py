@@ -26,6 +26,7 @@ from papple2.workbench.shell import (
     assign_lanes,
     comment,
     draw_gutter,
+    hexdump,
     label,
     listing,
     listing_rows,
@@ -520,6 +521,21 @@ def test_loop_reports_write_into_the_reports_folder(
     assert (tmp_path / "experiment" / "lr_loop_members_6000.csv").exists()
 
 
+def test_listing_shows_a_label_given_in_another_session(
+    walkthrough, tmp_path: Path, capsys, no_run: None, no_dossier: None
+) -> None:
+    # Two terminals on one dossier: the label comes from the other one,
+    # after this session opened the dossier.
+    make_walkthrough_current(walkthrough)
+    use_dossier(tmp_path / "dossier")
+    Annotations(tmp_path / "dossier").label(0x6010, "SUB")
+    capsys.readouterr()
+
+    listing(0x6010)
+
+    assert "SUB" in capsys.readouterr().out.splitlines()[0]
+
+
 def test_listing_of_a_routine_alone_lists_its_whole_range(
     walkthrough, capsys, no_run: None, no_dossier: None
 ) -> None:
@@ -592,6 +608,7 @@ def test_listing_of_an_address_alone_that_is_no_routine_stops(
         (show_routine_graph, ()),
         (listing, (0x6000, 0x6002)),
         (loop_reports, (0x6000,)),
+        (hexdump, (0x6000,)),
     ],
 )
 def test_the_run_commands_stop_without_a_current_run(
@@ -813,3 +830,60 @@ def test_stack_tracking_reports_without_a_reports_folder_stop(
     run(stand_in_program(emulator, []), 10, StackTracking)
     with pytest.raises(RuntimeError, match="use_reports_folder"):
         stack_tracking_reports()
+
+
+# The hexdump. Sixteen bytes at $6000, over the stand-in program: H and I
+# in Apple's normal text (bit 7 set), a carriage return, and a plain A.
+HEXDUMP_BYTES = [0xC8, 0xC9, 0x8D, 0x41] + [0x00] * 12
+
+
+@pytest.fixture
+def hexdump_run(make_emulator, monkeypatch: pytest.MonkeyPatch, no_run: None):
+    """A current run whose memory holds HEXDUMP_BYTES at $6000."""
+    _, emulator = make_emulator(ENDLESS_PROGRAM)
+    emulator.apple2.memory.load_test_data(0x6000, HEXDUMP_BYTES)
+    monkeypatch.setattr(shell, "run_emulator", emulator)
+    return emulator
+
+
+def test_hexdump_starts_on_a_full_line(hexdump_run, capsys) -> None:
+    # 6005 lies in the line from 6000; 6010 ends it.
+    hexdump(0x6005, 0x6010)
+
+    assert capsys.readouterr().out.splitlines() == [
+        "6000  c8 c9 8d 41 00 00 00 00  00 00 00 00 00 00 00 00  |HI.A............|",
+    ]
+
+
+def test_hexdump_rounds_its_end_up_to_a_full_line(hexdump_run, capsys) -> None:
+    hexdump(0x6000, 0x6011)
+
+    lines = capsys.readouterr().out.splitlines()
+    assert [line[:4] for line in lines] == ["6000", "6010"]
+
+
+def test_hexdump_without_end_shows_one_page(hexdump_run, capsys) -> None:
+    hexdump(0x6008)
+
+    lines = capsys.readouterr().out.splitlines()
+    assert len(lines) == 16
+    assert lines[-1].startswith("60f0")
+
+
+def test_hexdump_stops_at_the_end_of_memory(hexdump_run, capsys) -> None:
+    hexdump(0xFFF8)
+
+    lines = capsys.readouterr().out.splitlines()
+    assert [line[:4] for line in lines] == ["fff0"]
+
+
+def test_hexdump_takes_a_label_for_an_address(
+    hexdump_run, tmp_path: Path, capsys, no_dossier: None
+) -> None:
+    use_dossier(tmp_path / "dossier")
+    label(0x6000, "TABLE")
+
+    hexdump("TABLE", 0x6010)
+    by_label = capsys.readouterr().out
+    hexdump(0x6000, 0x6010)
+    assert by_label == capsys.readouterr().out
