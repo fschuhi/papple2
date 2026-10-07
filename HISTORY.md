@@ -11,6 +11,8 @@
 
 ---
 
+- **2026-10-07:** `hexdump()`: Lode Runner's row tables at a glance, `hgr_rows_lo` ending exactly where `hgr_rows_hi` begins. Whatever a command shows goes to the clipboard with `clip()`.
+- **2026-10-07:** Labels where the code uses them: in `edit()`, I name what an operand points at, zero page included. Two terminals work on one dossier side by side.
 - **2026-10-07:** Structure discovery: a routine now ends where another begins, and every way into a routine is an arrow of its own kind: `JSR`, `JMP`, branch, glide, and the `RTS` of a stack jump, found by the shadow stack. Every piece of code that ran now belongs to a routine; no orphans left.
 - **2026-10-06:** The routine graph: every routine of the attract play in one picture, with the `JSR`s between them and my labels on the boxes. Level loading on the left, the game loop on the right. Clearer than my dot from the Robotron project: the point where `papple2` leaves the old workbench behind for good.
 - **2026-10-06:** The inner-loop page for the new design: the same seven instructions, every byte with the hook list that hears it. The immediate operand was the eye-opener: the addressing mode reads nothing, the operation reads it as an immediate.
