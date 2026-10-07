@@ -10,7 +10,7 @@ Since 2026-10-02, `papple2.workbench` holds two kinds of packages, connected by 
 
 - **Instrumentation packages** watch a running `Emulator` through its hooks -- after every instruction, or after reads and writes of memory -- and write reports into a folder given by the caller. The `-ing` suffix marks them: `Tiling` in `tiling.py`; `StackTracking` in `stack_tracking.py` (since 2026-10-04), a shadow stack that sorts every `RTS` by the frame its `JSR` opened and writes `lr_returns.csv`. `run()` attaches any number of them, as classes it builds on the booted machine.
 - **Analysis packages** need no `Emulator`: they read reports from a folder and return plain values or write reports of their own, so they also run on fixture files. Reading is kept apart from the logic. `basic_blocks_analysis.py` reads the split reports, builds a graph of basic blocks, finds dominators and natural loops, and writes the loop reports.
-- **The shell** (`shell.py`) holds the commands: the functions meant for the prompt and for experiments. It keeps three pieces of state, one of each at a time: the reports folder, the dossier, and the current run. `dis(emulator, start, end, labels, graph, comments)` disassembles a range from memory after the run, with labels in the operands and in a column of their own, comments behind the instructions, and the jumps the run took drawn as arrows in a gutter on the left; `listing()` is `dis()` on the current run with the dossier's labels and comments.
+- **The shell** (`shell.py`) holds the commands: the functions meant for the prompt and for experiments. It keeps three pieces of state, one of each at a time: the reports folder, the dossier, and the current run. `dis(emulator, start, end, labels, graph, comments)` disassembles a range from memory after the run, with labels in the operands and in a column of their own, comments behind the instructions, and the jumps the run took drawn as arrows in a gutter on the left; `listing()` and `edit()` are `dis()` on the current run with the dossier's labels and comments.
 - **The dossier** (since 2026-10-03) is everything we know about one program, in a folder of its own: `dossiers/lode_runner/`, under git (unlike `data/`). Today it holds `annotations.json`, the labels and comments, kept by `Annotations` in `annotations.py`: every change is written at once, sorted by address, one entry per line. `use_dossier()` opens it, and starts a new one with the Apple II's standard labels. Snapshots (outside git) may follow. Unlike the reports, which every run rebuilds, the dossier only changes by hand.
 
 ```mermaid
@@ -23,7 +23,7 @@ graph LR
     TREP --> REPORTS["docs/reports/lr_basic_blocks_analysis/<br/>tiles, transitions, measurements"]
     REPORTS --> BBA["basic_blocks_analysis<br/>routines, graph, dominators, loops"]
     BBA --> LOOPS["loop_reports(entry)<br/>one pair of CSVs per routine"]
-    BBA --> SHELL["show_routines(), show_blocks(), listing()<br/>at the prompt"]
+    BBA --> SHELL["show_routines(), show_blocks(), listing(), edit()<br/>at the prompt"]
     SHELL <--> DOSSIER["dossiers/lode_runner/<br/>labels, comments, under git"]
 ```
 
@@ -57,6 +57,7 @@ The usual way in is to `%run` the experiment to work on, then use the commands:
 show_routines()
 show_blocks(0x6238)
 listing(0x7a3e)               # one argument: the whole routine
+edit(0x7a3e)                  # edit the whole routine, i.e. add labels and comments
 label(0x7a3e, "lookup_hgr")
 listing("lookup_hgr")         # a label wherever a routine's address goes
 show_callers("lookup_hgr")    # every call site that leaps into it
@@ -64,15 +65,15 @@ show_callers("lookup_hgr")    # every call site that leaps into it
 
 What `%run scripts/lr_basic_blocks_analysis.py` leaves in the session:
 
-| Kind | Names |
-|---|---|
-| Commands: setting up | `use_reports_folder()`, `use_dossier()`, `run()`, `tiling_reports()`, `stack_tracking_reports()` |
-| Commands: the current run | `show_routines()`, `show_blocks()`, `show_callers()`, `show_routine_graph()`, `listing()`, `loop_reports()` |
-| Commands: the dossier | `label()`, `comment()`, `unlabel()`, `uncomment()` |
-| Commands on objects | `print_routines()`, `print_blocks()`, `print_edges()`, `print_loops()`, `dis()`, `set_current_run()` |
-| For a run of your own | `lode_runner` (a program setup, a module: lowercase), `Tiling` and `StackTracking` (instrumentations, classes: capitalized) |
+| Kind | Names                                                                                                                                                         |
+|---|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Commands: setting up | `use_reports_folder()`, `use_dossier()`, `run()`, `tiling_reports()`, `stack_tracking_reports()`                                                              |
+| Commands: the current run | `show_routines()`, `show_blocks()`, `show_callers()`, `show_routine_graph()`, `listing()`, `edit(), `loop_reports()`                                          |
+| Commands: the dossier | `label()`, `comment()`, `unlabel()`, `uncomment()`                                                                                                            |
+| Commands on objects | `print_routines()`, `print_blocks()`, `print_edges()`, `print_loops()`, `dis()`, `set_current_run()`                                                          |
+| For a run of your own | `lode_runner` (a program setup, a module: lowercase), `Tiling` and `StackTracking` (instrumentations, classes: capitalized)                                   |
 | Machinery | `shell`, and through it `shell.run_emulator`, `shell.run_instrumentations`, `shell.routines`, `shell.run_graph`, `shell.run_transitions`, `shell.annotations` |
-| The experiment's own | `REPORTS_FOLDER`, `DOSSIER`, `parse_arguments()`, `arguments`, `entry`, `argparse`, `Path` |
+| The experiment's own | `REPORTS_FOLDER`, `DOSSIER`, `parse_arguments()`, `arguments`, `entry`, `argparse`, `Path`                                                                    |
 
 The commands are the contract: documented here, and kept working. The machinery is there for debugging and curiosity, with no guarantee. Reach it through the module, as `shell.routines`: a name imported from the module (`from papple2.workbench.shell import routines`, or `import *`) keeps the value it had at import time.
 

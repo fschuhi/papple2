@@ -26,16 +26,16 @@ dossiers/lode_runner/annotations.json
 #docs/reports/load_level/lr_loop_members.csv
 #docs/reports/load_level/lr_loops.csv
 
-#docs/reports/lr_basic_blocks_analysis/lr_loop_members_0800.csv
-#docs/reports/lr_basic_blocks_analysis/lr_loops_0800.csv
-#docs/reports/lr_basic_blocks_analysis/lr_measurements.txt
-#docs/reports/lr_basic_blocks_analysis/lr_returns.csv
-#docs/reports/lr_basic_blocks_analysis/lr_split_tiles.csv
-#docs/reports/lr_basic_blocks_analysis/lr_split_transitions.csv
-##docs/reports/lr_basic_blocks_analysis/lr_unbroken_tiles.csv
-##docs/reports/lr_basic_blocks_analysis/lr_unbroken_transitions.csv
+docs/reports/lr_basic_blocks_analysis/lr_loop_members_0800.csv
+docs/reports/lr_basic_blocks_analysis/lr_loops_0800.csv
+docs/reports/lr_basic_blocks_analysis/lr_measurements.txt
+docs/reports/lr_basic_blocks_analysis/lr_returns.csv
+docs/reports/lr_basic_blocks_analysis/lr_split_tiles.csv
+docs/reports/lr_basic_blocks_analysis/lr_split_transitions.csv
+#docs/reports/lr_basic_blocks_analysis/lr_unbroken_tiles.csv
+#docs/reports/lr_basic_blocks_analysis/lr_unbroken_transitions.csv
 
-#docs/reports/lr_overview/lr_overview.txt
+docs/reports/lr_overview/lr_overview.txt
 
 #docs/reports/lr_tiles/lr_measurements.txt
 #docs/reports/lr_tiles/lr_split_transitions.csv
@@ -56,13 +56,13 @@ dossiers/lode_runner/annotations.json
 
 # working documents for finding the direction `papple2` wants to take
 #DIRECTION.md
-docs/decisions.md
-docs/instrumentation-design.md
+#docs/decisions.md
+#docs/instrumentation-design.md
 docs/workbench.md
 
 # old instrumentation architecture
 #docs/instrumentation-map.md
-docs/diagrams/inner-loop.html
+#docs/diagrams/inner-loop.html
 docs/diagrams/inner-loop-hooks.html
 #docs/diagrams/memory-access.svg
 #docs/diagrams/run-loop.svg
@@ -109,7 +109,7 @@ src/papple2/core/memory.py
 #src/papple2/core/window.py
 
 ## debug
-#src/papple2/debug/assembler.py
+src/papple2/debug/assembler.py
 #src/papple2/debug/disassembler.py
 #src/papple2/debug/stop_conditions.py
 
