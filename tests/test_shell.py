@@ -24,6 +24,7 @@ from papple2.workbench.basic_blocks_analysis import (
 )
 from papple2.workbench.shell import (
     assign_lanes,
+    clip,
     comment,
     draw_gutter,
     hexdump,
@@ -409,16 +410,13 @@ def make_walkthrough_current(walkthrough) -> None:
 
 
 def test_show_routines_lists_the_routines_of_the_current_run(
-    walkthrough, tmp_path: Path, capsys, no_run: None, no_dossier: None
+    walkthrough, tmp_path: Path, no_run: None, no_dossier: None
 ) -> None:
     make_walkthrough_current(walkthrough)
     use_dossier(tmp_path / "dossier")
     label(0x6010, "SUB")
-    capsys.readouterr()  # what set_current_run() printed
 
-    show_routines()
-
-    lines = capsys.readouterr().out.splitlines()
+    lines = show_routines().splitlines()
     # The program from 6000 and SUB, the target of its JSR.
     assert [line.split()[0] for line in lines[1:]] == ["6000", "6010"]
     assert lines[2].endswith("SUB")
@@ -444,10 +442,9 @@ def test_show_blocks_shows_a_routine_of_the_current_run(
     make_walkthrough_current(walkthrough)
     capsys.readouterr()
 
-    show_blocks(0x6000)
-    shown = capsys.readouterr().out
+    shown = show_blocks(0x6000)
     print_blocks(walkthrough.graph, walkthrough.loops)
-    assert shown == capsys.readouterr().out
+    assert shown == capsys.readouterr().out.rstrip("\n")
 
 
 def test_show_blocks_refuses_an_address_that_is_no_routine(
@@ -459,7 +456,7 @@ def test_show_blocks_refuses_an_address_that_is_no_routine(
 
 
 def test_show_callers_lists_the_call_sites_with_the_routines_holding_them(
-    walkthrough, tmp_path: Path, capsys, no_run: None, no_dossier: None
+    walkthrough, tmp_path: Path, no_run: None, no_dossier: None
 ) -> None:
     # SUB has one caller: the JSR in INNER, taken six times, in the
     # routine from 6000.
@@ -467,26 +464,20 @@ def test_show_callers_lists_the_call_sites_with_the_routines_holding_them(
     use_dossier(tmp_path / "dossier")
     label(0x6000, "MAIN")
     label(0x6010, "SUB")
-    capsys.readouterr()
 
-    show_callers("SUB")
-
-    assert capsys.readouterr().out.splitlines() == [
+    assert show_callers("SUB").splitlines() == [
         "site  leap     count  routines",
         "6004  JSR          6  6000 MAIN",
     ]
 
 
 def test_show_callers_of_a_routine_nothing_leaps_into(
-    walkthrough, capsys, no_run: None, no_dossier: None
+    walkthrough, no_run: None, no_dossier: None
 ) -> None:
     # The run starts at 6000; no JSR or JMP leads there.
     make_walkthrough_current(walkthrough)
-    capsys.readouterr()
 
-    show_callers(0x6000)
-
-    assert capsys.readouterr().out.splitlines() == [
+    assert show_callers(0x6000).splitlines() == [
         "no JSR or JMP leads into 6000"
     ]
 
@@ -524,13 +515,25 @@ def test_routine_graph_draws_an_exit_in_the_look_of_its_kind(
 
 
 def test_listing_reads_the_memory_of_the_current_run(
-    walkthrough, capsys, no_run: None, no_dossier: None
+    walkthrough, no_run: None, no_dossier: None
 ) -> None:
     make_walkthrough_current(walkthrough)
-    capsys.readouterr()
 
-    listing(0x6000, 0x6002)
-    assert capsys.readouterr().out.splitlines()[0].startswith("6000")
+    assert listing(0x6000, 0x6002).splitlines()[0].startswith("6000")
+
+
+def test_a_command_returns_its_text_for_ipython_to_show(
+    walkthrough, no_run: None, no_dossier: None
+) -> None:
+    # IPython shows the returned text as it is, as Out[n]: no quotes, no \n.
+    from IPython.lib.pretty import pretty
+
+    make_walkthrough_current(walkthrough)
+
+    shown = listing(0x6000, 0x6004)
+
+    assert pretty(shown) == str(shown)
+    assert len(shown.splitlines()) == 2
 
 
 def test_loop_reports_write_into_the_reports_folder(
@@ -546,64 +549,45 @@ def test_loop_reports_write_into_the_reports_folder(
 
 
 def test_listing_shows_a_label_given_in_another_session(
-    walkthrough, tmp_path: Path, capsys, no_run: None, no_dossier: None
+    walkthrough, tmp_path: Path, no_run: None, no_dossier: None
 ) -> None:
     # Two terminals on one dossier: the label comes from the other one,
     # after this session opened the dossier.
     make_walkthrough_current(walkthrough)
     use_dossier(tmp_path / "dossier")
     Annotations(tmp_path / "dossier").label(0x6010, "SUB")
-    capsys.readouterr()
 
-    listing(0x6010)
-
-    assert "SUB" in capsys.readouterr().out.splitlines()[0]
+    assert "SUB" in listing(0x6010).splitlines()[0]
 
 
 def test_listing_of_a_routine_alone_lists_its_whole_range(
-    walkthrough, capsys, no_run: None, no_dossier: None
+    walkthrough, no_run: None, no_dossier: None
 ) -> None:
     make_walkthrough_current(walkthrough)
-    capsys.readouterr()
 
     # SUB is one block, $6010-$6013.
-    listing(0x6010)
-    alone = capsys.readouterr().out
-    listing(0x6010, 0x6013)
-    assert alone == capsys.readouterr().out
+    assert listing(0x6010) == listing(0x6010, 0x6013)
 
 
 def test_listing_of_a_routine_alone_shows_the_gaps_between_its_blocks(
-    walkthrough, capsys, no_run: None, no_dossier: None
+    walkthrough, no_run: None, no_dossier: None
 ) -> None:
     # The start routine runs from $6000 to DONE's NOP, $6013-$6014; SUB's
     # code lies between its blocks, not in it, and shows all the same.
     make_walkthrough_current(walkthrough)
-    capsys.readouterr()
 
-    listing(0x6000)
-    alone = capsys.readouterr().out
-    listing(0x6000, 0x6014)
-    assert alone == capsys.readouterr().out
+    assert listing(0x6000) == listing(0x6000, 0x6014)
 
 
 def test_the_run_commands_take_a_label_for_an_address(
-    walkthrough, tmp_path: Path, capsys, no_run: None, no_dossier: None
+    walkthrough, tmp_path: Path, no_run: None, no_dossier: None
 ) -> None:
     make_walkthrough_current(walkthrough)
     use_dossier(tmp_path / "dossier")
     label(0x6010, "SUB")
-    capsys.readouterr()
 
-    listing("SUB")
-    by_label = capsys.readouterr().out
-    listing(0x6010)
-    assert by_label == capsys.readouterr().out
-
-    show_blocks("SUB")
-    by_label = capsys.readouterr().out
-    show_blocks(0x6010)
-    assert by_label == capsys.readouterr().out
+    assert listing("SUB") == listing(0x6010)
+    assert show_blocks("SUB") == show_blocks(0x6010)
 
 
 def test_an_unknown_label_stops(
@@ -763,7 +747,7 @@ SUB     INC $10
 
 
 def test_show_callers_counts_a_jmp_into_a_routine(
-    make_emulator, tmp_path: Path, capsys, no_run: None, no_reports_folder: None,
+    make_emulator, tmp_path: Path, no_run: None, no_reports_folder: None,
     no_dossier: None
 ) -> None:
     # The JMP at 600b leads into SUB at 600e, from the routine TAIL at 6009.
@@ -771,11 +755,8 @@ def test_show_callers_counts_a_jmp_into_a_routine(
     run(stand_in_program(emulator, []), 12, Tiling)
     use_reports_folder(tmp_path)
     tiling_reports()
-    capsys.readouterr()
 
-    show_callers(0x600e)
-
-    assert capsys.readouterr().out.splitlines() == [
+    assert show_callers(0x600e).splitlines() == [
         "site  leap     count  routines",
         "6000  JSR          1  6000",
         "600b  JMP          1  6009",
@@ -870,44 +851,91 @@ def hexdump_run(make_emulator, monkeypatch: pytest.MonkeyPatch, no_run: None):
     return emulator
 
 
-def test_hexdump_starts_on_a_full_line(hexdump_run, capsys) -> None:
+def test_hexdump_starts_on_a_full_line(hexdump_run) -> None:
     # 6005 lies in the line from 6000; 6010 ends it.
-    hexdump(0x6005, 0x6010)
-
-    assert capsys.readouterr().out.splitlines() == [
+    assert hexdump(0x6005, 0x6010).splitlines() == [
         "6000  c8 c9 8d 41 00 00 00 00  00 00 00 00 00 00 00 00  |HI.A............|",
     ]
 
 
-def test_hexdump_rounds_its_end_up_to_a_full_line(hexdump_run, capsys) -> None:
-    hexdump(0x6000, 0x6011)
-
-    lines = capsys.readouterr().out.splitlines()
+def test_hexdump_rounds_its_end_up_to_a_full_line(hexdump_run) -> None:
+    lines = hexdump(0x6000, 0x6011).splitlines()
     assert [line[:4] for line in lines] == ["6000", "6010"]
 
 
-def test_hexdump_without_end_shows_one_page(hexdump_run, capsys) -> None:
-    hexdump(0x6008)
-
-    lines = capsys.readouterr().out.splitlines()
+def test_hexdump_without_end_shows_one_page(hexdump_run) -> None:
+    lines = hexdump(0x6008).splitlines()
     assert len(lines) == 16
     assert lines[-1].startswith("60f0")
 
 
-def test_hexdump_stops_at_the_end_of_memory(hexdump_run, capsys) -> None:
-    hexdump(0xFFF8)
-
-    lines = capsys.readouterr().out.splitlines()
+def test_hexdump_stops_at_the_end_of_memory(hexdump_run) -> None:
+    lines = hexdump(0xFFF8).splitlines()
     assert [line[:4] for line in lines] == ["fff0"]
 
 
 def test_hexdump_takes_a_label_for_an_address(
-    hexdump_run, tmp_path: Path, capsys, no_dossier: None
+    hexdump_run, tmp_path: Path, no_dossier: None
 ) -> None:
     use_dossier(tmp_path / "dossier")
     label(0x6000, "TABLE")
 
-    hexdump("TABLE", 0x6010)
-    by_label = capsys.readouterr().out
-    hexdump(0x6000, 0x6010)
-    assert by_label == capsys.readouterr().out
+    assert hexdump("TABLE", 0x6010) == hexdump(0x6000, 0x6010)
+
+
+# The clipboard. pbcopy and IPython are replaced by stand-ins: the tests
+# run on any machine, and outside IPython.
+
+
+@pytest.fixture
+def clipboard(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """What clip() hands to pbcopy, one entry per call."""
+    copied: list[str] = []
+
+    def pbcopy(command, input, text, check):
+        assert command == ["pbcopy"]
+        copied.append(input)
+
+    monkeypatch.setattr(shell.subprocess, "run", pbcopy)
+    return copied
+
+
+def test_clip_copies_the_text_given(clipboard: list[str], capsys) -> None:
+    clip(shell.Text("6000  a9 00     LDA #$00\n6002  60        RTS"))
+
+    assert clipboard == ["6000  a9 00     LDA #$00\n6002  60        RTS"]
+    assert capsys.readouterr().out == "copied 2 lines\n"
+
+
+def test_clip_without_text_copies_the_last_output(
+    clipboard: list[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # IPython keeps the last output in _.
+    ipython = SimpleNamespace(user_ns={"_": shell.Text("6000  60  RTS")})
+    monkeypatch.setattr(shell, "get_ipython", lambda: ipython)
+
+    clip()
+
+    assert clipboard == ["6000  60  RTS"]
+
+
+def test_clip_with_no_output_yet_copies_nothing(
+    clipboard: list[str], monkeypatch: pytest.MonkeyPatch, capsys
+) -> None:
+    # Before the first output, IPython's _ is empty.
+    monkeypatch.setattr(shell, "get_ipython", lambda: SimpleNamespace(user_ns={"_": ""}))
+
+    clip()
+
+    assert clipboard == []
+    assert capsys.readouterr().out == "nothing to copy\n"
+
+
+def test_clip_without_text_outside_ipython_stops(
+    clipboard: list[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(shell, "get_ipython", lambda: None)
+
+    with pytest.raises(RuntimeError, match="give clip"):
+        clip()
+

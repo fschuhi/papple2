@@ -2,9 +2,10 @@
 
 The analysis objects keep addresses as plain ints, which Python prints in
 decimal. Only a function that knows what each number means can choose its
-format, so these print addresses in hex, as the reports do, and leave
-counts in decimal. They print and return nothing, so IPython adds no
-output line of its own.
+format, so these show addresses in hex, as the reports do, and leave
+counts in decimal. The commands that show something (the show_ commands,
+listing() and hexdump()) return it as Text, which IPython shows as Out[n]
+and keeps in _; clip() copies it. The print_* functions print.
 
 Ranges are half-open, as everywhere in the workbench: start is the first
 byte, end the first byte behind. So a block printed as 6004-6007 is
@@ -34,15 +35,20 @@ dossier's labels and comments if one is open. The print_* functions take
 the objects they print instead, for any graph.
 """
 
+import contextlib
+import functools
+import io
 import re
 import subprocess
 import time
 from bisect import bisect_right
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
 
 import graphviz
+from IPython import get_ipython
 
 from papple2.core.cpu import JMP_absolute, JMP_indirect, JSR
 from papple2.core.emulator import Emulator
@@ -71,6 +77,35 @@ from papple2.workbench.tiling import (
     Tiling,
     address,
 )
+
+class Text(str):
+    """What a command shows, returned instead of printed. IPython shows it
+    as it is, line by line, not as a string in quotes, and keeps it in _
+    and Out[n]. As a str, it goes wherever text goes: str(), splitlines(),
+    the clipboard."""
+
+    def __repr__(self) -> str:
+        return str(self)
+
+    def _repr_pretty_(self, printer, cycle: bool) -> None:
+        # IPython's own way to show an object; without it, IPython would
+        # show a str subclass like any str, in quotes.
+        printer.text(str(self))
+
+
+def returns_text[**P](command: Callable[P, None]) -> Callable[P, Text]:
+    """Make command, which prints, return what it printed as Text instead.
+    The command itself keeps printing, so it stays simple, and the print_*
+    functions it calls stay as they are."""
+
+    @functools.wraps(command)
+    def returning(*args: P.args, **kwargs: P.kwargs) -> Text:
+        with contextlib.redirect_stdout(io.StringIO()) as printed:
+            command(*args, **kwargs)
+        return Text(printed.getvalue().rstrip("\n"))
+
+    return returning
+
 
 # Where write_report() writes; None until use_reports_folder() is called.
 reports_folder: Path | None = None
@@ -357,6 +392,7 @@ def routine_at(entry: int | str) -> int:
     return entry
 
 
+@returns_text
 def show_routines() -> None:
     """Every routine of the current run, with the dossier's labels."""
     refresh_annotations()
@@ -369,6 +405,7 @@ def show_routines() -> None:
     )
 
 
+@returns_text
 def show_blocks(entry: int | str) -> None:
     """The blocks of the routine starting at entry, an address or a label,
     with its loops and the dossier's labels."""
@@ -382,6 +419,7 @@ def show_blocks(entry: int | str) -> None:
     )
 
 
+@returns_text
 def show_callers(entry: int | str) -> None:
     """Every place that leaps into the routine starting at entry, an
     address or a label: one line per call site, in address order, with
@@ -448,6 +486,29 @@ def show_routine_graph() -> None:
         print(f"link (not copied, no pbcopy): {link}")
 
 
+def clip(text: str | None = None) -> None:
+    """Copy text to the clipboard; without text, the last output IPython
+    showed, as in _: e.g. listing("lookup_hgr"), then clip(). An older
+    output by its number: clip(Out[12]). Uses pbcopy, macOS's clipboard,
+    as show_routine_graph() does."""
+    if text is None:
+        ipython = get_ipython()
+        if ipython is None:
+            raise RuntimeError("not in IPython: give clip() the text to copy")
+        text = ipython.user_ns.get("_", "")
+    text = str(text)
+    if not text:
+        print("nothing to copy")
+        return
+    try:
+        subprocess.run(["pbcopy"], input=text, text=True, check=True)
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        print("not copied: no pbcopy")
+        return
+    lines = len(text.splitlines())
+    print(f"copied {lines:,} line{'' if lines == 1 else 's'}")
+
+
 @dataclass
 class ListingRow:
     """One line of a listing, its pieces kept apart, so that each caller
@@ -508,6 +569,7 @@ def current_listing_rows(
     )
 
 
+@returns_text
 def listing(start: int | str, end: int | str | None = None) -> None:
     """Print the listing of the current run's memory from start up to, not
     including, end. start and end as for current_listing_rows()."""
@@ -581,6 +643,7 @@ class HexdumpRow:
     values: list[int]
 
 
+@returns_text
 def hexdump(start: int | str, end: int | str | None = None) -> None:
     """Print the current run's memory from start up to, not including, end,
     16 bytes per line: hex on the left, text on the right. start and end are
