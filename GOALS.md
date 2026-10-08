@@ -13,6 +13,9 @@
 **What's next, in this order:**
 
 1. The listing editor's layout: the instruction column follows its widest instruction (see `TODO.md`).
+
+For this todo, please see the `EDITOR.md` implementation roadmap (feel free to suggest changes, of course, it's just a map) and the backlog.  
+
 2. HGR: tag what writes to the screen. My first longer piece of reverse engineering with the editor; it decides which tool comes next, colored ranges first.
 3. Region recovery.
 

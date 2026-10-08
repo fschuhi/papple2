@@ -4,4 +4,4 @@ numpy
 pytest
 ipython
 graphviz
-
+prompt_toolkit
