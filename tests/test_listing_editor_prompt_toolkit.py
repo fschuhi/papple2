@@ -19,6 +19,7 @@ from papple2.workbench.listing_editor_prompt_toolkit import (
     edit_rows,
     field_start,
     format_row,
+    future_crumbs,
 )
 
 
@@ -210,25 +211,37 @@ ROUTINES = {0x9000: Place(0x9000, lambda: MAIN), 0x9010: Place(0x9010, lambda: S
 
 
 def navigate(
-    keys: str, remembered: dict[int, tuple[int, int]] | None = None
+    keys: str | list[str], remembered: dict[int, tuple[int, int]] | None = None
 ) -> list[tuple[int, str, str]]:
     """Run the editor on MAIN with keys typed in; return what it saved. The
     keys end with Tab and Enter, which save the label of the bar's row: the
-    address saved says where the bar ended up."""
+    address saved says where the bar ended up. The picker lists both
+    routines.
+
+    keys as a list is typed in pieces, as in type_into_editor()."""
     saved = []
 
     def save(address: int, field: str, text: str) -> str | None:
         saved.append((address, field, text))
         return None
 
+    def type_in_pieces(pipe) -> None:
+        for piece in keys:
+            time.sleep(0.2)
+            pipe.send_text(piece)
+
     with create_pipe_input() as pipe:
-        pipe.send_text(keys)
+        if isinstance(keys, str):
+            pipe.send_text(keys)
+        else:
+            threading.Thread(target=type_in_pieces, args=(pipe,), daemon=True).start()
         with create_app_session(input=pipe, output=DummyOutput()):
             edit_rows(
                 ROUTINES[0x9000],
                 save,
                 open_routine=ROUTINES.get,
                 remembered=remembered,
+                goto_entries=sorted(ROUTINES),
             )
     return saved
 
@@ -264,6 +277,65 @@ def test_the_routines_are_remembered_beyond_the_editor() -> None:
     navigate("\r\x1b[Bq", remembered)
     # MAIN as it was left for SUB, SUB as it was left at q: (top, cursor).
     assert remembered == {0x9000: (0, 0), 0x9010: (0, 2)}
+
+
+# The picker. "g" opens it, Down moves its selection, Enter goes there.
+
+
+def test_g_goes_to_the_routine_picked() -> None:
+    # The selection starts on MAIN, the routine shown; Down picks SUB.
+    assert navigate("g\x1b[B\r\t\rq") == [(0x9010, "label", "sub")]
+
+
+def test_the_picker_starts_on_the_routine_shown() -> None:
+    # In SUB, Enter at once: SUB again, so the bar stays on SUB's entry.
+    assert navigate("\rg\r\t\rq") == [(0x9010, "label", "sub")]
+
+
+def test_backspace_comes_back_from_where_the_picker_went() -> None:
+    assert navigate("\x1b[Bg\x1b[B\r\x7f\t\rq") == [(0x9003, "label", "")]
+
+
+def test_esc_closes_the_picker_without_going_anywhere() -> None:
+    assert navigate(["g\x1b[B", "\x1b", "\t\rq"]) == [
+        (0x9000, "label", "main")
+    ]
+
+
+# Forward. "f" undoes the last Backspace, until a new step is taken.
+
+
+def test_f_goes_forward_to_where_backspace_came_from() -> None:
+    assert navigate("\r\x7ff\t\rq") == [(0x9010, "label", "sub")]
+
+
+def test_f_brings_back_the_window_and_bar_that_were_left() -> None:
+    # Into SUB, down one row, back, and forward: the bar is where it was.
+    assert navigate("\r\x1b[B\x7ff\t\rq") == [(0x9011, "label", "")]
+
+
+def test_f_goes_forward_to_where_the_picker_went() -> None:
+    assert navigate("g\x1b[B\r\x7ff\t\rq") == [(0x9010, "label", "sub")]
+
+
+def test_a_new_step_forgets_where_f_would_have_gone() -> None:
+    # Into SUB and back; then the BNE in MAIN jumps to its first row, a
+    # new step. f then goes nowhere: the bar stays on 9000, not in SUB.
+    assert navigate("\r\x7f\x1b[B\rf\t\rq") == [(0x9000, "label", "main")]
+
+
+def test_f_without_a_backspace_goes_nowhere() -> None:
+    assert navigate("f\t\rq") == [(0x9000, "label", "main")]
+
+
+def test_the_future_crumbs_fit_by_leaving_out_the_last_ones() -> None:
+    names = ["r_11x2_2", "lookup_hgr"]
+    # " > r_11x2_2 > lookup_hgr" is 24 characters.
+    assert future_crumbs(names, 24) == names
+    assert future_crumbs(names, 20) == ["r_11x2_2", "..."]
+    # " > ..." is 6 characters.
+    assert future_crumbs(names, 6) == ["..."]
+    assert future_crumbs(names, 5) == []
 
 
 def test_the_breadcrumbs_fit_by_leaving_out_the_first_ones() -> None:

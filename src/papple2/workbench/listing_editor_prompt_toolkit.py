@@ -11,8 +11,10 @@ Keys in the listing:
   PageUp / PageDown    : move the bar one window
   Enter                : follow the JSR, JMP or branch on the bar's row
   Backspace            : back to where the last Enter was pressed
+  f                    : forward again, to where Backspace came from
   Tab                  : edit the label of the bar's row
   e                    : edit the comment of the bar's row
+  g                    : open the picker, to go to another routine
   c                    : copy the visible lines to the clipboard
   q, Esc or Ctrl+C     : leave
 
@@ -26,6 +28,12 @@ Keys in the comment box:
   Enter                : save, back to the listing
   Esc                  : back to the listing without saving
   Ctrl+C               : leave without saving
+
+Keys in the picker:
+  Up / Down            : move the selection one line
+  Enter                : go to the selected routine
+  Esc                  : back to the listing
+  Ctrl+C               : leave
 
 Ctrl keys in a field and in the comment box (prompt_toolkit's own):
   Ctrl+A / Ctrl+E      : start / end of the text (Home / End too)
@@ -48,11 +56,19 @@ comment shows as one line, cut if it doesn't fit.
 Enter on a JSR opens the routine it calls, and so does Enter on a JMP into
 another routine's entry; Enter on a branch, or on a JMP to a row in the
 listing, moves the bar there. Backspace undoes the last Enter: the same
-routine, window and bar as before. Each routine remembers its window and
+routine, window and bar as before. f undoes the last Backspace, as long as
+no new step was taken since: Enter, or going somewhere with the picker,
+forgets where Backspace came from. Each routine remembers its window and
 bar when it is left, and opens again as it was. The breadcrumbs in the
 rule above the listing show the routines followed into, the one shown last;
-a jump within a routine adds none. The editor keeps its height, whatever
+a jump within a routine adds none. Behind it, in grey, the routines f
+would go forward to. The editor keeps its height, whatever
 the routine's length.
+
+g opens the picker over the bottom lines of the listing, PICKER_LINES high:
+a list of the routines edit_rows() was given, by entry and label, the
+selection on the routine shown. Enter goes there, as Enter on a JSR would,
+so Backspace comes back and the breadcrumbs grow.
 
 The operand field labels the address the operand names (row.target), not
 the line's own: $1a85 in LDA $1a85,Y, the pointer $1b in STA ($1b),Y.
@@ -114,6 +130,9 @@ MARKER_WIDTH = 2
 # How many lines of the listing the comment box covers, at most.
 COMMENT_LINES = 4
 
+# How many lines of the listing the picker covers, at most.
+PICKER_LINES = 10
+
 # The mnemonics whose target Enter follows within the listing.
 BRANCHES = frozenset({"BPL", "BMI", "BVC", "BVS", "BCC", "BCS", "BNE", "BEQ"})
 
@@ -125,7 +144,8 @@ CRUMB_SEPARATOR = " > "
 # marker: the > in front of it. rule: the lines above and below.
 # field: a label being edited. message: a refusal or a hint, in the line
 # under the listing. crumb: the routines followed into, in the line above;
-# crumb-here: the one shown.
+# crumb-here: the one shown; crumb-future: the ones f goes forward to. picker: the picker's box; its selected line
+# has the bar's look.
 STYLE = Style.from_dict(
     {
         "bar": "bg:#303030",
@@ -135,6 +155,8 @@ STYLE = Style.from_dict(
         "message": "ansiyellow",
         "crumb": "#9e9e9e",
         "crumb-here": "bold ansiwhite",
+        "crumb-future": "#585858",
+        "picker": "bg:#262626",
     }
 )
 
@@ -289,12 +311,35 @@ def breadcrumbs(names: list[str], width: int) -> list[str]:
     return [ELLIPSIS, *shown]
 
 
+def future_crumbs(names: list[str], room: int) -> list[str]:
+    """names, the nearest first, as many as fit into room behind the
+    breadcrumbs, each with CRUMB_SEPARATOR in front of it. The last ones
+    are left out if need be, with "..." in their place."""
+    shown: list[str] = []
+    used = 0
+    for index, name in enumerate(names):
+        cost = len(CRUMB_SEPARATOR) + len(name)
+        # If more come behind this one, keep room for the "..." standing
+        # in for them.
+        more = index < len(names) - 1
+        reserve = len(CRUMB_SEPARATOR) + len(ELLIPSIS) if more else 0
+        if used + cost + reserve > room:
+            if used + len(CRUMB_SEPARATOR) + len(ELLIPSIS) <= room:
+                shown.append(ELLIPSIS)
+            break
+        shown.append(name)
+        used += cost
+    return shown
+
+
 @dataclass
 class EditorState:
     """The rows, their columns, the row the bar is on and the first row in
     the window; the field being edited ("label", "operand", "comment" or
     None), the message for the line under the listing, and the place the
-    rows come from."""
+    rows come from. While the picker is open, picker holds the entries it
+    lists, picker_index the selected one and picker_top the first one in
+    its box; picker is None while it is closed."""
 
     rows: list[ListingRow]
     widths: ColumnWidths
@@ -303,6 +348,9 @@ class EditorState:
     field: str | None = None
     message: str = ""
     place: Place | None = None
+    picker: list[int] | None = None
+    picker_index: int = 0
+    picker_top: int = 0
 
 
 def keep_in_view(state: EditorState, height: int) -> None:
@@ -330,6 +378,7 @@ def edit_rows(
     height: int = 25,
     open_routine: Callable[[int], Place | None] = lambda address: None,
     remembered: dict[int, tuple[int, int]] | None = None,
+    goto_entries: list[int] | None = None,
 ) -> None:
     """Show the rows of place, inline, height lines at a time, and let
     labels and comments be edited, until q, Esc or Ctrl+C. Nothing stays on
@@ -343,16 +392,27 @@ def edit_rows(
     routine starting at address, or None: Enter on a JSR opens it.
     remembered keeps, by entry, the first row in the window and the bar's
     row of every routine left, (top, cursor); it outlives the editor, if
-    the caller keeps it."""
+    the caller keeps it. goto_entries are the entries the picker lists, in
+    the order given; g goes to one of them through open_routine()."""
     rows = place.load_rows()
     if not any(row.address is not None for row in rows):
         print("Nothing to show: no lines in this range.")
         return
     height = min(height, len(rows))
     remembered = {} if remembered is None else remembered
+    goto_entries = [] if goto_entries is None else goto_entries
     state = EditorState(rows, column_widths(rows), cursor=0, place=place)
     # Where Backspace goes: (place, top, cursor) before each Enter.
     history: list[tuple[Place, int, int]] = []
+    # Where f goes: (place, top, cursor) before each Backspace, the nearest
+    # last.
+    future: list[tuple[Place, int, int]] = []
+
+    def step(here: tuple[Place, int, int]) -> None:
+        """Note here as where Backspace goes, before a new step. A new step
+        forgets where f would have gone."""
+        history.append(here)
+        future.clear()
 
     def arrive(place: Place, view: tuple[int, int] | None) -> None:
         """Show place, its rows loaded afresh: the window and bar as in
@@ -414,6 +474,8 @@ def edit_rows(
             text = f"label of ${row.target:04x}"
         if not text and state.field == "comment":
             text = f"comment of ${row.address:04x}"
+        if not text and state.picker is not None:
+            text = "go to: Enter goes there, Esc closes"
         if not text:
             return FormattedText([])
         return FormattedText(
@@ -422,21 +484,39 @@ def edit_rows(
 
     def crumbs_text() -> FormattedText:
         """The line above the listing: the routines followed into, by the
-        labels of their entries, the one shown last. A jump within a
-        routine adds no crumb."""
+        labels of their entries, the one shown last, and behind it, in
+        grey, the ones f goes forward to. A jump within a routine adds no
+        crumb."""
+
+        def name_of(entry: int) -> str:
+            return label_of(entry) or f"{entry:04x}"
+
         entries: list[int] = []
         for followed, _top, _cursor in [*history, (state.place, 0, 0)]:
             if not entries or entries[-1] != followed.entry:
                 entries.append(followed.entry)
-        names = [label_of(entry) or f"{entry:04x}" for entry in entries]
+        # The nearest first: future holds it last.
+        ahead: list[int] = []
+        for followed, _top, _cursor in reversed(future):
+            last = ahead[-1] if ahead else entries[-1]
+            if followed.entry != last:
+                ahead.append(followed.entry)
         # Room for the rule's ends: "── " before, " ─" behind.
-        shown = breadcrumbs(names, text_width() + MARKER_WIDTH - 5)
+        room = text_width() + MARKER_WIDTH - 5
+        shown = breadcrumbs([name_of(entry) for entry in entries], room)
+        shown_ahead = future_crumbs(
+            [name_of(entry) for entry in ahead],
+            room - len(CRUMB_SEPARATOR.join(shown)),
+        )
         fragments = [("class:rule", "── ")]
         for index, name in enumerate(shown):
             if index:
                 fragments.append(("class:crumb", CRUMB_SEPARATOR))
             last = index == len(shown) - 1
             fragments.append(("class:crumb-here" if last else "class:crumb", name))
+        for name in shown_ahead:
+            fragments.append(("class:crumb-future", CRUMB_SEPARATOR))
+            fragments.append(("class:crumb-future", name))
         fragments.append(("class:rule", " "))
         return FormattedText(fragments)
 
@@ -463,14 +543,14 @@ def edit_rows(
             # A JMP back to the routine's own entry is a loop: stay.
             if routine is not None and (name == "JSR" or routine.entry != state.place.entry):
                 remember()
-                history.append(here)
+                step(here)
                 arrive(routine, None)
                 return
         target_row = row_of(state.rows, row.target) if name != "JSR" else None
         if target_row is None:
             state.message = f"no routine at ${row.target:04x}"
             return
-        history.append(here)
+        step(here)
         state.cursor = target_row
         keep_in_view(state, height)
 
@@ -480,8 +560,22 @@ def edit_rows(
         if not history:
             state.message = "nothing to go back to"
             return
+        here = (state.place, state.top, state.cursor)
         place, top, cursor = history.pop()
         remember()
+        future.append(here)
+        arrive(place, (top, cursor))
+
+    def forward() -> None:
+        """Undo the last Backspace: its place, window and bar."""
+        state.message = ""
+        if not future:
+            state.message = "nothing to go forward to"
+            return
+        here = (state.place, state.top, state.cursor)
+        place, top, cursor = future.pop()
+        remember()
+        history.append(here)
         arrive(place, (top, cursor))
 
     # One window less than its height, so one line of the old window
@@ -550,6 +644,93 @@ def edit_rows(
         comment_box.buffer.cursor_position = len(text)
         get_app().layout.focus(comment_box)
 
+    # The picker covers the bottom lines of the listing, as the comment box
+    # does, but more of them: a list wants more lines than a comment.
+    picker_lines = max(1, min(PICKER_LINES, height - 1))
+
+    def picker_text() -> FormattedText:
+        """The lines of the picker's box: entry and label, the selected
+        one with the bar's look."""
+        width = text_width()
+        fragments = []
+        shown = state.picker[state.picker_top : state.picker_top + picker_lines]
+        for offset, entry in enumerate(shown):
+            text = f"{entry:04x}  {label_of(entry)}".rstrip()
+            if state.picker_top + offset == state.picker_index:
+                fragments.append(("class:bar class:marker", ">".ljust(MARKER_WIDTH)))
+                fragments.append(("class:bar", text.ljust(width)))
+            else:
+                fragments.append(("", " " * MARKER_WIDTH))
+                fragments.append(("", text))
+            fragments.append(("", "\n"))
+        if fragments:
+            fragments.pop()  # no line break after the last line
+        return FormattedText(fragments)
+
+    # Focusable, so the picker's keys reach it, and not the listing's.
+    picker = Window(
+        FormattedTextControl(picker_text, focusable=True, show_cursor=False),
+        style="class:picker",
+        wrap_lines=False,
+    )
+    picker_float = Float(
+        ConditionalContainer(
+            picker, filter=Condition(lambda: state.picker is not None)
+        ),
+        # + 1 for the rule above the listing.
+        top=1 + height - picker_lines,
+        left=0,
+        right=0,
+        height=picker_lines,
+    )
+
+    def open_picker() -> None:
+        """Open the picker on goto_entries, the selection on the routine
+        shown, if it is one of them."""
+        state.message = ""
+        if not goto_entries:
+            state.message = "no routines to go to"
+            return
+        state.picker = goto_entries
+        entry = state.place.entry
+        state.picker_index = (
+            goto_entries.index(entry) if entry in goto_entries else 0
+        )
+        state.picker_top = 0
+        move_picker(0)
+        get_app().layout.focus(picker)
+
+    def move_picker(distance: int) -> None:
+        """Move the picker's selection, kept inside the list, and scroll
+        its box so that the selection is in it."""
+        last = len(state.picker) - 1
+        state.picker_index = max(0, min(last, state.picker_index + distance))
+        if state.picker_index < state.picker_top:
+            state.picker_top = state.picker_index
+        elif state.picker_index >= state.picker_top + picker_lines:
+            state.picker_top = state.picker_index - picker_lines + 1
+
+    def close_picker() -> None:
+        state.picker = None
+        state.message = ""
+        get_app().layout.focus(listing)
+
+    def go_to_picked() -> None:
+        """Go to the routine selected in the picker, as Enter on a JSR
+        would. The routine shown stays as it is."""
+        entry = state.picker[state.picker_index]
+        close_picker()
+        routine = open_routine(entry)
+        if routine is None:
+            state.message = f"no routine at ${entry:04x}"
+            return
+        if routine.entry == state.place.entry:
+            return
+        here = (state.place, state.top, state.cursor)
+        remember()
+        step(here)
+        arrive(routine, None)
+
     def open_field(name: str) -> None:
         """Open the field name on the bar's row, holding the label it
         edits, with the cursor behind the text."""
@@ -593,6 +774,7 @@ def edit_rows(
     in_listing = has_focus(listing)
     in_field = has_focus(field)
     in_comment = has_focus(comment_box)
+    in_picker = has_focus(picker)
     bindings = KeyBindings()
 
     # The listing's keys only while it has the focus: the app's own keys
@@ -627,6 +809,10 @@ def edit_rows(
     def _back(event: KeyPressEvent) -> None:
         back()
 
+    @bindings.add("f", filter=in_listing)
+    def _forward(event: KeyPressEvent) -> None:
+        forward()
+
     @bindings.add("tab", filter=in_listing)
     def _edit(event: KeyPressEvent) -> None:
         open_field("label")
@@ -634,6 +820,26 @@ def edit_rows(
     @bindings.add("e", filter=in_listing)
     def _edit_comment(event: KeyPressEvent) -> None:
         open_comment()
+
+    @bindings.add("g", filter=in_listing)
+    def _go_to(event: KeyPressEvent) -> None:
+        open_picker()
+
+    @bindings.add("up", filter=in_picker)
+    def _picker_up(event: KeyPressEvent) -> None:
+        move_picker(-1)
+
+    @bindings.add("down", filter=in_picker)
+    def _picker_down(event: KeyPressEvent) -> None:
+        move_picker(1)
+
+    @bindings.add("enter", filter=in_picker)
+    def _picker_go(event: KeyPressEvent) -> None:
+        go_to_picked()
+
+    @bindings.add("escape", filter=in_picker)
+    def _picker_close(event: KeyPressEvent) -> None:
+        close_picker()
 
     @bindings.add("q", filter=in_listing)
     @bindings.add("escape", filter=in_listing)
@@ -684,7 +890,7 @@ def edit_rows(
                         ),
                     ]
                 ),
-                floats=[field_float, comment_float],
+                floats=[field_float, comment_float, picker_float],
             ),
             focused_element=listing,
         ),

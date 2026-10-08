@@ -569,7 +569,8 @@ def edit(start: int | str, end: int | str | None = None, height: int = 25) -> No
     is saved to the current dossier at once, through save_edit(). The
     operand field labels the address an operand names, wherever the line
     is. Enter on a JSR opens the routine it calls; each routine opens as it
-    was last left, while the run lasts. height is the number of lines the
+    was last left, while the run lasts. g opens a list of the run's
+    routines, to go to one of them. height is the number of lines the
     editor shows at a time.
 
     Needs a real terminal."""
@@ -596,6 +597,7 @@ def edit(start: int | str, end: int | str | None = None, height: int = 25) -> No
         height,
         open_routine=routine_place,
         remembered=editor_views,
+        goto_entries=sorted(current_routines().graphs),
     )
 
 
