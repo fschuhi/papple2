@@ -75,13 +75,10 @@ The bar's row has a cyan > in front of it and a faint background. A thin
 line runs above and below the listing.
 
 At the prompt, edit() in papple2.workbench.shell opens it on the current
-run. Try it on a piece of Lode Runner typed in by hand:
-
-    make prototype
+run.
 """
 
 import subprocess
-import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -708,19 +705,3 @@ def edit_rows(
     app.timeoutlen = 0.05
 
     app.run()
-
-
-if __name__ == "__main__":
-    # Imported here: listing_editor needs termios, which this module
-    # itself doesn't.
-    from papple2.workbench.listing_editor import DATA, load_data, save_into_data
-
-    def label_in_data(address: int) -> str:
-        return next((row.label for row in DATA if row.address == address), "")
-
-    edit_rows(
-        Place(DATA[0].address, load_data, routine=False),
-        save_into_data,
-        label_in_data,
-        int(sys.argv[1]) if len(sys.argv) > 1 else 25,
-    )

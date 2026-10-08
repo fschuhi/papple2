@@ -123,7 +123,6 @@ src/papple2/debug/disassembler.py
 ## workbench
 src/papple2/workbench/annotations.py
 src/papple2/workbench/basic_blocks_analysis.py
-src/papple2/workbench/listing_editor.py
 src/papple2/workbench/listing_editor_prompt_toolkit.py
 src/papple2/workbench/shell.py
 #src/papple2/workbench/stack_tracking.py

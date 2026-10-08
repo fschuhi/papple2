@@ -11,7 +11,7 @@ RUN           = $(ACTIVATE) && python
 SETUP_STAMP   = $(VENV_DIR)/.setup_stamp
 
 # --- Phony targets ---
-.PHONY: all setup test test-verbose boot-basic boot-robotron boot-lode-runner boot-lode-runner-throttled boot-lode-runner-headless boot-bandits lr-count lr-tiles lr-overview lr-basic-blocks-analysis walkthrough ipython prototype clean showtree gentree commit-hash patch filesdump filesdump-detailed help
+.PHONY: all setup test test-verbose boot-basic boot-robotron boot-lode-runner boot-lode-runner-throttled boot-lode-runner-headless boot-bandits lr-count lr-tiles lr-overview lr-basic-blocks-analysis walkthrough ipython clean showtree gentree commit-hash patch filesdump filesdump-detailed help
 
 all: setup
 
@@ -76,9 +76,6 @@ walkthrough: $(SETUP_STAMP) ## Walk a tiny program through tiling and the basic 
 # --- Interactive ---
 ipython: $(SETUP_STAMP) ## Start IPython in the venv (e.g. %run scripts/walkthrough.py)
 	$(ACTIVATE) && ipython
-
-prototype: $(SETUP_STAMP) ## Run the prompt_toolkit listing editor prototype
-	$(RUN) src/papple2/workbench/listing_editor_prompt_toolkit.py
 
 # --- Utility Targets ---
 clean: ## Remove venv, cache, and tmp files
