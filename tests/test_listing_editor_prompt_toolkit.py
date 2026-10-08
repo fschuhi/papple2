@@ -2,6 +2,9 @@
 papple2.workbench.listing_editor_prompt_toolkit: its layout, as plain text,
 and its keys, typed in through a pipe instead of a terminal."""
 
+import threading
+import time
+
 from prompt_toolkit.application import create_app_session
 from prompt_toolkit.input import create_pipe_input
 from prompt_toolkit.output import DummyOutput
@@ -78,29 +81,42 @@ def test_the_empty_line_before_a_byte_block_is_its_gutter_alone() -> None:
 
 
 # The editor at work: keys go in through a pipe, the screen goes nowhere.
-# Tab is "\t", Enter "\r", Ctrl+C "\x03", Down "\x1b[B".
+# Tab is "\t", Enter "\r", Ctrl+C "\x03", Down "\x1b[B", Esc "\x1b".
 
 # Two rows: LDY names the address $1b, INX names none.
 EDITOR_ROWS = [
-    ListingRow(0x8350, "", "a4 1b", ".loop1", "LDY row_num", "", target=0x1B),
+    ListingRow(0x8350, "", "a4 1b", ".loop1", "LDY row_num", "with Y", target=0x1B),
     ListingRow(0x8352, "", "e8", "", "INX", ""),
 ]
 
 
 def type_into_editor(
-    keys: str, refusal: str | None = None, labels: dict[int, str] | None = None
+    keys: str | list[str],
+    refusal: str | None = None,
+    labels: dict[int, str] | None = None,
 ) -> list[tuple[int, str, str]]:
     """Run the editor on EDITOR_ROWS with keys typed in; return what it
     saved, as (address, field, text), in order. Every save is refused with
-    refusal, if one is given. labels stands in for the dossier's labels."""
+    refusal, if one is given. labels stands in for the dossier's labels.
+
+    keys as a list is typed in pieces, with a pause after each: a lone Esc
+    needs one, or the key after it would make it Esc plus that key."""
     saved = []
 
     def save(address: int, field: str, text: str) -> str | None:
         saved.append((address, field, text))
         return refusal
 
+    def type_in_pieces(pipe) -> None:
+        for piece in keys:
+            time.sleep(0.2)
+            pipe.send_text(piece)
+
     with create_pipe_input() as pipe:
-        pipe.send_text(keys)
+        if isinstance(keys, str):
+            pipe.send_text(keys)
+        else:
+            threading.Thread(target=type_in_pieces, args=(pipe,), daemon=True).start()
         with create_app_session(input=pipe, output=DummyOutput()):
             edit_rows(
                 lambda: EDITOR_ROWS,
@@ -158,3 +174,19 @@ def test_a_field_starts_where_format_row_puts_its_column() -> None:
     line = format_row(row, widths, 80)
     assert line[field_start(row, widths, "label") :].startswith(".loop1")
     assert line[field_start(row, widths, "operand") :].startswith("row_num")
+
+
+def test_e_opens_the_comment_and_enter_saves_it() -> None:
+    # The box starts with the comment, the cursor behind it.
+    assert type_into_editor("e, X\rq") == [(0x8350, "comment", "with Y, X")]
+
+
+def test_a_comment_can_be_given_where_there_is_none() -> None:
+    assert type_into_editor("\x1b[Bedone\rq") == [(0x8352, "comment", "done")]
+
+
+def test_esc_leaves_the_comment_box_without_saving() -> None:
+    # Then Tab and Enter save the label: the box is closed, the listing back.
+    assert type_into_editor(["eX", "\x1b", "\t\rq"]) == [
+        (0x8350, "label", ".loop1")
+    ]

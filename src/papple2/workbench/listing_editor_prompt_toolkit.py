@@ -3,12 +3,14 @@
 
 Shows the rows of a listing inline, below the prompt, and erases itself
 on exit, so nothing of it stays on the screen. The label of the bar's row,
-and the label of the address its operand names, are edited in place.
+and the label of the address its operand names, are edited in place; its
+comment in a box over the bottom lines of the listing.
 
 Keys in the listing:
   Up / Down            : move the bar one line
   PageUp / PageDown    : move the bar one window
   Tab                  : edit the label of the bar's row
+  e                    : edit the comment of the bar's row
   c                    : copy the visible lines to the clipboard
   q, Esc or Ctrl+C     : leave
 
@@ -17,6 +19,15 @@ Keys in a field:
   Enter                : save, back to the listing
   Esc                  : back to the listing without saving
   Ctrl+C               : leave without saving
+
+Keys in the comment box:
+  Enter                : save, back to the listing
+  Esc                  : back to the listing without saving
+  Ctrl+C               : leave without saving
+
+The comment box is COMMENT_LINES high and as wide as the terminal; a long
+comment wraps in it, and has no line breaks of its own. In the listing, a
+comment shows as one line, cut if it doesn't fit.
 
 The operand field labels the address the operand names (row.target), not
 the line's own: $1a85 in LDA $1a85,Y, the pointer $1b in STA ($1b),Y.
@@ -76,6 +87,9 @@ COMMENT_START = "  ; "
 
 # The column in front of each line, where the bar's row shows "> ".
 MARKER_WIDTH = 2
+
+# How many lines of the listing the comment box covers, at most.
+COMMENT_LINES = 4
 
 # bar: the faint background of the bar's row, a little lighter than a dark
 # terminal's own; change the colour here if it is too faint or too loud.
@@ -214,8 +228,8 @@ def field_width(row: ListingRow, widths: ColumnWidths, field: str, text: str) ->
 @dataclass
 class EditorState:
     """The rows, their columns, the row the bar is on and the first row in
-    the window; the field being edited ("label", "operand" or None), and
-    the message for the line under the listing."""
+    the window; the field being edited ("label", "operand", "comment" or
+    None), and the message for the line under the listing."""
 
     rows: list[ListingRow]
     widths: ColumnWidths
@@ -291,10 +305,13 @@ def edit_rows(
 
     def message_text() -> FormattedText:
         """The line under the listing: a refusal, or whose label the
-        operand field holds."""
+        operand field or whose comment the box holds."""
         text = state.message
+        row = state.rows[state.cursor]
         if not text and state.field == "operand":
-            text = f"label of ${state.rows[state.cursor].target:04x}"
+            text = f"label of ${row.target:04x}"
+        if not text and state.field == "comment":
+            text = f"comment of ${row.address:04x}"
         if not text:
             return FormattedText([])
         return FormattedText(
@@ -338,6 +355,38 @@ def edit_rows(
         height=1,
     )
 
+    # The comment box covers the bottom lines of the listing, so the editor
+    # keeps its height. Fewer lines if the listing is short, so the bar's
+    # row stays visible above it.
+    box_lines = max(1, min(COMMENT_LINES, height - 1))
+    # Multi-line, so that it wraps: a one-line field has one line. Enter
+    # saves all the same: our binding comes before the one that would
+    # insert a line break.
+    comment_box = TextArea(multiline=True, wrap_lines=True, style="class:field")
+    comment_float = Float(
+        ConditionalContainer(
+            comment_box, filter=Condition(lambda: state.field == "comment")
+        ),
+        # + 1 for the rule above the listing.
+        top=1 + height - box_lines,
+        left=0,
+        right=0,
+        height=box_lines,
+    )
+
+    def open_comment() -> None:
+        """Open the comment box with the bar's row's comment, the cursor
+        behind it. If the bar's row lies under the box, the listing
+        scrolls up first."""
+        lowest = height - box_lines - 1  # the lowest row above the box
+        if state.cursor - state.top > lowest:
+            state.top = state.cursor - lowest
+        state.field = "comment"
+        text = state.rows[state.cursor].comment
+        comment_box.text = text
+        comment_box.buffer.cursor_position = len(text)
+        get_app().layout.focus(comment_box)
+
     def open_field(name: str) -> None:
         """Open the field name on the bar's row, holding the label it
         edits, with the cursor behind the text."""
@@ -358,11 +407,14 @@ def edit_rows(
 
     def save() -> bool:
         """Save the field's text as the label of the row, or of the
-        operand's target. Refused: keep the reason for the line under the
+        operand's target, or the box's text as the row's comment. Refused: keep the reason for the line under the
         listing, and return False. Saved: load the rows again."""
         row = state.rows[state.cursor]
-        address = row.address if state.field == "label" else row.target
-        refusal = save_edit(address, "label", field.text)
+        if state.field == "comment":
+            refusal = save_edit(row.address, "comment", comment_box.text)
+        else:
+            address = row.address if state.field == "label" else row.target
+            refusal = save_edit(address, "label", field.text)
         if refusal:
             state.message = refusal
             return False
@@ -375,6 +427,7 @@ def edit_rows(
 
     in_listing = has_focus(listing)
     in_field = has_focus(field)
+    in_comment = has_focus(comment_box)
     bindings = KeyBindings()
 
     # The listing's keys only while it has the focus: the app's own keys
@@ -405,6 +458,10 @@ def edit_rows(
     def _edit(event: KeyPressEvent) -> None:
         open_field("label")
 
+    @bindings.add("e", filter=in_listing)
+    def _edit_comment(event: KeyPressEvent) -> None:
+        open_comment()
+
     @bindings.add("q", filter=in_listing)
     @bindings.add("escape", filter=in_listing)
     @bindings.add("c-c")
@@ -423,7 +480,13 @@ def edit_rows(
         if save():
             close_field()
 
+    @bindings.add("enter", filter=in_comment)
+    def _save_comment(event: KeyPressEvent) -> None:
+        if save():
+            close_field()
+
     @bindings.add("escape", filter=in_field)
+    @bindings.add("escape", filter=in_comment)
     def _cancel(event: KeyPressEvent) -> None:
         close_field()
 
@@ -446,7 +509,7 @@ def edit_rows(
                         ),
                     ]
                 ),
-                floats=[field_float],
+                floats=[field_float, comment_float],
             ),
             focused_element=listing,
         ),
