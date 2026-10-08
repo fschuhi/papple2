@@ -1,18 +1,35 @@
 #!/usr/bin/env python3
-"""The listing viewer, built on prompt_toolkit: the coming listing editor.
+"""The listing editor, built on prompt_toolkit.
 
 Shows the rows of a listing inline, below the prompt, and erases itself
-on exit, so nothing of it stays on the screen. Step 1 of the editor in
-EDITOR.md: it only shows and moves; editing follows.
+on exit, so nothing of it stays on the screen. The label of the bar's row,
+and the label of the address its operand names, are edited in place.
 
-Keys:
+Keys in the listing:
   Up / Down            : move the bar one line
   PageUp / PageDown    : move the bar one window
+  Tab                  : edit the label of the bar's row
   c                    : copy the visible lines to the clipboard
   q, Esc or Ctrl+C     : leave
 
-The columns are worked out once from all rows, so they stay where they are
-while the bar moves. An instruction longer than INSTRUCTION_CAP is cut,
+Keys in a field:
+  Tab                  : save, then go on: label -> operand -> label
+  Enter                : save, back to the listing
+  Esc                  : back to the listing without saving
+  Ctrl+C               : leave without saving
+
+The operand field labels the address the operand names (row.target), not
+the line's own: $1a85 in LDA $1a85,Y, the pointer $1b in STA ($1b),Y.
+While it is open, the line under the listing says whose label it is. A row
+whose operand names no address has no operand field: Tab stays on the
+label. A refused save (e.g. a label already used elsewhere) shows its
+reason in the line under the listing, and the field stays open.
+
+After every save the rows are loaded again, so a new label also shows in
+the operands that point at its address.
+
+The columns are worked out from all rows, so they stay where they are
+while the bar moves; after a save, they are worked out again. An instruction longer than INSTRUCTION_CAP is cut,
 and so is a comment that doesn't fit the terminal; both end in "...".
 
 The empty line before a .byte block is shown, but the bar skips it.
@@ -28,15 +45,24 @@ run. Try it on a piece of Lode Runner typed in by hand:
 
 import subprocess
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from prompt_toolkit.application import Application, get_app
+from prompt_toolkit.filters import Condition, has_focus
 from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
-from prompt_toolkit.layout.containers import HSplit, Window
+from prompt_toolkit.layout.containers import (
+    ConditionalContainer,
+    Float,
+    FloatContainer,
+    HSplit,
+    Window,
+)
 from prompt_toolkit.layout.controls import FormattedTextControl
 from prompt_toolkit.layout.layout import Layout
 from prompt_toolkit.styles import Style
+from prompt_toolkit.widgets import TextArea
 
 # The instruction column follows the longest instruction, up to this width.
 # Beyond it, one long operand label would push every comment to the right.
@@ -54,11 +80,15 @@ MARKER_WIDTH = 2
 # bar: the faint background of the bar's row, a little lighter than a dark
 # terminal's own; change the colour here if it is too faint or too loud.
 # marker: the > in front of it. rule: the lines above and below.
+# field: a label being edited. message: a refusal or a hint, in the line
+# under the listing.
 STYLE = Style.from_dict(
     {
         "bar": "bg:#303030",
         "marker": "bold ansicyan",
         "rule": "ansibrightblack",
+        "field": "bg:#4a4a4a",
+        "message": "ansiyellow",
     }
 )
 
@@ -153,15 +183,49 @@ def move(rows: list[ListingRow], index: int, distance: int) -> int:
     return found
 
 
-@dataclass
-class ViewState:
-    """The row the bar is on, and the first row in the window."""
+def mnemonic(row: ListingRow) -> str:
+    """The instruction's mnemonic: LDY in LDY row_num."""
+    return row.instruction.split(" ", 1)[0]
 
+
+def field_start(row: ListingRow, widths: ColumnWidths, field: str) -> int:
+    """Where field ("label" or "operand") starts in row's line, as
+    format_row() lays it out: the label column, or the operand behind the
+    mnemonic."""
+    start = len(f"{row.gutter}{row.address:04x}  {row.hex_bytes:<8}  ")
+    if field == "label":
+        return start
+    if widths.label:
+        start += widths.label + 2
+    return start + len(mnemonic(row)) + 1
+
+
+def field_width(row: ListingRow, widths: ColumnWidths, field: str, text: str) -> int:
+    """How wide field is while text is typed into it: at least as wide as
+    its column, so nothing of the line shows through, and one more than
+    the text, for the cursor behind it."""
+    if field == "label":
+        column = widths.label
+    else:
+        column = widths.instruction - len(mnemonic(row)) - 1
+    return max(column, len(text) + 1)
+
+
+@dataclass
+class EditorState:
+    """The rows, their columns, the row the bar is on and the first row in
+    the window; the field being edited ("label", "operand" or None), and
+    the message for the line under the listing."""
+
+    rows: list[ListingRow]
+    widths: ColumnWidths
     cursor: int
     top: int = 0
+    field: str | None = None
+    message: str = ""
 
 
-def keep_in_view(state: ViewState, height: int) -> None:
+def keep_in_view(state: EditorState, height: int) -> None:
     """Scroll the window so that the bar's row is in it."""
     if state.cursor < state.top:
         state.top = state.cursor
@@ -179,20 +243,31 @@ def copy_to_clipboard(text: str) -> None:
         pass
 
 
-def view_rows(rows: list[ListingRow], height: int = 25) -> None:
-    """Show rows inline, height lines at a time, until q, Esc or Ctrl+C.
-    Nothing stays on the screen afterwards."""
+def edit_rows(
+    load_rows: Callable[[], list[ListingRow]],
+    save_edit: Callable[[int, str, str], str | None],
+    label_of: Callable[[int], str] = lambda address: "",
+    height: int = 25,
+) -> None:
+    """Show the rows load_rows() gives, inline, height lines at a time, and
+    let labels be edited, until q, Esc or Ctrl+C. Nothing stays on the
+    screen afterwards.
+
+    save_edit(address, "label", text) saves a label and returns why it
+    refused, or None; after every save the rows are loaded again.
+    label_of(address) gives the label an address has now: the operand field
+    starts with the label of the operand's target."""
+    rows = load_rows()
     if not any(row.address is not None for row in rows):
         print("Nothing to show: no lines in this range.")
         return
     height = min(height, len(rows))
-    widths = column_widths(rows)
-    state = ViewState(cursor=next_line(rows, -1, 1))
+    state = EditorState(rows, column_widths(rows), cursor=next_line(rows, -1, 1))
 
     def visible_lines(columns: int) -> list[str]:
         return [
-            format_row(row, widths, columns)
-            for row in rows[state.top : state.top + height]
+            format_row(row, state.widths, columns)
+            for row in state.rows[state.top : state.top + height]
         ]
 
     def text_width() -> int:
@@ -214,42 +289,143 @@ def view_rows(rows: list[ListingRow], height: int = 25) -> None:
         fragments.pop()  # no line break after the last line
         return FormattedText(fragments)
 
+    def message_text() -> FormattedText:
+        """The line under the listing: a refusal, or whose label the
+        operand field holds."""
+        text = state.message
+        if not text and state.field == "operand":
+            text = f"label of ${state.rows[state.cursor].target:04x}"
+        if not text:
+            return FormattedText([])
+        return FormattedText(
+            [("class:rule", "── "), ("class:message", text), ("class:rule", " ")]
+        )
+
     def go(distance: int) -> None:
-        state.cursor = move(rows, state.cursor, distance)
+        state.cursor = move(state.rows, state.cursor, distance)
         keep_in_view(state, height)
 
     # One window less than its height, so one line of the old window
     # stays in view after a page.
     page = max(1, height - 1)
 
+    listing = Window(
+        # Focusable, so the listing has the focus: prompt_toolkit
+        # hides the terminal's cursor only for the focused
+        # window. Without it, the cursor blinked on and off at
+        # every key press.
+        FormattedTextControl(listing_text, focusable=True, show_cursor=False),
+        height=height,
+        wrap_lines=False,
+    )
+    # prompt_toolkit's own text field: cursor keys, Home/End, Backspace,
+    # Delete and undo come with it.
+    field = TextArea(multiline=False, wrap_lines=False, style="class:field")
+
+    def current_field_width() -> int:
+        return field_width(
+            state.rows[state.cursor], state.widths, state.field or "label", field.text
+        )
+
+    # The field floats over the label or operand of the bar's row. Its
+    # place is set when it opens; its width follows the text.
+    field_float = Float(
+        # Shown only while a field is open.
+        ConditionalContainer(field, filter=Condition(lambda: state.field is not None)),
+        top=0,
+        left=0,
+        width=current_field_width,
+        height=1,
+    )
+
+    def open_field(name: str) -> None:
+        """Open the field name on the bar's row, holding the label it
+        edits, with the cursor behind the text."""
+        row = state.rows[state.cursor]
+        state.field = name
+        text = row.label if name == "label" else label_of(row.target)
+        field.text = text
+        field.buffer.cursor_position = len(text)
+        # + 1 for the rule above the listing.
+        field_float.top = 1 + state.cursor - state.top
+        field_float.left = MARKER_WIDTH + field_start(row, state.widths, name)
+        get_app().layout.focus(field)
+
+    def close_field() -> None:
+        state.field = None
+        state.message = ""
+        get_app().layout.focus(listing)
+
+    def save() -> bool:
+        """Save the field's text as the label of the row, or of the
+        operand's target. Refused: keep the reason for the line under the
+        listing, and return False. Saved: load the rows again."""
+        row = state.rows[state.cursor]
+        address = row.address if state.field == "label" else row.target
+        refusal = save_edit(address, "label", field.text)
+        if refusal:
+            state.message = refusal
+            return False
+        state.message = ""
+        # A label never changes the number of rows, so the bar stays on
+        # the same line.
+        state.rows = load_rows()
+        state.widths = column_widths(state.rows)
+        return True
+
+    in_listing = has_focus(listing)
+    in_field = has_focus(field)
     bindings = KeyBindings()
 
-    @bindings.add("up")
+    # The listing's keys only while it has the focus: the app's own keys
+    # come before typing, so a q typed into a field would leave otherwise.
+
+    @bindings.add("up", filter=in_listing)
     def _up(event: KeyPressEvent) -> None:
         go(-1)
 
-    @bindings.add("down")
+    @bindings.add("down", filter=in_listing)
     def _down(event: KeyPressEvent) -> None:
         go(1)
 
-    @bindings.add("pageup")
+    @bindings.add("pageup", filter=in_listing)
     def _page_up(event: KeyPressEvent) -> None:
         go(-page)
 
-    @bindings.add("pagedown")
+    @bindings.add("pagedown", filter=in_listing)
     def _page_down(event: KeyPressEvent) -> None:
         go(page)
 
-    @bindings.add("c")
+    @bindings.add("c", filter=in_listing)
     def _copy(event: KeyPressEvent) -> None:
         # The lines as shown, without the marker column.
         copy_to_clipboard("\n".join(visible_lines(text_width())))
 
-    @bindings.add("q")
-    @bindings.add("escape")
+    @bindings.add("tab", filter=in_listing)
+    def _edit(event: KeyPressEvent) -> None:
+        open_field("label")
+
+    @bindings.add("q", filter=in_listing)
+    @bindings.add("escape", filter=in_listing)
     @bindings.add("c-c")
     def _leave(event: KeyPressEvent) -> None:
         event.app.exit()
+
+    @bindings.add("tab", filter=in_field)
+    def _next_field(event: KeyPressEvent) -> None:
+        if save():
+            row = state.rows[state.cursor]
+            has_operand = row.target is not None
+            open_field("operand" if state.field == "label" and has_operand else "label")
+
+    @bindings.add("enter", filter=in_field)
+    def _save(event: KeyPressEvent) -> None:
+        if save():
+            close_field()
+
+    @bindings.add("escape", filter=in_field)
+    def _cancel(event: KeyPressEvent) -> None:
+        close_field()
 
     def rule() -> Window:
         """A thin line across the whole width."""
@@ -257,23 +433,22 @@ def view_rows(rows: list[ListingRow], height: int = 25) -> None:
 
     app = Application(
         layout=Layout(
-            HSplit(
-                [
-                    rule(),
-                    Window(
-                        # Focusable, so the listing has the focus: prompt_toolkit
-                        # hides the terminal's cursor only for the focused
-                        # window. Without it, the cursor blinked on and off at
-                        # every key press.
-                        FormattedTextControl(
-                            listing_text, focusable=True, show_cursor=False
+            FloatContainer(
+                HSplit(
+                    [
+                        rule(),
+                        listing,
+                        Window(
+                            FormattedTextControl(message_text),
+                            height=1,
+                            char="─",
+                            style="class:rule",
                         ),
-                        height=height,
-                        wrap_lines=False,
-                    ),
-                    rule(),
-                ]
-            )
+                    ]
+                ),
+                floats=[field_float],
+            ),
+            focused_element=listing,
         ),
         key_bindings=bindings,
         style=STYLE,
@@ -284,12 +459,21 @@ def view_rows(rows: list[ListingRow], height: int = 25) -> None:
     # make it an arrow key's sequence. Its default, half a second, makes
     # leaving with Esc feel slow.
     app.ttimeoutlen = 0.05
+
     app.run()
 
 
 if __name__ == "__main__":
     # Imported here: listing_editor needs termios, which this module
     # itself doesn't.
-    from papple2.workbench.listing_editor import DATA
+    from papple2.workbench.listing_editor import DATA, load_data, save_into_data
 
-    view_rows(DATA, int(sys.argv[1]) if len(sys.argv) > 1 else 25)
+    def label_in_data(address: int) -> str:
+        return next((row.label for row in DATA if row.address == address), "")
+
+    edit_rows(
+        load_data,
+        save_into_data,
+        label_in_data,
+        int(sys.argv[1]) if len(sys.argv) > 1 else 25,
+    )

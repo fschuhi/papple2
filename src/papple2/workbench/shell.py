@@ -70,7 +70,7 @@ from papple2.workbench.basic_blocks_analysis import (
     stack_jumps,
     write_loop_reports,
 )
-from papple2.workbench.listing_editor_prompt_toolkit import ListingRow, view_rows
+from papple2.workbench.listing_editor_prompt_toolkit import ListingRow, edit_rows
 from papple2.workbench.stack_tracking import RETURNS_FILE, StackTracking
 from papple2.workbench.tiling import (
     SPLIT_TILES_FILE,
@@ -558,12 +558,26 @@ def listing(start: int | str, end: int | str | None = None) -> None:
 
 def edit(start: int | str, end: int | str | None = None, height: int = 25) -> None:
     """Open the listing editor on the same lines listing() prints. start and
-    end as for current_listing_rows(). height is the number of lines the
-    editor shows at a time. It shows and moves for now; until it edits,
-    label() and comment() give labels and comments at the prompt.
+    end as for current_listing_rows(). Every label changed there is saved
+    to the current dossier at once, through save_edit(). The operand field
+    labels the address an operand names, wherever the line is. height is
+    the number of lines the editor shows at a time. Comments are given with
+    comment() at the prompt, until the editor edits them too.
 
-    Needs a real terminal, so it doesn't work under pytest."""
-    view_rows(current_listing_rows(start, end), height)
+    Needs a real terminal."""
+    # Stop before the editor opens, not at the first save.
+    current_annotations()
+    # Turned into addresses once: the editor reloads the rows after every
+    # save, and a label given as start could be the one just renamed.
+    first, behind = listing_range(start, end)
+
+    def load_rows() -> list[ListingRow]:
+        return current_listing_rows(first, behind)
+
+    def label_of(address: int) -> str:
+        return current_annotations().labels.get(address, "")
+
+    edit_rows(load_rows, save_edit, label_of, height)
 
 
 def save_edit(address: int, field: str, text: str) -> str | None:
