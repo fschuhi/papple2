@@ -70,6 +70,7 @@ from papple2.workbench.basic_blocks_analysis import (
     stack_jumps,
     write_loop_reports,
 )
+from papple2.workbench.listing_editor_prompt_toolkit import ListingRow, view_rows
 from papple2.workbench.stack_tracking import RETURNS_FILE, StackTracking
 from papple2.workbench.tiling import (
     SPLIT_TILES_FILE,
@@ -509,27 +510,6 @@ def clip(text: str | None = None) -> None:
     print(f"copied {lines:,} line{'' if lines == 1 else 's'}")
 
 
-@dataclass
-class ListingRow:
-    """One line of a listing, its pieces kept apart, so that each caller
-    lays them out as it needs: print_listing() prints them, the listing
-    editor shows them in columns of its own. address is None for the empty
-    line before a .byte block; there, every field but the gutter is empty.
-
-    target is the address the operand names, the one a label in the operand
-    stands for: $1a85 in LDA $1a85,Y, the pointer $1b in STA ($1b),Y, a
-    branch's target. None where the operand names no address: implied,
-    accumulator and immediate operands, and .byte lines."""
-
-    address: int | None
-    gutter: str
-    hex_bytes: str
-    label: str
-    instruction: str
-    comment: str
-    target: int | None = None
-
-
 def listing_range(
     start: int | str, end: int | str | None = None
 ) -> tuple[int, int]:
@@ -578,29 +558,12 @@ def listing(start: int | str, end: int | str | None = None) -> None:
 
 def edit(start: int | str, end: int | str | None = None, height: int = 25) -> None:
     """Open the listing editor on the same lines listing() prints. start and
-    end as for current_listing_rows(). Every label and comment changed there
-    is saved to the current dossier at once, through save_edit(). The
-    Operand field labels the address an operand names, wherever the line
-    is. height is the number of lines the editor shows at a time.
+    end as for current_listing_rows(). height is the number of lines the
+    editor shows at a time. It shows and moves for now; until it edits,
+    label() and comment() give labels and comments at the prompt.
 
-    Needs a real terminal, so it doesn't work on Windows or under pytest."""
-    # Imported here, not at the top: the editor needs termios, which Windows
-    # doesn't have, and shell.py must load there too.
-    from papple2.workbench.listing_editor import run_editor
-
-    # Stop before the editor opens, not at the first save.
-    current_annotations()
-    # Turned into addresses once: the editor reloads the rows after every
-    # save, and a label given as start could be the one just renamed.
-    first, behind = listing_range(start, end)
-
-    def load_rows() -> list[ListingRow]:
-        return current_listing_rows(first, behind)
-
-    def label_of(address: int) -> str:
-        return current_annotations().labels.get(address, "")
-
-    run_editor(load_rows, save_edit, window_size=height, label_of=label_of)
+    Needs a real terminal, so it doesn't work under pytest."""
+    view_rows(current_listing_rows(start, end), height)
 
 
 def save_edit(address: int, field: str, text: str) -> str | None:

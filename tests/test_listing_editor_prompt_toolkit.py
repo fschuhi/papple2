@@ -5,10 +5,10 @@ terminal; its lines are plain text."""
 from papple2.workbench.listing_editor_prompt_toolkit import (
     INSTRUCTION_CAP,
     ColumnWidths,
+    ListingRow,
     column_widths,
     format_row,
 )
-from papple2.workbench.shell import ListingRow
 
 
 def row(

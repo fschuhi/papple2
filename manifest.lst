@@ -155,6 +155,7 @@ tests/test_disassembler.py
 #tests/test_emulator_debug_keys.py
 #tests/test_emulator_silent.py
 #tests/test_instruction_count.py
+tests/test_listing_editor_prompt_toolkit.py
 #tests/test_memory.py
 #tests/test_memory_hooks.py
 tests/test_shell.py
