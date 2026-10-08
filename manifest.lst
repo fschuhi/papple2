@@ -19,8 +19,8 @@ GOALS.md
 TODO.md
 #HISTORY.md
 
-# focused documents for the current sprint
-EDITOR.md
+# backlog for the editor
+docs/editor-ideas.md
 
 # dossiers
 dossiers/lode_runner/annotations.json
