@@ -1,6 +1,6 @@
 # Listing editor -- ideas
 
-Ideas for the listing editor (`papple2.workbench.listing_editor_prompt_toolkit`, opened by `edit()`). Once an idea is concrete enough to start, it gets an item in `TODO.md` that points here. Settled decisions are in `docs/decisions.md`; the editor's keys are in the module's docstring.
+Ideas for the listing editor (`papple2.workbench.listing_editor`, opened by `edit()`). Once an idea is concrete enough to start, it gets an item in `TODO.md` that points here. Settled decisions are in `docs/decisions.md`; the editor's keys are in the module's docstring.
 
 ---
 
@@ -13,7 +13,7 @@ Ideas for the listing editor (`papple2.workbench.listing_editor_prompt_toolkit`,
 *   **Semantic Jumping:** Keyboard shortcuts to move the active row forward or backward to the next/previous leap, block, loop header, or loop fallthrough.
 *   **RTS Resolution:** When on an `RTS`, query the shadow stack (`StackTracking`, `lr_returns.csv`) for all recorded return destinations, and present them as leap targets in a floating window over the listing. Selecting one leaps there, like Enter on a `JSR`.
 *   **Routine Navigation:** Shortcuts to jump to the top or bottom of the current routine.
-*   **Jump Station:** A dedicated modal or panel to register, organize, and instantly leap to meaningful targets (routines, stretches, labels). Jumping pushes the current location to breadcrumbs and centers the active row cursor on the target.
+*   **Jump Station:** A dedicated modal or panel to register, organize, and instantly leap to meaningful targets (routines, stretches, labels). Jumping pushes the current location to breadcrumbs and centers the active row cursor on the target. *(First step done 2026-10-08: Go To, `g`, a picker with every routine of the run. The picker is meant for every list of places: callers, the targets of an `RTS`, the paths into a watched range.)*
 
 ## 3. Editing Mechanics & SourceGen Inspirations
 

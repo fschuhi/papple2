@@ -8,13 +8,14 @@
 
 ## 📍 Current Session Pointer
 
-**Where we are:** `papple2` is the workbench for reverse engineering Apple II games by running them, with Lode Runner as the worked example. Dynamic first; the oracle only grades. I can run a game, see its routines, blocks and loops at the prompt, and all its routines in one picture. A routine ends where another begins, and every way into it is an arrow of its kind, stack jumps included: no code that ran is left without a routine. What I learn stays in the dossier. Two terminals can work on one dossier, `hexdump()` shows data tables, and `clip()` copies what a command showed. Since 2026-10-08 I read code in the new editor: `edit()` opens a routine right under the prompt, Enter follows a `JSR` into the routine it calls, Backspace brings me back, breadcrumbs say where I am, and labels and comments are given in place.
+**Where we are:** `papple2` is the workbench for reverse engineering Apple II games by running them, with Lode Runner as the worked example. Dynamic first; the oracle only grades. I can run a game, see its routines, blocks and loops at the prompt, and all its routines in one picture. A routine ends where another begins, and every way into it is an arrow of its kind, stack jumps included: no code that ran is left without a routine. What I learn stays in the dossier. Two terminals can work on one dossier, `hexdump()` shows data tables, and `clip()` copies what a command showed. Since 2026-10-08 I read code in the new editor: `edit()` opens a routine right under the prompt, Enter follows a `JSR` into the routine it calls, Backspace brings me back and `f` forward again, `g` goes to any routine, breadcrumbs say where I am, and labels and comments are given in place.
 
 **What's next, in this order:**
 
-1. Retire the old listing editor (see `TODO.md`, "Listing editor"). Short.
-2. HGR: the ray, as a discussion first; the idea is still fuzzy. A first slice to stand on: tag the rows that write to the screen, from an `after_write_data` hook, and show the tag in the editor. My first longer piece of reverse engineering with the editor; it decides which tool comes next.
-3. Region recovery.
+1. Callers in the editor's picker: a key opens the callers of the routine shown, as `show_callers()` knows them, and Enter goes up to the `JSR`. Short; the picker is there since Go To.
+2. The HGR ray, shaped 2026-10-08: from a pixel of the score up to the code that keeps the score. First slice: `Watching`, an instrumentation for named address ranges, in a new experiment on the score row; `show_watches()` lists who wrote there, with routine and labels. See `TODO.md`, "Who writes where".
+3. The way up: `StackTracking` writes when each frame opened and closed (`lr_frames.csv`); the backtrace of a write is the frames open at its moment. The paths that led into a watched range then filter the callers in the picker.
+4. Region recovery.
 
 **Still to prune:** `README.md`. The Dev parts and the data files move out, `docs/decisions.md` gets thinned, and the Vision is rewritten (remember, appreciate, tinker, create; no history).
 

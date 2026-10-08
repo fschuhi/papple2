@@ -11,6 +11,7 @@
 
 ---
 
+- **2026-10-08:** Go To and forward in the editor. `g` lists every routine of the run, Enter takes me there; Backspace comes back, and `f` goes forward again, the way ahead in grey in the breadcrumbs, like in a browser. Built while comparing `r_11x2_1` and `r_11x2_2`, and used for it at once. The old editor is retired; the new one is simply `listing_editor` now.
 - **2026-10-08:** The new listing editor, built on prompt_toolkit. Lode Runner's code opens right under the IPython prompt and vanishes when I leave. Enter on a `JSR` takes me into the routine it calls, Backspace brings me back, the breadcrumbs in the top rule say where I am, and every routine opens as I last left it. Labels with Tab, in place, comments with `e`. Was fuer ein geiler Editor!
 - **2026-10-07:** `hexdump()`: Lode Runner's row tables at a glance, `hgr_rows_lo` ending exactly where `hgr_rows_hi` begins. Whatever a command shows goes to the clipboard with `clip()`.
 - **2026-10-07:** Labels where the code uses them: in `edit()`, I name what an operand points at, zero page included. Two terminals work on one dossier side by side.
