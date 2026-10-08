@@ -13,6 +13,8 @@ from papple2.workbench.listing_editor_prompt_toolkit import (
     INSTRUCTION_CAP,
     ColumnWidths,
     ListingRow,
+    Place,
+    breadcrumbs,
     column_widths,
     edit_rows,
     field_start,
@@ -119,7 +121,7 @@ def type_into_editor(
             threading.Thread(target=type_in_pieces, args=(pipe,), daemon=True).start()
         with create_app_session(input=pipe, output=DummyOutput()):
             edit_rows(
-                lambda: EDITOR_ROWS,
+                Place(0x8350, lambda: EDITOR_ROWS, routine=False),
                 save,
                 lambda address: (labels or {}).get(address, ""),
             )
@@ -190,3 +192,84 @@ def test_esc_leaves_the_comment_box_without_saving() -> None:
     assert type_into_editor(["eX", "\x1b", "\t\rq"]) == [
         (0x8350, "label", ".loop1")
     ]
+
+
+# Following leaps. MAIN calls SUB, loops with BNE, and jumps into the ROM.
+# SUB's entry is its second row: the RTS before it is one of its exits.
+MAIN = [
+    ListingRow(0x9000, "", "20 10 90", "main", "JSR sub", "", target=0x9010),
+    ListingRow(0x9003, "", "d0 fb", "", "BNE main", "", target=0x9000),
+    ListingRow(0x9005, "", "4c 00 fc", "", "JMP $fc00", "", target=0xFC00),
+]
+SUB = [
+    ListingRow(0x900F, "", "60", "", "RTS", ""),
+    ListingRow(0x9010, "", "e8", "sub", "INX", ""),
+    ListingRow(0x9011, "", "d0 fc", "", "BNE $900f", "", target=0x900F),
+]
+ROUTINES = {0x9000: Place(0x9000, lambda: MAIN), 0x9010: Place(0x9010, lambda: SUB)}
+
+
+def navigate(
+    keys: str, remembered: dict[int, tuple[int, int]] | None = None
+) -> list[tuple[int, str, str]]:
+    """Run the editor on MAIN with keys typed in; return what it saved. The
+    keys end with Tab and Enter, which save the label of the bar's row: the
+    address saved says where the bar ended up."""
+    saved = []
+
+    def save(address: int, field: str, text: str) -> str | None:
+        saved.append((address, field, text))
+        return None
+
+    with create_pipe_input() as pipe:
+        pipe.send_text(keys)
+        with create_app_session(input=pipe, output=DummyOutput()):
+            edit_rows(
+                ROUTINES[0x9000],
+                save,
+                open_routine=ROUTINES.get,
+                remembered=remembered,
+            )
+    return saved
+
+
+def test_enter_on_a_jsr_opens_the_routine_on_its_entry() -> None:
+    assert navigate("\r\t\rq") == [(0x9010, "label", "sub")]
+
+
+def test_backspace_goes_back_to_the_jsr() -> None:
+    assert navigate("\r\x7f\t\rq") == [(0x9000, "label", "main")]
+
+
+def test_enter_on_a_branch_moves_the_bar_within_the_routine() -> None:
+    assert navigate("\x1b[B\r\t\rq") == [(0x9000, "label", "main")]
+
+
+def test_backspace_undoes_a_jump_within_the_routine() -> None:
+    assert navigate("\x1b[B\r\x7f\t\rq") == [(0x9003, "label", "")]
+
+
+def test_a_routine_opens_again_as_it_was_left() -> None:
+    # Into SUB, down one row, back, and into SUB again: the bar is where
+    # it was left, not on the entry.
+    assert navigate("\r\x1b[B\x7f\r\t\rq") == [(0x9011, "label", "")]
+
+
+def test_a_jmp_where_no_routine_starts_is_not_followed() -> None:
+    assert navigate("\x1b[B\x1b[B\r\t\rq") == [(0x9005, "label", "")]
+
+
+def test_the_routines_are_remembered_beyond_the_editor() -> None:
+    remembered: dict[int, tuple[int, int]] = {}
+    navigate("\r\x1b[Bq", remembered)
+    # MAIN as it was left for SUB, SUB as it was left at q: (top, cursor).
+    assert remembered == {0x9000: (0, 0), 0x9010: (0, 2)}
+
+
+def test_the_breadcrumbs_fit_by_leaving_out_the_first_ones() -> None:
+    names = ["routine_6238", "r_11x2_1", "lookup_hgr"]
+    assert breadcrumbs(names, 80) == names
+    assert breadcrumbs(names, 28) == ["...", "r_11x2_1", "lookup_hgr"]
+    assert breadcrumbs(names, 20) == ["...", "lookup_hgr"]
+    # The last one stays, even where it doesn't fit.
+    assert breadcrumbs(names, 5) == ["...", "lookup_hgr"]

@@ -9,6 +9,8 @@ comment in a box over the bottom lines of the listing.
 Keys in the listing:
   Up / Down            : move the bar one line
   PageUp / PageDown    : move the bar one window
+  Enter                : follow the JSR, JMP or branch on the bar's row
+  Backspace            : back to where the last Enter was pressed
   Tab                  : edit the label of the bar's row
   e                    : edit the comment of the bar's row
   c                    : copy the visible lines to the clipboard
@@ -25,9 +27,32 @@ Keys in the comment box:
   Esc                  : back to the listing without saving
   Ctrl+C               : leave without saving
 
+Ctrl keys in a field and in the comment box (prompt_toolkit's own):
+  Ctrl+A / Ctrl+E      : start / end of the text (Home / End too)
+  Ctrl+B / Ctrl+F      : one character left / right
+  Ctrl+Left / Right    : one word left / right (Esc B / Esc F too)
+  Ctrl+D / Ctrl+H      : delete the character under / before the cursor
+  Ctrl+K / Ctrl+U      : delete to the end / from the start; Ctrl+U at the
+                         end empties the field
+  Ctrl+W               : delete the word before the cursor
+  Esc D / Esc Backspace: delete the word after / before the cursor
+  Ctrl+Y               : paste back what Ctrl+K, Ctrl+U or Ctrl+W deleted
+  Ctrl+T               : swap the two characters before the cursor
+  Ctrl+_               : undo
+  Esc U / Esc L / Esc C: word to upper / lower case / capitalised
+
 The comment box is COMMENT_LINES high and as wide as the terminal; a long
 comment wraps in it, and has no line breaks of its own. In the listing, a
 comment shows as one line, cut if it doesn't fit.
+
+Enter on a JSR opens the routine it calls, and so does Enter on a JMP into
+another routine's entry; Enter on a branch, or on a JMP to a row in the
+listing, moves the bar there. Backspace undoes the last Enter: the same
+routine, window and bar as before. Each routine remembers its window and
+bar when it is left, and opens again as it was. The breadcrumbs in the
+rule above the listing show the routines followed into, the one shown last;
+a jump within a routine adds none. The editor keeps its height, whatever
+the routine's length.
 
 The operand field labels the address the operand names (row.target), not
 the line's own: $1a85 in LDA $1a85,Y, the pointer $1b in STA ($1b),Y.
@@ -40,8 +65,9 @@ After every save the rows are loaded again, so a new label also shows in
 the operands that point at its address.
 
 The columns are worked out from all rows, so they stay where they are
-while the bar moves; after a save, they are worked out again. An instruction longer than INSTRUCTION_CAP is cut,
-and so is a comment that doesn't fit the terminal; both end in "...".
+while the bar moves; after a save, they are worked out again. An
+instruction longer than INSTRUCTION_CAP is cut, and so is a comment that
+doesn't fit the terminal; both end in "...".
 
 The empty line before a .byte block is shown, but the bar skips it.
 
@@ -91,11 +117,18 @@ MARKER_WIDTH = 2
 # How many lines of the listing the comment box covers, at most.
 COMMENT_LINES = 4
 
+# The mnemonics whose target Enter follows within the listing.
+BRANCHES = frozenset({"BPL", "BMI", "BVC", "BVS", "BCC", "BCS", "BNE", "BEQ"})
+
+# Between two breadcrumbs.
+CRUMB_SEPARATOR = " > "
+
 # bar: the faint background of the bar's row, a little lighter than a dark
 # terminal's own; change the colour here if it is too faint or too loud.
 # marker: the > in front of it. rule: the lines above and below.
 # field: a label being edited. message: a refusal or a hint, in the line
-# under the listing.
+# under the listing. crumb: the routines followed into, in the line above;
+# crumb-here: the one shown.
 STYLE = Style.from_dict(
     {
         "bar": "bg:#303030",
@@ -103,6 +136,8 @@ STYLE = Style.from_dict(
         "rule": "ansibrightblack",
         "field": "bg:#4a4a4a",
         "message": "ansiyellow",
+        "crumb": "#9e9e9e",
+        "crumb-here": "bold ansiwhite",
     }
 )
 
@@ -225,11 +260,44 @@ def field_width(row: ListingRow, widths: ColumnWidths, field: str, text: str) ->
     return max(column, len(text) + 1)
 
 
+@dataclass(frozen=True)
+class Place:
+    """What the editor shows: the rows load_rows() gives, named in the
+    breadcrumbs after entry, the address of the routine's entry. routine
+    is False for a range given by its start and end, whose window and bar
+    are not remembered."""
+
+    entry: int
+    load_rows: Callable[[], list[ListingRow]]
+    routine: bool = True
+
+
+def row_of(rows: list[ListingRow], address: int) -> int | None:
+    """The index of the row at address, or None if no row is."""
+    for index, row in enumerate(rows):
+        if row.address == address:
+            return index
+    return None
+
+
+def breadcrumbs(names: list[str], width: int) -> list[str]:
+    """names, as they fit into width when joined by CRUMB_SEPARATOR: the
+    first ones are left out if need be, with "..." in their place. The
+    last one always stays."""
+    if len(CRUMB_SEPARATOR.join(names)) <= width:
+        return list(names)
+    shown = list(names)
+    while len(shown) > 1 and len(CRUMB_SEPARATOR.join([ELLIPSIS, *shown])) > width:
+        shown.pop(0)
+    return [ELLIPSIS, *shown]
+
+
 @dataclass
 class EditorState:
     """The rows, their columns, the row the bar is on and the first row in
     the window; the field being edited ("label", "operand", "comment" or
-    None), and the message for the line under the listing."""
+    None), the message for the line under the listing, and the place the
+    rows come from."""
 
     rows: list[ListingRow]
     widths: ColumnWidths
@@ -237,6 +305,7 @@ class EditorState:
     top: int = 0
     field: str | None = None
     message: str = ""
+    place: Place | None = None
 
 
 def keep_in_view(state: EditorState, height: int) -> None:
@@ -258,25 +327,61 @@ def copy_to_clipboard(text: str) -> None:
 
 
 def edit_rows(
-    load_rows: Callable[[], list[ListingRow]],
+    place: Place,
     save_edit: Callable[[int, str, str], str | None],
     label_of: Callable[[int], str] = lambda address: "",
     height: int = 25,
+    open_routine: Callable[[int], Place | None] = lambda address: None,
+    remembered: dict[int, tuple[int, int]] | None = None,
 ) -> None:
-    """Show the rows load_rows() gives, inline, height lines at a time, and
-    let labels be edited, until q, Esc or Ctrl+C. Nothing stays on the
-    screen afterwards.
+    """Show the rows of place, inline, height lines at a time, and let
+    labels and comments be edited, until q, Esc or Ctrl+C. Nothing stays on
+    the screen afterwards.
 
-    save_edit(address, "label", text) saves a label and returns why it
-    refused, or None; after every save the rows are loaded again.
+    save_edit(address, field, text) saves a label or a comment and returns
+    why it refused, or None; after every save the rows are loaded again.
     label_of(address) gives the label an address has now: the operand field
-    starts with the label of the operand's target."""
-    rows = load_rows()
+    starts with the label of the operand's target, and the breadcrumbs show
+    the labels of the routines' entries. open_routine(address) gives the
+    routine starting at address, or None: Enter on a JSR opens it.
+    remembered keeps, by entry, the first row in the window and the bar's
+    row of every routine left, (top, cursor); it outlives the editor, if
+    the caller keeps it."""
+    rows = place.load_rows()
     if not any(row.address is not None for row in rows):
         print("Nothing to show: no lines in this range.")
         return
     height = min(height, len(rows))
-    state = EditorState(rows, column_widths(rows), cursor=next_line(rows, -1, 1))
+    remembered = {} if remembered is None else remembered
+    state = EditorState(rows, column_widths(rows), cursor=0, place=place)
+    # Where Backspace goes: (place, top, cursor) before each Enter.
+    history: list[tuple[Place, int, int]] = []
+
+    def arrive(place: Place, view: tuple[int, int] | None) -> None:
+        """Show place, its rows loaded afresh: the window and bar as in
+        view; else as remembered; else from its first row, with the bar on
+        its entry."""
+        state.place = place
+        state.rows = place.load_rows()
+        state.widths = column_widths(state.rows)
+        if view is None and place.routine:
+            view = remembered.get(place.entry)
+        if view is not None and view[1] < len(state.rows):
+            state.top, state.cursor = view
+        else:
+            entry_row = row_of(state.rows, place.entry)
+            state.top = 0
+            state.cursor = (
+                entry_row if entry_row is not None else next_line(state.rows, -1, 1)
+            )
+        keep_in_view(state, height)
+
+    def remember() -> None:
+        """Keep how the routine shown looks, to show it so again."""
+        if state.place.routine:
+            remembered[state.place.entry] = (state.top, state.cursor)
+
+    arrive(place, None)
 
     def visible_lines(columns: int) -> list[str]:
         return [
@@ -318,9 +423,69 @@ def edit_rows(
             [("class:rule", "── "), ("class:message", text), ("class:rule", " ")]
         )
 
+    def crumbs_text() -> FormattedText:
+        """The line above the listing: the routines followed into, by the
+        labels of their entries, the one shown last. A jump within a
+        routine adds no crumb."""
+        entries: list[int] = []
+        for followed, _top, _cursor in [*history, (state.place, 0, 0)]:
+            if not entries or entries[-1] != followed.entry:
+                entries.append(followed.entry)
+        names = [label_of(entry) or f"{entry:04x}" for entry in entries]
+        # Room for the rule's ends: "── " before, " ─" behind.
+        shown = breadcrumbs(names, text_width() + MARKER_WIDTH - 5)
+        fragments = [("class:rule", "── ")]
+        for index, name in enumerate(shown):
+            if index:
+                fragments.append(("class:crumb", CRUMB_SEPARATOR))
+            last = index == len(shown) - 1
+            fragments.append(("class:crumb-here" if last else "class:crumb", name))
+        fragments.append(("class:rule", " "))
+        return FormattedText(fragments)
+
     def go(distance: int) -> None:
+        state.message = ""
         state.cursor = move(state.rows, state.cursor, distance)
         keep_in_view(state, height)
+
+    def follow() -> None:
+        """Follow the leap on the bar's row: a JSR, or a JMP into another
+        routine's entry, opens that routine; a branch, or a JMP to a row in
+        the listing, moves the bar there. Anything else: a message."""
+        state.message = ""
+        row = state.rows[state.cursor]
+        name = mnemonic(row)
+        # JMP ($0036) names its pointer, not where it leads.
+        jmp = name == "JMP" and "(" not in row.instruction
+        if row.target is None or not (name == "JSR" or jmp or name in BRANCHES):
+            state.message = "Enter follows a JSR, a JMP or a branch"
+            return
+        here = (state.place, state.top, state.cursor)
+        if name == "JSR" or jmp:
+            routine = open_routine(row.target)
+            # A JMP back to the routine's own entry is a loop: stay.
+            if routine is not None and (name == "JSR" or routine.entry != state.place.entry):
+                remember()
+                history.append(here)
+                arrive(routine, None)
+                return
+        target_row = row_of(state.rows, row.target) if name != "JSR" else None
+        if target_row is None:
+            state.message = f"no routine at ${row.target:04x}"
+            return
+        history.append(here)
+        state.cursor = target_row
+        keep_in_view(state, height)
+
+    def back() -> None:
+        """Undo the last Enter: its place, window and bar."""
+        state.message = ""
+        if not history:
+            state.message = "nothing to go back to"
+            return
+        place, top, cursor = history.pop()
+        remember()
+        arrive(place, (top, cursor))
 
     # One window less than its height, so one line of the old window
     # stays in view after a page.
@@ -382,6 +547,7 @@ def edit_rows(
         if state.cursor - state.top > lowest:
             state.top = state.cursor - lowest
         state.field = "comment"
+        state.message = ""
         text = state.rows[state.cursor].comment
         comment_box.text = text
         comment_box.buffer.cursor_position = len(text)
@@ -392,6 +558,7 @@ def edit_rows(
         edits, with the cursor behind the text."""
         row = state.rows[state.cursor]
         state.field = name
+        state.message = ""
         text = row.label if name == "label" else label_of(row.target)
         field.text = text
         field.buffer.cursor_position = len(text)
@@ -407,8 +574,9 @@ def edit_rows(
 
     def save() -> bool:
         """Save the field's text as the label of the row, or of the
-        operand's target, or the box's text as the row's comment. Refused: keep the reason for the line under the
-        listing, and return False. Saved: load the rows again."""
+        operand's target, or the box's text as the row's comment. Refused:
+        keep the reason for the line under the listing, and return False.
+        Saved: load the rows again."""
         row = state.rows[state.cursor]
         if state.field == "comment":
             refusal = save_edit(row.address, "comment", comment_box.text)
@@ -421,7 +589,7 @@ def edit_rows(
         state.message = ""
         # A label never changes the number of rows, so the bar stays on
         # the same line.
-        state.rows = load_rows()
+        state.rows = state.place.load_rows()
         state.widths = column_widths(state.rows)
         return True
 
@@ -454,6 +622,14 @@ def edit_rows(
         # The lines as shown, without the marker column.
         copy_to_clipboard("\n".join(visible_lines(text_width())))
 
+    @bindings.add("enter", filter=in_listing)
+    def _follow(event: KeyPressEvent) -> None:
+        follow()
+
+    @bindings.add("backspace", filter=in_listing)
+    def _back(event: KeyPressEvent) -> None:
+        back()
+
     @bindings.add("tab", filter=in_listing)
     def _edit(event: KeyPressEvent) -> None:
         open_field("label")
@@ -466,6 +642,7 @@ def edit_rows(
     @bindings.add("escape", filter=in_listing)
     @bindings.add("c-c")
     def _leave(event: KeyPressEvent) -> None:
+        remember()
         event.app.exit()
 
     @bindings.add("tab", filter=in_field)
@@ -490,16 +667,17 @@ def edit_rows(
     def _cancel(event: KeyPressEvent) -> None:
         close_field()
 
-    def rule() -> Window:
-        """A thin line across the whole width."""
-        return Window(height=1, char="─", style="class:rule")
-
     app = Application(
         layout=Layout(
             FloatContainer(
                 HSplit(
                     [
-                        rule(),
+                        Window(
+                            FormattedTextControl(crumbs_text),
+                            height=1,
+                            char="─",
+                            style="class:rule",
+                        ),
                         listing,
                         Window(
                             FormattedTextControl(message_text),
@@ -541,7 +719,7 @@ if __name__ == "__main__":
         return next((row.label for row in DATA if row.address == address), "")
 
     edit_rows(
-        load_data,
+        Place(DATA[0].address, load_data, routine=False),
         save_into_data,
         label_in_data,
         int(sys.argv[1]) if len(sys.argv) > 1 else 25,

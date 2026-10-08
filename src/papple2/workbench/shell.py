@@ -70,7 +70,7 @@ from papple2.workbench.basic_blocks_analysis import (
     stack_jumps,
     write_loop_reports,
 )
-from papple2.workbench.listing_editor_prompt_toolkit import ListingRow, edit_rows
+from papple2.workbench.listing_editor_prompt_toolkit import ListingRow, Place, edit_rows
 from papple2.workbench.stack_tracking import RETURNS_FILE, StackTracking
 from papple2.workbench.tiling import (
     SPLIT_TILES_FILE,
@@ -216,6 +216,11 @@ run_transitions: list[SplitTransition] | None = None
 # set_current_run() is given that report.
 run_stack_jumps: dict[tuple[int, int], int] | None = None
 
+# The listing editor's memory: for every routine edit() showed, the first
+# row in its window and the bar's row when it was left, (top, cursor), so
+# that it opens again as it was. Forgotten with the run's routines.
+editor_views: dict[int, tuple[int, int]] = {}
+
 # How show_callers() names the leaps that lead into a routine.
 CALL_KINDS = {JSR: "JSR", JMP_absolute: "JMP", JMP_indirect: "JMP ()"}
 
@@ -261,6 +266,7 @@ def set_current_run(
         entered[target] = entered.get(target, 0) + count
     run_emulator = emulator
     routines = find_routines(tiles, transitions, start, entered)
+    editor_views.clear()
     run_graph = build_run_graph(tiles, transitions, start)
     run_transitions = transitions
     print(f"{len(routines.graphs)} routines")
@@ -316,6 +322,7 @@ def run(
     run_graph = None
     run_transitions = None
     run_stack_jumps = None
+    editor_views.clear()
 
 
 def tiling_reports() -> None:
@@ -558,26 +565,48 @@ def listing(start: int | str, end: int | str | None = None) -> None:
 
 def edit(start: int | str, end: int | str | None = None, height: int = 25) -> None:
     """Open the listing editor on the same lines listing() prints. start and
-    end as for current_listing_rows(). Every label changed there is saved
-    to the current dossier at once, through save_edit(). The operand field
-    labels the address an operand names, wherever the line is. height is
-    the number of lines the editor shows at a time. Comments are given with
-    comment() at the prompt, until the editor edits them too.
+    end as for current_listing_rows(). Every label and comment changed there
+    is saved to the current dossier at once, through save_edit(). The
+    operand field labels the address an operand names, wherever the line
+    is. Enter on a JSR opens the routine it calls; each routine opens as it
+    was last left, while the run lasts. height is the number of lines the
+    editor shows at a time.
 
     Needs a real terminal."""
     # Stop before the editor opens, not at the first save.
     current_annotations()
-    # Turned into addresses once: the editor reloads the rows after every
-    # save, and a label given as start could be the one just renamed.
-    first, behind = listing_range(start, end)
-
-    def load_rows() -> list[ListingRow]:
-        return current_listing_rows(first, behind)
 
     def label_of(address: int) -> str:
         return current_annotations().labels.get(address, "")
 
-    edit_rows(load_rows, save_edit, label_of, height)
+    if end is None:
+        place = routine_place(routine_at(start))
+    else:
+        # Turned into addresses once: the editor reloads the rows after
+        # every save, and a label given as start could be the one just
+        # renamed.
+        first, behind = listing_range(start, end)
+        place = Place(
+            first, lambda: current_listing_rows(first, behind), routine=False
+        )
+    edit_rows(
+        place,
+        save_edit,
+        label_of,
+        height,
+        open_routine=routine_place,
+        remembered=editor_views,
+    )
+
+
+def routine_place(entry: int) -> Place | None:
+    """The routine of the current run starting at entry, as the listing
+    editor shows it: the whole routine, as listing(entry) lists it. None if
+    no routine starts there."""
+    if routines is None or entry not in routines.graphs:
+        return None
+    first, behind = listing_range(entry)
+    return Place(entry, lambda: current_listing_rows(first, behind))
 
 
 def save_edit(address: int, field: str, text: str) -> str | None:
