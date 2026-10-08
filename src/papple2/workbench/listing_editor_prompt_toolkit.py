@@ -459,6 +459,12 @@ def edit_rows(
     # make it an arrow key's sequence. Its default, half a second, makes
     # leaving with Esc feel slow.
     app.ttimeoutlen = 0.05
+    # Then it waits this long for a key that would make Esc the first of a
+    # two-key binding, e.g. Esc b, which Option+Left sends for word left.
+    # Its default is a second; with both waits shortened, Esc closes a
+    # field in about 0.1 s. Option+Left still works: both of its keys
+    # arrive at once.
+    app.timeoutlen = 0.05
 
     app.run()
 
