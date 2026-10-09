@@ -71,6 +71,7 @@ from papple2.workbench.basic_blocks_analysis import (
     stack_jumps,
     write_loop_reports,
 )
+from papple2.workbench.colors import Colors
 from papple2.workbench.hidden import Hidden, HiddenRange
 from papple2.workbench.listing_editor import ListingRow, Place, PickerItem, edit_rows
 from papple2.workbench.stack_tracking import RETURNS_FILE, StackTracking
@@ -141,16 +142,21 @@ annotations: Annotations | None = None
 # labels and comments. None until use_dossier() is called.
 hidden: Hidden | None = None
 
+# The current dossier's color definitions; views share their lookup.
+color_store: Colors | None = None
+
 
 def use_dossier(folder: Path) -> None:
-    """Make folder the current dossier and open its annotations and hidden
-    ranges. A dossier without annotations yet starts with the Apple II's
-    standard labels; after that, they are left alone, so a removed one
-    doesn't come back. Opening the hidden ranges writes nothing."""
-    global dossier_folder, annotations, hidden
+    """Make folder the current dossier and open its annotations, hidden
+    ranges and colors. A dossier without annotations yet starts with the
+    Apple II's standard labels; after that, they are left alone, so a
+    removed one doesn't come back. Opening hidden ranges and colors writes
+    nothing."""
+    global dossier_folder, annotations, hidden, color_store
     dossier_folder = Path(folder)
     annotations = Annotations(dossier_folder)
     hidden = Hidden(dossier_folder)
+    color_store = Colors(dossier_folder)
     if not annotations.path.exists():
         annotations.add_labels(STANDARD_LABELS)
 
@@ -225,6 +231,66 @@ def hide(name: str, start: int | str, end: int | str, note: str) -> None:
 def unhide(name: str) -> None:
     """Remove a named hidden range from the current dossier."""
     current_hidden().unhide(name)
+
+
+def current_colors() -> Colors:
+    """The current dossier's colors. Stops if no dossier is open."""
+    if dossier_folder is None or color_store is None:
+        raise RuntimeError("no dossier open; call use_dossier() first")
+    return color_store
+
+
+def color(
+        name: str, start: int | str, end: int | str, shade: str
+) -> None:
+    """Save a named, half-open color range in the current dossier.
+
+    Bounds are addresses or labels, resolved before saving. Reusing name
+    replaces its definition; overlaps are allowed. No current run is
+    required. For a routine, use color(name, *to_range(routine), shade).
+    """
+    store = current_colors()
+    refresh_annotations()
+    store.color(name, address_of(start), address_of(end), shade)
+
+
+def uncolor(name: str) -> None:
+    """Remove a named color range from the current dossier."""
+    current_colors().uncolor(name)
+
+
+@returns_text
+def colors() -> None:
+    """Show the current dossier's color definitions in address order."""
+    store = current_colors()
+    store.reload()
+    if not store.ranges:
+        print("no color ranges")
+        return
+    print(f"{'range':<9}  {'color':<7}  name")
+    for name, definition in sorted(
+            store.ranges.items(),
+            key=lambda item: (item[1].start, item[0]),
+    ):
+        print(
+            f"{definition.start:04x}-{definition.end:04x}  "
+            f"{definition.shade:<7}  {name}"
+        )
+
+
+def to_range(
+        start: int | str, end: int | str | None = None
+) -> tuple[int, int]:
+    """Return half-open bounds for argument unpacking into color().
+
+    With start alone, return the current routine's listing bounds. With
+    end, resolve both bounds as addresses or labels; no run is required.
+    Labels are read afresh before resolution.
+    """
+    refresh_annotations()
+    if end is None:
+        return listing_range(start)
+    return address_of(start), address_of(end)
 
 
 # The current run: the program setup it ran, the machine as the run left

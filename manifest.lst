@@ -126,6 +126,7 @@ src/papple2/programs/lode_runner.py
 ## workbench
 src/papple2/workbench/annotations.py
 src/papple2/workbench/basic_blocks_analysis.py
+src/papple2/workbench/colors.py
 src/papple2/workbench/hidden.py
 src/papple2/workbench/listing_editor.py
 src/papple2/workbench/shell.py
@@ -139,6 +140,7 @@ src/papple2/workbench/shell.py
 #tests/test_basic_blocks_analysis.py
 #tests/test_breakpoints.py
 #tests/test_annotations.py
+tests/test_colors.py
 #tests/test_cpu_arithmetic.py
 #tests/test_cpu_branch.py
 #tests/test_cpu_bugs.py
@@ -164,6 +166,7 @@ tests/test_listing_editor.py
 #tests/test_memory.py
 #tests/test_memory_hooks.py
 tests/test_shell.py
+tests/test_shell_colors.py
 tests/test_shell_hidden.py
 #tests/test_softswitches.py
 #tests/test_stack_tracking.py

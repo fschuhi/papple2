@@ -60,6 +60,8 @@ from papple2.workbench.tiling import Tiling
 # Imported so that IPython's %run leaves them in its namespace, ready for
 # looking at the run.
 from papple2.workbench.shell import (  # noqa: F401
+    color,
+    colors,
     clip,
     comment,
     edit,
@@ -82,6 +84,8 @@ from papple2.workbench.shell import (  # noqa: F401
     show_routines,
     stack_tracking_reports,
     tiling_reports,
+    to_range,
+    uncolor,
     uncomment,
     unhide,
     unlabel,
