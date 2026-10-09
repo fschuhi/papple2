@@ -21,7 +21,8 @@ own (dossiers/lode_runner/). Its annotations, the labels and comments, are
 one part of it, in annotations.json. use_dossier() makes a dossier the
 current one; label(), comment(), unlabel() and uncomment() change its
 annotations, and every change is saved at once. There is one current
-dossier at a time, kept in this module.
+dossier at a time, kept in this module. Named hidden ranges are kept
+separately in hidden.json; hide() and unhide() change their definitions.
 
 The current run is what one run left behind: the machine and the
 instrumentations that were attached to it, and, once the tiling's reports
@@ -70,6 +71,7 @@ from papple2.workbench.basic_blocks_analysis import (
     stack_jumps,
     write_loop_reports,
 )
+from papple2.workbench.hidden import Hidden
 from papple2.workbench.listing_editor import ListingRow, Place, PickerItem, edit_rows
 from papple2.workbench.stack_tracking import RETURNS_FILE, StackTracking
 from papple2.workbench.tiling import (
@@ -135,14 +137,20 @@ def write_report(file_name: str, text: str) -> None:
 dossier_folder: Path | None = None
 annotations: Annotations | None = None
 
+# The current dossier's named hidden ranges, stored separately from its
+# labels and comments. None until use_dossier() is called.
+hidden: Hidden | None = None
+
 
 def use_dossier(folder: Path) -> None:
-    """Make folder the current dossier and open its annotations. A dossier
-    without annotations yet starts with the Apple II's standard labels;
-    after that, they are left alone, so a removed one doesn't come back."""
-    global dossier_folder, annotations
+    """Make folder the current dossier and open its annotations and hidden
+    ranges. A dossier without annotations yet starts with the Apple II's
+    standard labels; after that, they are left alone, so a removed one
+    doesn't come back. Opening the hidden ranges writes nothing."""
+    global dossier_folder, annotations, hidden
     dossier_folder = Path(folder)
     annotations = Annotations(dossier_folder)
+    hidden = Hidden(dossier_folder)
     if not annotations.path.exists():
         annotations.add_labels(STANDARD_LABELS)
 
@@ -192,6 +200,31 @@ def comment(address: int, text: str) -> None:
 def uncomment(address: int) -> None:
     """Remove address's comment from the current dossier."""
     current_annotations().uncomment(address)
+
+
+def current_hidden() -> Hidden:
+    """The current dossier's hidden ranges. Stops if no dossier is open."""
+    if dossier_folder is None or hidden is None:
+        raise RuntimeError("no dossier open; call use_dossier() first")
+    return hidden
+
+
+def hide(name: str, start: int | str, end: int | str, note: str) -> None:
+    """Save a named hidden range in the current dossier's hidden.json.
+
+    start and end are addresses or labels; end is exclusive. Reusing name
+    replaces its definition. Overlaps with other named ranges are refused.
+    Labels are read afresh before the bounds are resolved, so labels given
+    in another session can be used too. No current run is required.
+    """
+    store = current_hidden()
+    refresh_annotations()
+    store.hide(name, address_of(start), address_of(end), note)
+
+
+def unhide(name: str) -> None:
+    """Remove a named hidden range from the current dossier."""
+    current_hidden().unhide(name)
 
 
 # The current run: the program setup it ran, the machine as the run left
