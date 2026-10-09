@@ -43,9 +43,6 @@
 
 ## Listing editor
 
-- ~~Callers in the picker.~~ *(Done 2026-10-09: `u` opens the picker on the callers of the routine shown, one line per call site and routine holding it, e.g. `8352  JSR     r_11x2_1 (1,782)`. The picker's lines are `PickerItem`s (text, routine, row); `call_sites()` in `shell.py` computes them for `show_callers()` and `caller_items()` alike. Later filtered by the paths into a watched range, see "Who writes where".)*
-- ~~Offset labels.~~ *(Done 2026-10-09: an operand without a label of its own that points into a labelled instruction that ran shows as `label+N`, e.g. `STA .selfmod1+2`. The disassembler gets `ran` from `ran_in(graph)` in `shell.py`.)*
-- ~~Gaps that never ran.~~ *(Done 2026-10-09: `listing()` and `edit()` show only the code in the run graph's blocks; every gap is one row, grey in the editor (`gap`). `listing_rows(..., only_ran=True)`. The disassembler wraps addresses at `$FFFF` since, which the decoded data of `routine_0800` needed.)*
 - `i` and `m`: the bar to the previous and the next row with a label, within the routine shown. Movements like the arrow keys, not steps: Backspace does not undo them. (`i`/`m`, not `j`/`k`: my Karabiner Elements cross.)
 - Go To beyond routine entries, _higher priority (2026-10-09)_: e.g. `game_start` at `6056`, reached only by `JMP`. See also the item further below.
 - A key to open the gaps that never ran, in place. _Low priority._
@@ -62,8 +59,8 @@
 
 ## Ranges and stretches
 
-- Annotation: `hide` goes into `annotations.json`, a section `ranges`.
-- Then `hide(name, start, end, note)` and `unhide(name)`: a named range shown as one grey row, e.g. `... 2800-2832 relocation_bytes: relocation loop, overwritten after it ran ...`, in `listing()` and `edit()`. It may hide code that ran too. Two steps: the dossier with its commands and tests; then `listing_rows()`. Open: an arrow into a hidden range (dropped for now, like an arrow whose end lies outside the listing); a label inside one (kept in the dossier, not shown).
+- ~~Annotation: `hide` goes into `annotations.json`, a section `ranges`.~~ *(Resolved 2026-10-09: hidden ranges live separately in the dossier's `hidden.json`, owned by `Hidden` in `hidden.py`. Labels and comments remain in `annotations.json`; stretches remain separate objects, not hidden ranges.)*
+- ~~Then `hide(name, start, end, note)` and `unhide(name)`: a named range shown as one grey row, e.g. `... 2800-2832 relocation_bytes: relocation loop, overwritten after it ran ...`, in `listing()` and `edit()`. It may hide code that ran too. Two steps: the dossier with its commands and tests; then `listing_rows()`. Open: an arrow into a hidden range (dropped for now, like an arrow whose end lies outside the listing); a label inside one (kept in the dossier, not shown).~~ *(Done 2026-10-09: persistent commands take half-open address or label bounds; reusing a name replaces its definition, overlaps are refused, adjacent ranges are allowed. Changes reload before saving, unchanged definitions write nothing, and listings reload before showing. `listing_rows()` clips hidden spans to the requested bounds and replaces each with one row before decoding, taking precedence over never-ran gaps. The editor shows it grey and skips it. Labels and comments stay saved; arrows with hidden ends are dropped, arrows crossing the span remain. Code bounds should lie between instructions. Verified in `edit("routine_0800")`.)*
 - Code that ran and was overwritten afterwards, e.g. `JMP $2800` at `0800` and the relocation loop at `2800`-`2832`, which read `00` and `80` after the run. A listing reads memory after the run (`docs/decisions.md`), so it shows what was written there later. Option B to `hide`: `Tiling` keeps the bytes of each instruction as they ran, and the listing shows those. Harder with self-modifying code, whose bytes change between runs of the same instruction.
 
 ## Who writes where

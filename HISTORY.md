@@ -11,6 +11,7 @@
 
 ---
 
+- **2026-10-09:** Persistent hiding: `hide()` and `unhide()` keep named ranges in the dossier's `hidden.json`. In `listing()` and `edit()`, each hidden span becomes one grey row, without decoding its bytes or removing its labels and comments. `routine_0800` is easier to read now that the overwritten relocation loop can be set aside.
 - **2026-10-09:** `routine_0800` can be read: a listing shows only the code that ran, and every gap that never ran is one grey line. On the way I found that Lode Runner's start-up code was overwritten after it ran, and traced the jumps from `0800` through the relocation to `game_start` at `6056`.
 - **2026-10-09:** Up the call tree in the editor: `u` lists the callers of the routine shown, with how often each call was made, and Enter lands on the `JSR`. From `r_11x2_2` it is two steps up to the main loop, and `routine_64bd` turns out to be the hub of nearly everything drawn.
 - **2026-10-09:** Offset labels: `STA .selfmod1+2` instead of `STA $845c` with a comment. The self-modifying chain in `routine_8438` now reads as code: `.selfmod1` writes into the operand of `.selfmod3`.

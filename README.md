@@ -155,7 +155,7 @@ Unthrottled, `papple2` runs as fast as Python allows: about 3.5 times a real App
 
 ### Workbench
 
-`papple2.workbench` holds the tools for reverse engineering: instrumentations that record what a run does, analyses that recover routines, basic blocks and loops from the recorded reports, the commands of `shell.py` for experiments and for the IPython prompt (listings, the listing editor, a hexdump, the clipboard), and the dossier, where labels and comments stay. The reports carry meaning on their own, they are easy to work with.
+`papple2.workbench` holds the tools for reverse engineering: instrumentations that record what a run does, analyses that recover routines, basic blocks and loops from the recorded reports, the commands of `shell.py` for experiments and for the IPython prompt (listings, the listing editor, a hexdump, the clipboard), and the dossier, where labels, comments and named hidden ranges stay. Labels and comments live in `annotations.json`; hidden ranges live separately in `hidden.json`. `hide()` and `unhide()` change those ranges, and `listing()` and `edit()` show each hidden span as one grey row without decoding its bytes. The reports carry meaning on their own, they are easy to work with.
 
 See [`docs/workbench.md`](docs/workbench.md) for the commands, the experiments, the reports and the glossary.
 
