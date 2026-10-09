@@ -15,6 +15,7 @@ Keys in the listing:
   Tab                  : edit the label of the bar's row
   e                    : edit the comment of the bar's row
   g                    : open the picker, to go to another routine
+  u                    : open the picker on the callers of the routine shown
   c                    : copy the visible lines to the clipboard
   q, Esc or Ctrl+C     : leave
 
@@ -69,6 +70,11 @@ g opens the picker over the bottom lines of the listing, PICKER_LINES high:
 a list of the routines edit_rows() was given, by entry and label, the
 selection on the routine shown. Enter goes there, as Enter on a JSR would,
 so Backspace comes back and the breadcrumbs grow.
+
+u opens the same picker on the callers of the routine shown, as
+edit_rows() gets them from callers_of: one line per call site, with its
+leap, the routine that holds it, and how often it was taken. Enter opens
+that routine with the bar on the call site, and Backspace comes back.
 
 The operand field labels the address the operand names (row.target), not
 the line's own: $1a85 in LDA $1a85,Y, the pointer $1b in STA ($1b),Y.
@@ -291,6 +297,17 @@ class Place:
     routine: bool = True
 
 
+@dataclass(frozen=True)
+class PickerItem:
+    """One line of the picker: its text, the entry of the routine Enter
+    opens, and the address of the row the bar goes to there. Without an
+    address, the routine opens as it was last left, else on its entry."""
+
+    text: str
+    entry: int
+    address: int | None = None
+
+
 def row_of(rows: list[ListingRow], address: int) -> int | None:
     """The index of the row at address, or None if no row is."""
     for index, row in enumerate(rows):
@@ -337,7 +354,7 @@ class EditorState:
     """The rows, their columns, the row the bar is on and the first row in
     the window; the field being edited ("label", "operand", "comment" or
     None), the message for the line under the listing, and the place the
-    rows come from. While the picker is open, picker holds the entries it
+    rows come from. While the picker is open, picker holds the items it
     lists, picker_index the selected one and picker_top the first one in
     its box; picker is None while it is closed."""
 
@@ -348,7 +365,7 @@ class EditorState:
     field: str | None = None
     message: str = ""
     place: Place | None = None
-    picker: list[int] | None = None
+    picker: list[PickerItem] | None = None
     picker_index: int = 0
     picker_top: int = 0
 
@@ -379,6 +396,7 @@ def edit_rows(
     open_routine: Callable[[int], Place | None] = lambda address: None,
     remembered: dict[int, tuple[int, int]] | None = None,
     goto_entries: list[int] | None = None,
+    callers_of: Callable[[int], list[PickerItem]] = lambda entry: [],
 ) -> None:
     """Show the rows of place, inline, height lines at a time, and let
     labels and comments be edited, until q, Esc or Ctrl+C. Nothing stays on
@@ -393,7 +411,9 @@ def edit_rows(
     remembered keeps, by entry, the first row in the window and the bar's
     row of every routine left, (top, cursor); it outlives the editor, if
     the caller keeps it. goto_entries are the entries the picker lists, in
-    the order given; g goes to one of them through open_routine()."""
+    the order given; g goes to one of them through open_routine().
+    callers_of(entry) gives the picker's items for the callers of the
+    routine starting at entry; u opens the picker on them."""
     rows = place.load_rows()
     if not any(row.address is not None for row in rows):
         print("Nothing to show: no lines in this range.")
@@ -414,10 +434,13 @@ def edit_rows(
         history.append(here)
         future.clear()
 
-    def arrive(place: Place, view: tuple[int, int] | None) -> None:
+    def arrive(
+        place: Place, view: tuple[int, int] | None, at: int | None = None
+    ) -> None:
         """Show place, its rows loaded afresh: the window and bar as in
         view; else as remembered; else from its first row, with the bar on
-        its entry."""
+        its entry. With at, the bar then goes to the row at that address,
+        if there is one."""
         state.place = place
         state.rows = place.load_rows()
         state.widths = column_widths(state.rows)
@@ -432,6 +455,9 @@ def edit_rows(
                 entry_row if entry_row is not None else next_line(state.rows, -1, 1)
             )
         keep_in_view(state, height)
+        if at is not None and row_of(state.rows, at) is not None:
+            state.cursor = row_of(state.rows, at)
+            keep_in_view(state, height)
 
     def remember() -> None:
         """Keep how the routine shown looks, to show it so again."""
@@ -652,13 +678,13 @@ def edit_rows(
     picker_lines = max(1, min(PICKER_LINES, height - 1))
 
     def picker_text() -> FormattedText:
-        """The lines of the picker's box: entry and label, the selected
+        """The lines of the picker's box: the items' texts, the selected
         one with the bar's look."""
         width = text_width()
         fragments = []
         shown = state.picker[state.picker_top : state.picker_top + picker_lines]
-        for offset, entry in enumerate(shown):
-            text = f"{entry:04x}  {label_of(entry)}".rstrip()
+        for offset, item in enumerate(shown):
+            text = item.text
             if state.picker_top + offset == state.picker_index:
                 fragments.append(("class:bar class:marker", ">".ljust(MARKER_WIDTH)))
                 fragments.append(("class:bar", text.ljust(width)))
@@ -687,18 +713,27 @@ def edit_rows(
         height=picker_lines,
     )
 
-    def open_picker() -> None:
-        """Open the picker on goto_entries, the selection on the routine
-        shown, if it is one of them."""
+    def goto_items() -> list[PickerItem]:
+        """Go To's items: every routine of goto_entries, by entry and
+        label. Made each time the picker opens, so a label given since
+        shows."""
+        return [
+            PickerItem(f"{entry:04x}  {label_of(entry)}".rstrip(), entry)
+            for entry in goto_entries
+        ]
+
+    def open_picker(items: list[PickerItem], empty: str) -> None:
+        """Open the picker on items, the selection on the first one that
+        leads into the routine shown, else on the first one. Without items,
+        empty goes into the line under the listing instead."""
         state.message = ""
-        if not goto_entries:
-            state.message = "no routines to go to"
+        if not items:
+            state.message = empty
             return
-        state.picker = goto_entries
+        state.picker = items
+        entries = [item.entry for item in items]
         entry = state.place.entry
-        state.picker_index = (
-            goto_entries.index(entry) if entry in goto_entries else 0
-        )
+        state.picker_index = entries.index(entry) if entry in entries else 0
         state.picker_top = 0
         move_picker(0)
         get_app().layout.focus(picker)
@@ -719,20 +754,21 @@ def edit_rows(
         get_app().layout.focus(listing)
 
     def go_to_picked() -> None:
-        """Go to the routine selected in the picker, as Enter on a JSR
-        would. The routine shown stays as it is."""
-        entry = state.picker[state.picker_index]
+        """Go to the routine of the item selected in the picker, as Enter
+        on a JSR would, and there to the item's row, if it names one.
+        Picking the routine shown changes nothing."""
+        item = state.picker[state.picker_index]
         close_picker()
-        routine = open_routine(entry)
+        routine = open_routine(item.entry)
         if routine is None:
-            state.message = f"no routine at ${entry:04x}"
+            state.message = f"no routine at ${item.entry:04x}"
             return
         if routine.entry == state.place.entry:
             return
         here = (state.place, state.top, state.cursor)
         remember()
         step(here)
-        arrive(routine, None)
+        arrive(routine, None, item.address)
 
     def open_field(name: str) -> None:
         """Open the field name on the bar's row, holding the label it
@@ -826,7 +862,15 @@ def edit_rows(
 
     @bindings.add("g", filter=in_listing)
     def _go_to(event: KeyPressEvent) -> None:
-        open_picker()
+        open_picker(goto_items(), "no routines to go to")
+
+    @bindings.add("u", filter=in_listing)
+    def _callers(event: KeyPressEvent) -> None:
+        if not state.place.routine:
+            state.message = "u shows the callers of a routine, not of a range"
+            return
+        entry = state.place.entry
+        open_picker(callers_of(entry), f"no JSR or JMP leads into ${entry:04x}")
 
     @bindings.add("up", filter=in_picker)
     def _picker_up(event: KeyPressEvent) -> None:

@@ -22,8 +22,10 @@ from papple2.workbench.basic_blocks_analysis import (
     read_split_reports,
     routine_calls,
 )
+from papple2.workbench.listing_editor import PickerItem
 from papple2.workbench.shell import (
     assign_lanes,
+    caller_items,
     clip,
     comment,
     draw_gutter,
@@ -468,6 +470,19 @@ def test_show_callers_lists_the_call_sites_with_the_routines_holding_them(
     assert show_callers("SUB").splitlines() == [
         "site  leap     count  routines",
         "6004  JSR          6  6000 MAIN",
+    ]
+
+
+def test_caller_items_lead_to_the_call_site_in_the_routine_holding_it(
+    walkthrough, tmp_path: Path, no_run: None, no_dossier: None
+) -> None:
+    # SUB's one caller: the JSR at 6004, taken six times, in MAIN.
+    make_walkthrough_current(walkthrough)
+    use_dossier(tmp_path / "dossier")
+    label(0x6000, "MAIN")
+
+    assert caller_items(0x6010) == [
+        PickerItem("6004  JSR     MAIN (6)", 0x6000, 0x6004)
     ]
 
 

@@ -70,7 +70,7 @@ from papple2.workbench.basic_blocks_analysis import (
     stack_jumps,
     write_loop_reports,
 )
-from papple2.workbench.listing_editor import ListingRow, Place, edit_rows
+from papple2.workbench.listing_editor import ListingRow, Place, PickerItem, edit_rows
 from papple2.workbench.stack_tracking import RETURNS_FILE, StackTracking
 from papple2.workbench.tiling import (
     SPLIT_TILES_FILE,
@@ -427,20 +427,26 @@ def show_blocks(entry: int | str) -> None:
     )
 
 
-@returns_text
-def show_callers(entry: int | str) -> None:
-    """Every place that leaps into the routine starting at entry, an
-    address or a label: one line per call site, in address order, with
-    its leap (JSR, JMP, JMP ()), how often it was taken, and the routines
-    whose blocks hold the site, with the dossier's labels.
+@dataclass(frozen=True)
+class CallSite:
+    """One place that leaps into a routine: the address of the leap, its
+    opcode (JSR, JMP, JMP ()), how often it was taken, and the entries of
+    the routines whose blocks hold it, in address order."""
+
+    site: int
+    opcode: int
+    count: int
+    holders: tuple[int, ...]
+
+
+def call_sites(entry: int) -> list[CallSite]:
+    """Every place in the current run that leaps into the routine starting
+    at entry, in address order. Prints nothing; show_callers() prints them.
 
     JMPs count as callers for now: a JMP into a routine's entry may be a
     tail call, which only a shadow stack can tell apart. A site can lie in
-    several routines, where code is shared, so all of them are listed."""
-    refresh_annotations()
+    several routines, where code is shared, so all of them are holders."""
     found = current_routines()
-    entry = routine_at(entry)
-    labels = annotations.labels if annotations is not None else {}
 
     # Count per site and leap, adding up in case a site has several rows.
     counts: dict[tuple[int, int], int] = {}
@@ -452,19 +458,65 @@ def show_callers(entry: int | str) -> None:
         counts[key] = counts.get(key, 0) + row.count
         blocks_of[row.leap_from_pc] = row.source_tile
 
-    if not counts:
+    return [
+        CallSite(
+            site,
+            opcode,
+            count,
+            tuple(
+                sorted(
+                    holder
+                    for holder, graph in found.graphs.items()
+                    if blocks_of[site] in graph.blocks
+                )
+            ),
+        )
+        for (site, opcode), count in sorted(counts.items())
+    ]
+
+
+def caller_items(entry: int) -> list[PickerItem]:
+    """The callers of the routine starting at entry, as the listing
+    editor's picker lists them: one line per call site and routine that
+    holds it, e.g. 8352  JSR     r_11x2_1 (1,782), with the site's count.
+    Enter opens that routine with the bar on the call site."""
+    refresh_annotations()
+    labels = annotations.labels if annotations is not None else {}
+    items = []
+    for call in call_sites(entry):
+        for holder in call.holders:
+            name = labels.get(holder, address(holder))
+            text = (
+                f"{address(call.site)}  {CALL_KINDS[call.opcode]:<6}  "
+                f"{name} ({call.count:,})"
+            )
+            items.append(PickerItem(text, holder, call.site))
+    return items
+
+
+@returns_text
+def show_callers(entry: int | str) -> None:
+    """Every place that leaps into the routine starting at entry, an
+    address or a label: one line per call site, as call_sites() finds
+    them, with its leap (JSR, JMP, JMP ()), how often it was taken, and
+    the routines whose blocks hold the site, with the dossier's labels."""
+    refresh_annotations()
+    entry = routine_at(entry)
+    labels = annotations.labels if annotations is not None else {}
+
+    calls = call_sites(entry)
+    if not calls:
         print(f"no JSR or JMP leads into {address(entry)}")
         return
     print(f"{'site':<4}  {'leap':<6}  {'count':>6}  routines")
-    for (site, opcode), count in sorted(counts.items()):
+    for call in calls:
         holders = [
             f"{address(holder)} {labels.get(holder, '')}".rstrip()
-            for holder, graph in found.graphs.items()
-            if blocks_of[site] in graph.blocks
+            for holder in call.holders
         ]
         print(
-            f"{address(site)}  {CALL_KINDS[opcode]:<6}  {count:>6,}  "
-            + ", ".join(sorted(holders))
+            f"{address(call.site)}  {CALL_KINDS[call.opcode]:<6}  {call.count:>6,}  "
+            + ", ".join(holders)
         )
 
 
@@ -570,7 +622,8 @@ def edit(start: int | str, end: int | str | None = None, height: int = 25) -> No
     operand field labels the address an operand names, wherever the line
     is. Enter on a JSR opens the routine it calls; each routine opens as it
     was last left, while the run lasts. g opens a list of the run's
-    routines, to go to one of them. height is the number of lines the
+    routines, to go to one of them; u a list of the callers of the routine
+    shown, to go to one of their call sites. height is the number of lines the
     editor shows at a time.
 
     Needs a real terminal."""
@@ -598,6 +651,7 @@ def edit(start: int | str, end: int | str | None = None, height: int = 25) -> No
         open_routine=routine_place,
         remembered=editor_views,
         goto_entries=sorted(current_routines().graphs),
+        callers_of=caller_items,
     )
 
 

@@ -13,6 +13,7 @@ from papple2.workbench.listing_editor import (
     INSTRUCTION_CAP,
     ColumnWidths,
     ListingRow,
+    PickerItem,
     Place,
     breadcrumbs,
     column_widths,
@@ -208,6 +209,9 @@ SUB = [
     ListingRow(0x9011, "", "d0 fc", "", "BNE $900f", "", target=0x900F),
 ]
 ROUTINES = {0x9000: Place(0x9000, lambda: MAIN), 0x9010: Place(0x9010, lambda: SUB)}
+# SUB's one caller, made up for the tests: a JSR at 9003 in MAIN, not on
+# MAIN's entry, so a test can tell the call site from the entry.
+CALLERS = {0x9010: [PickerItem("9003  JSR     main (2)", 0x9000, 0x9003)]}
 
 
 def navigate(
@@ -242,6 +246,7 @@ def navigate(
                 open_routine=ROUTINES.get,
                 remembered=remembered,
                 goto_entries=sorted(ROUTINES),
+                callers_of=lambda entry: CALLERS.get(entry, []),
             )
     return saved
 
@@ -326,6 +331,23 @@ def test_a_new_step_forgets_where_f_would_have_gone() -> None:
 
 def test_f_without_a_backspace_goes_nowhere() -> None:
     assert navigate("f\t\rq") == [(0x9000, "label", "main")]
+
+
+# Callers. "u" opens the picker on the callers of the routine shown.
+
+
+def test_u_goes_to_the_call_site_of_the_caller_picked() -> None:
+    # Into SUB, then u and Enter: MAIN, the bar on the call site 9003.
+    assert navigate("\ru\r\t\rq") == [(0x9003, "label", "")]
+
+
+def test_backspace_comes_back_from_the_caller() -> None:
+    assert navigate("\ru\r\x7f\t\rq") == [(0x9010, "label", "sub")]
+
+
+def test_u_without_callers_leaves_the_listing_as_it_is() -> None:
+    # MAIN has no callers: no picker opens, so Tab edits MAIN's label.
+    assert navigate("u\t\rq") == [(0x9000, "label", "main")]
 
 
 def test_the_future_crumbs_fit_by_leaving_out_the_last_ones() -> None:
