@@ -16,6 +16,8 @@ from papple2.debug.disassembler import STANDARD_LABELS
 from papple2.workbench import shell
 from papple2.workbench.annotations import Annotations
 from papple2.workbench.basic_blocks_analysis import (
+    BasicBlock,
+    BlockGraph,
     build_graph,
     immediate_dominators,
     natural_loops,
@@ -155,6 +157,60 @@ def test_listing_rows_carry_the_address_each_operand_names(make_emulator) -> Non
         0x0036,  # JMP (): the pointer
         None,  # accumulator
         None,  # implied
+    ]
+
+
+# A branch over code that never ran, loaded as bytes:
+#   6000 LDA #$00   6002 BEQ $6006   6004 LDA #$01 (jumped over)   6006 RTS
+NEVER_RAN_BYTES = [0xA9, 0x00, 0xF0, 0x02, 0xA9, 0x01, 0x60]
+
+
+def never_ran_graph() -> BlockGraph:
+    """The run of NEVER_RAN_BYTES: two blocks, and the branch between."""
+    return BlockGraph(
+        entry=0x6000,
+        blocks={
+            0x6000: BasicBlock(0x6000, 0x6004, 1),
+            0x6006: BasicBlock(0x6006, 0x6007, 1),
+        },
+        edges={(0x6000, 0x6006): 1},
+        successors={0x6000: [0x6006], 0x6006: []},
+        predecessors={0x6000: [], 0x6006: [0x6000]},
+    )
+
+
+def test_listing_rows_show_each_gap_that_never_ran_as_one_row(make_emulator) -> None:
+    # One gap between the blocks, and one behind the last: 6007 never ran.
+    _asm, emulator = make_emulator(ENDLESS_PROGRAM)
+    emulator.apple2.memory.load_test_data(0x6000, NEVER_RAN_BYTES)
+
+    rows = listing_rows(emulator, 0x6000, 0x6008, graph=never_ran_graph())
+
+    assert [row.address for row in rows] == [0x6000, 0x6002, None, 0x6006, None]
+    assert rows[2].instruction == "... 6004-6006: 2 bytes never ran ..."
+    assert rows[4].instruction == "... 6007-6008: 1 byte never ran ..."
+
+
+def test_listing_rows_without_a_graph_show_every_instruction(make_emulator) -> None:
+    _asm, emulator = make_emulator(ENDLESS_PROGRAM)
+    emulator.apple2.memory.load_test_data(0x6000, NEVER_RAN_BYTES)
+
+    rows = listing_rows(emulator, 0x6000, 0x6007)
+
+    assert [row.address for row in rows] == [0x6000, 0x6002, 0x6004, 0x6006]
+
+
+def test_print_listing_draws_the_arrow_past_a_gap(make_emulator, capsys) -> None:
+    _asm, emulator = make_emulator(ENDLESS_PROGRAM)
+    emulator.apple2.memory.load_test_data(0x6000, NEVER_RAN_BYTES)
+
+    print_listing(listing_rows(emulator, 0x6000, 0x6007, graph=never_ran_graph()))
+
+    assert capsys.readouterr().out.splitlines() == [
+        "    6000  a9 00     LDA #$00",
+        "+-- 6002  f0 02     BEQ $6006",
+        "|   ... 6004-6006: 2 bytes never ran ...",
+        "+-> 6006  60        RTS",
     ]
 
 

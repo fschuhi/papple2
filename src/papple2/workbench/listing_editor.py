@@ -171,8 +171,11 @@ STYLE = Style.from_dict(
 class ListingRow:
     """One line of a listing, its pieces kept apart, so that each caller
     lays them out as it needs: print_listing() prints them, the listing
-    editor shows them in columns of its own. address is None for the empty
-    line before a .byte block; there, every field but the gutter is empty.
+    editor shows them in columns of its own. address is None for a row that
+    is no instruction: the empty line before a .byte block, and a gap the
+    run never reached, whose text is in instruction ("... 6004-6006: 2
+    bytes never ran ..."). There, every other field but the gutter is
+    empty, and the bar skips the row.
 
     target is the address the operand names, the one a label in the operand
     stands for: $1a85 in LDA $1a85,Y, the pointer $1b in STA ($1b),Y, a
@@ -220,7 +223,7 @@ def format_row(row: ListingRow, widths: ColumnWidths, columns: int) -> str:
     comment. columns is the terminal's width: the comment is cut to fit
     it. The empty line before a .byte block is its gutter alone."""
     if row.address is None:
-        return row.gutter.rstrip()
+        return (row.gutter + row.instruction).rstrip()
     line = f"{row.gutter}{row.address:04x}  {row.hex_bytes:<8}  "
     if widths.label:
         line += f"{row.label:<{widths.label}}  "

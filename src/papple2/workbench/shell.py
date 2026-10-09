@@ -997,7 +997,10 @@ def listing_rows(
     branches, JMPs). Glides, fall-throughs and calls are not drawn. An
     arrow is drawn only if both of its ends lie in the range. And an
     operand that points into a labelled instruction that ran, without a
-    label of its own, shows as label+N: STA .selfmod1+2.
+    label of its own, shows as label+N: STA .selfmod1+2. Only the code the
+    run executed is listed: each gap between its blocks is one row whose
+    instruction says which bytes never ran, e.g. "... 0803-2800: 7,677
+    bytes never ran ...". Without graph, every byte in the range is listed.
 
     An instruction that starts before end is listed whole, even if its
     operand reaches past end. A block's end always lies behind its last
@@ -1007,15 +1010,27 @@ def listing_rows(
     as the disassembler works it out, so the listing editor can label it.
     """
     disassembler = Disassembler(emulator.cpu, labels, comments, ran=ran_in(graph))
-    # disassemble() takes an inclusive end.
-    rows = disassembler.disassemble(start, end - 1)
+    # disassemble() takes an inclusive end. A gap gets an empty row, like
+    # the one before a .byte block; gaps keeps its text, by row number.
+    rows: list[list[str]] = []
+    gaps: dict[int, str] = {}
+    position = start
+    for first, behind in ran_parts(start, end, graph):
+        if first > position:
+            gaps[len(rows)] = never_ran(position, first)
+            rows.append(["", "", "", "", "", ""])
+        rows.extend(disassembler.disassemble(first, behind - 1))
+        position = behind
+    if position < end:
+        gaps[len(rows)] = never_ran(position, end)
+        rows.append(["", "", "", "", "", ""])
     gutter = draw_gutter(len(rows), *arrows_in(rows, graph))
     # The addresses of the global labels, sorted, to find each line's scope.
     global_addresses = sorted(
         address for address, text in (labels or {}).items() if "." not in text
     )
     result = []
-    for row, prefix in zip(rows, gutter):
+    for index, (row, prefix) in enumerate(zip(rows, gutter)):
         row_address, row_bytes, label, mnemonic, operand, comment = row
         instruction = f"{mnemonic} {operand}".rstrip()
         target = None
@@ -1030,8 +1045,9 @@ def listing_rows(
             if mnemonic != ".byte":
                 info, _length = disassembler.collect_op_info(address)
                 target = info.get("operand_address")
-        else:  # the empty line before a .byte block
+        else:  # the empty line before a .byte block, or a gap
             address = None
+            instruction = gaps.get(index, "")
         result.append(
             ListingRow(
                 address=address,
@@ -1044,6 +1060,38 @@ def listing_rows(
             )
         )
     return result
+
+
+def ran_parts(
+    start: int, end: int, graph: BlockGraph | None
+) -> list[tuple[int, int]]:
+    """The parts of the range from start up to end to list instruction by
+    instruction, in address order, each as (first, behind). Without graph,
+    the whole range. With it, only the code the run executed: its blocks,
+    cut to the range, adjoining blocks joined into one part. Whatever lies
+    between the parts never ran."""
+    if graph is None:
+        return [(start, end)]
+    parts: list[tuple[int, int]] = []
+    for block in sorted(graph.blocks.values(), key=lambda block: block.start):
+        first, behind = max(block.start, start), min(block.end, end)
+        if first >= behind:  # the block lies outside the range
+            continue
+        if parts and parts[-1][1] >= first:
+            parts[-1] = (parts[-1][0], max(parts[-1][1], behind))
+        else:
+            parts.append((first, behind))
+    return parts
+
+
+def never_ran(first: int, behind: int) -> str:
+    """The text of the row that stands for a gap: the bytes from first up
+    to, not including, behind."""
+    size = behind - first
+    return (
+        f"... {first:04x}-{behind:04x}: {size:,} byte{'' if size == 1 else 's'}"
+        " never ran ..."
+    )
 
 
 def ran_in(graph: BlockGraph | None) -> Callable[[int], bool]:
@@ -1085,15 +1133,16 @@ def print_listing(rows: list[ListingRow]) -> None:
     The label column is as wide as the longest label in the rows, and left
     out if no row has a label. The comments line up two spaces after the
     widest commented instruction, so .byte lines don't push them out; lines
-    without a comment end with their instruction.
+    without a comment end with their instruction. A row without an address
+    is its gutter and, for a gap that never ran, the gap's text.
     """
     width = max((len(row.label) for row in rows), default=0)
     instruction_width = max(
         (len(row.instruction) for row in rows if row.comment), default=0
     )
     for row in rows:
-        if row.address is None:  # the empty line before a .byte block
-            print(row.gutter.rstrip())
+        if row.address is None:  # the empty line before a .byte block, or a gap
+            print((row.gutter + row.instruction).rstrip())
             continue
         name_column = f"{row.label:<{width}}  " if width else ""
         instruction = row.instruction

@@ -84,6 +84,13 @@ def test_the_empty_line_before_a_byte_block_is_its_gutter_alone() -> None:
     assert format_row(empty, ColumnWidths(label=0, instruction=8), 80) == "| |"
 
 
+def test_a_gap_that_never_ran_is_its_gutter_and_its_text() -> None:
+    gap = ListingRow(None, "|   ", "", "", "... 6004-6006: 2 bytes never ran ...", "")
+    assert format_row(gap, ColumnWidths(label=0, instruction=8), 80) == (
+        "|   ... 6004-6006: 2 bytes never ran ..."
+    )
+
+
 # The editor at work: keys go in through a pipe, the screen goes nowhere.
 # Tab is "\t", Enter "\r", Ctrl+C "\x03", Down "\x1b[B", Esc "\x1b".
 
