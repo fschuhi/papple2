@@ -71,7 +71,7 @@ from papple2.workbench.basic_blocks_analysis import (
     stack_jumps,
     write_loop_reports,
 )
-from papple2.workbench.hidden import Hidden
+from papple2.workbench.hidden import Hidden, HiddenRange
 from papple2.workbench.listing_editor import ListingRow, Place, PickerItem, edit_rows
 from papple2.workbench.stack_tracking import RETURNS_FILE, StackTracking
 from papple2.workbench.tiling import (
@@ -625,11 +625,14 @@ def current_listing_rows(
     start: int | str, end: int | str | None = None
 ) -> list[ListingRow]:
     """The rows of the current run's memory in the range listing_range()
-    gives, with the arrows of the whole run and the dossier's labels and
-    comments. The annotations are read from the file first, so a listing,
-    and the editor after every save or Esc, shows what another session
-    has given."""
+    gives, with the arrows of the whole run and the dossier's labels,
+    comments and hidden ranges. The dossier files are read first, so
+    changes made in another session show too."""
     refresh_annotations()
+    hidden_ranges = None
+    if dossier_folder is not None and hidden is not None:
+        hidden.reload()
+        hidden_ranges = hidden.ranges
     start, end = listing_range(start, end)
     return listing_rows(
         run_emulator,
@@ -639,6 +642,7 @@ def current_listing_rows(
         run_graph,
         annotations.comments if annotations is not None else None,
         only_ran=True,
+        hidden_ranges=hidden_ranges,
     )
 
 
@@ -1010,6 +1014,7 @@ def listing_rows(
     graph: BlockGraph | None = None,
     comments: dict[int, str] | None = None,
     only_ran: bool = False,
+    hidden_ranges: dict[str, HiddenRange] | None = None,
 ) -> list[ListingRow]:
     """The rows of a listing from start up to, not including, end, one per
     instruction: address, bytes, instruction. Read from the emulator's
@@ -1041,6 +1046,12 @@ def listing_rows(
     routine's graph leaves out the routines it calls, which ran all the
     same. Without only_ran, every byte in the range is listed.
 
+    With hidden_ranges, each named range is clipped to the listing and
+    shown as one row, whether or not it ran. Hidden spans are omitted
+    before disassembly. Their labels and comments are not shown; arrows
+    with a hidden end are dropped. Place bounds between instructions when
+    hiding code. The ranges must not overlap, as Hidden enforces.
+
     An instruction that starts before end is listed whole, even if its
     operand reaches past end. A block's end always lies behind its last
     instruction, so this only shows for ranges that cut an instruction.
@@ -1049,21 +1060,44 @@ def listing_rows(
     as the disassembler works it out, so the listing editor can label it.
     """
     disassembler = Disassembler(emulator.cpu, labels, comments, ran=ran_in(graph))
-    # disassemble() takes an inclusive end. A gap gets an empty row, like
-    # the one before a .byte block; gaps keeps its text, by row number.
+    # disassemble() takes an inclusive end. A gap or hidden span gets an
+    # empty row; gaps keeps its display text, by row number.
     rows: list[list[str]] = []
     gaps: dict[int, str] = {}
-    position = start
-    for first, behind in ran_parts(start, end, graph if only_ran else None):
-        if first > position:
-            gaps[len(rows)] = never_ran(position, first)
+
+    def add_visible(first: int, behind: int) -> None:
+        """List one span outside the hidden ranges, with its run gaps."""
+        if first >= behind:
+            return
+        position = first
+        for part_start, part_end in ran_parts(
+            first, behind, graph if only_ran else None
+        ):
+            if part_start > position:
+                gaps[len(rows)] = never_ran(position, part_start)
+                rows.append(["", "", "", "", "", ""])
+            rows.extend(disassembler.disassemble(part_start, part_end - 1))
+            position = part_end
+        if position < behind:
+            gaps[len(rows)] = never_ran(position, behind)
             rows.append(["", "", "", "", "", ""])
-        rows.extend(disassembler.disassemble(first, behind - 1))
-        position = behind
-    if position < end:
-        gaps[len(rows)] = never_ran(position, end)
+
+    position = start
+    for name, definition in sorted(
+        (hidden_ranges or {}).items(),
+        key=lambda item: (item[1].start, item[0]),
+    ):
+        first = max(start, definition.start)
+        behind = min(end, definition.end)
+        if first >= behind:
+            continue
+        add_visible(position, first)
+        note = f": {definition.note}" if definition.note else ""
+        gaps[len(rows)] = f"... {first:04x}-{behind:04x} {name}{note} ..."
         rows.append(["", "", "", "", "", ""])
-    gutter = draw_gutter(len(rows), *arrows_in(rows, graph))
+        position = behind
+    add_visible(position, end)
+    gutter = draw_gutter(len(rows), *arrows_in(rows, graph, hidden_ranges))
     # The addresses of the global labels, sorted, to find each line's scope.
     global_addresses = sorted(
         address for address, text in (labels or {}).items() if "." not in text
@@ -1084,7 +1118,7 @@ def listing_rows(
             if mnemonic != ".byte":
                 info, _length = disassembler.collect_op_info(address)
                 target = info.get("operand_address")
-        else:  # the empty line before a .byte block, or a gap
+        else:  # the empty line before a .byte block, a gap or a hidden span
             address = None
             instruction = gaps.get(index, "")
         result.append(
@@ -1173,14 +1207,14 @@ def print_listing(rows: list[ListingRow]) -> None:
     out if no row has a label. The comments line up two spaces after the
     widest commented instruction, so .byte lines don't push them out; lines
     without a comment end with their instruction. A row without an address
-    is its gutter and, for a gap that never ran, the gap's text.
+    is its gutter and the text of its gap or hidden span.
     """
     width = max((len(row.label) for row in rows), default=0)
     instruction_width = max(
         (len(row.instruction) for row in rows if row.comment), default=0
     )
     for row in rows:
-        if row.address is None:  # the empty line before a .byte block, or a gap
+        if row.address is None:  # the empty line, a gap or a hidden span
             print((row.gutter + row.instruction).rstrip())
             continue
         name_column = f"{row.label:<{width}}  " if width else ""
@@ -1194,11 +1228,14 @@ def print_listing(rows: list[ListingRow]) -> None:
 
 
 def arrows_in(
-    rows: list[list[str]], graph: BlockGraph | None
+    rows: list[list[str]],
+    graph: BlockGraph | None,
+    hidden_ranges: dict[str, HiddenRange] | None = None,
 ) -> tuple[list[tuple[int, int]], list[int]]:
     """The arrows for the rows of a listing, as (source row, target row),
     and their lanes. An arrow starts at the last instruction of an edge's
-    source block, the leap, and ends at the edge's target."""
+    source block, the leap, and ends at the edge's target. A hidden leap
+    must not move its arrow onto an earlier visible instruction."""
     if graph is None:
         return [], []
     # Row number of each instruction, by its address; empty lines and
@@ -1212,6 +1249,13 @@ def arrows_in(
     for (source, target), _count in graph.edges.items():
         block = graph.blocks[source]
         if target == block.end:  # just the next instruction: no arrow
+            continue
+        # The block ends behind its leap. With instruction-aligned hidden
+        # bounds, a hidden last byte means the leap is hidden too.
+        if any(
+            definition.start <= block.end - 1 < definition.end
+            for definition in (hidden_ranges or {}).values()
+        ):
             continue
         leaps = [address for address in row_of if source <= address < block.end]
         if not leaps or target not in row_of:  # an end lies outside the range
