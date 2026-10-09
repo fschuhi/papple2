@@ -162,6 +162,7 @@ tests/test_listing_editor.py
 #tests/test_memory.py
 #tests/test_memory_hooks.py
 tests/test_shell.py
+tests/test_shell_hidden.py
 #tests/test_softswitches.py
 #tests/test_stack_tracking.py
 #tests/test_tiling.py
