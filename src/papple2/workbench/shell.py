@@ -70,7 +70,7 @@ from papple2.workbench.basic_blocks_analysis import (
     stack_jumps,
     write_loop_reports,
 )
-from papple2.workbench.listing_editor_prompt_toolkit import ListingRow, Place, edit_rows
+from papple2.workbench.listing_editor import ListingRow, Place, edit_rows
 from papple2.workbench.stack_tracking import RETURNS_FILE, StackTracking
 from papple2.workbench.tiling import (
     SPLIT_TILES_FILE,

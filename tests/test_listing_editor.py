@@ -9,7 +9,7 @@ from prompt_toolkit.application import create_app_session
 from prompt_toolkit.input import create_pipe_input
 from prompt_toolkit.output import DummyOutput
 
-from papple2.workbench.listing_editor_prompt_toolkit import (
+from papple2.workbench.listing_editor import (
     INSTRUCTION_CAP,
     ColumnWidths,
     ListingRow,
