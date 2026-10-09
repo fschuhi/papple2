@@ -603,8 +603,11 @@ def edit_rows(
     # The field floats over the label or operand of the bar's row. Its
     # place is set when it opens; its width follows the text.
     field_float = Float(
-        # Shown only while a field is open.
-        ConditionalContainer(field, filter=Condition(lambda: state.field is not None)),
+        # Shown only while the label or the operand field is open, not
+        # while the comment box is: it is a field of its own.
+        ConditionalContainer(
+            field, filter=Condition(lambda: state.field in ("label", "operand"))
+        ),
         top=0,
         left=0,
         width=current_field_width,

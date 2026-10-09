@@ -119,3 +119,58 @@ def test_a_commented_address_fills_the_comment_column(
     lines = disassembler.disassemble(0x0300, 0x0302)
 
     assert [line[5] for line in lines] == ["five lives", ""]
+
+
+# Code that changes itself: STA $0312 at $0300 writes into the operand of
+# LDA $a500,Y at $0310, labelled SELFMOD. $0311 is its low byte, $0312 its
+# high byte.
+SELF_MODIFYING = {
+    0x0300: [0x8D, 0x12, 0x03],  # STA $0312
+    0x0310: [0xB9, 0x00, 0xA5],  # SELFMOD: LDA $a500,Y
+}
+
+
+def load(memory: Memory, program: dict[int, list[int]]) -> None:
+    for address, data in program.items():
+        memory.load_test_data(address, data)
+
+
+@pytest.mark.parametrize(
+    "low_byte, operand", [(0x11, "SELFMOD+1"), (0x12, "SELFMOD+2")]
+)
+def test_an_operand_inside_a_labelled_instruction_that_ran_shows_an_offset(
+    memory: Memory, cpu: CPU, low_byte: int, operand: str
+) -> None:
+    load(memory, SELF_MODIFYING)
+    memory.load_test_data(0x0301, [low_byte])
+    disassembler = Disassembler(cpu, {0x0310: "SELFMOD"}, ran=lambda address: True)
+
+    lines = disassembler.disassemble(0x0300, instructions=1)
+
+    assert lines[0][4] == operand
+
+
+def test_a_label_of_its_own_wins_over_an_offset(memory: Memory, cpu: CPU) -> None:
+    load(memory, SELF_MODIFYING)
+    disassembler = Disassembler(
+        cpu, {0x0310: "SELFMOD", 0x0312: "HIGH"}, ran=lambda address: True
+    )
+
+    lines = disassembler.disassemble(0x0300, instructions=1)
+
+    assert lines[0][4] == "HIGH"
+
+
+def test_no_offset_into_a_labelled_byte_that_never_ran(
+    memory: Memory, cpu: CPU
+) -> None:
+    # As in Lode Runner's zero page: $1e is sprite_num, a data byte. Read
+    # as an opcode, $b9 would make a three-byte instruction reaching $1f.
+    # Without a run that executed $1e, STA $1f stays as it is.
+    memory.load_test_data(0x001E, [0xB9])
+    memory.load_test_data(0x0300, [0x85, 0x1F])  # STA $1f
+    disassembler = Disassembler(cpu, {0x001E: "sprite_num"})
+
+    lines = disassembler.disassemble(0x0300, instructions=1)
+
+    assert lines[0][4] == "$1f"

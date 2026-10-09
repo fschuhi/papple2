@@ -36,6 +36,7 @@ class Disassembler:
         labels: dict[int, str] | None = None,
         comments: dict[int, str] | None = None,
         is_code: Callable[[int], bool] = lambda address: True,
+        ran: Callable[[int], bool] = lambda address: False,
     ) -> None:
         self.cpu = cpu
         # is_code(address) decides whether an address is disassembled as an
@@ -49,6 +50,12 @@ class Disassembler:
         # comments: the comment for an address, shown in the comment column
         # of the instruction at that address
         self.comments = comments if comments is not None else {}
+        # ran(address) says whether the code at address ran, as a run
+        # observed it; the default knows of no run. It only decides whether
+        # an operand pointing into a labelled instruction shows as label+N
+        # (see __name_of). is_code still decides how bytes are decoded:
+        # code that never ran is code all the same.
+        self.ran = ran
 
         self.ops = [(1, "???")] * 0x100
         self.setup_ops()
@@ -424,9 +431,27 @@ class Disassembler:
         return lines
 
 
+    def __name_of(self, address: int) -> str | None:
+        """The name an operand shows for address: its label; else, if
+        address lies inside an instruction that ran and has a label, that
+        label and the offset, e.g. selfmod1+2 for the high byte of
+        selfmod1's operand, where code that changes itself writes. None if
+        neither. Only code that ran counts: a data byte with a label, read
+        as an opcode, would make up an instruction around address."""
+        if address in self.labels:
+            return self.labels[address]
+        for offset in (1, 2):
+            start = address - offset
+            if start in self.labels and self.ran(start):
+                length = self.ops[self.read_byte(start)][0]
+                if offset < length:
+                    return f"{self.labels[start]}+{offset}"
+        return None
+
+
     def __replace_operand_address(self, operand: str, operand_address: int) -> str:
-        if operand_address in self.labels:
-            label = self.labels[operand_address]
+        label = self.__name_of(operand_address)
+        if label is not None:
             # absolute modes print four digits ($0010), zero-page modes two ($10);
             # try four first, so an absolute $0010 is not taken for zero page
             four_digits = hexaddr(operand_address)

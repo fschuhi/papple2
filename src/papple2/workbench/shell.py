@@ -941,7 +941,9 @@ def listing_rows(
     With graph, the jumps the run took are drawn as arrows in the gutter:
     every edge whose target is not simply the next instruction (taken
     branches, JMPs). Glides, fall-throughs and calls are not drawn. An
-    arrow is drawn only if both of its ends lie in the range.
+    arrow is drawn only if both of its ends lie in the range. And an
+    operand that points into a labelled instruction that ran, without a
+    label of its own, shows as label+N: STA .selfmod1+2.
 
     An instruction that starts before end is listed whole, even if its
     operand reaches past end. A block's end always lies behind its last
@@ -950,7 +952,7 @@ def listing_rows(
     Each instruction's row carries the address its operand names in target,
     as the disassembler works it out, so the listing editor can label it.
     """
-    disassembler = Disassembler(emulator.cpu, labels, comments)
+    disassembler = Disassembler(emulator.cpu, labels, comments, ran=ran_in(graph))
     # disassemble() takes an inclusive end.
     rows = disassembler.disassemble(start, end - 1)
     gutter = draw_gutter(len(rows), *arrows_in(rows, graph))
@@ -988,6 +990,15 @@ def listing_rows(
             )
         )
     return result
+
+
+def ran_in(graph: BlockGraph | None) -> Callable[[int], bool]:
+    """Whether an address lies in a block of graph, i.e. in code the run
+    executed. Without a graph, nothing ran."""
+    if graph is None:
+        return lambda address: False
+    blocks = list(graph.blocks.values())
+    return lambda address: any(block.start <= address < block.end for block in blocks)
 
 
 def scope_of(
