@@ -62,12 +62,18 @@ class Disassembler:
 
     # The disassembler only looks: it reads the memory list directly, past
     # the soft switches and past anything that watches the CPU's accesses.
+    # An address past $FFFF wraps round to $0000, as on the 6502: the
+    # addressing modes add an index to a base without wrapping, and in
+    # bytes that are not code, any base and index turn up.
 
     def read_byte(self, address: int) -> int:
-        return self.memory._mem[address]
+        return self.memory._mem[address & 0xFFFF]
 
     def read_word(self, address: int) -> int:
-        return self.memory._mem[address] | self.memory._mem[address + 1] << 8
+        return (
+            self.memory._mem[address & 0xFFFF]
+            | self.memory._mem[(address + 1) & 0xFFFF] << 8
+        )
 
     def setup_ops(self) -> None:
         self.ops[0x00] = (1, "BRK", None)

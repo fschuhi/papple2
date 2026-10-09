@@ -174,3 +174,18 @@ def test_no_offset_into_a_labelled_byte_that_never_ran(
     lines = disassembler.disassemble(0x0300, instructions=1)
 
     assert lines[0][4] == "$1f"
+
+
+def test_an_address_past_ffff_wraps_round(memory: Memory, cpu: CPU) -> None:
+    # LDA ($10),Y with the pointer $fff0 and Y = $20 reads at $10010,
+    # which wraps round to $0010, as on the 6502. Such bytes turn up in
+    # data decoded as code; they used to stop the listing with an
+    # IndexError.
+    memory.load_test_data(0x0010, [0xF0, 0xFF])
+    memory.load_test_data(0x0300, [0xB1, 0x10])  # LDA ($10),Y
+    cpu.Y = 0x20
+    disassembler = Disassembler(cpu)
+
+    info, _length = disassembler.collect_op_info(0x0300)
+
+    assert info["memory"] == [0x10010, 1, 0xF0]
