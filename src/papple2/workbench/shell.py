@@ -88,13 +88,20 @@ class Text(str):
     and Out[n]. As a str, it goes wherever text goes: str(), splitlines(),
     the clipboard."""
 
+    def __new__(
+            cls, text: str, display_text: str | None = None
+    ) -> "Text":
+        instance = super().__new__(cls, text)
+        instance.display_text = text if display_text is None else display_text
+        return instance
+
     def __repr__(self) -> str:
         return str(self)
 
     def _repr_pretty_(self, printer, cycle: bool) -> None:
         # IPython's own way to show an object; without it, IPython would
         # show a str subclass like any str, in quotes.
-        printer.text(str(self))
+        printer.text(self.display_text)
 
 
 def returns_text[**P](command: Callable[P, None]) -> Callable[P, Text]:
@@ -712,11 +719,21 @@ def current_listing_rows(
     )
 
 
-@returns_text
-def listing(start: int | str, end: int | str | None = None) -> None:
-    """Print the listing of the current run's memory from start up to, not
-    including, end. start and end as for current_listing_rows()."""
-    print_listing(current_listing_rows(start, end))
+def listing(start: int | str, end: int | str | None = None) -> Text:
+    """Show the current listing with location colors, retaining plain text
+    for string operations and the clipboard. Comments, arrows and collapsed
+    rows remain uncolored. Bounds as for current_listing_rows()."""
+    rows = current_listing_rows(start, end)
+    with contextlib.redirect_stdout(io.StringIO()) as printed:
+        print_listing(rows)
+    plain = printed.getvalue().rstrip("\n")
+
+    if dossier_folder is None or color_store is None:
+        return Text(plain)
+    color_store.reload()
+    with contextlib.redirect_stdout(io.StringIO()) as printed:
+        print_listing(rows, color_of=color_store.color_at)
+    return Text(plain, printed.getvalue().rstrip("\n"))
 
 
 def edit(start: int | str, end: int | str | None = None, height: int = 25) -> None:
@@ -1273,32 +1290,56 @@ def shorten_locals(instruction: str, owner: str) -> str:
     )
 
 
-def print_listing(rows: list[ListingRow]) -> None:
-    """Print the rows listing_rows() gives: gutter, address, bytes, label,
-    instruction, comment.
+# Terminal foreground colors for the dossier's supported shades.
+LISTING_COLORS = {
+    "red": "\x1b[31m",
+    "green": "\x1b[32m",
+    "yellow": "\x1b[33m",
+    "blue": "\x1b[34m",
+    "magenta": "\x1b[35m",
+    "cyan": "\x1b[36m",
+    "white": "\x1b[37m",
+}
 
-    The label column is as wide as the longest label in the rows, and left
-    out if no row has a label. The comments line up two spaces after the
-    widest commented instruction, so .byte lines don't push them out; lines
-    without a comment end with their instruction. A row without an address
-    is its gutter and the text of its gap or hidden span.
+
+def print_listing(
+    rows: list[ListingRow],
+    color_of: Callable[[int], str | None] | None = None,
+) -> None:
+    """Print listing rows, optionally colored by their starting addresses.
+
+    The label column follows the longest label. Comments align after the
+    widest commented instruction. Colors cover addresses, bytes, labels
+    and instructions, including operands and .byte contents; comments,
+    arrow gutters and collapsed rows remain uncolored.
+
+    Without color_of, print plain text, suitable for reports and copying.
     """
     width = max((len(row.label) for row in rows), default=0)
     instruction_width = max(
         (len(row.instruction) for row in rows if row.comment), default=0
     )
     for row in rows:
-        if row.address is None:  # the empty line, a gap or a hidden span
+        if row.address is None:
             print((row.gutter + row.instruction).rstrip())
             continue
         name_column = f"{row.label:<{width}}  " if width else ""
         instruction = row.instruction
         if row.comment:
-            instruction = f"{instruction:<{instruction_width}}  ; {row.comment}"
-        print(
-            f"{row.gutter}{row.address:04x}  {row.hex_bytes:<8}  "
-            f"{name_column}{instruction}".rstrip()
+            instruction = f"{instruction:<{instruction_width}}"
+        code = (
+            f"{row.address:04x}  {row.hex_bytes:<8}  "
+            f"{name_column}{instruction}"
         )
+        shade = color_of(row.address) if color_of is not None else None
+        if shade is not None:
+            # Keep alignment padding outside the color, and reset before
+            # the comment so location color does not spread into prose.
+            visible = code.rstrip()
+            padding = code[len(visible):]
+            code = LISTING_COLORS[shade] + visible + "\x1b[0m" + padding
+        comment = f"  ; {row.comment}" if row.comment else ""
+        print(f"{row.gutter}{code}{comment}".rstrip())
 
 
 def arrows_in(

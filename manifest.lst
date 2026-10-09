@@ -163,6 +163,7 @@ tests/test_disassembler.py
 tests/test_hidden.py
 tests/test_hidden_listing.py
 #tests/test_instruction_count.py
+tests/test_listing_colors.py
 tests/test_listing_editor.py
 #tests/test_memory.py
 #tests/test_memory_hooks.py
