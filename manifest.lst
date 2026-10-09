@@ -140,6 +140,7 @@ src/papple2/workbench/shell.py
 #tests/test_basic_blocks_analysis.py
 #tests/test_breakpoints.py
 #tests/test_annotations.py
+tests/test_breadcrumbs_colors.py
 tests/test_colors.py
 #tests/test_cpu_arithmetic.py
 #tests/test_cpu_branch.py

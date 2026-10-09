@@ -62,8 +62,9 @@ no new step was taken since: Enter, or going somewhere with the picker,
 forgets where Backspace came from. Each routine remembers its window and
 bar when it is left, and opens again as it was. The breadcrumbs in the
 rule above the listing show the routines followed into, the one shown last;
-a jump within a routine adds none. Behind it, in grey, the routines f
-would go forward to. The editor keeps its height, whatever
+a jump within a routine adds none. Behind it are the routines f would go
+forward to. Every name uses its assigned color, or gray without one;
+only the current name is bold. The editor keeps its height, whatever
 the routine's length.
 
 g opens the picker over the bottom lines of the listing, PICKER_LINES high:
@@ -353,6 +354,57 @@ def future_crumbs(names: list[str], room: int) -> list[str]:
     return shown
 
 
+def breadcrumb_text(
+    entries: list[int],
+    ahead: list[int],
+    label_of: Callable[[int], str],
+    color_of: Callable[[int], str | None],
+    width: int,
+) -> FormattedText:
+    """Format the navigation path with each place's assigned color.
+
+    Only the current place is bold. Uncolored names, separators and
+    abbreviations are gray. Addresses remain attached to names while
+    fitting them to width, so equal labels do not confuse color lookup.
+    """
+    names = [label_of(entry) or f"{entry:04x}" for entry in entries]
+    shown = breadcrumbs(names, width)
+    omitted = len(shown) > len(names) or shown != names
+    visible_entries = entries[-(len(shown) - 1):] if omitted else entries
+    visible_names = shown[1:] if omitted else shown
+
+    fragments = [("class:rule", "── ")]
+    if omitted:
+        fragments.append(("class:crumb", ELLIPSIS))
+        fragments.append(("class:crumb", CRUMB_SEPARATOR))
+
+    for index, (entry, name) in enumerate(zip(visible_entries, visible_names)):
+        if index:
+            fragments.append(("class:crumb", CRUMB_SEPARATOR))
+        shade = color_of(entry)
+        style = f"ansi{shade}" if shade else "class:crumb"
+        if index == len(visible_names) - 1:
+            style += " bold"
+        fragments.append((style, name))
+
+    ahead_names = [label_of(entry) or f"{entry:04x}" for entry in ahead]
+    shown_ahead = future_crumbs(
+        ahead_names,
+        width - len(CRUMB_SEPARATOR.join(shown)),
+    )
+    for index, name in enumerate(shown_ahead):
+        fragments.append(("class:crumb", CRUMB_SEPARATOR))
+        if name == ELLIPSIS:
+            fragments.append(("class:crumb", name))
+        else:
+            shade = color_of(ahead[index])
+            style = f"ansi{shade}" if shade else "class:crumb"
+            fragments.append((style, name))
+
+    fragments.append(("class:rule", " "))
+    return FormattedText(fragments)
+
+
 @dataclass
 class EditorState:
     """The rows, their columns, the row the bar is on and the first row in
@@ -401,6 +453,7 @@ def edit_rows(
     remembered: dict[int, tuple[int, int]] | None = None,
     goto_entries: list[int] | None = None,
     callers_of: Callable[[int], list[PickerItem]] = lambda entry: [],
+    color_of: Callable[[int], str | None] = lambda entry: None,
 ) -> None:
     """Show the rows of place, inline, height lines at a time, and let
     labels and comments be edited, until q, Esc or Ctrl+C. Nothing stays on
@@ -417,7 +470,10 @@ def edit_rows(
     the caller keeps it. goto_entries are the entries the picker lists, in
     the order given; g goes to one of them through open_routine().
     callers_of(entry) gives the picker's items for the callers of the
-    routine starting at entry; u opens the picker on them."""
+    routine starting at entry; u opens the picker on them.
+    color_of(entry) gives a breadcrumb's assigned color, or None for gray.
+    Past and future names have normal weight; the current name is bold."""
+
     rows = place.load_rows()
     if not any(row.address is not None for row in rows):
         print("Nothing to show: no lines in this range.")
@@ -517,14 +573,8 @@ def edit_rows(
         )
 
     def crumbs_text() -> FormattedText:
-        """The line above the listing: the routines followed into, by the
-        labels of their entries, the one shown last, and behind it, in
-        grey, the ones f goes forward to. A jump within a routine adds no
-        crumb."""
-
-        def name_of(entry: int) -> str:
-            return label_of(entry) or f"{entry:04x}"
-
+        """The navigation path above the listing, with assigned colors.
+        A jump within a routine adds no crumb."""
         entries: list[int] = []
         for followed, _top, _cursor in [*history, (state.place, 0, 0)]:
             if not entries or entries[-1] != followed.entry:
@@ -537,22 +587,7 @@ def edit_rows(
                 ahead.append(followed.entry)
         # Room for the rule's ends: "── " before, " ─" behind.
         room = text_width() + MARKER_WIDTH - 5
-        shown = breadcrumbs([name_of(entry) for entry in entries], room)
-        shown_ahead = future_crumbs(
-            [name_of(entry) for entry in ahead],
-            room - len(CRUMB_SEPARATOR.join(shown)),
-        )
-        fragments = [("class:rule", "── ")]
-        for index, name in enumerate(shown):
-            if index:
-                fragments.append(("class:crumb", CRUMB_SEPARATOR))
-            last = index == len(shown) - 1
-            fragments.append(("class:crumb-here" if last else "class:crumb", name))
-        for name in shown_ahead:
-            fragments.append(("class:crumb-future", CRUMB_SEPARATOR))
-            fragments.append(("class:crumb-future", name))
-        fragments.append(("class:rule", " "))
-        return FormattedText(fragments)
+        return breadcrumb_text(entries, ahead, label_of, color_of, room)
 
     def go(distance: int) -> None:
         state.message = ""

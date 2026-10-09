@@ -734,6 +734,13 @@ def edit(start: int | str, end: int | str | None = None, height: int = 25) -> No
     # Stop before the editor opens, not at the first save.
     current_annotations()
 
+    def color_of(entry: int) -> str | None:
+        if color_store is None:
+            return None
+        color_store.reload()
+        first, behind = listing_range(entry)
+        return color_store.color_for_range(first, behind)
+
     def label_of(address: int) -> str:
         return current_annotations().labels.get(address, "")
 
@@ -756,6 +763,7 @@ def edit(start: int | str, end: int | str | None = None, height: int = 25) -> No
         remembered=editor_views,
         goto_entries=sorted(current_routines().graphs),
         callers_of=caller_items,
+        color_of=color_of,
     )
 
 

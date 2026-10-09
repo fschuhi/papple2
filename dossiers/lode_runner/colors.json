@@ -1,4 +1,9 @@
 {
+  "hgr_lookup": {
+    "start": "7a3e",
+    "end": "7a51",
+    "shade": "cyan"
+  },
   "sprites": {
     "start": "8336",
     "end": "83a7",
