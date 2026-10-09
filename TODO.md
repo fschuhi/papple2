@@ -34,7 +34,7 @@
 - _Important:_ `show_loops(entry)` and `show_edges(entry)` on the current run, like `show_blocks(entry)`; `print_loops()` and `print_edges()` take the objects.
 - _Orientation (2026-10-04):_ `show_returns(entry)`, the rows of `lr_returns.csv` for one routine at the prompt, with the dossier's labels. Reports carry no labels: they are rebuilt by every run, while the dossier changes by hand.
 - Views beyond an address range: a loop (by its header: its member blocks) and a routine (by its entry: the blocks of its graph in address order, with gaps between them). *(Partly done 2026-10-04: `listing(entry)` lists a routine from its lowest block to its highest, gaps included, unmarked. Open: a loop's view, and marking the gaps.)*
-- Bytes between blocks never ran, but `dis()` decodes them anyway, e.g. `LOAD_LEVEL`'s `629a` (`LDA #$00`, jumped over in the whole run) and `62b5`-`62c2`. Mark them, or show them as a gap. Where they are data, the decoding may not line up with the real instructions.
+- ~~Bytes between blocks never ran, but `dis()` decodes them anyway, e.g. `LOAD_LEVEL`'s `629a`. Mark them, or show them as a gap.~~ *(Done 2026-10-09: `listing()` and `edit()` show each gap as one row, see "Listing editor". `dis()` on memory without a run still decodes everything.)*
 - Shelved (2026-10-02): counts next to the listing, in two columns right of the instructions: the runs on a block's first line, how often the arrow was taken on its leap. Not needed for the walkthrough, where every count is known. The first real case: `628a BPL $6292` in `LOAD_LEVEL` always jumps (224 of 224, since `AND #$0f` clears bit 7), which an arrow cannot show. Build it when reading a real routine shows the need.
 - Colored ranges, in the hexdump, `listing()` and `edit()`: see `docs/editor-ideas.md`, "Color Ranges", for the design. Steps: the dossier, the hexdump, `listing()`, `edit()`.
 - _Parked (2026-10-07):_ the hexdump in Apple screen codes, for text a game keeps that way: `$00`-`$3F` inverse, `$40`-`$7F` flashing, `$80`-`$FF` normal, e.g. `hexdump(start, end, text="screen")`. Until such text turns up.
@@ -43,9 +43,14 @@
 
 ## Listing editor
 
-- ~~_First, short:_ retire the old editor, `listing_editor.py`. `make prototype` still borrows its `DATA`, `load_data` and `save_into_data`; move what it needs into the new module, or give the prototype a stand-in of its own. The old editor imports `ListingRow` from `shell.py`, which only re-exports it.~~ *(Done 2026-10-08: the old editor and `make prototype` are gone, `edit()` replaced them in practice. The new editor's module is now `listing_editor.py`, its tests `tests/test_listing_editor.py`.)*
-- ~~Go To and forward.~~ *(Done 2026-10-08: `g` opens the picker, a box over the bottom lines of the listing, `PICKER_LINES` high, listing every routine of the run; Enter goes there as Enter on a `JSR` would. Backspace keeps where it came from, `f` goes there again, shown in grey in the breadcrumbs (`crumb-future`); any new step forgets it. Every step goes through `step()` in `edit_rows()`.)*
-- _Next:_ Callers in the picker: a key (`u`?) lists the callers of the routine shown, from the run's transitions as in `show_callers()`, and Enter goes to the `JSR` in the caller. Later filtered by the paths into a watched range (see "Who writes where").
+- ~~Callers in the picker.~~ *(Done 2026-10-09: `u` opens the picker on the callers of the routine shown, one line per call site and routine holding it, e.g. `8352  JSR     r_11x2_1 (1,782)`. The picker's lines are `PickerItem`s (text, routine, row); `call_sites()` in `shell.py` computes them for `show_callers()` and `caller_items()` alike. Later filtered by the paths into a watched range, see "Who writes where".)*
+- ~~Offset labels.~~ *(Done 2026-10-09: an operand without a label of its own that points into a labelled instruction that ran shows as `label+N`, e.g. `STA .selfmod1+2`. The disassembler gets `ran` from `ran_in(graph)` in `shell.py`.)*
+- ~~Gaps that never ran.~~ *(Done 2026-10-09: `listing()` and `edit()` show only the code in the run graph's blocks; every gap is one row, grey in the editor (`gap`). `listing_rows(..., only_ran=True)`. The disassembler wraps addresses at `$FFFF` since, which the decoded data of `routine_0800` needed.)*
+- `i` and `m`: the bar to the previous and the next row with a label, within the routine shown. Movements like the arrow keys, not steps: Backspace does not undo them. (`i`/`m`, not `j`/`k`: my Karabiner Elements cross.)
+- Go To beyond routine entries, _higher priority (2026-10-09)_: e.g. `game_start` at `6056`, reached only by `JMP`. See also the item further below.
+- A key to open the gaps that never ran, in place. _Low priority._
+- Offset labels for data words: `LDA zp_hgr1_row_ptr+1` instead of a label of its own for the high byte (`zp_hgr1_row_ptr_hi`). Today `label+N` is shown only into instructions that ran, since a data byte read as an opcode would make up an instruction.
+- `arrive()` in the editor calls `row_of()` twice for the same address; once is enough.
 - The picker: typing to narrow its list, once 68 routines get long to scroll through.
 - Go To beyond routine entries: local labels (`.loop1`) need `routine_of()`, see "Reading at the prompt"; data labels such as `hgr_rows_lo` need a hexdump view in the editor, since the disassembler would read a table as code.
 - Folding labelled loops, after reading with the editor for a while: see `docs/editor-ideas.md`, "Folding". _Needs investigation first:_ does each of Lode Runner's loops span a contiguous range of rows in the listing?
@@ -55,7 +60,15 @@
 - _Parked (2026-10-08):_ paging. Terminal.app turns Option+Up/Down into plain arrow keys and keeps fn+Up/Down for its own scrolling, so PageUp/PageDown never arrive. A mapping in Terminal.app or Karabiner that sends `ESC [5~` and `ESC [6~` would do it.
 - `listing()` shows a long comment whole, wrapped onto continuation rows. Their gutter continues only the arrows that pass the row; `draw_gutter()` knows which. Needs tests of its own.
 
+## Ranges and stretches
+
+- Annotation: `hide` goes into `annotations.json`, a section `ranges`.
+- Then `hide(name, start, end, note)` and `unhide(name)`: a named range shown as one grey row, e.g. `... 2800-2832 relocation_bytes: relocation loop, overwritten after it ran ...`, in `listing()` and `edit()`. It may hide code that ran too. Two steps: the dossier with its commands and tests; then `listing_rows()`. Open: an arrow into a hidden range (dropped for now, like an arrow whose end lies outside the listing); a label inside one (kept in the dossier, not shown).
+- Code that ran and was overwritten afterwards, e.g. `JMP $2800` at `0800` and the relocation loop at `2800`-`2832`, which read `00` and `80` after the run. A listing reads memory after the run (`docs/decisions.md`), so it shows what was written there later. Option B to `hide`: `Tiling` keeps the bytes of each instruction as they ran, and the listing shows those. Harder with self-modifying code, whose bytes change between runs of the same instruction.
+
 ## Who writes where
+
+- Who overwrote Lode Runner's start-up code (`0800`-`0803`, `2800`-`2832`, parts of `5f32`-`5fa6`) after it ran: a case for `Watching`. A guess, unchecked: the loop at `5f4b`, which runs 32,768 times.
 
 - `run()` builds every instrumentation from the CPU (`instrumentation(emulator.cpu)`), while `attach()` sorts its hooks into `Memory` or `CPU` by name. Whether an instrumentation with memory hooks gets at the memory through the CPU (`conftest.py` builds `CPU(memory, ...)`) is unchecked; the shadow stack did not tell, since `StackTracking` needs no memory hooks.
 - Who writes the relocated code: an `after_write_data` hook on `$6252` names the instruction (probably the loop at `$2821`, which runs 33,024 times, the size of the file).
@@ -81,9 +94,10 @@
 ## Code tidying
 
 - Assembler: a program whose first instruction has no operand (`INX`, `NOP`, `PHA`, ...) fails with `UnboundLocalError`. In `assemble()`, `operand` is only set on lines that have one, but `find_info(mnemonic, addressmode, operand)` always passes it; later lines reuse the previous line's value by accident. Reset `operand` at the start of each line, and add a test. Found 2026-09-28; hit again 2026-10-04 by a test's stand-in program (`ENDLESS_PROGRAM` in `tests/test_shell.py` works around it).
-- The indexed modes (`abs,X`, `abs,Y`, `(zp),Y`) don't wrap at `$FFFF` as the 6502 does.
+- The indexed modes (`abs,X`, `abs,Y`, `(zp),Y`) don't wrap at `$FFFF` as the 6502 does, in the CPU. (The disassembler wraps since 2026-10-09.)
 - `read_word_bug`: the three indirect modes in `core/cpu.py` call `memory.read_pointer_word()` directly; `CPU.read_word_bug()` goes; `Memory.read_word_bug()` has already gone. No change in behaviour: the page wrap lives in `read_pointer_word()`.
 - A pass over all docstrings and comments, file by file: a docstring says what the thing is for and how to call it; no history, no dates. Known stale: the stand-ins' comments that mention "the CPU's write hook" (`RwtsHook` in `src/papple2/programs/lode_runner.py`, `MliHook` in `scripts/boot_bandits.py`), and the comment above `WINDOW_POLL_INTERVAL` in `core/emulator.py`, which leaves out the breakpoints.
+- `call_sites()` in `shell.py` builds its result with a nested list comprehension; a plain loop would read more easily. Kept for the code review: reading list comprehensions is its first topic.
 - `from papple2.workbench.shell import *` imports the module's state (`routines`, `annotations`, ...) as copies of their values at import time, which then go stale. An `__all__` in `shell.py` listing only the commands would prevent it.
 - `shell.py` holds helpers next to the commands (`write_report()`, `current_annotations()`, `address_of()`, `current_routines()`, `routine_at()`, `loop_ids()`, `innermost_loop()`, `assign_lanes()`, `draw_gutter()`, `arrows_in()`). Mark them as not part of the contract (an underscore, or a module of their own).
 - `shell.py`'s `loop_ids()` and `innermost_loop()` repeat two pieces of `write_loop_reports()`. If they drift apart, the ids at the prompt and in the reports differ; a shared helper would prevent it.

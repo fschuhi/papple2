@@ -19,6 +19,9 @@ GOALS.md
 TODO.md
 #HISTORY.md
 
+# This project is educational. LLMs should check this file to finetune their "Educator" role.
+EDUCATION.md
+
 # backlog for the editor
 docs/editor-ideas.md
 

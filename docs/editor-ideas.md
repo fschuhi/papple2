@@ -13,12 +13,11 @@ Ideas for the listing editor (`papple2.workbench.listing_editor`, opened by `edi
 *   **Semantic Jumping:** Keyboard shortcuts to move the active row forward or backward to the next/previous leap, block, loop header, or loop fallthrough.
 *   **RTS Resolution:** When on an `RTS`, query the shadow stack (`StackTracking`, `lr_returns.csv`) for all recorded return destinations, and present them as leap targets in a floating window over the listing. Selecting one leaps there, like Enter on a `JSR`.
 *   **Routine Navigation:** Shortcuts to jump to the top or bottom of the current routine.
-*   **Jump Station:** A dedicated modal or panel to register, organize, and instantly leap to meaningful targets (routines, stretches, labels). Jumping pushes the current location to breadcrumbs and centers the active row cursor on the target. *(First step done 2026-10-08: Go To, `g`, a picker with every routine of the run. The picker is meant for every list of places: callers, the targets of an `RTS`, the paths into a watched range.)*
+*   **Jump Station:** A dedicated modal or panel to register, organize, and instantly leap to meaningful targets (routines, stretches, labels). Jumping pushes the current location to breadcrumbs and centers the active row cursor on the target. *(First step done 2026-10-08: Go To, `g`, a picker with every routine of the run. The picker is meant for every list of places: callers, the targets of an `RTS`, the paths into a watched range. Callers with `u` since 2026-10-09.)*
 
 ## 3. Editing Mechanics & SourceGen Inspirations
 
 *   **Data Operand Formatting (SourceGen-style):** Highlight a raw data block and format it as `.word` pointers, `.byte` tables, or ASCII strings. Auto-generate labels for pointer targets.
-*   **Offset Math (`label+1`):** Support rendering 16-bit zero-page fetches as `LDA target` and `LDA target+1` rather than requiring distinct labels for the high byte. The dossier has such a pair today: `zp_hgr1_row_ptr` and `zp_hgr1_row_ptr_hi`.
 
 ## 4. Visuals & Rule Engines
 
@@ -30,7 +29,7 @@ Ideas for the listing editor (`papple2.workbench.listing_editor`, opened by `edi
 ## 5. Structural & Vertical Search
 
 *   **Vertical Regex:** Support regular expressions that span multiple rows (e.g., finding a `PHA` followed by another `PHA` within a 3-line window).
-*   **Inbound/Outbound Querying:** Search for all routines that `JSR` into the current routine, or all routines the current routine calls. At the prompt, `show_callers()` already does the inbound half; in the editor, e.g. on a routine's entry row.
+*   **Inbound/Outbound Querying:** Search for all routines that `JSR` into the current routine, or all routines the current routine calls. At the prompt, `show_callers()` does the inbound half; in the editor, `u` (2026-10-09). Open: the outbound half.
 *   **Scope Toggles:** Run searches locally (within the currently viewed routine) or globally (across all known routines and stretches).
 
 ## 6. Stretches (Overlapping Regions)
