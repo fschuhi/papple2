@@ -41,7 +41,7 @@ docs/reports/lr_basic_blocks_analysis/lr_split_transitions.csv
 #docs/reports/lr_basic_blocks_analysis/lr_unbroken_tiles.csv
 #docs/reports/lr_basic_blocks_analysis/lr_unbroken_transitions.csv
 
-docs/reports/lr_overview/lr_overview.txt
+#docs/reports/lr_overview/lr_overview.txt
 
 #docs/reports/lr_tiles/lr_measurements.txt
 #docs/reports/lr_tiles/lr_split_transitions.csv
@@ -109,7 +109,7 @@ src/papple2/util.py
 
 ## core
 #src/papple2/core/apple.py
-#src/papple2/core/cpu.py
+src/papple2/core/cpu.py
 #src/papple2/core/disk_image.py
 src/papple2/core/emulator.py
 src/papple2/core/memory.py
@@ -121,11 +121,12 @@ src/papple2/debug/disassembler.py
 #src/papple2/debug/stop_conditions.py
 
 ## programs
-#src/papple2/programs/lode_runner.py
+src/papple2/programs/lode_runner.py
 
 ## workbench
 src/papple2/workbench/annotations.py
 src/papple2/workbench/basic_blocks_analysis.py
+src/papple2/workbench/hidden.py
 src/papple2/workbench/listing_editor.py
 src/papple2/workbench/shell.py
 #src/papple2/workbench/stack_tracking.py
@@ -162,7 +163,7 @@ tests/test_listing_editor.py
 #tests/test_memory_hooks.py
 tests/test_shell.py
 #tests/test_softswitches.py
-tests/test_stack_tracking.py
+#tests/test_stack_tracking.py
 #tests/test_tiling.py
 #tests/test_throttle.py
 #tests/test_util.py
