@@ -605,6 +605,7 @@ def current_listing_rows(
         annotations.labels if annotations is not None else None,
         run_graph,
         annotations.comments if annotations is not None else None,
+        only_ran=True,
     )
 
 
@@ -975,6 +976,7 @@ def listing_rows(
     labels: dict[int, str] | None = None,
     graph: BlockGraph | None = None,
     comments: dict[int, str] | None = None,
+    only_ran: bool = False,
 ) -> list[ListingRow]:
     """The rows of a listing from start up to, not including, end, one per
     instruction: address, bytes, instruction. Read from the emulator's
@@ -997,10 +999,14 @@ def listing_rows(
     branches, JMPs). Glides, fall-throughs and calls are not drawn. An
     arrow is drawn only if both of its ends lie in the range. And an
     operand that points into a labelled instruction that ran, without a
-    label of its own, shows as label+N: STA .selfmod1+2. Only the code the
-    run executed is listed: each gap between its blocks is one row whose
-    instruction says which bytes never ran, e.g. "... 0803-2800: 7,677
-    bytes never ran ...". Without graph, every byte in the range is listed.
+    label of its own, shows as label+N: STA .selfmod1+2.
+
+    With only_ran, only the code in graph's blocks is listed: each gap
+    between them is one row whose instruction says which bytes never ran,
+    e.g. "... 0803-2800: 8,189 bytes never ran ...". Give it the run graph
+    (build_run_graph()), whose blocks are all the code the run executed: a
+    routine's graph leaves out the routines it calls, which ran all the
+    same. Without only_ran, every byte in the range is listed.
 
     An instruction that starts before end is listed whole, even if its
     operand reaches past end. A block's end always lies behind its last
@@ -1015,7 +1021,7 @@ def listing_rows(
     rows: list[list[str]] = []
     gaps: dict[int, str] = {}
     position = start
-    for first, behind in ran_parts(start, end, graph):
+    for first, behind in ran_parts(start, end, graph if only_ran else None):
         if first > position:
             gaps[len(rows)] = never_ran(position, first)
             rows.append(["", "", "", "", "", ""])

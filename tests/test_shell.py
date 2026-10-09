@@ -184,7 +184,7 @@ def test_listing_rows_show_each_gap_that_never_ran_as_one_row(make_emulator) -> 
     _asm, emulator = make_emulator(ENDLESS_PROGRAM)
     emulator.apple2.memory.load_test_data(0x6000, NEVER_RAN_BYTES)
 
-    rows = listing_rows(emulator, 0x6000, 0x6008, graph=never_ran_graph())
+    rows = listing_rows(emulator, 0x6000, 0x6008, graph=never_ran_graph(), only_ran=True)
 
     assert [row.address for row in rows] == [0x6000, 0x6002, None, 0x6006, None]
     assert rows[2].instruction == "... 6004-6006: 2 bytes never ran ..."
@@ -204,7 +204,7 @@ def test_print_listing_draws_the_arrow_past_a_gap(make_emulator, capsys) -> None
     _asm, emulator = make_emulator(ENDLESS_PROGRAM)
     emulator.apple2.memory.load_test_data(0x6000, NEVER_RAN_BYTES)
 
-    print_listing(listing_rows(emulator, 0x6000, 0x6007, graph=never_ran_graph()))
+    print_listing(listing_rows(emulator, 0x6000, 0x6007, graph=never_ran_graph(), only_ran=True))
 
     assert capsys.readouterr().out.splitlines() == [
         "    6000  a9 00     LDA #$00",

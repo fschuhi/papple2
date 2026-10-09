@@ -151,7 +151,7 @@ CRUMB_SEPARATOR = " > "
 # field: a label being edited. message: a refusal or a hint, in the line
 # under the listing. crumb: the routines followed into, in the line above;
 # crumb-here: the one shown; crumb-future: the ones f goes forward to. picker: the picker's box; its selected line
-# has the bar's look.
+# has the bar's look. gap: a row for bytes that never ran, kept faint.
 STYLE = Style.from_dict(
     {
         "bar": "bg:#303030",
@@ -162,6 +162,7 @@ STYLE = Style.from_dict(
         "crumb": "#9e9e9e",
         "crumb-here": "bold ansiwhite",
         "crumb-future": "#585858",
+        "gap": "#585858",
         "picker": "bg:#262626",
     }
 )
@@ -488,8 +489,12 @@ def edit_rows(
                 # The bar runs across the whole width, not only the text.
                 fragments.append(("class:bar", text.ljust(width)))
             else:
+                # A row without an address is a gap, or the empty line
+                # before a .byte block: faint, so the code stands out.
+                row = state.rows[state.top + offset]
+                style = "class:gap" if row.address is None else ""
                 fragments.append(("", " " * MARKER_WIDTH))
-                fragments.append(("", text))
+                fragments.append((style, text))
             fragments.append(("", "\n"))
         fragments.pop()  # no line break after the last line
         return FormattedText(fragments)
