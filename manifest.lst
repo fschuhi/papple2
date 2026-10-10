@@ -51,8 +51,8 @@ dossiers/lode_runner/hidden.json
 #docs/reports/lr_tiles/lr_measurements.txt
 #docs/reports/lr_tiles/lr_split_transitions.csv
 #docs/reports/lr_tiles/lr_split_tiles.csv
-#docs/reports/lr_tiles/lr_unbroken_transitions.csv
 #docs/reports/lr_tiles/lr_unbroken_tiles.csv
+#docs/reports/lr_tiles/lr_unbroken_transitions.csv
 
 #docs/reports/walkthrough/lr_loop_members.csv
 #docs/reports/walkthrough/lr_loops.csv
@@ -67,9 +67,9 @@ dossiers/lode_runner/hidden.json
 
 # working documents for finding the direction `papple2` wants to take
 #DIRECTION.md
-#docs/decisions.md
+docs/decisions.md
 #docs/instrumentation-design.md
-#docs/workbench.md
+docs/workbench.md
 
 # instrumentation architecture
 #docs/instrumentation-map.md
@@ -98,16 +98,16 @@ papple2.example.toml
 #tools/concat_files.py
 
 ### --- Scripts, outside of the controlled package src ---
-#scripts/lr_basic_blocks_analysis.py
+scripts/lr_basic_blocks_analysis.py
 #scripts/boot_bandits.py
 #scripts/boot_basic.py
 #scripts/boot_lode_runner.py
 #scripts/boot_robotron.py
 #scripts/lr_count.py
-#scripts/lr_overview.py
+scripts/lr_overview.py
 #scripts/lr_tiles.py
 #scripts/speed_test.py
-#scripts/walkthrough.py
+scripts/walkthrough.py
 
 ### --- Source in `src/` ---
 #src/papple2/util.py
@@ -116,7 +116,7 @@ papple2.example.toml
 #src/papple2/core/apple.py
 #src/papple2/core/cpu.py
 #src/papple2/core/disk_image.py
-#src/papple2/core/emulator.py
+src/papple2/core/emulator.py
 #src/papple2/core/memory.py
 #src/papple2/core/window.py
 
@@ -126,26 +126,26 @@ papple2.example.toml
 #src/papple2/debug/stop_conditions.py
 
 ## programs
-#src/papple2/programs/lode_runner.py
+src/papple2/programs/lode_runner.py
 
 ## workbench
-#src/papple2/workbench/annotations.py
-#src/papple2/workbench/basic_blocks_analysis.py
-#src/papple2/workbench/colors.py
-#src/papple2/workbench/hidden.py
-#src/papple2/workbench/listing_editor.py
-#src/papple2/workbench/shell.py
-#src/papple2/workbench/stack_tracking.py
-#src/papple2/workbench/tiling.py
+src/papple2/workbench/annotations.py
+src/papple2/workbench/basic_blocks_analysis.py
+src/papple2/workbench/colors.py
+src/papple2/workbench/hidden.py
+src/papple2/workbench/listing_editor.py
+src/papple2/workbench/shell.py
+src/papple2/workbench/stack_tracking.py
+src/papple2/workbench/tiling.py
 
 ### --- Tests and fixtures data ---
-#tests/conftest.py
+tests/conftest.py
 #tests/test_assembler.py
 #tests/test_attach.py
 #tests/test_basic_blocks_analysis.py
 #tests/test_breakpoints.py
 #tests/test_annotations.py
-#tests/test_breadcrumbs_colors.py
+tests/test_breadcrumbs_colors.py
 #tests/test_colors.py
 #tests/test_cpu_arithmetic.py
 #tests/test_cpu_branch.py
@@ -166,21 +166,21 @@ papple2.example.toml
 #tests/test_emulator_debug_keys.py
 #tests/test_emulator_silent.py
 #tests/test_hidden.py
-#tests/test_hidden_listing.py
+tests/test_hidden_listing.py
 #tests/test_instruction_count.py
-#tests/test_listing_colors.py
+tests/test_listing_colors.py
 #tests/test_listing_editor.py
 #tests/test_memory.py
 #tests/test_memory_hooks.py
-#tests/test_shell.py
-#tests/test_shell_colors.py
-#tests/test_shell_hidden.py
+tests/test_shell.py
+tests/test_shell_colors.py
+tests/test_shell_hidden.py
 #tests/test_softswitches.py
 #tests/test_stack_tracking.py
 #tests/test_tiling.py
 #tests/test_throttle.py
 #tests/test_util.py
-#tests/test_walkthrough.py
+tests/test_walkthrough.py
 
 ### --- Data ---
 # `*.BIN` are not in VCS
