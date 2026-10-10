@@ -19,9 +19,6 @@ GOALS.md
 TODO.md
 #HISTORY.md
 
-# Current refactoring target: `Workbench`
-REFACTORING.md
-
 # This project is educational. LLMs should check this file to finetune their "Educator" role.
 #EDUCATION.md
 
@@ -68,16 +65,16 @@ dossiers/lode_runner/hidden.json
 # working documents for finding the direction `papple2` wants to take
 #DIRECTION.md
 docs/decisions.md
-#docs/instrumentation-design.md
+docs/instrumentation-design.md
 docs/workbench.md
 
 # instrumentation architecture
 #docs/instrumentation-map.md
 #docs/diagrams/inner-loop.html
 #docs/diagrams/inner-loop-hooks.html
-#docs/diagrams/memory-access.svg
+docs/diagrams/memory-access.svg
 #docs/diagrams/routine_graph.svg
-#docs/diagrams/run-loop.svg
+docs/diagrams/run-loop.svg
 
 ### --- Build & Python Configuration ---
 Makefile
@@ -99,9 +96,9 @@ papple2.example.toml
 
 ### --- Scripts, outside of the controlled package src ---
 scripts/lr_basic_blocks_analysis.py
-#scripts/boot_bandits.py
+scripts/boot_bandits.py
 #scripts/boot_basic.py
-#scripts/boot_lode_runner.py
+scripts/boot_lode_runner.py
 #scripts/boot_robotron.py
 #scripts/lr_count.py
 scripts/lr_overview.py
@@ -110,20 +107,20 @@ scripts/lr_overview.py
 scripts/walkthrough.py
 
 ### --- Source in `src/` ---
-#src/papple2/util.py
+src/papple2/util.py
 
 ## core
-#src/papple2/core/apple.py
-#src/papple2/core/cpu.py
-#src/papple2/core/disk_image.py
+src/papple2/core/apple.py
+src/papple2/core/cpu.py
+src/papple2/core/disk_image.py
 src/papple2/core/emulator.py
-#src/papple2/core/memory.py
-#src/papple2/core/window.py
+src/papple2/core/memory.py
+src/papple2/core/window.py
 
 ## debug
-#src/papple2/debug/assembler.py
-#src/papple2/debug/disassembler.py
-#src/papple2/debug/stop_conditions.py
+src/papple2/debug/assembler.py
+src/papple2/debug/disassembler.py
+src/papple2/debug/stop_conditions.py
 
 ## programs
 src/papple2/programs/lode_runner.py

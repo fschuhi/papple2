@@ -8,16 +8,17 @@
 
 ## 📍 Current Session Pointer
 
-**Where we are:** `papple2` is the workbench for reverse engineering Apple II games by running them, with Lode Runner as the worked example. Dynamic first; the oracle only grades. Routines, blocks, loops and callers are available at the prompt and in the editor; what I learn stays in the dossier. Since 2026-10-09, `hide()` sets overwritten code aside as one grey row in `listing()` and `edit()`, persisted in `hidden.json`. Named color ranges persist separately in `colors.json`: every breadcrumb uses its assigned color, only the current one bold; long listings color code by location while comments and arrows stay unchanged. The editor deliberately has no line coloring. Copied listing text remains plain. Both hiding and initial coloring were checked in the real IPython workflow.
+**Where we are:** `papple2` is the workbench for reverse engineering Apple II games by running them, with Lode Runner as the worked example. Dynamic first; the oracle only grades. Routines, blocks, loops and callers are available at the prompt and in the editor; what I learn stays in the dossier. Since 2026-10-09, `hide()` sets overwritten code aside as one grey row in `listing()` and `edit()`, persisted in `hidden.json`. Named color ranges persist separately in `colors.json`: every breadcrumb uses its assigned color, only the current one bold; long listings color code by location while comments and arrows stay unchanged. The editor deliberately has no line coloring. Copied listing text remains plain. Both hiding and initial coloring were checked in the real IPython workflow. Since 2026-10-10 the state of a working session lives in one `Session` object, `shell.session`, and the commands are thin wrappers around it.
 
 **What's next, in this order:**
 
-0. Introduce `Session`: the state of `shell.py` moves into one object, with no change in functionality. Prepared, not started: `REFACTORING.md` has the plan, which is the tag `pre-session`, then step 1 in two slices (the dossier and the reports folder, then the run), then step 2 later. This reverses the decision "Commands, not classes" in `docs/decisions.md`.
+0. Architecture diagrams, made from the code and the artefacts around it by a fresh session (`TODO.md`, "Explaining `papple2`"), as one or a few PDFs to take home: for the presentation on Monday 2026-10-12, and as reference points when going into the code.
 1. Finish the agreed color views in small steps: referenced operands, Graphviz nodes, then the static memory map. The map is wanted for the presentation on Sunday, 2026-10-11; if time is tight, explicitly decide whether to move it ahead of the other views. `TODO.md`, "Coloring and memory map", carries the contracts and open presentation choices.
 2. Navigation: Ctrl-based paging bindings for my Karabiner Elements remapping, plus `i` and `m` for the previous and next label. These are different movements, not substitutes.
 3. The HGR ray: a design session first. The shape of 2026-10-08 (`Watching`, `show_watches()`, the frames of `StackTracking`, the callers filtered by the paths into a watched range) is not settled enough to build on. Actual store destinations can use the shared color system later; they are not part of static operand coloring.
-4. An architecture and design review, with slides and a revised `README.md` where needed; a code review of single modules, starting with how to read a list comprehension; a script for the live demo on Monday 2026-10-12 (which experiment, which routines in which order, which commands, when the editor).
-5. Region recovery.
+4. Slides from those diagrams where needed, a revised `README.md` where needed; a code review of single modules, starting with how to read a list comprehension; a script for the live demo on Monday 2026-10-12 (which experiment, which routines in which order, which commands, when the editor).
+5. The `Session`, step 2 (`TODO.md`, "Code tidying"): no hurry, no change in functionality.
+6. Region recovery.
 
 **Still to prune:** `README.md`. The Dev parts and the data files move out, `docs/decisions.md` gets thinned, and the Vision is rewritten (remember, appreciate, tinker, create; no history).
 
