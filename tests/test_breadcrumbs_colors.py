@@ -120,7 +120,7 @@ def test_colors_are_looked_up_by_address_not_by_label_text() -> None:
 
 
 def test_the_shell_supplies_a_live_routine_color_lookup(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fresh_session: None,
 ) -> None:
     graph = BlockGraph(
         entry=0x8336,
@@ -138,8 +138,10 @@ def test_the_shell_supplies_a_live_routine_color_lookup(
             calls_into={0x8336: 1},
         ),
     )
-    monkeypatch.setattr(shell, "annotations", SimpleNamespace(labels={}))
-    monkeypatch.setattr(shell, "color_store", Colors(tmp_path))
+    monkeypatch.setattr(
+        shell.session, "annotations", SimpleNamespace(labels={})
+    )
+    monkeypatch.setattr(shell.session, "color_store", Colors(tmp_path))
     captured = {}
 
     def capture(*args: object, **kwargs: object) -> None:

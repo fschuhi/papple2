@@ -7,6 +7,7 @@ from papple2.core.cpu import CPU
 from papple2.core.emulator import Emulator
 from papple2.debug.assembler import Assembler
 from papple2.debug.stop_conditions import at_address
+from papple2.workbench import shell
 from papple2.workbench.basic_blocks_analysis import (
     BlockGraph,
     Loop,
@@ -15,6 +16,7 @@ from papple2.workbench.basic_blocks_analysis import (
     natural_loops,
     read_split_reports,
 )
+from papple2.workbench.session import Session
 from papple2.workbench.tiling import Tiling
 
 
@@ -26,6 +28,14 @@ def memory():
 @pytest.fixture
 def cpu(memory):
     return CPU(memory, None)
+
+
+@pytest.fixture
+def fresh_session(monkeypatch):
+    """A new, empty Session as the shell's current one, with no reports
+    folder and no dossier. The shell's own Session is back after the test,
+    so the tests don't see each other's state."""
+    monkeypatch.setattr(shell, "session", Session())
 
 
 @pytest.fixture

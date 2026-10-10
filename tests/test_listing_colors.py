@@ -29,13 +29,13 @@ ROWS = [
 
 @pytest.fixture
 def colored_listing(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fresh_session: None,
 ) -> Colors:
     """Supply fixed rows, leaving run analysis outside these tests."""
     store = Colors(tmp_path)
     store.color("first", 0x6000, 0x6002, "blue")
-    monkeypatch.setattr(shell, "dossier_folder", tmp_path)
-    monkeypatch.setattr(shell, "color_store", store)
+    monkeypatch.setattr(shell.session, "dossier_folder", tmp_path)
+    monkeypatch.setattr(shell.session, "color_store", store)
 
     def current_rows(
         start: int | str, end: int | str | None = None
@@ -138,7 +138,7 @@ def test_listing_reloads_colors_changed_in_another_session(
 def test_listing_without_a_color_store_displays_plain_text(
     colored_listing: Colors, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(shell, "color_store", None)
+    monkeypatch.setattr(shell.session, "color_store", None)
 
     shown = listing(0x6000, 0x6007)
 

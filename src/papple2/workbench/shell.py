@@ -13,16 +13,17 @@ listing_rows(emulator, 0x6004, 0x6007).
 
 The reports folder is the home of an experiment: write_report() writes
 there. use_reports_folder() sets it, in a recipe or at the prompt. There is
-one at a time, kept in this module; reports from other experiments are
-read by their full paths instead.
+one at a time, kept in the module's Session object; reports from other
+experiments are read by their full paths instead.
 
 The dossier is everything we know about one program, in a folder of its
 own (dossiers/lode_runner/). Its annotations, the labels and comments, are
 one part of it, in annotations.json. use_dossier() makes a dossier the
 current one; label(), comment(), unlabel() and uncomment() change its
 annotations, and every change is saved at once. There is one current
-dossier at a time, kept in this module. Named hidden ranges are kept
-separately in hidden.json; hide() and unhide() change their definitions.
+dossier at a time, kept in the module's Session object. Named hidden
+ranges are kept separately in hidden.json; hide() and unhide() change
+their definitions.
 
 The current run is what one run left behind: the machine and the
 instrumentations that were attached to it, and, once the tiling's reports
@@ -53,9 +54,8 @@ from IPython import get_ipython
 
 from papple2.core.cpu import JMP_absolute, JMP_indirect, JSR
 from papple2.core.emulator import Emulator
-from papple2.debug.disassembler import STANDARD_LABELS, Disassembler
+from papple2.debug.disassembler import Disassembler
 from papple2.debug.stop_conditions import instruction_count_reaches
-from papple2.workbench.annotations import Annotations
 from papple2.workbench.basic_blocks_analysis import (
     BlockGraph,
     Loop,
@@ -71,9 +71,9 @@ from papple2.workbench.basic_blocks_analysis import (
     stack_jumps,
     write_loop_reports,
 )
-from papple2.workbench.colors import Colors
-from papple2.workbench.hidden import Hidden, HiddenRange
+from papple2.workbench.hidden import HiddenRange
 from papple2.workbench.listing_editor import ListingRow, Place, PickerItem, edit_rows
+from papple2.workbench.session import Session
 from papple2.workbench.stack_tracking import RETURNS_FILE, StackTracking
 from papple2.workbench.tiling import (
     SPLIT_TILES_FILE,
@@ -118,39 +118,23 @@ def returns_text[**P](command: Callable[P, None]) -> Callable[P, Text]:
     return returning
 
 
-# Where write_report() writes; None until use_reports_folder() is called.
-reports_folder: Path | None = None
+# The state of the working session: the reports folder and the current
+# dossier. Commands look `session` up when they are called, so a test can
+# replace it.
+session = Session()
 
 
 def use_reports_folder(folder: Path) -> None:
     """Make folder the reports folder, where write_report() writes. The
     folder need not exist yet."""
-    global reports_folder
-    reports_folder = Path(folder)
+    session.use_reports_folder(folder)
 
 
 def write_report(file_name: str, text: str) -> None:
     """Write text into the reports folder as file_name, creating the folder
     if needed. Stops if no reports folder is set, rather than guessing one."""
-    if reports_folder is None:
-        raise RuntimeError("no reports folder set; call use_reports_folder() first")
-    path = reports_folder / file_name
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8")
+    path = session.write_report(file_name, text)
     print(f"wrote {path}")
-
-
-# The current dossier's folder, and the annotations read from it; None
-# until use_dossier() is called.
-dossier_folder: Path | None = None
-annotations: Annotations | None = None
-
-# The current dossier's named hidden ranges, stored separately from its
-# labels and comments. None until use_dossier() is called.
-hidden: Hidden | None = None
-
-# The current dossier's color definitions; views share their lookup.
-color_store: Colors | None = None
 
 
 def use_dossier(folder: Path) -> None:
@@ -159,67 +143,27 @@ def use_dossier(folder: Path) -> None:
     Apple II's standard labels; after that, they are left alone, so a
     removed one doesn't come back. Opening hidden ranges and colors writes
     nothing."""
-    global dossier_folder, annotations, hidden, color_store
-    dossier_folder = Path(folder)
-    annotations = Annotations(dossier_folder)
-    hidden = Hidden(dossier_folder)
-    color_store = Colors(dossier_folder)
-    if not annotations.path.exists():
-        annotations.add_labels(STANDARD_LABELS)
-
-
-def current_annotations() -> Annotations:
-    """The current dossier's annotations. Stops if no dossier is open."""
-    if annotations is None:
-        raise RuntimeError("no dossier open; call use_dossier() first")
-    return annotations
-
-
-def refresh_annotations() -> None:
-    """Read the current dossier's annotations from the file again, so that
-    labels and comments given in another session show too. Without an open
-    dossier, nothing happens."""
-    if annotations is not None:
-        annotations.reload()
-
-
-def address_of(place: int | str) -> int:
-    """place itself if it is an address; if it is a label, the address the
-    current dossier gives it. A label names one address only: the dossier
-    refuses a text used twice."""
-    if isinstance(place, int):
-        return place
-    for labelled, text in current_annotations().labels.items():
-        if text == place:
-            return labelled
-    raise ValueError(f"no label {place} in the dossier")
+    session.use_dossier(folder)
 
 
 def label(address: int, text: str) -> None:
     """Give address the label text in the current dossier."""
-    current_annotations().label(address, text)
+    session.current_annotations().label(address, text)
 
 
 def unlabel(address: int) -> None:
     """Remove address's label from the current dossier."""
-    current_annotations().unlabel(address)
+    session.current_annotations().unlabel(address)
 
 
 def comment(address: int, text: str) -> None:
     """Give address the comment text in the current dossier."""
-    current_annotations().comment(address, text)
+    session.current_annotations().comment(address, text)
 
 
 def uncomment(address: int) -> None:
     """Remove address's comment from the current dossier."""
-    current_annotations().uncomment(address)
-
-
-def current_hidden() -> Hidden:
-    """The current dossier's hidden ranges. Stops if no dossier is open."""
-    if dossier_folder is None or hidden is None:
-        raise RuntimeError("no dossier open; call use_dossier() first")
-    return hidden
+    session.current_annotations().uncomment(address)
 
 
 def hide(name: str, start: int | str, end: int | str, note: str) -> None:
@@ -230,21 +174,14 @@ def hide(name: str, start: int | str, end: int | str, note: str) -> None:
     Labels are read afresh before the bounds are resolved, so labels given
     in another session can be used too. No current run is required.
     """
-    store = current_hidden()
-    refresh_annotations()
-    store.hide(name, address_of(start), address_of(end), note)
+    store = session.current_hidden()
+    session.refresh_annotations()
+    store.hide(name, session.address_of(start), session.address_of(end), note)
 
 
 def unhide(name: str) -> None:
     """Remove a named hidden range from the current dossier."""
-    current_hidden().unhide(name)
-
-
-def current_colors() -> Colors:
-    """The current dossier's colors. Stops if no dossier is open."""
-    if dossier_folder is None or color_store is None:
-        raise RuntimeError("no dossier open; call use_dossier() first")
-    return color_store
+    session.current_hidden().unhide(name)
 
 
 def color(
@@ -256,20 +193,20 @@ def color(
     replaces its definition; overlaps are allowed. No current run is
     required. For a routine, use color(name, *to_range(routine), shade).
     """
-    store = current_colors()
-    refresh_annotations()
-    store.color(name, address_of(start), address_of(end), shade)
+    store = session.current_colors()
+    session.refresh_annotations()
+    store.color(name, session.address_of(start), session.address_of(end), shade)
 
 
 def uncolor(name: str) -> None:
     """Remove a named color range from the current dossier."""
-    current_colors().uncolor(name)
+    session.current_colors().uncolor(name)
 
 
 @returns_text
 def colors() -> None:
     """Show the current dossier's color definitions in address order."""
-    store = current_colors()
+    store = session.current_colors()
     store.reload()
     if not store.ranges:
         print("no color ranges")
@@ -294,10 +231,10 @@ def to_range(
     end, resolve both bounds as addresses or labels; no run is required.
     Labels are read afresh before resolution.
     """
-    refresh_annotations()
+    session.refresh_annotations()
     if end is None:
         return listing_range(start)
-    return address_of(start), address_of(end)
+    return session.address_of(start), session.address_of(end)
 
 
 # The current run: the program setup it ran, the machine as the run left
@@ -385,9 +322,11 @@ def label_routines() -> None:
     with a label keep it, so names given by hand stay. A global label at
     every entry keeps local labels from belonging to the routine above.
     Without an open dossier, nothing happens."""
-    if annotations is None or routines is None:
+    if session.annotations is None or routines is None:
         return
-    annotations.add_labels({entry: f"routine_{entry:04x}" for entry in routines.graphs})
+    session.annotations.add_labels(
+        {entry: f"routine_{entry:04x}" for entry in routines.graphs}
+    )
 
 
 def run(
@@ -442,18 +381,18 @@ def tiling_reports() -> None:
         raise RuntimeError(
             "the current run had no Tiling attached; run(program, n, Tiling)"
         )
-    if reports_folder is None:
+    if session.reports_folder is None:
         raise RuntimeError("no reports folder set; call use_reports_folder() first")
     # The emulator counts from 0, so emulator.instructions is what ran while
     # the tiling was attached.
     tilings[0].write_reports(
-        reports_folder, run_emulator.instructions, len(run_rwts.log)
+        session.reports_folder, run_emulator.instructions, len(run_rwts.log)
     )
     set_current_run(
         run_emulator,
         run_program.LOAD_ADDRESS,
-        reports_folder / SPLIT_TILES_FILE,
-        reports_folder / SPLIT_TRANSITIONS_FILE,
+        session.reports_folder / SPLIT_TILES_FILE,
+        session.reports_folder / SPLIT_TRANSITIONS_FILE,
     )
 
 
@@ -473,16 +412,16 @@ def stack_tracking_reports() -> None:
             "the current run had no StackTracking attached; "
             "run(program, n, StackTracking)"
         )
-    if reports_folder is None:
+    if session.reports_folder is None:
         raise RuntimeError("no reports folder set; call use_reports_folder() first")
-    trackings[0].write_reports(reports_folder)
+    trackings[0].write_reports(session.reports_folder)
     if routines is not None:
         set_current_run(
             run_emulator,
             run_program.LOAD_ADDRESS,
-            reports_folder / SPLIT_TILES_FILE,
-            reports_folder / SPLIT_TRANSITIONS_FILE,
-            returns=reports_folder / RETURNS_FILE,
+            session.reports_folder / SPLIT_TILES_FILE,
+            session.reports_folder / SPLIT_TRANSITIONS_FILE,
+            returns=session.reports_folder / RETURNS_FILE,
         )
 
 
@@ -498,7 +437,7 @@ def current_routines() -> Routines:
 def routine_at(entry: int | str) -> int:
     """The address of entry, an address or a label, if a routine of the
     current run starts there; stops if not."""
-    entry = address_of(entry)
+    entry = session.address_of(entry)
     if entry not in current_routines().graphs:
         raise ValueError(
             f"{address(entry)} is not a routine; show_routines() lists them"
@@ -509,13 +448,13 @@ def routine_at(entry: int | str) -> int:
 @returns_text
 def show_routines() -> None:
     """Every routine of the current run, with the dossier's labels."""
-    refresh_annotations()
+    session.refresh_annotations()
     found = current_routines()
     print_routines(
         found.graphs,
         found.loops_of,
         found.calls_into,
-        annotations.labels if annotations is not None else None,
+        session.annotations.labels if session.annotations is not None else None,
     )
 
 
@@ -523,13 +462,13 @@ def show_routines() -> None:
 def show_blocks(entry: int | str) -> None:
     """The blocks of the routine starting at entry, an address or a label,
     with its loops and the dossier's labels."""
-    refresh_annotations()
+    session.refresh_annotations()
     found = current_routines()
     entry = routine_at(entry)
     print_blocks(
         found.graphs[entry],
         found.loops_of[entry],
-        annotations.labels if annotations is not None else None,
+        session.annotations.labels if session.annotations is not None else None,
     )
 
 
@@ -586,8 +525,8 @@ def caller_items(entry: int) -> list[PickerItem]:
     editor's picker lists them: one line per call site and routine that
     holds it, e.g. 8352  JSR     r_11x2_1 (1,782), with the site's count.
     Enter opens that routine with the bar on the call site."""
-    refresh_annotations()
-    labels = annotations.labels if annotations is not None else {}
+    session.refresh_annotations()
+    labels = session.annotations.labels if session.annotations is not None else {}
     items = []
     for call in call_sites(entry):
         for holder in call.holders:
@@ -606,9 +545,9 @@ def show_callers(entry: int | str) -> None:
     address or a label: one line per call site, as call_sites() finds
     them, with its leap (JSR, JMP, JMP ()), how often it was taken, and
     the routines whose blocks hold the site, with the dossier's labels."""
-    refresh_annotations()
+    session.refresh_annotations()
     entry = routine_at(entry)
-    labels = annotations.labels if annotations is not None else {}
+    labels = session.annotations.labels if session.annotations is not None else {}
 
     calls = call_sites(entry)
     if not calls:
@@ -633,12 +572,12 @@ def show_routine_graph() -> None:
     paste into a browser. It doesn't open the picture itself: the system's
     viewer for SVG may be the wrong one, e.g. Edge in the Windows VM.
     Needs Graphviz's dot program."""
-    refresh_annotations()
+    session.refresh_annotations()
     found = current_routines()
     graph = routine_graph(
         found,
         routine_calls(found, run_transitions or []),
-        annotations.labels if annotations is not None else None,
+        session.annotations.labels if session.annotations is not None else None,
         routine_exits(found, run_transitions or [], run_stack_jumps),
     )
     path = graph.render(ROUTINE_GRAPH_FILE, format="svg", cleanup=True)
@@ -691,7 +630,7 @@ def listing_range(
             min(block.start for block in blocks),
             max(block.end for block in blocks),
         )
-    return address_of(start), address_of(end)
+    return session.address_of(start), session.address_of(end)
 
 
 def current_listing_rows(
@@ -701,19 +640,19 @@ def current_listing_rows(
     gives, with the arrows of the whole run and the dossier's labels,
     comments and hidden ranges. The dossier files are read first, so
     changes made in another session show too."""
-    refresh_annotations()
+    session.refresh_annotations()
     hidden_ranges = None
-    if dossier_folder is not None and hidden is not None:
-        hidden.reload()
-        hidden_ranges = hidden.ranges
+    if session.dossier_folder is not None and session.hidden is not None:
+        session.hidden.reload()
+        hidden_ranges = session.hidden.ranges
     start, end = listing_range(start, end)
     return listing_rows(
         run_emulator,
         start,
         end,
-        annotations.labels if annotations is not None else None,
+        session.annotations.labels if session.annotations is not None else None,
         run_graph,
-        annotations.comments if annotations is not None else None,
+        session.annotations.comments if session.annotations is not None else None,
         only_ran=True,
         hidden_ranges=hidden_ranges,
     )
@@ -728,11 +667,11 @@ def listing(start: int | str, end: int | str | None = None) -> Text:
         print_listing(rows)
     plain = printed.getvalue().rstrip("\n")
 
-    if dossier_folder is None or color_store is None:
+    if session.dossier_folder is None or session.color_store is None:
         return Text(plain)
-    color_store.reload()
+    session.color_store.reload()
     with contextlib.redirect_stdout(io.StringIO()) as printed:
-        print_listing(rows, color_of=color_store.color_at)
+        print_listing(rows, color_of=session.color_store.color_at)
     return Text(plain, printed.getvalue().rstrip("\n"))
 
 
@@ -749,17 +688,17 @@ def edit(start: int | str, end: int | str | None = None, height: int = 25) -> No
 
     Needs a real terminal."""
     # Stop before the editor opens, not at the first save.
-    current_annotations()
+    session.current_annotations()
 
     def color_of(entry: int) -> str | None:
-        if color_store is None:
+        if session.color_store is None:
             return None
-        color_store.reload()
+        session.color_store.reload()
         first, behind = listing_range(entry)
-        return color_store.color_for_range(first, behind)
+        return session.color_store.color_for_range(first, behind)
 
     def label_of(address: int) -> str:
-        return current_annotations().labels.get(address, "")
+        return session.current_annotations().labels.get(address, "")
 
     if end is None:
         place = routine_place(routine_at(start))
@@ -802,7 +741,7 @@ def save_edit(address: int, field: str, text: str) -> str | None:
 
     A label typed as .name is a local label: the dossier saves it by its
     full name, with the global label above it, e.g. routine_6238.loop1."""
-    dossier = current_annotations()
+    dossier = session.current_annotations()
     entries = dossier.labels if field == "label" else dossier.comments
     if text == entries.get(address, ""):
         return None
@@ -841,14 +780,14 @@ def hexdump(start: int | str, end: int | str | None = None) -> None:
     addresses or labels. start may lie anywhere in the first line, and end
     is rounded up to a full line, see hexdump_rows(). Without end, 16
     lines: one page, 256 bytes."""
-    refresh_annotations()
+    session.refresh_annotations()
     if run_emulator is None:
         raise RuntimeError("no run; call run() or set_current_run() first")
-    first = address_of(start)
+    first = session.address_of(start)
     if end is None:
         behind = first - first % HEXDUMP_WIDTH + HEXDUMP_WIDTH * HEXDUMP_LINES
     else:
-        behind = address_of(end)
+        behind = session.address_of(end)
     print_hexdump(hexdump_rows(run_emulator, first, behind))
 
 
@@ -894,9 +833,9 @@ def loop_reports(entry: int | str) -> None:
     lr_loops_<entry>.csv and lr_loop_members_<entry>.csv."""
     found = current_routines()
     entry = routine_at(entry)
-    if reports_folder is None:
+    if session.reports_folder is None:
         raise RuntimeError("no reports folder set; call use_reports_folder() first")
-    write_loop_reports(reports_folder, found.graphs[entry], found.loops_of[entry])
+    write_loop_reports(session.reports_folder, found.graphs[entry], found.loops_of[entry])
 
 
 def loop_ids(loops: dict[int, Loop]) -> dict[int, str]:

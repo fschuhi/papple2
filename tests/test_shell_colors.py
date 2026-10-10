@@ -22,12 +22,8 @@ from papple2.workbench.shell import (
 
 
 @pytest.fixture
-def no_dossier(monkeypatch: pytest.MonkeyPatch) -> None:
+def no_dossier(fresh_session: None) -> None:
     """Isolate the dossier state changed by use_dossier()."""
-    monkeypatch.setattr(shell, "dossier_folder", None)
-    monkeypatch.setattr(shell, "annotations", None)
-    monkeypatch.setattr(shell, "hidden", None)
-    monkeypatch.setattr(shell, "color_store", None)
 
 
 def test_opening_a_dossier_opens_colors_without_writing(
@@ -35,8 +31,8 @@ def test_opening_a_dossier_opens_colors_without_writing(
 ) -> None:
     use_dossier(tmp_path)
 
-    assert shell.color_store is not None
-    assert shell.color_store.ranges == {}
+    assert shell.session.color_store is not None
+    assert shell.session.color_store.ranges == {}
     assert not (tmp_path / "colors.json").exists()
 
 
@@ -47,7 +43,7 @@ def test_opening_a_dossier_reads_saved_colors(
 
     use_dossier(tmp_path)
 
-    assert shell.color_store.ranges == {
+    assert shell.session.color_store.ranges == {
         "sprites": ColorRange(0x8336, 0x8438, "blue")
     }
 
@@ -127,7 +123,7 @@ def test_color_allows_overlaps(
 
     color("stats", 0x0012, 0x0016, "blue")
 
-    assert shell.color_store.color_at(0x0012) == "magenta"
+    assert shell.session.color_store.color_at(0x0012) == "magenta"
     assert len(Colors(tmp_path).ranges) == 2
 
 
@@ -208,7 +204,7 @@ def test_switching_dossiers_does_not_carry_colors_across(
 
     use_dossier(second)
 
-    assert shell.color_store.ranges == {}
+    assert shell.session.color_store.ranges == {}
     assert not (second / "colors.json").exists()
 
     color("scores", 0x0010, 0x0014, "red")
@@ -221,7 +217,7 @@ def test_switching_dossiers_does_not_carry_colors_across(
 
     use_dossier(first)
 
-    assert shell.color_store.ranges == Colors(first).ranges
+    assert shell.session.color_store.ranges == Colors(first).ranges
 
 
 def test_to_range_resolves_explicit_bounds_without_a_run(

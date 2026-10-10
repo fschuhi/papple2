@@ -288,10 +288,9 @@ def test_print_routines_lists_every_routine_with_its_label(
 
 
 @pytest.fixture
-def no_reports_folder(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Start without a reports folder, and restore the module's after the
-    test, so the tests don't see each other's folder."""
-    monkeypatch.setattr(shell, "reports_folder", None)
+def no_reports_folder(fresh_session: None) -> None:
+    """Start without a reports folder: a fresh session has none, and the
+    shell's own is back after the test."""
 
 
 def test_write_report_writes_into_the_reports_folder(
@@ -310,11 +309,9 @@ def test_write_report_without_a_reports_folder_stops(no_reports_folder: None) ->
 
 
 @pytest.fixture
-def no_dossier(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Start without a current dossier, and restore the module's after the
-    test, so the tests don't see each other's dossier."""
-    monkeypatch.setattr(shell, "dossier_folder", None)
-    monkeypatch.setattr(shell, "annotations", None)
+def no_dossier(fresh_session: None) -> None:
+    """Start without a current dossier: a fresh session has none, and the
+    shell's own is back after the test."""
 
 
 def test_a_new_dossier_starts_with_the_standard_labels(

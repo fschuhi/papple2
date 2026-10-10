@@ -11,11 +11,8 @@ from papple2.workbench.shell import hide, unhide, use_dossier
 
 
 @pytest.fixture
-def no_dossier(monkeypatch: pytest.MonkeyPatch) -> None:
+def no_dossier(fresh_session: None) -> None:
     """Start without a dossier and restore the shell's state afterwards."""
-    monkeypatch.setattr(shell, "dossier_folder", None)
-    monkeypatch.setattr(shell, "annotations", None)
-    monkeypatch.setattr(shell, "hidden", None)
 
 
 def test_opening_a_dossier_opens_hidden_ranges_without_writing(
@@ -23,8 +20,8 @@ def test_opening_a_dossier_opens_hidden_ranges_without_writing(
 ) -> None:
     use_dossier(tmp_path)
 
-    assert shell.hidden is not None
-    assert shell.hidden.ranges == {}
+    assert shell.session.hidden is not None
+    assert shell.session.hidden.ranges == {}
     assert not (tmp_path / "hidden.json").exists()
 
 
@@ -37,7 +34,7 @@ def test_opening_a_dossier_reads_its_hidden_ranges(
 
     use_dossier(tmp_path)
 
-    assert shell.hidden.ranges == {
+    assert shell.session.hidden.ranges == {
         "relocation_bytes": HiddenRange(
             0x2800, 0x2832, "overwritten after it ran"
         )
@@ -101,7 +98,7 @@ def test_hide_refuses_an_unknown_label_without_saving(
     with pytest.raises(ValueError, match="no label missing"):
         hide("relocation_bytes", "missing", 0x2832, "overwritten")
 
-    assert shell.hidden.ranges == {}
+    assert shell.session.hidden.ranges == {}
     assert not (tmp_path / "hidden.json").exists()
 
 
@@ -140,7 +137,7 @@ def test_unhide_removes_the_saved_definition(
 
     unhide("relocation_bytes")
 
-    assert shell.hidden.ranges == {}
+    assert shell.session.hidden.ranges == {}
     assert Hidden(tmp_path).ranges == {}
 
 
@@ -176,7 +173,7 @@ def test_switching_dossiers_does_not_carry_hidden_ranges_across(
 
     use_dossier(second)
 
-    assert shell.hidden.ranges == {}
+    assert shell.session.hidden.ranges == {}
     assert not (second / "hidden.json").exists()
 
     hide("startup", 0x0800, 0x0803, "overwritten")
@@ -189,7 +186,7 @@ def test_switching_dossiers_does_not_carry_hidden_ranges_across(
 
     use_dossier(first)
 
-    assert shell.hidden.ranges == Hidden(first).ranges
+    assert shell.session.hidden.ranges == Hidden(first).ranges
 
 
 def test_hidden_commands_leave_annotations_untouched(

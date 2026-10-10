@@ -318,11 +318,9 @@ def current_listing(
     graph: BlockGraph,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    fresh_session: None,
 ) -> Path:
     """A hand-made current listing, with an isolated temporary dossier."""
-    monkeypatch.setattr(shell, "dossier_folder", None)
-    monkeypatch.setattr(shell, "annotations", None)
-    monkeypatch.setattr(shell, "hidden", None)
     monkeypatch.setattr(shell, "run_emulator", machine)
     monkeypatch.setattr(shell, "run_graph", graph)
     monkeypatch.setattr(
