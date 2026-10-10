@@ -321,10 +321,10 @@ def current_listing(
     fresh_session: None,
 ) -> Path:
     """A hand-made current listing, with an isolated temporary dossier."""
-    monkeypatch.setattr(shell, "run_emulator", machine)
-    monkeypatch.setattr(shell, "run_graph", graph)
+    monkeypatch.setattr(shell.session, "run_emulator", machine)
+    monkeypatch.setattr(shell.session, "run_graph", graph)
     monkeypatch.setattr(
-        shell,
+        shell.session,
         "routines",
         Routines(
             graphs={0x6000: graph},

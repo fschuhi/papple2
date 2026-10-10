@@ -42,7 +42,6 @@ import functools
 import io
 import re
 import subprocess
-import time
 from bisect import bisect_right
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -55,32 +54,18 @@ from IPython import get_ipython
 from papple2.core.cpu import JMP_absolute, JMP_indirect, JSR
 from papple2.core.emulator import Emulator
 from papple2.debug.disassembler import Disassembler
-from papple2.debug.stop_conditions import instruction_count_reaches
 from papple2.workbench.basic_blocks_analysis import (
     BlockGraph,
     Loop,
     Routines,
-    SplitTransition,
-    build_run_graph,
-    find_routines,
-    read_split_tiles,
-    read_returns,
-    read_split_transitions,
     routine_calls,
     routine_exits,
-    stack_jumps,
     write_loop_reports,
 )
 from papple2.workbench.hidden import HiddenRange
 from papple2.workbench.listing_editor import ListingRow, Place, PickerItem, edit_rows
 from papple2.workbench.session import Session
-from papple2.workbench.stack_tracking import RETURNS_FILE, StackTracking
-from papple2.workbench.tiling import (
-    SPLIT_TILES_FILE,
-    SPLIT_TRANSITIONS_FILE,
-    Tiling,
-    address,
-)
+from papple2.workbench.tiling import address
 
 class Text(str):
     """What a command shows, returned instead of printed. IPython shows it
@@ -237,33 +222,6 @@ def to_range(
     return session.address_of(start), session.address_of(end)
 
 
-# The current run: the program setup it ran, the machine as the run left
-# it (listing() reads its memory), its RWTS stand-in, and the
-# instrumentations that were attached, in the order given to run(). None
-# (or empty) until run() is called.
-run_program: ModuleType | None = None
-run_emulator: Emulator | None = None
-run_rwts = None
-run_instrumentations: list = []
-# The run's routines and the graph of every block it ran (listing()'s
-# arrows), built from the tiling's split reports. None until
-# tiling_reports() or set_current_run() is called.
-routines: Routines | None = None
-run_graph: BlockGraph | None = None
-# The run's split transitions, as read from its report: who leapt where,
-# and how often. show_callers() reads them. None until tiling_reports() or
-# set_current_run() is called.
-run_transitions: list[SplitTransition] | None = None
-# The run's stack jumps, (address of the RTS, target) -> how often, as
-# stack_jumps() finds them in the stack tracking's report. None until
-# set_current_run() is given that report.
-run_stack_jumps: dict[tuple[int, int], int] | None = None
-
-# The listing editor's memory: for every routine edit() showed, the first
-# row in its window and the bar's row when it was left, (top, cursor), so
-# that it opens again as it was. Forgotten with the run's routines.
-editor_views: dict[int, tuple[int, int]] = {}
-
 # How show_callers() names the leaps that lead into a routine.
 CALL_KINDS = {JSR: "JSR", JMP_absolute: "JMP", JMP_indirect: "JMP ()"}
 
@@ -297,36 +255,10 @@ def set_current_run(
     the stack tracking's report, the targets of the run's stack jumps
     become routines too. Every routine entry without a label gets one in
     the current dossier, see label_routines()."""
-    global run_emulator, routines, run_graph, run_transitions, run_stack_jumps
-    tiles = read_split_tiles(split_tiles)
-    transitions = read_split_transitions(split_transitions)
-    run_stack_jumps = (
-        stack_jumps(read_returns(returns), transitions) if returns else None
+    count = session.set_current_run(
+        emulator, start, split_tiles, split_transitions, returns
     )
-    # How often each target was entered by a stack jump.
-    entered: dict[int, int] = {}
-    for (_, target), count in (run_stack_jumps or {}).items():
-        entered[target] = entered.get(target, 0) + count
-    run_emulator = emulator
-    routines = find_routines(tiles, transitions, start, entered)
-    editor_views.clear()
-    run_graph = build_run_graph(tiles, transitions, start)
-    run_transitions = transitions
-    print(f"{len(routines.graphs)} routines")
-    label_routines()
-
-
-def label_routines() -> None:
-    """Give every entry of the current run's routines that has no label the
-    name routine_6238, after its address, in the current dossier. Entries
-    with a label keep it, so names given by hand stay. A global label at
-    every entry keeps local labels from belonging to the routine above.
-    Without an open dossier, nothing happens."""
-    if session.annotations is None or routines is None:
-        return
-    session.annotations.add_labels(
-        {entry: f"routine_{entry:04x}" for entry in routines.graphs}
-    )
+    print(f"{count} routines")
 
 
 def run(
@@ -343,57 +275,18 @@ def run(
     Each instrumentation is a class, created on the booted machine's CPU.
     run() writes nothing: the reports are the experiment's choice,
     afterwards. The routines of an earlier run are forgotten."""
-    global run_program, run_emulator, run_rwts, run_instrumentations
-    global routines, run_graph, run_transitions, run_stack_jumps
-    emulator, rwts = program.boot(binary or program.DEFAULT_BINARY, headless=True)
-    attached = [instrumentation(emulator.cpu) for instrumentation in instrumentations]
-    for instrumentation in attached:
-        emulator.attach(instrumentation)
-
-    start = time.perf_counter()
-    try:
-        emulator.run(until=instruction_count_reaches(instructions))
-    finally:
-        seconds = time.perf_counter() - start
-        for instrumentation in attached:
-            emulator.detach(instrumentation)
-    print(f"{emulator.instructions:,} instructions in {seconds:.2f} s")
-
-    run_program = program
-    run_emulator = emulator
-    run_rwts = rwts
-    run_instrumentations = attached
-    routines = None
-    run_graph = None
-    run_transitions = None
-    run_stack_jumps = None
-    editor_views.clear()
+    count, seconds = session.run(
+        program, instructions, *instrumentations, binary=binary
+    )
+    print(f"{count:,} instructions in {seconds:.2f} s")
 
 
 def tiling_reports() -> None:
     """Write the tiling reports of the current run into the reports folder,
     and build the run's routines and run graph from them: the files are the
     only connection. The run must have had Tiling attached."""
-    if run_emulator is None or run_program is None:
-        raise RuntimeError("no run; call run() first")
-    tilings = [each for each in run_instrumentations if isinstance(each, Tiling)]
-    if not tilings:
-        raise RuntimeError(
-            "the current run had no Tiling attached; run(program, n, Tiling)"
-        )
-    if session.reports_folder is None:
-        raise RuntimeError("no reports folder set; call use_reports_folder() first")
-    # The emulator counts from 0, so emulator.instructions is what ran while
-    # the tiling was attached.
-    tilings[0].write_reports(
-        session.reports_folder, run_emulator.instructions, len(run_rwts.log)
-    )
-    set_current_run(
-        run_emulator,
-        run_program.LOAD_ADDRESS,
-        session.reports_folder / SPLIT_TILES_FILE,
-        session.reports_folder / SPLIT_TRANSITIONS_FILE,
-    )
+    count = session.tiling_reports()
+    print(f"{count} routines")
 
 
 def stack_tracking_reports() -> None:
@@ -402,54 +295,16 @@ def stack_tracking_reports() -> None:
     run must have had StackTracking attached. If tiling_reports() has
     already built the run's routines, they are built again with the
     report, so that the targets of stack jumps become routines too."""
-    if run_emulator is None:
-        raise RuntimeError("no run; call run() first")
-    trackings = [
-        each for each in run_instrumentations if isinstance(each, StackTracking)
-    ]
-    if not trackings:
-        raise RuntimeError(
-            "the current run had no StackTracking attached; "
-            "run(program, n, StackTracking)"
-        )
-    if session.reports_folder is None:
-        raise RuntimeError("no reports folder set; call use_reports_folder() first")
-    trackings[0].write_reports(session.reports_folder)
-    if routines is not None:
-        set_current_run(
-            run_emulator,
-            run_program.LOAD_ADDRESS,
-            session.reports_folder / SPLIT_TILES_FILE,
-            session.reports_folder / SPLIT_TRANSITIONS_FILE,
-            returns=session.reports_folder / RETURNS_FILE,
-        )
-
-
-def current_routines() -> Routines:
-    """The current run's routines. Stops if there is no current run."""
-    if routines is None:
-        raise RuntimeError(
-            "no routines; call tiling_reports() after run(), or set_current_run()"
-        )
-    return routines
-
-
-def routine_at(entry: int | str) -> int:
-    """The address of entry, an address or a label, if a routine of the
-    current run starts there; stops if not."""
-    entry = session.address_of(entry)
-    if entry not in current_routines().graphs:
-        raise ValueError(
-            f"{address(entry)} is not a routine; show_routines() lists them"
-        )
-    return entry
+    count = session.stack_tracking_reports()
+    if count is not None:
+        print(f"{count} routines")
 
 
 @returns_text
 def show_routines() -> None:
     """Every routine of the current run, with the dossier's labels."""
     session.refresh_annotations()
-    found = current_routines()
+    found = session.current_routines()
     print_routines(
         found.graphs,
         found.loops_of,
@@ -463,8 +318,8 @@ def show_blocks(entry: int | str) -> None:
     """The blocks of the routine starting at entry, an address or a label,
     with its loops and the dossier's labels."""
     session.refresh_annotations()
-    found = current_routines()
-    entry = routine_at(entry)
+    found = session.current_routines()
+    entry = session.routine_at(entry)
     print_blocks(
         found.graphs[entry],
         found.loops_of[entry],
@@ -491,12 +346,12 @@ def call_sites(entry: int) -> list[CallSite]:
     JMPs count as callers for now: a JMP into a routine's entry may be a
     tail call, which only a shadow stack can tell apart. A site can lie in
     several routines, where code is shared, so all of them are holders."""
-    found = current_routines()
+    found = session.current_routines()
 
     # Count per site and leap, adding up in case a site has several rows.
     counts: dict[tuple[int, int], int] = {}
     blocks_of: dict[int, int] = {}
-    for row in run_transitions or []:
+    for row in session.run_transitions or []:
         if row.target_tile != entry or row.opcode not in CALL_KINDS:
             continue
         key = (row.leap_from_pc, row.opcode)
@@ -546,7 +401,7 @@ def show_callers(entry: int | str) -> None:
     them, with its leap (JSR, JMP, JMP ()), how often it was taken, and
     the routines whose blocks hold the site, with the dossier's labels."""
     session.refresh_annotations()
-    entry = routine_at(entry)
+    entry = session.routine_at(entry)
     labels = session.annotations.labels if session.annotations is not None else {}
 
     calls = call_sites(entry)
@@ -573,12 +428,12 @@ def show_routine_graph() -> None:
     viewer for SVG may be the wrong one, e.g. Edge in the Windows VM.
     Needs Graphviz's dot program."""
     session.refresh_annotations()
-    found = current_routines()
+    found = session.current_routines()
     graph = routine_graph(
         found,
-        routine_calls(found, run_transitions or []),
+        routine_calls(found, session.run_transitions or []),
         session.annotations.labels if session.annotations is not None else None,
-        routine_exits(found, run_transitions or [], run_stack_jumps),
+        routine_exits(found, session.run_transitions or [], session.run_stack_jumps),
     )
     path = graph.render(ROUTINE_GRAPH_FILE, format="svg", cleanup=True)
     print(f"wrote {path}")
@@ -623,9 +478,9 @@ def listing_range(
     With start alone, start is a routine's entry, and the range covers the
     whole routine: from its lowest block to its highest, so any gap between
     its blocks shows too, e.g. code the run never reached."""
-    found = current_routines()
+    found = session.current_routines()
     if end is None:
-        blocks = found.graphs[routine_at(start)].blocks.values()
+        blocks = found.graphs[session.routine_at(start)].blocks.values()
         return (
             min(block.start for block in blocks),
             max(block.end for block in blocks),
@@ -647,11 +502,11 @@ def current_listing_rows(
         hidden_ranges = session.hidden.ranges
     start, end = listing_range(start, end)
     return listing_rows(
-        run_emulator,
+        session.run_emulator,
         start,
         end,
         session.annotations.labels if session.annotations is not None else None,
-        run_graph,
+        session.run_graph,
         session.annotations.comments if session.annotations is not None else None,
         only_ran=True,
         hidden_ranges=hidden_ranges,
@@ -701,7 +556,7 @@ def edit(start: int | str, end: int | str | None = None, height: int = 25) -> No
         return session.current_annotations().labels.get(address, "")
 
     if end is None:
-        place = routine_place(routine_at(start))
+        place = routine_place(session.routine_at(start))
     else:
         # Turned into addresses once: the editor reloads the rows after
         # every save, and a label given as start could be the one just
@@ -716,8 +571,8 @@ def edit(start: int | str, end: int | str | None = None, height: int = 25) -> No
         label_of,
         height,
         open_routine=routine_place,
-        remembered=editor_views,
-        goto_entries=sorted(current_routines().graphs),
+        remembered=session.editor_views,
+        goto_entries=sorted(session.current_routines().graphs),
         callers_of=caller_items,
         color_of=color_of,
     )
@@ -727,7 +582,7 @@ def routine_place(entry: int) -> Place | None:
     """The routine of the current run starting at entry, as the listing
     editor shows it: the whole routine, as listing(entry) lists it. None if
     no routine starts there."""
-    if routines is None or entry not in routines.graphs:
+    if session.routines is None or entry not in session.routines.graphs:
         return None
     first, behind = listing_range(entry)
     return Place(entry, lambda: current_listing_rows(first, behind))
@@ -781,14 +636,14 @@ def hexdump(start: int | str, end: int | str | None = None) -> None:
     is rounded up to a full line, see hexdump_rows(). Without end, 16
     lines: one page, 256 bytes."""
     session.refresh_annotations()
-    if run_emulator is None:
+    if session.run_emulator is None:
         raise RuntimeError("no run; call run() or set_current_run() first")
     first = session.address_of(start)
     if end is None:
         behind = first - first % HEXDUMP_WIDTH + HEXDUMP_WIDTH * HEXDUMP_LINES
     else:
         behind = session.address_of(end)
-    print_hexdump(hexdump_rows(run_emulator, first, behind))
+    print_hexdump(hexdump_rows(session.run_emulator, first, behind))
 
 
 def hexdump_rows(emulator: Emulator, start: int, end: int) -> list[HexdumpRow]:
@@ -831,8 +686,8 @@ def loop_reports(entry: int | str) -> None:
     """Write the loop reports of the routine starting at entry, an address
     or a label, into the reports folder, with the entry in their names:
     lr_loops_<entry>.csv and lr_loop_members_<entry>.csv."""
-    found = current_routines()
-    entry = routine_at(entry)
+    found = session.current_routines()
+    entry = session.routine_at(entry)
     if session.reports_folder is None:
         raise RuntimeError("no reports folder set; call use_reports_folder() first")
     write_loop_reports(session.reports_folder, found.graphs[entry], found.loops_of[entry])

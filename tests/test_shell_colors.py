@@ -53,7 +53,7 @@ def test_color_saves_bounds_without_a_current_run(
     no_dossier: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(shell, "routines", None)
+    monkeypatch.setattr(shell.session, "routines", None)
     use_dossier(tmp_path)
 
     color("scores", 0x0010, 0x0014, "red")
@@ -225,7 +225,7 @@ def test_to_range_resolves_explicit_bounds_without_a_run(
     no_dossier: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(shell, "routines", None)
+    monkeypatch.setattr(shell.session, "routines", None)
     use_dossier(tmp_path)
     Annotations(tmp_path).label(0x8336, "sprites_start")
 
@@ -241,7 +241,7 @@ def test_to_range_takes_integer_bounds_without_a_dossier(
 def test_to_range_of_a_routine_requires_a_current_run(
     no_dossier: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(shell, "routines", None)
+    monkeypatch.setattr(shell.session, "routines", None)
 
     with pytest.raises(RuntimeError, match="set_current_run"):
         to_range(0x8336)
@@ -264,7 +264,7 @@ def test_a_routines_range_unpacks_into_color(
         predecessors={0x8336: [], 0x8344: [0x8336]},
     )
     monkeypatch.setattr(
-        shell,
+        shell.session,
         "routines",
         Routines(
             graphs={0x8336: graph},

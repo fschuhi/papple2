@@ -46,8 +46,8 @@ def test_hide_saves_address_bounds_without_a_current_run(
     no_dossier: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(shell, "run_emulator", None)
-    monkeypatch.setattr(shell, "routines", None)
+    monkeypatch.setattr(shell.session, "run_emulator", None)
+    monkeypatch.setattr(shell.session, "routines", None)
     use_dossier(tmp_path)
 
     hide("relocation_bytes", 0x2800, 0x2832, "overwritten")

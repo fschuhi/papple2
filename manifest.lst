@@ -134,6 +134,7 @@ src/papple2/workbench/basic_blocks_analysis.py
 src/papple2/workbench/colors.py
 src/papple2/workbench/hidden.py
 src/papple2/workbench/listing_editor.py
+src/papple2/workbench/session.py
 src/papple2/workbench/shell.py
 src/papple2/workbench/stack_tracking.py
 src/papple2/workbench/tiling.py

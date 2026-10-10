@@ -441,17 +441,9 @@ def test_save_edit_refuses_a_dotted_label_without_a_global_label_above(
 
 
 @pytest.fixture
-def no_run(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Start without a current run, and restore the module's after the
-    test, so the tests don't see each other's run."""
-    monkeypatch.setattr(shell, "run_program", None)
-    monkeypatch.setattr(shell, "run_emulator", None)
-    monkeypatch.setattr(shell, "run_rwts", None)
-    monkeypatch.setattr(shell, "run_instrumentations", [])
-    monkeypatch.setattr(shell, "routines", None)
-    monkeypatch.setattr(shell, "run_graph", None)
-    monkeypatch.setattr(shell, "run_transitions", None)
-    monkeypatch.setattr(shell, "run_stack_jumps", None)
+def no_run(fresh_session: None) -> None:
+    """Start without a current run: a fresh session has none, and the
+    shell's own is back after the test."""
 
 
 def make_walkthrough_current(walkthrough) -> None:
@@ -556,9 +548,9 @@ def test_routine_graph_has_a_box_per_routine_and_an_arrow_per_call(
     # Two routines: the program from 6000, without a label, and SUB. One
     # arrow: the JSR in INNER, taken six times.
     make_walkthrough_current(walkthrough)
-    calls = routine_calls(shell.routines, shell.run_transitions)
+    calls = routine_calls(shell.session.routines, shell.session.run_transitions)
 
-    graph = routine_graph(shell.routines, calls, {0x6010: "SUB"})
+    graph = routine_graph(shell.session.routines, calls, {0x6010: "SUB"})
 
     assert graph.body == [
         "\tnode [fontname=Menlo shape=box]\n",
@@ -575,7 +567,7 @@ def test_routine_graph_draws_an_exit_in_the_look_of_its_kind(
     # into SUB, taken twice. It is drawn dashed and blue, its kind named.
     make_walkthrough_current(walkthrough)
 
-    graph = routine_graph(shell.routines, {}, exits={(0x6000, 0x6010, "jmp"): 2})
+    graph = routine_graph(shell.session.routines, {}, exits={(0x6000, 0x6010, "jmp"): 2})
 
     assert graph.body[-1] == (
         '\t6000 -> 6010 [label="JMP 2" color=blue style=dashed]\n'
@@ -740,14 +732,14 @@ def test_run_attaches_the_instrumentations_and_writes_nothing(
     # Booted headless from the program's default binary.
     assert booted == [("data/bin/STAND_IN.BIN", True)]
     # Both attached, in the order given, and each saw every instruction.
-    counter, tiling = shell.run_instrumentations
+    counter, tiling = shell.session.run_instrumentations
     assert isinstance(counter, CountInstructions)
     assert isinstance(tiling, Tiling)
     assert counter.count == emulator.instructions
-    assert shell.run_emulator is emulator
+    assert shell.session.run_emulator is emulator
     # run() writes nothing, and there are no routines until the reports.
     assert list(tmp_path.iterdir()) == []
-    assert shell.routines is None
+    assert shell.session.routines is None
 
 
 def test_run_boots_from_the_binary_given(
@@ -772,7 +764,7 @@ def test_tiling_reports_write_the_reports_and_find_the_routines(
 
     assert (tmp_path / "experiment" / "lr_split_tiles.csv").exists()
     assert (tmp_path / "experiment" / "lr_split_transitions.csv").exists()
-    assert list(shell.routines.graphs) == [0x6000]
+    assert list(shell.session.routines.graphs) == [0x6000]
 
 
 def test_tiling_reports_without_a_run_stop(no_run: None) -> None:
@@ -873,12 +865,12 @@ def test_stack_tracking_reports_make_stack_jump_targets_routines(
 
     tiling_reports()
     # Before the returns: TARGET belongs to no routine.
-    assert list(shell.routines.graphs) == [0x6000, 0x6006]
+    assert list(shell.session.routines.graphs) == [0x6000, 0x6006]
 
     stack_tracking_reports()
     # After: the RTS at 600c is a stack jump, and TARGET a routine.
-    assert shell.run_stack_jumps == {(0x600C, 0x600D): 1}
-    assert list(shell.routines.graphs) == [0x6000, 0x6006, 0x600D]
+    assert shell.session.run_stack_jumps == {(0x600C, 0x600D): 1}
+    assert list(shell.session.routines.graphs) == [0x6000, 0x6006, 0x600D]
 
 
 def test_stack_tracking_reports_without_a_run_stop(no_run: None) -> None:
@@ -915,7 +907,7 @@ def hexdump_run(make_emulator, monkeypatch: pytest.MonkeyPatch, no_run: None):
     """A current run whose memory holds HEXDUMP_BYTES at $6000."""
     _, emulator = make_emulator(ENDLESS_PROGRAM)
     emulator.apple2.memory.load_test_data(0x6000, HEXDUMP_BYTES)
-    monkeypatch.setattr(shell, "run_emulator", emulator)
+    monkeypatch.setattr(shell.session, "run_emulator", emulator)
     return emulator
 
 

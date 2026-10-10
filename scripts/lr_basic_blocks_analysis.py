@@ -25,8 +25,8 @@ Run from the repo root:
 
 or in IPython, which keeps the commands of papple2.workbench.shell in its
 namespace afterwards. The run is the shell's current run: its machine,
-instrumentations, routines and run graph are kept as shell.run_emulator,
-shell.run_instrumentations, shell.routines and shell.run_graph. Lode
+instrumentations, routines and run graph are kept in shell.session, as
+run_emulator, run_instrumentations, routines and run_graph. Lode
 Runner's dossier (dossiers/lode_runner/, under git) is the current
 dossier: label(), comment(), unlabel() and uncomment() change its
 annotations at once, and listing() shows a range with the whole run's

@@ -130,7 +130,7 @@ def test_the_shell_supplies_a_live_routine_color_lookup(
         predecessors={0x8336: []},
     )
     monkeypatch.setattr(
-        shell,
+        shell.session,
         "routines",
         Routines(
             graphs={0x8336: graph},
