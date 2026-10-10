@@ -1,5 +1,7 @@
 # papple2 -- Decisions
 
+**This file is for session-to-session communication between collaborating LLMs.** The user doesn't author or check anything here. The LLMs need to make sure that they do not constrain their work too much with this file.  
+
 An entry needs a reason that cannot be seen in the code or in a test. What another document already says does not go in.
 
 ---
