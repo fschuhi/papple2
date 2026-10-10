@@ -12,6 +12,7 @@
 
 **What's next, in this order:**
 
+0. Introduce `Workbench`, see `REFACTORING.md`.
 1. Finish the agreed color views in small steps: referenced operands, Graphviz nodes, then the static memory map. The map is wanted for the presentation on Sunday, 2026-10-11; if time is tight, explicitly decide whether to move it ahead of the other views. `TODO.md`, "Coloring and memory map", carries the contracts and open presentation choices.
 2. Navigation: Ctrl-based paging bindings for my Karabiner Elements remapping, plus `i` and `m` for the previous and next label. These are different movements, not substitutes.
 3. The HGR ray: a design session first. The shape of 2026-10-08 (`Watching`, `show_watches()`, the frames of `StackTracking`, the callers filtered by the paths into a watched range) is not settled enough to build on. Actual store destinations can use the shared color system later; they are not part of static operand coloring.
