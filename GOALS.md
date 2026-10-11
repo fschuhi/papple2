@@ -12,13 +12,14 @@
 
 **What's next, in this order:**
 
-0. The static memory map, for the presentation on Monday 2026-10-12: my friend doesn't know the Apple II, and the map shows where everything lives in its 64 KB. Moved ahead of the other color views on 2026-10-11. First decide how a cell summarizes the bytes it covers, then the cheapest grid that shows the dossier's colors. `TODO.md`, "Coloring and memory map", carries the contracts and open presentation choices.
-1. Finish the other agreed color views in small steps: referenced operands, then Graphviz nodes.
-2. Navigation: Ctrl-based paging bindings for my Karabiner Elements remapping, plus `i` and `m` for the previous and next label. These are different movements, not substitutes.
-3. The HGR ray: a design session first. The shape of 2026-10-08 (`Watching`, `show_watches()`, the frames of `StackTracking`, the callers filtered by the paths into a watched range) is not settled enough to build on. Actual store destinations can use the shared color system later; they are not part of static operand coloring.
-4. The README pruning (`TODO.md`, "Explaining `papple2`"); a code review of single modules, starting with how to read a list comprehension. The slides and the script for the live demo are in `PRESENTATION.md` (2026-10-11); refine it there.
-5. The `Session`, step 2 (`TODO.md`, "Code tidying"): no hurry, no change in functionality.
-6. Region recovery.
+1. Diagrams for the editor and the listing, as data flow: where the rows come from, how ranges are hidden or skipped, where labels, comments, arrows and colors enter, and where edits go back to the dossier (`TODO.md`, "Explaining `papple2`").
+2. A diagram to replace the last Mermaid chart in `README.md`, "Emulator / Window / States".
+3. Syntax coloring, built on what the diagram of step 1 shows about where coloring enters (`TODO.md`, "Coloring and memory map").
+4. The static memory map, and colors in `hexdump()`, which has none yet (`TODO.md`, "Coloring and memory map").
+5. Revisit the walkthrough and write `walkthrough.md` (`TODO.md`, "Explaining `papple2`").
+6. Real-world examples for `Tiling` and `StackTracking` from Lode Runner, homing in with `show_routines()`, added to `walkthrough.md`.
+7. The cross reference (`TODO.md`, "Cross reference").
+8. The README pruning (`TODO.md`, "Explaining `papple2`").
 
 **Still to prune:** `README.md`. The Dev parts and the data files move out, `docs/decisions.md` gets thinned, and the Vision is rewritten (remember, appreciate, tinker, create; no history). Details, with the additions of 2026-10-11: `TODO.md`, "README pruning".
 
