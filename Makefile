@@ -81,11 +81,14 @@ ipython: $(SETUP_STAMP) ## Start IPython in the venv (e.g. %run scripts/walkthro
 	$(ACTIVATE) && ipython
 
 # --- Presentation (the diagrams in docs/diagrams/, rendered by Graphviz's dot) ---
-presentation: ## Render docs/diagrams/*.dot to PDF and PNG in tmp/presentation/
+# The SVG goes next to its source, under git, for README.md and docs/;
+# PDF and PNG go into tmp/presentation/, for slides.
+presentation: ## Render docs/diagrams/*.dot to SVG next to them, and to PDF and PNG in tmp/presentation/
 	mkdir -p tmp/presentation
 	@for f in docs/diagrams/*.dot; do \
 		name=$$(basename $$f .dot); \
-		echo "$$f -> tmp/presentation/$$name.pdf, $$name.png"; \
+		echo "$$f -> docs/diagrams/$$name.svg, tmp/presentation/$$name.pdf, $$name.png"; \
+		dot -Tsvg $$f -o docs/diagrams/$$name.svg || exit 1; \
 		dot -Tpdf $$f -o tmp/presentation/$$name.pdf || exit 1; \
 		dot -Tpng -Gdpi=200 $$f -o tmp/presentation/$$name.png || exit 1; \
 	done

@@ -13,7 +13,7 @@ digraph workbench {
     ranksep=0.45;
     bgcolor="white";
     fontname="Helvetica";
-    node [shape=box, style="rounded,filled", fontname="Menlo", fontsize=11,
+    node [shape=box, style="rounded,filled", fontname="monospace", fontsize=11,
           penwidth=1, height=0.3];
     edge [color="#5F5E5A", fontname="Helvetica", fontsize=10, fontcolor="#444441",
           arrowsize=0.7];

@@ -33,17 +33,17 @@ digraph core {
         fontname="Helvetica"; fontsize=12; labelloc="b";
         label=<<FONT POINT-SIZE="14" COLOR="#444441"><B>papple2.core</B></FONT><BR/><FONT COLOR="#5F5E5A">the machine</FONT>>;
 
-        emulator [penwidth=2, color="#444441", label=<<FONT FACE="Menlo"><B>emulator</B></FONT><BR/><FONT POINT-SIZE="10">Emulator: builds the Apple2 and the window,</FONT><BR/><FONT POINT-SIZE="10">runs the loop: breakpoints, traps, until, hooks</FONT>>];
+        emulator [penwidth=2, color="#444441", label=<<FONT FACE="monospace"><B>emulator</B></FONT><BR/><FONT POINT-SIZE="10">Emulator: builds the Apple2 and the window,</FONT><BR/><FONT POINT-SIZE="10">runs the loop: breakpoints, traps, until, hooks</FONT>>];
 
-        window [label=<<FONT FACE="Menlo">window</FONT><BR/><FONT POINT-SIZE="10">PygameWindow or NoWindow:</FONT><BR/><FONT POINT-SIZE="10">keys in, frames out</FONT>>];
+        window [label=<<FONT FACE="monospace">window</FONT><BR/><FONT POINT-SIZE="10">PygameWindow or NoWindow:</FONT><BR/><FONT POINT-SIZE="10">keys in, frames out</FONT>>];
 
-        apple [label=<<FONT FACE="Menlo">apple</FONT><BR/><FONT POINT-SIZE="10">Apple2 builds Display, Speaker,</FONT><BR/><FONT POINT-SIZE="10">SoftSwitches, Memory, CPU</FONT>>];
+        apple [label=<<FONT FACE="monospace">apple</FONT><BR/><FONT POINT-SIZE="10">Apple2 builds Display, Speaker,</FONT><BR/><FONT POINT-SIZE="10">SoftSwitches, Memory, CPU</FONT>>];
 
-        cpu [label=<<FONT FACE="Menlo">cpu</FONT><BR/><FONT POINT-SIZE="10">the 6502</FONT>>];
+        cpu [label=<<FONT FACE="monospace">cpu</FONT><BR/><FONT POINT-SIZE="10">the 6502</FONT>>];
 
-        memory [label=<<FONT FACE="Menlo">memory</FONT><BR/><FONT POINT-SIZE="10">64K, one method and hook list</FONT><BR/><FONT POINT-SIZE="10">per kind of access</FONT>>];
+        memory [label=<<FONT FACE="monospace">memory</FONT><BR/><FONT POINT-SIZE="10">64K, one method and hook list</FONT><BR/><FONT POINT-SIZE="10">per kind of access</FONT>>];
 
-        disk_image [label=<<FONT FACE="Menlo">disk_image</FONT><BR/><FONT POINT-SIZE="10">imports nothing,</FONT><BR/><FONT POINT-SIZE="10">only programs uses it</FONT>>];
+        disk_image [label=<<FONT FACE="monospace">disk_image</FONT><BR/><FONT POINT-SIZE="10">imports nothing,</FONT><BR/><FONT POINT-SIZE="10">only programs uses it</FONT>>];
 
         { rank=same; window; apple; }
 
@@ -63,7 +63,7 @@ digraph core {
                             label=" holds its Emulator:\n frame timing "];
     }
 
-    util [label="papple2.util", fontname="Menlo", fillcolor="#F1EFE8"];
+    util [label="papple2.util", fontname="monospace", fillcolor="#F1EFE8"];
     pygame [label="pygame\n(outside)", color="#B4B2A9", fontcolor="#5F5E5A",
             style="rounded,filled,dashed"];
     { rank=same; util; pygame; }

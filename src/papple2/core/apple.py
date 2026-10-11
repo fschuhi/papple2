@@ -19,6 +19,7 @@ from papple2.core.cpu import CPU
 from papple2.core.memory import Memory
 
 # Toggle this to False to restore the original "scanline" look with black gaps
+# So far, affects text output only.
 SOLID_PIXELS = True
 
 class Display:

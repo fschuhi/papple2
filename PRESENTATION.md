@@ -89,7 +89,34 @@ Slide layout: the diagram on the left, a smaller pane on the right with bullets 
 **Worth knowing if asked:**
 - How a byte reaches the screen: `STA $2000` -> `memory.write_data()` -> `write_byte()` -> `Display.update()` draws into a pygame surface -> every 1000 passes of the loop, `window.present()` flips it onto the screen. Three modules take part; a diagram of its own would help (open).
 
-### 4. The pipeline (`pipeline.png`)
+### 4. One pass of the loop (`run-loop.png`)
+
+**What I say:**
+
+> This is the heartbeat of the machine: one pass of `Emulator.run()`. It goes round millions of times; 4 million for one run of the experiment.
+>
+> First, in amber, the checks before the instruction. The breakpoints, every one of them asked, so each sees every instruction. Then the trap: if a routine is stood in for at this address, like Lode Runner's disk routine, the trap does its work and says whether it served. Then `until`: should the run stop here?
+>
+> Any of the three can stop the machine, and they all stop it the same way, through the state machine. With a window, that's a pause, as if I had pressed Ctrl-X. Without a window, the run ends.
+>
+> Then, in grey, the instruction itself. The opcode is fetched, the operation runs, and every byte it touches goes through a method that says why the CPU touches it: an operand, a pointer, data, the stack. Each passes the access on to the memory, where the soft switches and the screen live, and then calls its hooks, in blue. That's where the instrumentations listen.
+>
+> And every thousandth pass, the window gets its turn: slow down to the Apple II's pace if asked, read the keys, show the frame.
+
+**Right pane:**
+
+- amber: may I run this instruction?
+- grey: run it, byte by byte
+- blue: who hears about it
+- every 1000th pass: the window
+- three ways to stop, one way of stopping
+
+**Worth knowing if asked:**
+- Why breakpoints before traps: a breakpoint at a trap's address stops before the trap moves `PC` away.
+- Why every 1000th pass: asking pygame for events on every instruction took about a third of the windowed run time (measured 2026-09-23).
+- The memory access kinds are named for why the CPU accesses a byte, not where it is: `LDA $0100,X` touches the stack page, but it is a data read.
+
+### 5. The pipeline (`pipeline.png`)
 
 **What I say:**
 
@@ -122,13 +149,7 @@ The recipe from `scripts/lr_basic_blocks_analysis.py`: the same lines could be t
 
 ## Things to show
 
-1. **Where the run stops, in the window.** Lode Runner boots and runs 4 million instructions, the same count as the experiment, then stops as if Ctrl-X had been pressed. The next Ctrl-X continues.
-   ```
-   python scripts/boot_lode_runner.py data/bin/LODE_RUNNER.BIN --instructions 4000000
-   ```
-   - `Session.run()` always runs headless, so the experiment itself can't be watched; this is the way to show its stopping point.
-   - There's no make target for it yet.
-   - The script's docstring says the window mode with `--instructions` was never tried. Try it before the presentation.
+1. **Where the run stops, in the window.** `make boot-lode-runner-break`: Lode Runner boots and runs 4 million instructions, the same count as the experiment, then stops as if Ctrl-X had been pressed. The next Ctrl-X continues. The experiment itself always runs headless; this shows where it ends. Fits slide 4: `until` with a window is a pause.
 2. **The experiment at the prompt.** In `make ipython`:
    ```
    %run scripts/lr_basic_blocks_analysis.py
@@ -146,6 +167,6 @@ The recipe from `scripts/lr_basic_blocks_analysis.py`: the same lines could be t
 
 ## Open
 
-- A slide on how a byte reaches the screen (see slide 3).
+- A slide on how a byte reaches the screen (see slide 3). The new hi-res renderer in `apple.py` belongs there: a write redraws its byte and both neighbours, because colours smear across byte boundaries.
 - Which slides get a code snippet instead of bullets.
 - Order of slides and demos.

@@ -1,0 +1,98 @@
+// One pass of Emulator.run(): the checks before an instruction, the
+// instruction with its memory accesses and hooks, and the window's turn
+// every 1000 passes. Replaces the old run-loop.svg (pre-redesign).
+// Colours: amber = stop conditions (from papple2.debug or traps),
+// grey = the machine, blue = the hooks the instrumentations attach to,
+// white = the window. Rendered by `make presentation`.
+
+digraph run_loop {
+    rankdir=TB;
+    newrank=true;
+    compound=true;
+    size="13.3,7.5";
+    nodesep=0.35;
+    ranksep=0.32;
+    bgcolor="white";
+    fontname="Helvetica";
+    fontsize=10;
+    fontcolor="#5F5E5A";
+    labelloc="b";
+    label="\nWhile stopped with a window, no instruction runs, but the passes go on: the window is still polled, so Ctrl-X can continue.\nThe hooks (blue) are where Tiling and StackTracking listen; Emulator.attach() puts their after_* methods into these lists.";
+    node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=11,
+          fillcolor="white", color="#5F5E5A", penwidth=1, margin="0.12,0.06"];
+    edge [color="#5F5E5A", fontname="Helvetica", fontsize=10, fontcolor="#444441",
+          arrowsize=0.7];
+
+    pass [label=<<B>a pass of the loop</B>>, shape=box, style="rounded,filled",
+          fillcolor="#D3D1C7", color="#444441", penwidth=1.5];
+
+    subgraph cluster_checks {
+        label=<<B>1  before the instruction</B>  <FONT POINT-SIZE="10">only while running</FONT>>;
+        labeljust="l"; style="rounded,filled"; fillcolor="#FAEEDA"; color="#854F0B";
+        fontcolor="#633806"; fontsize=12;
+        node [color="#854F0B"];
+
+        breakpoints [label=<<B>breakpoints</B><BR/><FONT POINT-SIZE="10">every should_break(PC) is asked,</FONT><BR/><FONT POINT-SIZE="10">so each sees every instruction</FONT>>];
+        trap [label=<<B>trap at PC?</B><BR/><FONT POINT-SIZE="10">trap(emulator) serves it, e.g. the</FONT><BR/><FONT POINT-SIZE="10">RWTS hook: True = served, go on</FONT>>];
+        until [label=<<B>until(emulator)?</B><BR/><FONT POINT-SIZE="10">e.g. instruction_count_reaches(n)</FONT>>];
+        breakpoints -> trap;
+        trap -> until [label=" served, or none "];
+    }
+
+    stopped [label=<<B>stopped</B>  <FONT FACE="monospace" POINT-SIZE="10">Event('breakpoint')</FONT><BR/><FONT POINT-SIZE="10">window: a pause, Ctrl-X continues</FONT><BR/><FONT POINT-SIZE="10">(and until is dropped, so it won't stop again)</FONT><BR/><FONT POINT-SIZE="10">no window: the run ends</FONT>>,
+             fillcolor="#FAEEDA", color="#854F0B", penwidth=1.5];
+
+    breakpoints -> stopped [label=" one says True "];
+    trap -> stopped [label=" not served "];
+    until -> stopped [label=" True "];
+
+    subgraph cluster_step {
+        label=<<B>2  the instruction</B>  <FONT FACE="monospace" POINT-SIZE="10">cpu.do_next_step()</FONT>>;
+        labeljust="l"; style="rounded,filled"; fillcolor="#F1EFE8"; color="#444441";
+        fontcolor="#444441"; fontsize=12;
+
+        fetch [label=<<FONT FACE="monospace">memory.read_opcode(PC)</FONT><BR/><FONT POINT-SIZE="10">last_PC = PC, PC + 1, cycles + 2</FONT>>];
+        op [label=<<FONT FACE="monospace">ops_dispatch[opcode]()</FONT><BR/><FONT POINT-SIZE="10">the operation, with its addressing mode</FONT>>];
+        kinds [label=<<B>one kind method per access</B><BR/><FONT FACE="monospace" POINT-SIZE="10">read_opcode, read_operand, read_pointer,<BR/>read_data, read_immediate, read_stack,<BR/>read_vector, write_data, write_stack</FONT>>];
+        byte [label=<<FONT FACE="monospace">read_byte / write_byte</FONT><BR/><FONT POINT-SIZE="10">$C000-$CFFF: soft switches</FONT><BR/><FONT POINT-SIZE="10">screen areas: display.update()</FONT>>];
+        after_instruction [label=<<FONT FACE="monospace">after_instruction</FONT> hooks>,
+                           fillcolor="#E6F1FB", color="#185FA5"];
+
+        fetch -> op;
+        op -> kinds [label=" each byte it reads or writes "];
+        kinds -> byte [label=" first "];
+        byte -> after_kind [label=" then "];
+        after_kind [label=<<FONT FACE="monospace">after_&lt;kind&gt;</FONT> hooks<BR/><FONT POINT-SIZE="10">(address, value), writes also old_value</FONT>>,
+                    fillcolor="#E6F1FB", color="#185FA5"];
+        { rank=same; byte; after_kind; }
+        fetch -> kinds [style=dashed, label=" the opcode, too "];
+        op -> after_instruction [label=" when the operation is done "];
+    }
+
+    count [label=<<FONT FACE="monospace">instructions += 1</FONT>>];
+
+    subgraph cluster_window {
+        label=<<B>3  every 1000th pass</B>  <FONT POINT-SIZE="10">WINDOW_POLL_INTERVAL; the other passes skip this</FONT>>;
+        labeljust="l"; style="rounded,dashed"; color="#888780";
+        fontcolor="#444441"; fontsize=12;
+
+        throttle [label=<<B>throttle</B><BR/><FONT POINT-SIZE="10">window and speed only:</FONT><BR/><FONT POINT-SIZE="10">sleep to the Apple II's pace</FONT>>];
+        poll [label=<<FONT FACE="monospace">window.poll()</FONT><BR/><FONT POINT-SIZE="10">keys, Ctrl-X, halt</FONT><BR/><FONT POINT-SIZE="10">into the state machine</FONT>>];
+        present [label=<<FONT FACE="monospace">window.present()</FONT><BR/><FONT POINT-SIZE="10">the frame onto the screen</FONT>>];
+        { rank=same; throttle; poll; present; }
+        throttle -> poll -> present;
+    }
+
+    ends [label=<<B>run() returns</B><BR/><FONT POINT-SIZE="10">until given and stopped,</FONT><BR/><FONT POINT-SIZE="10">or halt from the window</FONT>>,
+          fillcolor="#D3D1C7", color="#444441"];
+
+    pass -> breakpoints [lhead=cluster_checks];
+    until -> fetch [lhead=cluster_step, label=" False: still running "];
+    after_instruction -> count [ltail=cluster_step];
+    count -> throttle [lhead=cluster_window, label=" passes + 1 "];
+    present -> ends [ltail=cluster_window, style=dashed];
+    present -> pass [ltail=cluster_window, constraint=false, label=" next pass "];
+    stopped -> ends [style=dashed];
+    stopped -> throttle [lhead=cluster_window, style=dashed, constraint=false,
+                         label=" window: passes go on "];
+}

@@ -13,19 +13,7 @@ Since 2026-10-02, `papple2.workbench` holds two kinds of packages, connected by 
 - **The shell** (`shell.py`) holds the commands: the functions meant for the prompt and for experiments. It keeps them in a `Session` (`session.py`), the one at `shell.session`: the current reports folder, dossier and run, one of each at a time. Each command is a thin wrapper that prints what the `Session` gives it. `listing_rows()` builds a range from memory after the run, with labels in the operands and in a column of their own, comments behind the instructions, and the jumps the run took drawn as arrows in a gutter on the left; `listing()` shows the current run with the dossier's labels, comments, hidden ranges and location colors; `edit()` opens the same rows in the listing editor, but uses colors in the breadcrumbs rather than the instruction lines. `hexdump()` shows the memory as bytes and text. Commands that show something return text, which IPython shows as `Out[n]` and keeps in `_`; `clip()` copies the plain text.
 - **The dossier** is everything we know about one program, in a folder of its own: `dossiers/lode_runner/`, under git (unlike `data/`). It holds `annotations.json` for labels and comments, `hidden.json` for named hidden ranges, and `colors.json` for named color ranges. Each store reloads before a change and saves changes immediately; commands reload before showing their contents, so two IPython sessions can work on one dossier. `use_dossier()` opens all three stores and starts new annotations with the Apple II's standard labels. Opening the hidden and color stores writes nothing. Unlike the reports, which every run rebuilds, these definitions persist across runs. Labels given by hand stay; routine entries without a label receive a generated label when the run's routines are built. Snapshots (outside git) may follow.
 
-```mermaid
-graph LR
-    EXP["experiment<br/>scripts/lr_basic_blocks_analysis.py"] --> RUN["run(lode_runner, n, Tiling, StackTracking)"]
-    RUN --> TILING["Tiling<br/>instrumentation"]
-    RUN --> STACK["StackTracking<br/>instrumentation"]
-    STACK --> SREP["stack_tracking_reports()<br/>lr_returns.csv"]
-    TILING --> TREP["tiling_reports()"]
-    TREP --> REPORTS["docs/reports/lr_basic_blocks_analysis/<br/>tiles, transitions, measurements"]
-    REPORTS --> BBA["basic_blocks_analysis<br/>routines, graph, dominators, loops"]
-    BBA --> LOOPS["loop_reports(entry)<br/>one pair of CSVs per routine"]
-    BBA --> SHELL["show_routines(), show_blocks(), listing(), edit()<br/>at the prompt"]
-    SHELL <--> DOSSIER["dossiers/lode_runner/<br/>annotations, hidden ranges, colors, under git"]
-```
+<p align="center"><img src="diagrams/pipeline.svg" alt="The workbench's pipeline, from a run to the commands" width="100%"></p>
 
 `scripts/walkthrough.py` takes a tiny program through the same pipeline: twenty bytes, two nested loops and one `JSR`, small enough to follow by hand; its labels are still typed into `NAMES`. Everything the pipeline finds is observed structure: only what ran in this run.
 

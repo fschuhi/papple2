@@ -1,6 +1,6 @@
 # Instrumentation design
 
-**Status:** decided, and implemented up to the tag `core-complete`. Section 9 lists what is still open. The old design this one replaces is drawn in `docs/instrumentation-map.md` (the tag `pre-redesign`).
+**Status:** decided, and implemented up to the tag `core-complete`. Section 9 lists what is still open. The old design this one replaces is at the tag `pre-redesign`.
 
     **Purpose:** one place for the rules that span `Emulator`, `CPU` and `Memory`, so that they are not spread over comments in several modules.
 

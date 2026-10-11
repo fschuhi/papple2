@@ -73,22 +73,25 @@ docs/workbench.md
 
 # instrumentation architecture
 # dynamic html to explain hooks for various 6502 operations
-#docs/instrumentation-map.md
 #docs/diagrams/inner-loop.html
 #docs/diagrams/inner-loop-hooks.html
 
 # output from `show_routines()``
 #docs/diagrams/routine_graph.svg
 
-# presentation diagrams
+# architecture diagrams (dot)
 docs/diagrams/core.dot
 docs/diagrams/packages.dot
 docs/diagrams/pipeline.dot
+docs/diagrams/run-loop.dot
 docs/diagrams/workbench.svg
 
-# older schematics
-docs/diagrams/memory-access.svg
-docs/diagrams/run-loop.svg
+# architecture diagrams (svg, for GitHub)
+#docs/diagrams/core.svg
+#docs/diagrams/packages.svg
+#docs/diagrams/pipeline.svg
+#docs/diagrams/run-loop.svg
+#docs/diagrams/workbench.svg
 
 ### --- Build & Python Configuration ---
 Makefile

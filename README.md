@@ -28,7 +28,7 @@
 
 `papple2` is a small Apple II emulator written in Python. It is not meant to compete with full emulators on speed or completeness. Its purpose is to be a debugging instrument: a machine I can stop, inspect, and script from Python while it runs Apple II code.
 
-The core comes from ApplePy by James Tauber, ported to Python 3 and stripped of what I did not need (the socket interface). Around that core sit an assembler and disassembler, stand-ins for the disk routines two of the games call, and a speed control. The instruments that make it a debugging tool were rebuilt from scratch between 2026-09-27 and 2026-10-01, from the tag `pre-redesign` to the tag `core-complete`: memory access by kind with hook lists, `after_instruction`, and experiments that attach by method name. The decisions are in `docs/instrumentation-design.md`; the old design is drawn in `docs/instrumentation-map.md`. On top of it, a workbench for reverse engineering has begun (2026-10-02): an instrumentation records what ran, and analyses recover its structure from the recorded reports. Its first pipeline finds the routines and loops of Lode Runner's attract play (see "Workbench" below). It follows `DIRECTION.md`: dynamic analysis first, static disassembly to fill the holes. An IPython front end has begun (`docs/workbench.md`): an experiment run with `%run` leaves its run in the session, and the commands of `papple2.workbench.shell` show its routines, blocks, code and memory there. Since 2026-10-04 the experiments are written with the same commands, and the commands are the contract between `papple2`'s developers and its reverse engineers. Since 2026-10-03 what we learn stays: labels and comments given at the prompt or in the listing editor go into the program's dossier, a file under git, and every later listing shows them, also in a second IPython session working on the same dossier. The reverse engineering itself is meant to happen with an LLM reading reports, without `papple2`'s code: the `lr-` targets are experiments whose reports, under git, carry meaning on their own, while IPython is for working inside one of them.
+The core comes from ApplePy by James Tauber, ported to Python 3 and stripped of what I did not need (the socket interface). Around that core sit an assembler and disassembler, stand-ins for the disk routines two of the games call, and a speed control. The instruments that make it a debugging tool were rebuilt from scratch between 2026-09-27 and 2026-10-01, from the tag `pre-redesign` to the tag `core-complete`: memory access by kind with hook lists, `after_instruction`, and experiments that attach by method name. The decisions are in `docs/instrumentation-design.md`. On top of it, a workbench for reverse engineering has begun (2026-10-02): an instrumentation records what ran, and analyses recover its structure from the recorded reports. Its first pipeline finds the routines and loops of Lode Runner's attract play (see "Workbench" below). It follows `DIRECTION.md`: dynamic analysis first, static disassembly to fill the holes. An IPython front end has begun (`docs/workbench.md`): an experiment run with `%run` leaves its run in the session, and the commands of `papple2.workbench.shell` show its routines, blocks, code and memory there. Since 2026-10-04 the experiments are written with the same commands, and the commands are the contract between `papple2`'s developers and its reverse engineers. Since 2026-10-03 what we learn stays: labels and comments given at the prompt or in the listing editor go into the program's dossier, a file under git, and every later listing shows them, also in a second IPython session working on the same dossier. The reverse engineering itself is meant to happen with an LLM reading reports, without `papple2`'s code: the `lr-` targets are experiments whose reports, under git, carry meaning on their own, while IPython is for working inside one of them.
 
 **Core philosophy:**
 
@@ -45,21 +45,21 @@ Four programs boot in `papple2`: the Apple II's own Monitor and Integer BASIC, a
 
 **Lode Runner** (Doug Smith, Broderbund, 1983) is the worked example. XekriRedmane's literate-source disassembly, published at https://github.com/XekriRedmane/lode_runner_reveng, assembles byte for byte into the original, so it serves as the oracle: whatever `papple2` finds out by running the game is checked against it, and never fed into the tools. `papple2` plays real games from the original disk image, through a stand-in for the game's disk routine. All 150 levels, a celebration of Doug Smith's creativity, are on a single page: https://fschuhi.github.io/a2-lode-runner/levels.html.
 
-![Lode Runner in a real game, running under papple2](docs/images/lode-runner-play.jpg)
+<p align="center"><img src="docs/images/lode-runner-play.jpg" alt="Lode Runner in a real game, running under papple2" width="560"></p>
 
-*Lode Runner in a real game, played in `papple2`'s window from the original disk image (`make boot-lode-runner-throttled`).*
+<p align="center"><em>Lode Runner in a real game, played in <code>papple2</code>'s window from the original disk image (<code>make boot-lode-runner-throttled</code>).</em></p>
 
 **Bandits** (Sirius Software, 1982, by the Ngo brothers) runs from Total Replay's ProDOS files, through a stand-in for ProDOS's MLI, from its cutscene into the game and on to Game Over. It has not been disassembled yet, and it is expected to be full of self-modifying code: the dream project in `DIRECTION.md`.
 
-![Bandits title screen with the bandits and their scores, running under papple2](docs/images/bandits-title.jpg)
+<p align="center"><img src="docs/images/bandits-title.jpg" alt="Bandits title screen with the bandits and their scores, running under papple2" width="560"></p>
 
-*Bandits' title screen with the bandits and their scores, from Total Replay's files (`make boot-bandits`).*
+<p align="center"><em>Bandits' title screen with the bandits and their scores, from Total Replay's files (<code>make boot-bandits</code>).</em></p>
 
 **Robotron 2084** (Atari, 1983) was `papple2`'s first test case, researched in 2019 and 2020: the public project https://github.com/fschuhi/Robotron_2084, and a thread on 6502.org. It has not been completely disassembled either.
 
-![Robotron 2084 splash screen running under papple2](docs/images/robotron-splash.jpg)
+<p align="center"><img src="docs/images/robotron-splash.jpg" alt="Robotron 2084 splash screen running under papple2" width="560"></p>
 
-*The Robotron 2084 splash screen, running through `make boot-robotron` -- `papple2`'s first test case.*
+<p align="center"><em>The Robotron 2084 splash screen, running through <code>make boot-robotron</code> -- <code>papple2</code>'s first test case.</em></p>
 
 **More games:** Total Replay (by 4am and qkumba) ships many Apple II games as ProDOS files, loaded through the MLI, so the Bandits stand-in may serve many of them. Unchecked so far: how many need more MLI calls than Bandits, and how many need more than 48K (Total Replay itself targets 64K machines).
 
@@ -71,20 +71,15 @@ Four programs boot in `papple2`: the Apple II's own Monitor and Integer BASIC, a
 
 `papple2` is split into three layers, plus the program setups:
 
-```mermaid
-graph TD
-    WORKBENCH["papple2.workbench<br/>tiling, stack_tracking, basic_blocks_analysis, shell, annotations"]
-    PROGRAMS["papple2.programs<br/>lode_runner"]
-    DEBUG["papple2.debug<br/>assembler, disassembler"]
-    CORE["papple2.core<br/>cpu, memory, apple, window, emulator, disk_image"]
+<p align="center"><img src="docs/diagrams/packages.svg" alt="The four packages of papple2 and who imports whom" width="640"></p>
 
-    WORKBENCH --> CORE
-    WORKBENCH --> DEBUG
-    PROGRAMS --> CORE
-    DEBUG --> CORE
-```
+`papple2.core` never imports from `papple2.debug` (since 2026-09-27): the debugging tools use the machine, never the other way round. `papple2.workbench` (since 2026-10-02) holds the reverse-engineering tools meant for reuse, and uses the machine the same way; for disassembly and for stopping a run, `shell.py` and `session.py` also use `papple2.debug`. `papple2.programs` (since 2026-10-04) holds the program setups: how `papple2` loads and starts one program, e.g. `lode_runner` with its load address and its stand-in for the disk routines. The workbench does not import them; `run()` takes one as an argument. Programs that use `papple2` live outside the packages -- the boot scripts and experiments in `scripts/`, and the sibling projects below.
 
-`papple2.core` never imports from `papple2.debug` (since 2026-09-27): the debugging tools use the machine, never the other way round. `papple2.workbench` (since 2026-10-02) holds the reverse-engineering tools meant for reuse, and uses the machine the same way; for disassembly, `shell.py` also uses `papple2.debug`. `papple2.programs` (since 2026-10-04) holds the program setups: how `papple2` loads and starts one program, e.g. `lode_runner` with its load address and its stand-in for the disk routines. The workbench does not import them; `run()` takes one as an argument. Programs that use `papple2` live outside the packages -- the boot scripts and experiments in `scripts/`, and the sibling projects below.
+Inside the machine, `emulator` builds everything else and runs the loop; `apple` is the Apple II itself, with its display, speaker, soft switches, memory and CPU. Two references point back up, not as imports that run, but as objects held while the machine runs:
+
+<p align="center"><img src="docs/diagrams/core.svg" alt="Inside papple2.core: the emulator on top, the Apple II below it" width="600"></p>
+
+The sources of these diagrams are the `.dot` files in `docs/diagrams/`; `make presentation` renders them, as SVG next to their sources for these pages, and as PDF and PNG into `tmp/presentation/`.
 
 ### Emulator / Window / States
 
@@ -112,34 +107,16 @@ graph TD
 
 ### Extension points
 
-Since the redesign began (`HISTORY.md` 2026-09-27/28), `papple2` has four deliberately small ways to act on a running program. The old ones (checkpoints, CPU read/write hooks, the memory map) are drawn in `docs/instrumentation-map.md`, pinned to the tag `pre-redesign`;, and the decisions taken so far in `docs/instrumentation-design.md`.
+Since the redesign began (`HISTORY.md` 2026-09-27/28), `papple2` has four deliberately small ways to act on a running program. The old ones (checkpoints, CPU read/write hooks, the memory map) are at the tag `pre-redesign`; the decisions taken so far are in `docs/instrumentation-design.md`.
 
 - **Hooks** (lists in `Memory` and `CPU`) watch every instruction and memory access, and experiments attach to them by method name; see "Memory access by kind" below.
 - **Traps** (`add_trap(address, handler)`) stand in for a routine at a fixed address. Before each instruction, `run()` looks up `PC` in the trap table (only while there are any traps). A handler returns whether it *served* the address: `True`, and the run continues at whatever `PC` the handler set; `False`, and the run stops before the instruction there, via `breakpoint`. The two disk stand-ins, `RwtsHook` (Lode Runner, `$B7B5`) and `MliHook` (Bandits, `$BF00`), are traps.
 - **`until`** is a parameter of `run()`, not an attachment point: a condition checked before each instruction (`instruction_count_reaches(n)`, `at_address(a)`). When it is met, `run()` stops via `breakpoint`; without a window it then returns, with a window it pauses as if Ctrl-X had been pressed. The ready-made conditions are in `papple2/debug/stop_conditions.py`.
 - **Debug-key handlers** (`EmulatorStates.stopped_state`/`running_state`) are keyed to the window's events, not to instructions: `D` and `L` while Stopped. `tests/test_emulator_debug_keys.py` shows how to attach one from outside.
 
-```mermaid
-graph TD
-    subgraph STEP["Before each instruction, inside Emulator.run(), while Running"]
-        TRAP["trap at PC?<br/>add_trap(address, handler)"]
-        UNTIL["until(emulator)?<br/>parameter of run()"]
-        EXEC["cpu.do_next_step()"]
-        BRK["dispatch Event('breakpoint')"]
+One pass of `Emulator.run()`: the breakpoints, the trap and `until` before the instruction, the instruction with its memory accesses and hooks, and the window's turn every 1000 passes.
 
-        TRAP -- "no trap, or served" --> UNTIL
-        TRAP -- "not served" --> BRK
-        UNTIL -- "not met" --> EXEC
-        UNTIL -- "met" --> BRK
-    end
-
-    subgraph PASSES["Every 1000 loop passes"]
-        THR["throttle to speed<br/>windowed runs only"]
-        WIN["PygameWindow.poll() / present()"]
-        KEYS["EmulatorStates handlers<br/>keys, Ctrl-X; D / L while Stopped"]
-        THR --> WIN --> KEYS
-    end
-```
+<p align="center"><img src="docs/diagrams/run-loop.svg" alt="One pass of Emulator.run()" width="640"></p>
 
 ### Memory access by kind
 
@@ -156,6 +133,8 @@ Unthrottled, `papple2` runs as fast as Python allows: about 3.5 times a real App
 ### Workbench
 
 `papple2.workbench` holds the tools for reverse engineering: instrumentations that record what a run does, analyses that recover routines, basic blocks and loops from the recorded reports, the commands of `shell.py` for experiments and for the IPython prompt (listings, the listing editor, a hexdump, the clipboard), and the dossier, where labels, comments, hidden ranges and color ranges stay. These live separately in `annotations.json`, `hidden.json` and `colors.json`. `hide()` and `unhide()` control spans shown as one grey row in `listing()` and `edit()`, without decoding their bytes. `color()`, `uncolor()` and `colors()` manage persistent address classifications: long listings color code by location, leaving comments and arrows unchanged; the editor colors its breadcrumbs, not its instruction lines. Both use the same color store, and copied listing text remains plain. The reports carry meaning on their own, they are easy to work with.
+
+<p align="center"><img src="docs/diagrams/workbench.svg" alt="Inside papple2.workbench, coloured by role" width="720"></p>
 
 See [`docs/workbench.md`](docs/workbench.md) for the commands, the experiments, the reports and the glossary.
 
@@ -183,9 +162,9 @@ See [`docs/workbench.md`](docs/workbench.md) for the commands, the experiments, 
 
 The manual checks are plain scripts in `scripts/`, not pytest tests: they assert nothing, and the point is a human watching the window. So `make test` never opens a window, and each script runs via its own `make` target.
 
-![Robotron 2084 gameplay stopped mid-run via Ctrl-X, status bar showing PC, A, X, Y, SP, and flags](docs/images/robotron-stopped.jpg)
+<p align="center"><img src="docs/images/robotron-stopped.jpg" alt="Robotron 2084 gameplay stopped mid-run via Ctrl-X, status bar showing PC, A, X, Y, SP, and flags" width="560"></p>
 
-*Execution stopped mid-game via `Ctrl-X` -- the status bar shows the halted CPU state, the same inspect point `Emulator.run(until=...)` and unserved traps stop at.*
+<p align="center"><em>Execution stopped mid-game via <code>Ctrl-X</code> -- the status bar shows the halted CPU state, the same inspect point <code>Emulator.run(until=...)</code> and unserved traps stop at.</em></p>
 
 ---
 
@@ -244,9 +223,9 @@ make ipython         # IPython in the venv; then e.g. %run scripts/lr_basic_bloc
 
 `make setup` will happily produce a broken install if your default `python3` resolves to 3.14. If needed: `rm -rf .venv && python3.12 -m venv .venv && make setup`.
 
-![A small Integer BASIC program entered and run via make boot-basic](docs/images/basic-demo.jpg)
+<p align="center"><img src="docs/images/basic-demo.jpg" alt="A small Integer BASIC program entered and run via make boot-basic" width="560"></p>
 
-*`make boot-basic`, then `Ctrl-B` into Integer BASIC, running a small hand-typed program -- the real ROM, not a simulation of it.*
+<p align="center"><em><code>make boot-basic</code>, then <code>Ctrl-B</code> into Integer BASIC, running a small hand-typed program -- the real ROM, not a simulation of it.</em></p>
 
 ---
 

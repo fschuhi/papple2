@@ -17,17 +17,17 @@ digraph packages {
     edge [color="#5F5E5A", fontname="Helvetica", fontsize=10, fontcolor="#444441",
           arrowsize=0.7];
 
-    scripts [style="rounded,filled,dashed", fillcolor="#F1EFE8", label=<<B>scripts/</B><BR/><FONT POINT-SIZE="10" FACE="Menlo">boot_*, lr_*, walkthrough</FONT><BR/><FONT POINT-SIZE="10">use papple2, outside the package</FONT>>];
+    scripts [style="rounded,filled,dashed", fillcolor="#F1EFE8", label=<<B>scripts/</B><BR/><FONT POINT-SIZE="10" FACE="monospace">boot_*, lr_*, walkthrough</FONT><BR/><FONT POINT-SIZE="10">use papple2, outside the package</FONT>>];
 
-    workbench [fillcolor="#EEEDFE", color="#534AB7", label=<<FONT COLOR="#3C3489"><B>papple2.workbench</B></FONT><BR/><FONT POINT-SIZE="10" COLOR="#534AB7">reverse engineering: run, reports, analysis, commands</FONT><BR/><FONT POINT-SIZE="10" FACE="Menlo">tiling, stack_tracking, basic_blocks_analysis,<BR/>session, annotations, hidden, colors, shell, listing_editor</FONT>>];
+    workbench [fillcolor="#EEEDFE", color="#534AB7", label=<<FONT COLOR="#3C3489"><B>papple2.workbench</B></FONT><BR/><FONT POINT-SIZE="10" COLOR="#534AB7">reverse engineering: run, reports, analysis, commands</FONT><BR/><FONT POINT-SIZE="10" FACE="monospace">tiling, stack_tracking, basic_blocks_analysis,<BR/>session, annotations, hidden, colors, shell, listing_editor</FONT>>];
 
-    debug [fillcolor="#FAEEDA", color="#854F0B", label=<<FONT COLOR="#633806"><B>papple2.debug</B></FONT><BR/><FONT POINT-SIZE="10" COLOR="#854F0B">tools around the machine: read, stop, write</FONT><BR/><FONT POINT-SIZE="10" FACE="Menlo">disassembler, stop_conditions, assembler</FONT>>];
+    debug [fillcolor="#FAEEDA", color="#854F0B", label=<<FONT COLOR="#633806"><B>papple2.debug</B></FONT><BR/><FONT POINT-SIZE="10" COLOR="#854F0B">tools around the machine: read, stop, write</FONT><BR/><FONT POINT-SIZE="10" FACE="monospace">disassembler, stop_conditions, assembler</FONT>>];
 
-    programs [fillcolor="#E1F5EE", color="#0F6E56", label=<<FONT COLOR="#085041"><B>papple2.programs</B></FONT><BR/><FONT POINT-SIZE="10" COLOR="#0F6E56">program setups</FONT><BR/><FONT POINT-SIZE="10" FACE="Menlo">lode_runner</FONT>>];
+    programs [fillcolor="#E1F5EE", color="#0F6E56", label=<<FONT COLOR="#085041"><B>papple2.programs</B></FONT><BR/><FONT POINT-SIZE="10" COLOR="#0F6E56">program setups</FONT><BR/><FONT POINT-SIZE="10" FACE="monospace">lode_runner</FONT>>];
 
-    core [fillcolor="#F1EFE8", color="#5F5E5A", label=<<FONT COLOR="#444441"><B>papple2.core</B></FONT><BR/><FONT POINT-SIZE="10" COLOR="#5F5E5A">the machine</FONT><BR/><FONT POINT-SIZE="10" FACE="Menlo">emulator, window, apple, cpu, memory, disk_image</FONT>>];
+    core [fillcolor="#F1EFE8", color="#5F5E5A", label=<<FONT COLOR="#444441"><B>papple2.core</B></FONT><BR/><FONT POINT-SIZE="10" COLOR="#5F5E5A">the machine</FONT><BR/><FONT POINT-SIZE="10" FACE="monospace">emulator, window, apple, cpu, memory, disk_image</FONT>>];
 
-    util [fillcolor="#F1EFE8", label=<<FONT FACE="Menlo">papple2.util</FONT>>];
+    util [fillcolor="#F1EFE8", label=<<FONT FACE="monospace">papple2.util</FONT>>];
 
     { rank=same; debug; programs; }
 

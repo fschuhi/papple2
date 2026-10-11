@@ -24,17 +24,17 @@ digraph pipeline {
 
     // 1 the run
     subgraph cluster_run {
-        label=<<B>1  run</B><BR/><FONT FACE="Menlo" POINT-SIZE="10">session.run(program, n,<BR/>Tiling, StackTracking)</FONT>>;
+        label=<<B>1  run</B><BR/><FONT FACE="monospace" POINT-SIZE="10">session.run(program, n,<BR/>Tiling, StackTracking)</FONT>>;
         labelloc="t"; style="rounded,filled"; fillcolor="#E6F1FB"; color="#185FA5";
         fontcolor="#0C447C"; fontsize=12;
 
-        boot [label=<<FONT FACE="Menlo">lode_runner.boot()</FONT><BR/><FONT POINT-SIZE="10">Emulator, headless,</FONT><BR/><FONT POINT-SIZE="10">with the RWTS hook</FONT>>,
+        boot [label=<<FONT FACE="monospace">lode_runner.boot()</FONT><BR/><FONT POINT-SIZE="10">Emulator, headless,</FONT><BR/><FONT POINT-SIZE="10">with the RWTS hook</FONT>>,
               fillcolor="#E1F5EE", color="#0F6E56"];
-        loop [label=<<FONT FACE="Menlo">Emulator.run()</FONT><BR/><FONT POINT-SIZE="10">until instruction_count_reaches(n),</FONT><BR/><FONT POINT-SIZE="10">4,000,000 in the recipe</FONT>>,
+        loop [label=<<FONT FACE="monospace">Emulator.run()</FONT><BR/><FONT POINT-SIZE="10">until instruction_count_reaches(n),</FONT><BR/><FONT POINT-SIZE="10">4,000,000 in the recipe</FONT>>,
               penwidth=1.5, color="#444441"];
-        tiling [label=<<FONT FACE="Menlo"><B>Tiling</B></FONT><BR/><FONT POINT-SIZE="10">which code ran,</FONT><BR/><FONT POINT-SIZE="10">where it leapt</FONT>>,
+        tiling [label=<<FONT FACE="monospace"><B>Tiling</B></FONT><BR/><FONT POINT-SIZE="10">which code ran,</FONT><BR/><FONT POINT-SIZE="10">where it leapt</FONT>>,
                 color="#185FA5"];
-        stack [label=<<FONT FACE="Menlo"><B>StackTracking</B></FONT><BR/><FONT POINT-SIZE="10">a second stack:</FONT><BR/><FONT POINT-SIZE="10">real returns, tricks</FONT>>,
+        stack [label=<<FONT FACE="monospace"><B>StackTracking</B></FONT><BR/><FONT POINT-SIZE="10">a second stack:</FONT><BR/><FONT POINT-SIZE="10">real returns, tricks</FONT>>,
                color="#185FA5"];
         { rank=same; boot; loop; }
         { rank=same; tiling; stack; }
@@ -46,10 +46,10 @@ digraph pipeline {
 
     // 2 the reports, files in the reports folder
     subgraph cluster_reports {
-        label=<<B>2  reports</B><BR/><FONT FACE="Menlo" POINT-SIZE="10">tiling_reports()<BR/>stack_tracking_reports()</FONT>>;
+        label=<<B>2  reports</B><BR/><FONT FACE="monospace" POINT-SIZE="10">tiling_reports()<BR/>stack_tracking_reports()</FONT>>;
         labelloc="t"; style="rounded,dashed"; color="#185FA5";
         fontcolor="#0C447C"; fontsize=12;
-        node [shape=note, style="filled", fillcolor="white", fontname="Menlo",
+        node [shape=note, style="filled", fillcolor="white", fontname="monospace",
               fontsize=10, color="#185FA5"];
 
         split_tiles [label="lr_split_tiles.csv"];
@@ -67,15 +67,15 @@ digraph pipeline {
 
     // 3 the analysis
     subgraph cluster_analysis {
-        label=<<B>3  analysis</B><BR/><FONT FACE="Menlo" POINT-SIZE="10">set_current_run()</FONT>>;
+        label=<<B>3  analysis</B><BR/><FONT FACE="monospace" POINT-SIZE="10">set_current_run()</FONT>>;
         labelloc="t"; style="rounded,filled"; fillcolor="#FAECE7"; color="#993C1D";
         fontcolor="#712B13"; fontsize=12;
 
-        read [label=<<FONT FACE="Menlo">read_split_tiles()<BR/>read_split_transitions()<BR/>read_returns()</FONT>>,
+        read [label=<<FONT FACE="monospace">read_split_tiles()<BR/>read_split_transitions()<BR/>read_returns()</FONT>>,
               fontsize=10, color="#993C1D"];
-        find [label=<<FONT FACE="Menlo">find_routines()</FONT><BR/><FONT POINT-SIZE="10">the start and every JSR target,</FONT><BR/><FONT POINT-SIZE="10">stack jumps counted in</FONT>>,
+        find [label=<<FONT FACE="monospace">find_routines()</FONT><BR/><FONT POINT-SIZE="10">the start and every JSR target,</FONT><BR/><FONT POINT-SIZE="10">stack jumps counted in</FONT>>,
               color="#993C1D"];
-        run_graph [label=<<FONT FACE="Menlo">build_run_graph()</FONT><BR/><FONT POINT-SIZE="10">every block the run ran</FONT>>,
+        run_graph [label=<<FONT FACE="monospace">build_run_graph()</FONT><BR/><FONT POINT-SIZE="10">every block the run ran</FONT>>,
                    color="#993C1D"];
         { rank=same; find; run_graph; }
         read -> find;
@@ -92,9 +92,9 @@ digraph pipeline {
         labelloc="t"; style="rounded,filled"; fillcolor="#F1EFE8"; color="#444441";
         fontcolor="#444441"; fontsize=12;
 
-        state [label=<<FONT FACE="Menlo">routines<BR/>run_graph<BR/>run_transitions<BR/>run_stack_jumps<BR/>run_emulator</FONT>>,
+        state [label=<<FONT FACE="monospace">routines<BR/>run_graph<BR/>run_transitions<BR/>run_stack_jumps<BR/>run_emulator</FONT>>,
                fontsize=10, fillcolor="#D3D1C7", color="#444441", penwidth=1.5];
-        dossier [label=<<B>dossier</B><BR/><FONT POINT-SIZE="10" FACE="Menlo">annotations, hidden, colors</FONT><BR/><FONT POINT-SIZE="10">dossiers/lode_runner/</FONT>>,
+        dossier [label=<<B>dossier</B><BR/><FONT POINT-SIZE="10" FACE="monospace">annotations, hidden, colors</FONT><BR/><FONT POINT-SIZE="10">dossiers/lode_runner/</FONT>>,
                  fillcolor="#F1EFE8", color="#5F5E5A", style="rounded,filled,dashed"];
         { rank=same; state; dossier; }
         state -> dossier [label=" label_routines():\n routine_xxxx where\n no label yet "];
@@ -108,7 +108,7 @@ digraph pipeline {
         label=<<B>5  commands</B><BR/><FONT POINT-SIZE="10">papple2.workbench.shell,</FONT><BR/><FONT POINT-SIZE="10">at the prompt or in a recipe</FONT>>;
         labelloc="t"; style="rounded,filled"; fillcolor="#EAF3DE"; color="#3B6D11";
         fontcolor="#27500A"; fontsize=12;
-        node [fontname="Menlo", fontsize=10, color="#3B6D11"];
+        node [fontname="monospace", fontsize=10, color="#3B6D11"];
 
         show [label="show_routines()\nshow_blocks()\nshow_callers()\nshow_routine_graph()"];
         listing [label="listing()\nhexdump()"];
