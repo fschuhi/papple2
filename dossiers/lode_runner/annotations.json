@@ -13,6 +13,8 @@
     "0800": "routine_0800",
     "1a85": "hgr_rows_lo",
     "1b45": "hgr_rows_hi",
+    "1c9a": "tbl_halfscr_col_byte",
+    "1d26": "tbl_halfscr_col_shift",
     "2800": "relocation_loop",
     "5f32": "cont_in_relocation",
     "6056": "game_start",
@@ -130,10 +132,10 @@
     "7a48": "HGR1 starts at $2000",
     "7a4c": "HGR2 starts at $4000, so toggle bits 5 and 6",
     "7a50": "both row pointers set ",
-    "8336": "A = sprite, Y = row, X = shift",
-    "833a": "returns A, X",
+    "8336": "A = sprite, Y = row, X = halfscr col",
+    "833a": "returns A = halfscr col byte, X = additional shift needed",
     "8352": "with Y",
-    "8872": "X = ?",
-    "887b": "return A ($1c9a,X), X ($1d26,X)"
+    "8872": "X = half-screen col",
+    "887b": "return A = screen byte, X = additional shift needed"
   }
 }

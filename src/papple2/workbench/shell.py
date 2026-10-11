@@ -500,7 +500,8 @@ def edit(start: int | str, end: int | str | None = None, height: int = 25) -> No
     was last left, while the run lasts. g opens a list of the run's
     routines, to go to one of them; u a list of the callers of the routine
     shown, to go to one of their call sites. height is the number of lines the
-    editor shows at a time.
+    editor shows at a time. The name in an operand has the color of the
+    address it names, if that address lies in a color range.
 
     Needs a real terminal."""
     # Stop before the editor opens, not at the first save.
@@ -513,9 +514,19 @@ def edit(start: int | str, end: int | str | None = None, height: int = 25) -> No
         first, behind = session.listing_range(entry)
         return session.color_store.color_for_range(first, behind)
 
+    def target_color_of(address: int) -> str | None:
+        # Called for every visible operand on every redraw, so it reads the
+        # definitions in memory: loaded below when the editor opens, and
+        # again whenever color_of() reloads them for the breadcrumbs.
+        if session.color_store is None:
+            return None
+        return session.color_store.color_at(address)
+
     def label_of(address: int) -> str:
         return session.current_annotations().labels.get(address, "")
 
+    if session.color_store is not None:
+        session.color_store.reload()
     if end is None:
         place = routine_place(session.routine_at(start))
     else:
@@ -536,6 +547,7 @@ def edit(start: int | str, end: int | str | None = None, height: int = 25) -> No
         goto_entries=sorted(session.current_routines().graphs),
         callers_of=caller_items,
         color_of=color_of,
+        target_color_of=target_color_of,
     )
 
 

@@ -99,14 +99,17 @@ line runs above and below the listing.
 
 Each mnemonic is colored by its class, as in the 6502 reference at
 pagetable.com (c64ref): load, trans, stack, shift, logic, arith, inc, ctrl,
-bra, flags, nop. The hex bytes are dark gray. Operands, labels and comments
-keep the terminal's color: an operand may name an address in a color range,
-and that color is to show there later. c copies the lines as plain text.
+bra, flags, nop. The hex bytes are dark gray. The name in an operand has
+the color of the address it names, if that address lies in a color range:
+the table in LDA tbl,X, the pointer in STA (ptr),Y, the target of a JSR or
+a branch. Brackets and index stay plain, and so do labels, comments and
+immediates. c copies the lines as plain text.
 
 At the prompt, edit() in papple2.workbench.shell opens it on the current
 run.
 """
 
+import re
 import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -317,13 +320,33 @@ def field_width(row: ListingRow, widths: ColumnWidths, field: str, text: str) ->
     return max(column, len(text) + 1)
 
 
+def operand_name_span(row: ListingRow) -> tuple[int, int] | None:
+    """Where, in row.instruction, the operand names its target: the label
+    or address without "(", ")" and the index, e.g. zp_hgr1_row_ptr in
+    AND (zp_hgr1_row_ptr),Y. A label+N stays whole. None for an operand
+    that names no address (implied, immediate, .byte)."""
+    if row.target is None:
+        return None
+    match = re.match(r"\S+ \(?([^,()\s]+)", row.instruction)
+    if match is None:
+        return None
+    return match.start(1), match.end(1)
+
+
 def row_fragments(
-    row: ListingRow, widths: ColumnWidths, columns: int
+    row: ListingRow,
+    widths: ColumnWidths,
+    columns: int,
+    target_color_of: Callable[[int], str | None] | None = None,
 ) -> list[tuple[str, str]]:
     """The line format_row() gives, cut into (style, text) pieces: the hex
     bytes dark gray, the mnemonic in its class's color, everything else
     unstyled. Joined, the texts are exactly format_row()'s line. A row
-    without an address is one faint piece."""
+    without an address is one faint piece.
+
+    With target_color_of, the name in the operand gets the color of the
+    address it names (row.target), if that address has one; brackets and
+    index stay plain."""
     line = format_row(row, widths, columns)
     if row.address is None:
         return [("class:gap", line)]
@@ -338,13 +361,36 @@ def row_fragments(
     name_end = name_start + len(name)
     group = MNEMONIC_CLASS.get(name)
     name_style = f"class:mn-{group}" if group else ""
+
+    # The operand's name, if its target has a color. Where the instruction
+    # is cut, only the part before the "..." is colored.
+    operand_start = operand_end = name_end
+    operand_style = ""
+    span = operand_name_span(row)
+    shade = (
+        target_color_of(row.target)
+        if span is not None and target_color_of is not None
+        else None
+    )
+    if shade is not None:
+        shown = cut(row.instruction, widths.instruction)
+        visible = len(shown) - (len(ELLIPSIS) if shown != row.instruction else 0)
+        instruction_start = name_start
+        operand_start = max(name_end, instruction_start + span[0])
+        operand_end = max(
+            operand_start, instruction_start + min(span[1], visible)
+        )
+        operand_style = f"ansi{shade}"
+
     # Slices beyond the line are empty, so the pieces always add up to it.
     cuts = [
         (0, bytes_start, ""),
         (bytes_start, bytes_end, "class:bytes"),
         (bytes_end, name_start, ""),
         (name_start, name_end, name_style),
-        (name_end, len(line), ""),
+        (name_end, operand_start, ""),
+        (operand_start, operand_end, operand_style),
+        (operand_end, len(line), ""),
     ]
     return [
         (style, line[first:behind])
@@ -526,6 +572,7 @@ def edit_rows(
     goto_entries: list[int] | None = None,
     callers_of: Callable[[int], list[PickerItem]] = lambda entry: [],
     color_of: Callable[[int], str | None] = lambda entry: None,
+    target_color_of: Callable[[int], str | None] = lambda address: None,
 ) -> None:
     """Show the rows of place, inline, height lines at a time, and let
     labels and comments be edited, until q, Esc or Ctrl+C. Nothing stays on
@@ -544,7 +591,9 @@ def edit_rows(
     callers_of(entry) gives the picker's items for the callers of the
     routine starting at entry; u opens the picker on them.
     color_of(entry) gives a breadcrumb's assigned color, or None for gray.
-    Past and future names have normal weight; the current name is bold."""
+    Past and future names have normal weight; the current name is bold.
+    target_color_of(address) gives the color of the address an operand
+    names, or None: the operand's name shows in it."""
 
     rows = place.load_rows()
     if not any(row.address is not None for row in rows):
@@ -616,7 +665,7 @@ def edit_rows(
             # A row without an address is a gap, or the empty line before
             # a .byte block: faint, so the code stands out. Other rows
             # carry the colors of their bytes and mnemonic.
-            pieces = row_fragments(row, state.widths, width)
+            pieces = row_fragments(row, state.widths, width, target_color_of)
             if state.top + offset == state.cursor:
                 fragments.append(("class:bar class:marker", ">".ljust(MARKER_WIDTH)))
                 fragments.extend(on_bar(pieces, width))

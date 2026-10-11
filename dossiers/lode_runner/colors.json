@@ -1,4 +1,14 @@
 {
+  "halfscr_col_byte": {
+    "start": "1c9a",
+    "end": "1d26",
+    "shade": "green"
+  },
+  "halfscr_col_shift": {
+    "start": "1d26",
+    "end": "1db2",
+    "shade": "cyan"
+  },
   "hgr_lookup": {
     "start": "7a3e",
     "end": "7a51",
