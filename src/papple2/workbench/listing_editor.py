@@ -97,6 +97,12 @@ The empty line before a .byte block is shown, but the bar skips it.
 The bar's row has a cyan > in front of it and a faint background. A thin
 line runs above and below the listing.
 
+Each mnemonic is colored by its class, as in the 6502 reference at
+pagetable.com (c64ref): load, trans, stack, shift, logic, arith, inc, ctrl,
+bra, flags, nop. The hex bytes are dark gray. Operands, labels and comments
+keep the terminal's color: an operand may name an address in a color range,
+and that color is to show there later. c copies the lines as plain text.
+
 At the prompt, edit() in papple2.workbench.shell opens it on the current
 run.
 """
@@ -148,6 +154,46 @@ BRANCHES = frozenset({"BPL", "BMI", "BVC", "BVS", "BCC", "BCS", "BNE", "BEQ"})
 # Between two breadcrumbs.
 CRUMB_SEPARATOR = " > "
 
+# The classes of the 6502's mnemonics, as in the 6502 reference at
+# pagetable.com (c64ref). A mnemonic without a class (.byte, ???) keeps
+# the terminal's color.
+MNEMONIC_GROUPS = {
+    "load": "LDA LDX LDY STA STX STY",
+    "trans": "TAX TAY TSX TXA TXS TYA",
+    "stack": "PHA PHP PLA PLP",
+    "shift": "ASL LSR ROL ROR",
+    "logic": "AND BIT EOR ORA",
+    "arith": "ADC CMP CPX CPY SBC",
+    "inc": "DEC DEX DEY INC INX INY",
+    "ctrl": "BRK JMP JSR RTI RTS",
+    "bra": "BCC BCS BEQ BMI BNE BPL BVC BVS",
+    "flags": "CLC CLD CLI CLV SEC SED SEI",
+    "nop": "NOP",
+}
+
+# Mnemonic -> its class.
+MNEMONIC_CLASS = {
+    name: group
+    for group, names in MNEMONIC_GROUPS.items()
+    for name in names.split()
+}
+
+# The font color of each class: the reference's background colors, taken
+# by eye from its table. Change a value here if it reads badly.
+MNEMONIC_COLORS = {
+    "load": "#ff8a80",
+    "trans": "#ff80b0",
+    "stack": "#e080ff",
+    "shift": "#98a8f0",
+    "logic": "#98d0f0",
+    "arith": "#90e8a0",
+    "inc": "#c0f0a0",
+    "ctrl": "#fff060",
+    "bra": "#ffd060",
+    "flags": "#ffb860",
+    "nop": "#a8a8a8",
+}
+
 # bar: the faint background of the bar's row, a little lighter than a dark
 # terminal's own; change the colour here if it is too faint or too loud.
 # marker: the > in front of it. rule: the lines above and below.
@@ -155,8 +201,11 @@ CRUMB_SEPARATOR = " > "
 # under the listing. crumb: the routines followed into, in the line above;
 # crumb-here: the one shown; crumb-future: the ones f goes forward to. picker: the picker's box; its selected line
 # has the bar's look. gap: a row for bytes that never ran, kept faint.
+# bytes: the hex bytes of a row. mn-<class>: a mnemonic of that class.
 STYLE = Style.from_dict(
     {
+        **{f"mn-{group}": color for group, color in MNEMONIC_COLORS.items()},
+        "bytes": "#626262",
         "bar": "bg:#303030",
         "marker": "bold ansicyan",
         "rule": "ansibrightblack",
@@ -266,6 +315,51 @@ def field_width(row: ListingRow, widths: ColumnWidths, field: str, text: str) ->
     else:
         column = widths.instruction - len(mnemonic(row)) - 1
     return max(column, len(text) + 1)
+
+
+def row_fragments(
+    row: ListingRow, widths: ColumnWidths, columns: int
+) -> list[tuple[str, str]]:
+    """The line format_row() gives, cut into (style, text) pieces: the hex
+    bytes dark gray, the mnemonic in its class's color, everything else
+    unstyled. Joined, the texts are exactly format_row()'s line. A row
+    without an address is one faint piece."""
+    line = format_row(row, widths, columns)
+    if row.address is None:
+        return [("class:gap", line)]
+    bytes_start = len(f"{row.gutter}{row.address:04x}  ")
+    bytes_end = bytes_start + len(row.hex_bytes)
+    name = mnemonic(row)
+    name_start = field_start(row, widths, "label")
+    if widths.label:
+        name_start += widths.label + 2
+    # Never before the bytes end, so no text is taken twice.
+    name_start = max(name_start, bytes_end)
+    name_end = name_start + len(name)
+    group = MNEMONIC_CLASS.get(name)
+    name_style = f"class:mn-{group}" if group else ""
+    # Slices beyond the line are empty, so the pieces always add up to it.
+    cuts = [
+        (0, bytes_start, ""),
+        (bytes_start, bytes_end, "class:bytes"),
+        (bytes_end, name_start, ""),
+        (name_start, name_end, name_style),
+        (name_end, len(line), ""),
+    ]
+    return [
+        (style, line[first:behind])
+        for first, behind, style in cuts
+        if line[first:behind]
+    ]
+
+
+def on_bar(pieces: list[tuple[str, str]], width: int) -> list[tuple[str, str]]:
+    """pieces with the bar's background under each, padded to width, so
+    the bar runs across the whole width, not only the text."""
+    used = sum(len(text) for _style, text in pieces)
+    return [
+        (f"class:bar {style}".rstrip(), text) for style, text in pieces
+    ] + [("class:bar", " " * max(0, width - used))]
 
 
 @dataclass(frozen=True)
@@ -517,18 +611,18 @@ def edit_rows(
     def listing_text() -> FormattedText:
         width = text_width()
         fragments = []
-        for offset, text in enumerate(visible_lines(width)):
+        visible = state.rows[state.top : state.top + height]
+        for offset, row in enumerate(visible):
+            # A row without an address is a gap, or the empty line before
+            # a .byte block: faint, so the code stands out. Other rows
+            # carry the colors of their bytes and mnemonic.
+            pieces = row_fragments(row, state.widths, width)
             if state.top + offset == state.cursor:
                 fragments.append(("class:bar class:marker", ">".ljust(MARKER_WIDTH)))
-                # The bar runs across the whole width, not only the text.
-                fragments.append(("class:bar", text.ljust(width)))
+                fragments.extend(on_bar(pieces, width))
             else:
-                # A row without an address is a gap, or the empty line
-                # before a .byte block: faint, so the code stands out.
-                row = state.rows[state.top + offset]
-                style = "class:gap" if row.address is None else ""
                 fragments.append(("", " " * MARKER_WIDTH))
-                fragments.append((style, text))
+                fragments.extend(pieces)
             fragments.append(("", "\n"))
         fragments.pop()  # no line break after the last line
         return FormattedText(fragments)
