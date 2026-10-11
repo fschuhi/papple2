@@ -121,6 +121,8 @@ from prompt_toolkit.layout.layout import Layout
 from prompt_toolkit.styles import Style
 from prompt_toolkit.widgets import TextArea
 
+from papple2.workbench.listing import ListingRow
+
 # The instruction column follows the longest instruction, up to this width.
 # Beyond it, one long operand label would push every comment to the right.
 INSTRUCTION_CAP = 32
@@ -167,30 +169,6 @@ STYLE = Style.from_dict(
         "picker": "bg:#262626",
     }
 )
-
-
-@dataclass
-class ListingRow:
-    """One line of a listing, its pieces kept apart, so that each caller
-    lays them out as it needs: print_listing() prints them, the listing
-    editor shows them in columns of its own. address is None for a row that
-    is no instruction: the empty line before a .byte block, and a gap the
-    run never reached, whose text is in instruction ("... 6004-6006: 2
-    bytes never ran ..."). There, every other field but the gutter is
-    empty, and the bar skips the row.
-
-    target is the address the operand names, the one a label in the operand
-    stands for: $1a85 in LDA $1a85,Y, the pointer $1b in STA ($1b),Y, a
-    branch's target. None where the operand names no address: implied,
-    accumulator and immediate operands, and .byte lines."""
-
-    address: int | None
-    gutter: str
-    hex_bytes: str
-    label: str
-    instruction: str
-    comment: str
-    target: int | None = None
 
 
 @dataclass(frozen=True)

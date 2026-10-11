@@ -7,6 +7,7 @@ import pytest
 
 from papple2.core.cpu import CPU
 from papple2.core.memory import Memory
+from papple2.debug.disassembler import Disassembler
 from papple2.workbench import shell
 from papple2.workbench.basic_blocks_analysis import BasicBlock, BlockGraph, Routines
 from papple2.workbench.hidden import Hidden, HiddenRange
@@ -275,15 +276,15 @@ def test_labels_and_comments_inside_a_hidden_span_are_not_shown(
 def test_hidden_spans_are_not_disassembled(
     machine: SimpleNamespace, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    original = shell.Disassembler.collect_op_info
+    original = Disassembler.collect_op_info
 
     def checked(
-        self: shell.Disassembler, address: int
-    ) -> tuple[shell.Disassembler.__annotations__, int]:
+        self: Disassembler, address: int
+    ) -> tuple[Disassembler.__annotations__, int]:
         assert not 0x6002 <= address < 0x6006
         return original(self, address)
 
-    monkeypatch.setattr(shell.Disassembler, "collect_op_info", checked)
+    monkeypatch.setattr(Disassembler, "collect_op_info", checked)
 
     rows = listing_rows(
         machine,
