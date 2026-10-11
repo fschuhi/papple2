@@ -247,6 +247,7 @@ def memory_map(
     start: int | str = 0x0000,
     end: int | str = 0x10000,
     cell_bytes: int = 0x100,
+    legend: bool = True,
 ) -> Text:
     """Show the current dossier's color ranges from start up to, not
     including, end: 16 cells per row, each cell_bytes bytes, a power of 2.
@@ -256,7 +257,8 @@ def memory_map(
 
     A cell has the color of the bytes in it (Colors.color_of_bytes), light
     yellow where different colors meet. Below the map, a legend lists the
-    color ranges in the range shown. The text kept for str() and clip()
+    color ranges in the range shown; legend=False leaves it out. The text
+    kept for str() and clip()
     shows a letter per colored cell and dots for the others."""
     store = session.current_colors()
     session.refresh_annotations()
@@ -275,7 +277,7 @@ def memory_map(
     def shown(colored: bool) -> str:
         with contextlib.redirect_stdout(io.StringIO()) as printed:
             print_memory_map(rows, cell_bytes, colored)
-            if entries:
+            if legend and entries:
                 print()
                 print_map_legend(entries, has_mix(rows), colored)
         return printed.getvalue().rstrip("\n")

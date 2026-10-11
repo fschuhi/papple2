@@ -255,3 +255,11 @@ def test_the_clipboard_gets_the_plain_map(
     shell.clip(shown)
 
     assert copied == [str(shown)]
+
+
+def test_legend_false_shows_the_map_alone(dossier: Path) -> None:
+    with_legend = memory_map(0x1C00, 0x1E00, 0x10).splitlines()
+
+    assert memory_map(0x1C00, 0x1E00, 0x10, legend=False).splitlines() == (
+        with_legend[:3]
+    )
