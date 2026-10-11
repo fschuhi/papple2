@@ -212,6 +212,7 @@ make boot-basic     # boot Apple II into the Monitor; Ctrl-B enters Integer BASI
 make boot-lode-runner           # boot Lode Runner with the pygame window open; a key press starts a real game from the disk image
 make boot-lode-runner-throttled # the same, at the speed of a real Apple II
 make boot-lode-runner-headless  # run Lode Runner headless; save both hi-res pages as PNG
+make boot-lode-runner-break     # the same with the window, stopped after 4,000,000 instructions, where the experiments end; Ctrl-X continues
 make boot-bandits               # boot Bandits from Total Replay's ProDOS files
 make lr-count        # Early experiment (frozen): map which addresses Lode Runner's attract play runs (PNG and HTML)
 make lr-tiles        # Early experiment (frozen): tiling reports into tmp/lr_tiles/ (CSV and text)
@@ -219,6 +220,7 @@ make lr-overview     # Overview of the whole run from docs/reports/lr_tiles/, in
 make lr-basic-blocks-analysis  # Every routine of the run; tiling, returns and loop reports (start 0800) in docs/reports/lr_basic_blocks_analysis/
 make walkthrough     # A tiny program through tiling and the basic blocks analysis, reports in tmp/walkthrough/
 make ipython         # IPython in the venv; then e.g. %run scripts/lr_basic_blocks_analysis.py
+make presentation    # Render the diagrams: SVG next to docs/diagrams/*.dot, PDF and PNG into tmp/presentation/
 ```
 
 `make setup` will happily produce a broken install if your default `python3` resolves to 3.14. If needed: `rm -rf .venv && python3.12 -m venv .venv && make setup`.
