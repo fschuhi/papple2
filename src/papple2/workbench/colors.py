@@ -2,7 +2,8 @@
 
 Ranges are half-open. Overlaps are allowed: matching definitions with
 different shades give MIX_COLOR, while definitions with the same shade
-keep that shade.
+keep that shade. MIX_COLOR is the terminal's light yellow, which is no
+shade a range can be given, so a mix never looks like a range.
 
 Every change reloads the file first to preserve another session's edits.
 Opening the store or repeating an unchanged definition writes nothing.
@@ -16,7 +17,7 @@ from pathlib import Path
 SHADES = frozenset(
     {"red", "green", "yellow", "blue", "magenta", "cyan", "white"}
 )
-MIX_COLOR = "magenta"
+MIX_COLOR = "brightyellow"
 
 
 @dataclass(frozen=True)
@@ -109,6 +110,26 @@ class Colors:
             definition.shade
             for definition in self.ranges.values()
             if definition.start <= start and end <= definition.end
+        }
+        return _combined(shades)
+
+    def color_of_bytes(self, start: int, end: int) -> str | None:
+        """The color of the bytes from start up to, not including, end.
+
+        For a cell of the memory map: every definition that touches at
+        least one byte of the span counts, so partial coverage colors it.
+        Different shades give MIX_COLOR, whether they overlap at one byte
+        or lie in separate bytes. Unlike color_for_range(), no definition
+        has to contain the whole span.
+        """
+        if not 0 <= start < end <= 0x10000:
+            raise ValueError(
+                "a color lookup needs 0000 <= start < end <= 10000"
+            )
+        shades = {
+            definition.shade
+            for definition in self.ranges.values()
+            if definition.start < end and start < definition.end
         }
         return _combined(shades)
 

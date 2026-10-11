@@ -315,3 +315,73 @@ def test_coloring_leaves_other_dossier_files_untouched(
 
     for name, text in originals.items():
         assert (tmp_path / name).read_text(encoding="utf-8") == text
+
+
+def test_the_mix_color_is_no_shade_a_range_can_have(tmp_path: Path) -> None:
+    assert MIX_COLOR not in SHADES
+    assert "magenta" in SHADES
+
+    with pytest.raises(ValueError, match="unknown color"):
+        Colors(tmp_path).color("scores", 0x0010, 0x0014, MIX_COLOR)
+
+
+# color_of_bytes(): the color of a memory map's cell. Lode Runner's dossier
+# as the example: green 1c9a-1d26, cyan 1d26-1db2.
+
+
+@pytest.fixture
+def tables(tmp_path: Path) -> Colors:
+    colors = Colors(tmp_path)
+    colors.color("halfscr_col_byte", 0x1C9A, 0x1D26, "green")
+    colors.color("halfscr_col_shift", 0x1D26, 0x1DB2, "cyan")
+    return colors
+
+
+def test_bytes_without_a_definition_have_no_color(tables: Colors) -> None:
+    assert tables.color_of_bytes(0x1B00, 0x1C00) is None
+
+
+def test_partial_coverage_colors_the_bytes(tables: Colors) -> None:
+    # Green covers only 1c9a-1cff of the page.
+    assert tables.color_of_bytes(0x1C00, 0x1D00) == "green"
+    assert tables.color_for_range(0x1C00, 0x1D00) is None
+
+
+def test_different_shades_in_separate_bytes_mix(tables: Colors) -> None:
+    # Green ends at 1d26, cyan starts there: no byte has both.
+    assert tables.color_of_bytes(0x1D00, 0x1E00) == MIX_COLOR
+    assert tables.color_of_bytes(0x1D20, 0x1D30) == MIX_COLOR
+
+
+def test_one_shade_in_part_of_the_bytes_keeps_it(tables: Colors) -> None:
+    assert tables.color_of_bytes(0x1D30, 0x1D40) == "cyan"
+
+
+def test_equal_shades_in_one_span_keep_their_color(tmp_path: Path) -> None:
+    colors = Colors(tmp_path)
+    colors.color("scores", 0x0010, 0x0014, "red")
+    colors.color("stats", 0x0018, 0x001C, "red")
+
+    assert colors.color_of_bytes(0x0000, 0x0100) == "red"
+
+
+def test_spans_that_only_touch_do_not_count(tables: Colors) -> None:
+    # Half-open: green ends at 1d26, so 1d26 onwards has no green byte.
+    assert tables.color_of_bytes(0x1D26, 0x1D30) == "cyan"
+    assert tables.color_of_bytes(0x1C90, 0x1C9A) is None
+    assert tables.color_of_bytes(0x1DB2, 0x1DC0) is None
+
+
+def test_the_whole_memory_is_one_span(tables: Colors) -> None:
+    assert tables.color_of_bytes(0x0000, 0x10000) == MIX_COLOR
+
+
+@pytest.mark.parametrize(
+    "start, end",
+    [(-1, 0x0010), (0x0010, 0x0010), (0x0014, 0x0010), (0xFFFF, 0x10001)],
+)
+def test_color_of_bytes_refuses_invalid_bounds(
+    tables: Colors, start: int, end: int
+) -> None:
+    with pytest.raises(ValueError, match="start < end"):
+        tables.color_of_bytes(start, end)

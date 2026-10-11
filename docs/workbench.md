@@ -116,7 +116,7 @@ listing(0x82aa, 0x84c1)
 - Reusing a name replaces its definition. `uncolor(name)` removes it; an unknown name is refused.
 - `colors()` shows saved definitions in address order.
 - Supported shades are `red`, `green`, `yellow`, `blue`, `magenta`, `cyan` and `white`.
-- Overlaps are allowed. At one byte, matching definitions with the same shade retain that shade; different shades produce the fixed mix color `magenta`. With no matching definition, no color is assigned.
+- Overlaps are allowed. At one byte, matching definitions with the same shade retain that shade; different shades produce the mix color, light yellow (`brightyellow`), which no range can be given. With no matching definition, no color is assigned.
 
 The views share the lookup but use colors differently:
 

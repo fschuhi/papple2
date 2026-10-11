@@ -11,7 +11,7 @@ from papple2.workbench.basic_blocks_analysis import (
     BlockGraph,
     Routines,
 )
-from papple2.workbench.colors import ColorRange, Colors
+from papple2.workbench.colors import MIX_COLOR, ColorRange, Colors
 from papple2.workbench.shell import (
     color,
     colors,
@@ -123,7 +123,7 @@ def test_color_allows_overlaps(
 
     color("stats", 0x0012, 0x0016, "blue")
 
-    assert shell.session.color_store.color_at(0x0012) == "magenta"
+    assert shell.session.color_store.color_at(0x0012) == MIX_COLOR
     assert len(Colors(tmp_path).ranges) == 2
 
 

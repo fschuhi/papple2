@@ -6,8 +6,9 @@ import pytest
 from IPython.lib.pretty import pretty
 
 from papple2.workbench import shell
-from papple2.workbench.colors import Colors
+from papple2.workbench.colors import MIX_COLOR, SHADES, Colors
 from papple2.workbench.listing_editor import ListingRow
+from papple2.workbench.listing import LISTING_COLORS
 from papple2.workbench.shell import Text, listing, print_listing
 
 
@@ -150,3 +151,13 @@ def test_existing_text_objects_keep_their_plain_display() -> None:
 
     assert pretty(shown) == "6000  RTS"
     assert repr(shown) == "6000  RTS"
+
+
+def test_every_shade_and_the_mix_color_can_be_printed() -> None:
+    assert set(LISTING_COLORS) == SHADES | {MIX_COLOR}
+
+
+def test_the_mix_color_is_printed_light_yellow(capsys) -> None:
+    print_listing(ROWS[:1], color_of=lambda address: MIX_COLOR)
+
+    assert capsys.readouterr().out.startswith("|   \x1b[93m6000")
