@@ -8,13 +8,14 @@ one byte, as in a hexdump.
 
 map_rows() works out the color of each cell, through a lookup it is
 given (Colors.color_of_bytes in the shell); print_memory_map() prints the
-rows. Nothing here keeps state or reads the dossier.
+rows, and print_map_legend() the color ranges below them. Nothing here
+keeps state or reads the dossier.
 """
 
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from papple2.workbench.colors import MIX_COLOR
+from papple2.workbench.colors import MIX_COLOR, ColorRange
 
 # Cells per row of the map.
 MAP_COLUMNS = 16
@@ -134,3 +135,30 @@ def print_memory_map(
                 letter = "." if shade is None else MAP_LETTERS[shade]
                 cells.append(letter * width + " ")
         print(f"{row.address:04x}  {''.join(cells)}".rstrip())
+
+
+def has_mix(rows: list[MapRow]) -> bool:
+    """Whether a cell of the rows has the mix color."""
+    return any(shade == MIX_COLOR for row in rows for shade in row.cells)
+
+
+def print_map_legend(
+    entries: list[tuple[str, ColorRange]], mix: bool, colored: bool = False
+) -> None:
+    """Print one line per color range: a swatch, its bounds, its shade and
+    its name, in the order given; then, if mix, a line for the mix color.
+    The swatch is a cell of the map, colored or plain as there."""
+
+    def swatch(shade: str) -> str:
+        if colored:
+            return MAP_BACKGROUNDS[shade] + "   " + RESET
+        return MAP_LETTERS[shade] * 3
+
+    for name, definition in entries:
+        print(
+            f"{swatch(definition.shade)}  "
+            f"{definition.start:04x}-{definition.end:04x}  "
+            f"{definition.shade:<7}  {name}"
+        )
+    if mix:
+        print(f"{swatch(MIX_COLOR)}  different colors in one cell")

@@ -65,6 +65,7 @@ What `%run scripts/lr_basic_blocks_analysis.py` leaves in the session:
 | Commands: the dossier | `label()`, `comment()`, `unlabel()`, `uncomment()`, `hide()`, `unhide()`, `color()`, `uncolor()`, `colors()`                                                      |
 | Commands: range bounds | `to_range()`                                                                                                                                                 |
 | Commands: hex arithmetic | `hx()`                                                                                                                                                        |
+| Commands: memory map | `memory_map()`                                                                                                                                                |
 | Commands on objects | `print_routines()`, `print_blocks()`, `print_edges()`, `print_loops()`, `listing_rows()`, `print_listing()`, `set_current_run()`                               |
 | For a run of your own | `lode_runner` (a program setup, a module: lowercase), `Tiling` and `StackTracking` (instrumentations, classes: capitalized)                                   |
 | Machinery | `shell`, and through it `shell.session` with `shell.session.run_emulator`, `.run_instrumentations`, `.routines`, `.run_graph`, `.run_transitions`, `.annotations`, `.hidden`, `.color_store` |
@@ -124,9 +125,10 @@ The views share the lookup but use colors differently:
 - **`edit()` colors the navigation path.** A breadcrumb uses the color of definitions containing the routine's whole displayed span. Different containing shades produce the mix color; partial coverage alone does not color the title. Past, current and future names all use their assigned colors; only the current one is bold. Uncolored names, separators and abbreviations are gray. Instruction lines are not location-colored.
 - **`edit()` colors syntax and targets.** Each mnemonic has the color of its class, as in the 6502 reference at pagetable.com: load, trans, stack, shift, logic, arith, inc, ctrl, bra, flags, nop. The hex bytes are dark gray. The name in an operand has the color of the address it names (`ListingRow.target`): the table in `LDA tbl,X`, the pointer in `STA (ptr),Y`, the target of a `JSR` or a branch. Brackets, index, immediates, labels and comments stay plain.
 - **`hexdump()` colors bytes.** Each hex byte uses the color at its own address. The text column stays plain, read like a comment.
-- **Clipboard text stays plain.** `listing()` and `hexdump()` return a `Text` string with plain content and a separate colored display version for IPython. `str()`, `splitlines()` and `clip()` use the plain content.
+- **`memory_map()` colors cells.** `memory_map(start, end, cell_bytes)` shows 16 cells per row, each `cell_bytes` bytes, a power of 2: by default the whole 64 KB, a page per cell; `cell_bytes=0x10` makes each row one page. A cell has the color of the bytes in it, even if only some of them are classified; different colors in one cell give the mix color. Rows start at round addresses, columns show offsets, and there are no gridlines, so neighbouring cells of one color form a band. A legend below lists the color ranges in the range shown. No run is needed.
+- **Clipboard text stays plain.** `listing()` and `hexdump()` return a `Text` string with plain content and a separate colored display version for IPython. `str()`, `splitlines()` and `clip()` use the plain content. `memory_map()` does the same; its plain content shows a letter per colored cell (`g` for green, `Y` for the mix) and dots for the others.
 
-Operand colors in `listing()`, Graphviz node colors and a static memory map are not implemented yet. A breadcrumb's whole-span containment lookup is not a summary of byte colors for a map cell.
+Operand colors in `listing()` and Graphviz node colors are not implemented yet. A breadcrumb's whole-span containment lookup is not a summary of byte colors for a map cell.
 
 ## Experiments in `scripts/`
 

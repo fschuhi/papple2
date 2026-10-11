@@ -70,6 +70,12 @@ from papple2.workbench.listing import (  # noqa: F401
     print_listing,
 )
 from papple2.workbench.listing_editor import Place, PickerItem, edit_rows
+from papple2.workbench.memory_map import (
+    has_mix,
+    map_rows,
+    print_map_legend,
+    print_memory_map,
+)
 from papple2.workbench.session import Session
 from papple2.workbench.tiling import address
 
@@ -235,6 +241,46 @@ def hx(value: int) -> Text:
     sign (-$008c), and a value past $ffff shows all its digits ($1008c)."""
     sign = "-" if value < 0 else ""
     return Text(f"{sign}${abs(value):04x}")
+
+
+def memory_map(
+    start: int | str = 0x0000,
+    end: int | str = 0x10000,
+    cell_bytes: int = 0x100,
+) -> Text:
+    """Show the current dossier's color ranges from start up to, not
+    including, end: 16 cells per row, each cell_bytes bytes, a power of 2.
+    The default shows the whole 64 KB, a page per cell; cell_bytes=0x10
+    makes each row one page. start and end are addresses or labels, and
+    are rounded out to whole rows. No run is needed.
+
+    A cell has the color of the bytes in it (Colors.color_of_bytes), light
+    yellow where different colors meet. Below the map, a legend lists the
+    color ranges in the range shown. The text kept for str() and clip()
+    shows a letter per colored cell and dots for the others."""
+    store = session.current_colors()
+    session.refresh_annotations()
+    first, behind = session.address_of(start), session.address_of(end)
+    store.reload()
+    rows = map_rows(store.color_of_bytes, first, behind, cell_bytes)
+    entries = sorted(
+        (
+            (name, definition)
+            for name, definition in store.ranges.items()
+            if definition.start < behind and first < definition.end
+        ),
+        key=lambda item: (item[1].start, item[0]),
+    )
+
+    def shown(colored: bool) -> str:
+        with contextlib.redirect_stdout(io.StringIO()) as printed:
+            print_memory_map(rows, cell_bytes, colored)
+            if entries:
+                print()
+                print_map_legend(entries, has_mix(rows), colored)
+        return printed.getvalue().rstrip("\n")
+
+    return Text(shown(colored=False), shown(colored=True))
 
 
 # How show_callers() names the leaps that lead into a routine.

@@ -72,6 +72,7 @@ from papple2.workbench.shell import (  # noqa: F401
     listing,
     listing_rows,
     loop_reports,
+    memory_map,
     print_blocks,
     print_edges,
     print_listing,
