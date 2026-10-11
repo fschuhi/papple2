@@ -218,9 +218,17 @@ The recipe from `scripts/lr_basic_blocks_analysis.py`: the same lines could be t
    `0x6238` is `LOAD_LEVEL`.
 3. **Operand colors in the editor.** `edit("load_ax_from_table")`: the mnemonics are colored by class, and each operand has the color of the table it reads from.
 4. **The same colors in the hexdump.** `hexdump("tbl_halfscr_col_byte", 0x1db2)`: the two tables themselves, green running into cyan. Both views use the same `colors.json`.
-5. **The routine graph.** `show_routine_graph()` writes `tmp/routine_graph.svg` and puts its link on the clipboard, to paste into a browser.
-6. **The inner loop, live.** `docs/diagrams/inner-loop-hooks.html`: seven instructions, call by call, through the kind methods and hooks.
-7. **A tiny program through the whole pipeline.** `make walkthrough`, reports in `tmp/walkthrough/`.
+5. **Overlaps in light yellow.** Three cells, one line each: IPython shows `Out` only for the last line of a cell.
+   ```
+   color("probe", 0x1d20, 0x1d30, "red")
+   hexdump(0x1d00, 0x1d40)
+   uncolor("probe")
+   ```
+   Where red lies over the green and cyan tables, the bytes turn light yellow.
+6. **The memory map.** `memory_map()`: the dossier's color ranges across all 64 KB, with a legend. Then the zoom, `memory_map(0x1c00, 0x1e00, 0x10)`: one page per row, the green table running into the cyan one, light yellow where they meet. `legend=False` shows the map alone.
+7. **The routine graph.** `show_routine_graph()` writes `tmp/routine_graph.svg` and puts its link on the clipboard, to paste into a browser.
+8. **The inner loop, live.** `docs/diagrams/inner-loop-hooks.html`: seven instructions, call by call, through the kind methods and hooks.
+9. **A tiny program through the whole pipeline.** `make walkthrough`, reports in `tmp/walkthrough/`.
 
 ---
 
