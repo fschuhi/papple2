@@ -67,7 +67,6 @@ docs/reports/walkthrough/lr_unbroken_transitions.csv
 
 # working documents for finding the direction `papple2` wants to take
 #DIRECTION.md
-docs/decisions.md
 docs/instrumentation-design.md
 docs/workbench.md
 

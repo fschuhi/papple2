@@ -22,24 +22,25 @@ digraph pipeline {
     edge [color="#5F5E5A", fontname="Helvetica", fontsize=10, fontcolor="#444441",
           arrowsize=0.7];
 
+    // 0 the machine, built before the run: the program's boot()
+    boot [label=<<FONT FACE="monospace">lode_runner.boot()</FONT><BR/><FONT POINT-SIZE="10">Emulator, headless,</FONT><BR/><FONT POINT-SIZE="10">with the RWTS hook</FONT>>,
+          fillcolor="#E1F5EE", color="#0F6E56"];
+    boot -> loop [label=" emulator "];
+
     // 1 the run
     subgraph cluster_run {
-        label=<<B>1  run</B><BR/><FONT FACE="monospace" POINT-SIZE="10">session.run(program, n,<BR/>Tiling, StackTracking)</FONT>>;
+        label=<<B>1  run</B><BR/><FONT FACE="monospace" POINT-SIZE="10">session.run(emulator, n,<BR/>Tiling, StackTracking)</FONT>>;
         labelloc="t"; style="rounded,filled"; fillcolor="#E6F1FB"; color="#185FA5";
         fontcolor="#0C447C"; fontsize=12;
 
-        boot [label=<<FONT FACE="monospace">lode_runner.boot()</FONT><BR/><FONT POINT-SIZE="10">Emulator, headless,</FONT><BR/><FONT POINT-SIZE="10">with the RWTS hook</FONT>>,
-              fillcolor="#E1F5EE", color="#0F6E56"];
         loop [label=<<FONT FACE="monospace">Emulator.run()</FONT><BR/><FONT POINT-SIZE="10">until instruction_count_reaches(n),</FONT><BR/><FONT POINT-SIZE="10">4,000,000 in the recipe</FONT>>,
               penwidth=1.5, color="#444441"];
         tiling [label=<<FONT FACE="monospace"><B>Tiling</B></FONT><BR/><FONT POINT-SIZE="10">which code ran,</FONT><BR/><FONT POINT-SIZE="10">where it leapt</FONT>>,
                 color="#185FA5"];
         stack [label=<<FONT FACE="monospace"><B>StackTracking</B></FONT><BR/><FONT POINT-SIZE="10">a second stack:</FONT><BR/><FONT POINT-SIZE="10">real returns, tricks</FONT>>,
                color="#185FA5"];
-        { rank=same; boot; loop; }
         { rank=same; tiling; stack; }
 
-        boot -> loop;
         loop -> tiling [label=" hooks "];
         loop -> stack [label=" hooks "];
     }

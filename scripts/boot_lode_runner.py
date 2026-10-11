@@ -33,7 +33,7 @@ from pathlib import Path
 
 from papple2.core.emulator import Emulator
 from papple2.debug.stop_conditions import instruction_count_reaches
-from papple2.programs.lode_runner import boot, describe
+from papple2.programs.lode_runner import describe, install_rwts, load
 
 
 def hires_row_address(page_base: int, y: int) -> int:
@@ -84,7 +84,8 @@ def main() -> None:
                         help="window only: 1.0 = a real Apple II (default: unthrottled)")
     args = parser.parse_args()
 
-    emulator, rwts = boot(args.binary, args.headless, args.speed)
+    emulator = load(args.binary, args.headless, args.speed)
+    rwts = install_rwts(emulator)
     if args.headless:
         run_headless(emulator, args.instructions if args.instructions is not None else 4_000_000)
     elif args.instructions is not None:

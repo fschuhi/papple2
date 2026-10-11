@@ -40,6 +40,6 @@ digraph packages {
     debug -> util;
     programs -> util;
 
-    note [shape=plaintext, style="", fontsize=10, fontcolor="#5F5E5A", label=<Every arrow points down: the machine knows nothing of the tools around it.<BR/>Workbench never imports programs: run() takes the program as an argument.<BR/>assembler has no user inside papple2: only tests/ and scripts/walkthrough.py use it.>];
+    note [shape=plaintext, style="", fontsize=10, fontcolor="#5F5E5A", label=<Every arrow points down: the machine knows nothing of the tools around it.<BR/>Workbench never imports programs: run() takes the emulator a program's boot() gives.<BR/>assembler has no user inside papple2: only tests/ and scripts/walkthrough.py use it.>];
     util -> note [style=invis];
 }

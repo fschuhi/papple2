@@ -44,7 +44,6 @@ import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from types import ModuleType
 
 import graphviz
 from IPython import get_ipython
@@ -325,22 +324,20 @@ def set_current_run(
 
 
 def run(
-        program: ModuleType,
+        emulator: Emulator,
         instructions: int,
         *instrumentations: type,
-        binary: str | None = None,
 ) -> None:
-    """Run program headless for the given number of instructions, with the
-    instrumentations attached, e.g. run(lode_runner, 4_000_000, Tiling).
+    """Run emulator for the given number of instructions, from where its PC
+    stands, with the instrumentations attached, e.g.
+    run(lode_runner.boot(), 4_000_000, Tiling).
 
-    program is a program setup from papple2.programs, e.g. lode_runner:
-    its boot() loads and starts it from binary, or from its DEFAULT_BINARY.
-    Each instrumentation is a class, created on the booted machine's CPU.
-    run() writes nothing: the reports are the experiment's choice,
-    afterwards. The routines of an earlier run are forgotten."""
-    count, seconds = session.run(
-        program, instructions, *instrumentations, binary=binary
-    )
+    The emulator comes ready from a program's boot(), e.g.
+    papple2.programs.lode_runner.boot(): run() only runs it. Each
+    instrumentation is a class, created on the emulator's CPU. run() writes
+    nothing: the reports are the experiment's choice, afterwards. The
+    routines of an earlier run are forgotten."""
+    count, seconds = session.run(emulator, instructions, *instrumentations)
     print(f"{count:,} instructions in {seconds:.2f} s")
 
 

@@ -125,7 +125,7 @@ def walkthrough(make_emulator, tmp_path: Path) -> Walkthrough:
     emulator.attach(tiling)
     emulator.run(until=at_address(WALKTHROUGH_END))
     emulator.detach(tiling)
-    tiling.write_reports(tmp_path, emulator.instructions, rwts_reads=0)
+    tiling.write_reports(tmp_path, emulator.instructions)
 
     tiles, transitions = read_split_reports(tmp_path)
     graph = build_graph(tiles, transitions, entry=WALKTHROUGH_ENTRY)

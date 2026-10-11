@@ -161,7 +161,7 @@ Slide layout: the diagram on the left, a smaller pane on the right with bullets 
 ```python
 use_reports_folder(REPORTS_FOLDER)
 use_dossier(DOSSIER)
-run(lode_runner, 4_000_000, Tiling, StackTracking)
+run(lode_runner.boot(), 4_000_000, Tiling, StackTracking)
 tiling_reports()
 stack_tracking_reports()
 loop_reports(0x0800)

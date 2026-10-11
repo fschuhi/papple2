@@ -686,28 +686,15 @@ def test_the_run_commands_stop_without_a_current_run(
         command(*arguments)
 
 
-# A stand-in for a program setup: an endless loop at $6000, so any number
-# of instructions can run. Only lines like the walkthrough's: begun with
-# INX, the program made the assembler fail (UnboundLocalError for
-# operand), which is not looked into yet.
+# An endless loop at $6000, so any number of instructions can run. Only
+# lines like the walkthrough's: begun with INX, the program made the
+# assembler fail (UnboundLocalError for operand), which is not looked into
+# yet.
 ENDLESS_PROGRAM = """
         *=$6000
 LOOP    INC $10
         JMP LOOP
 """
-
-
-def stand_in_program(emulator, booted: list) -> SimpleNamespace:
-    """A program setup like papple2.programs.lode_runner, whose boot()
-    hands out emulator and notes how it was called."""
-
-    def boot(binary: str, headless: bool):
-        booted.append((binary, headless))
-        return emulator, SimpleNamespace(log=[])  # no RWTS reads
-
-    return SimpleNamespace(
-        LOAD_ADDRESS=0x6000, DEFAULT_BINARY="data/bin/STAND_IN.BIN", boot=boot
-    )
 
 
 class CountInstructions:
@@ -724,13 +711,10 @@ def test_run_attaches_the_instrumentations_and_writes_nothing(
     make_emulator, tmp_path: Path, no_run: None, no_reports_folder: None
 ) -> None:
     _, emulator = make_emulator(ENDLESS_PROGRAM)
-    booted = []
     use_reports_folder(tmp_path)
 
-    run(stand_in_program(emulator, booted), 10, CountInstructions, Tiling)
+    run(emulator, 10, CountInstructions, Tiling)
 
-    # Booted headless from the program's default binary.
-    assert booted == [("data/bin/STAND_IN.BIN", True)]
     # Both attached, in the order given, and each saw every instruction.
     counter, tiling = shell.session.run_instrumentations
     assert isinstance(counter, CountInstructions)
@@ -742,22 +726,11 @@ def test_run_attaches_the_instrumentations_and_writes_nothing(
     assert shell.session.routines is None
 
 
-def test_run_boots_from_the_binary_given(
-    make_emulator, no_run: None
-) -> None:
-    _, emulator = make_emulator(ENDLESS_PROGRAM)
-    booted = []
-
-    run(stand_in_program(emulator, booted), 10, binary="data/bin/OTHER.BIN")
-
-    assert booted == [("data/bin/OTHER.BIN", True)]
-
-
 def test_tiling_reports_write_the_reports_and_find_the_routines(
     make_emulator, tmp_path: Path, no_run: None, no_reports_folder: None
 ) -> None:
     _, emulator = make_emulator(ENDLESS_PROGRAM)
-    run(stand_in_program(emulator, []), 10, Tiling)
+    run(emulator, 10, Tiling)
     use_reports_folder(tmp_path / "experiment")
 
     tiling_reports()
@@ -776,7 +749,7 @@ def test_tiling_reports_without_tiling_stop(
     make_emulator, tmp_path: Path, no_run: None, no_reports_folder: None
 ) -> None:
     _, emulator = make_emulator(ENDLESS_PROGRAM)
-    run(stand_in_program(emulator, []), 10, CountInstructions)
+    run(emulator, 10, CountInstructions)
     use_reports_folder(tmp_path)
     with pytest.raises(RuntimeError, match="no Tiling"):
         tiling_reports()
@@ -786,7 +759,7 @@ def test_tiling_reports_without_a_reports_folder_stop(
     make_emulator, no_run: None, no_reports_folder: None
 ) -> None:
     _, emulator = make_emulator(ENDLESS_PROGRAM)
-    run(stand_in_program(emulator, []), 10, Tiling)
+    run(emulator, 10, Tiling)
     with pytest.raises(RuntimeError, match="use_reports_folder"):
         tiling_reports()
 
@@ -812,7 +785,7 @@ def test_show_callers_counts_a_jmp_into_a_routine(
 ) -> None:
     # The JMP at 600b leads into SUB at 600e, from the routine TAIL at 6009.
     _, emulator = make_emulator(TAIL_CALL_PROGRAM)
-    run(stand_in_program(emulator, []), 12, Tiling)
+    run(emulator, 12, Tiling)
     use_reports_folder(tmp_path)
     tiling_reports()
 
@@ -828,7 +801,7 @@ def test_stack_tracking_reports_write_the_report(
     make_emulator, tmp_path: Path, no_run: None, no_reports_folder: None
 ) -> None:
     _, emulator = make_emulator(ENDLESS_PROGRAM)
-    run(stand_in_program(emulator, []), 10, StackTracking)
+    run(emulator, 10, StackTracking)
     use_reports_folder(tmp_path / "experiment")
 
     stack_tracking_reports()
@@ -860,7 +833,7 @@ def test_stack_tracking_reports_make_stack_jump_targets_routines(
     make_emulator, tmp_path: Path, capsys, no_run: None, no_reports_folder: None
 ) -> None:
     _, emulator = make_emulator(STACK_JUMP_PROGRAM)
-    run(stand_in_program(emulator, []), 12, Tiling, StackTracking)
+    run(emulator, 12, Tiling, StackTracking)
     use_reports_folder(tmp_path)
 
     tiling_reports()
@@ -882,7 +855,7 @@ def test_stack_tracking_reports_without_stack_tracking_stop(
     make_emulator, tmp_path: Path, no_run: None, no_reports_folder: None
 ) -> None:
     _, emulator = make_emulator(ENDLESS_PROGRAM)
-    run(stand_in_program(emulator, []), 10, Tiling)
+    run(emulator, 10, Tiling)
     use_reports_folder(tmp_path)
     with pytest.raises(RuntimeError, match="no StackTracking"):
         stack_tracking_reports()
@@ -892,7 +865,7 @@ def test_stack_tracking_reports_without_a_reports_folder_stop(
     make_emulator, no_run: None, no_reports_folder: None
 ) -> None:
     _, emulator = make_emulator(ENDLESS_PROGRAM)
-    run(stand_in_program(emulator, []), 10, StackTracking)
+    run(emulator, 10, StackTracking)
     with pytest.raises(RuntimeError, match="use_reports_folder"):
         stack_tracking_reports()
 

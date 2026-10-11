@@ -26,7 +26,7 @@ An **experiment** is one `lr_` script in `scripts/`. Its **recipe** is the part 
 ```python
 use_reports_folder(Path("docs/reports/lr_basic_blocks_analysis"))
 use_dossier(Path("dossiers/lode_runner"))
-run(lode_runner, 4_000_000, Tiling, StackTracking)
+run(lode_runner.boot(), 4_000_000, Tiling, StackTracking)
 tiling_reports()
 stack_tracking_reports()
 loop_reports(0x0800)
@@ -34,7 +34,7 @@ loop_reports(0x0800)
 
 The rest of an experiment can do analysis of its own, or offer functions of its own: `overview()` in `lr_overview.py`, which works from reports alone, is one. A function that proves useful beyond its experiment graduates to `shell.py`, as `show_blocks()`, `listing()` and `loop_reports()` did from `lr_basic_blocks_analysis.py`.
 
-`run()` only runs: it boots the program setup headless, builds and attaches the instrumentations, runs, and detaches them. What gets written afterwards is the experiment's choice, one command per kind of report: `tiling_reports()` writes the tiling reports into the reports folder and builds the run's routines and run graph from them, since the files are the only connection. Each experiment writes into a reports folder of its own, `docs/reports/<experiment>/`, under git. The reports of other experiments are read by their full paths, by convention, as `lr_overview.py` reads `docs/reports/lr_tiles/`.
+`run()` only runs: it takes a ready emulator, as a program's `boot()` gives it, builds and attaches the instrumentations, runs from where `PC` stands, and detaches them. What gets written afterwards is the experiment's choice, one command per kind of report: `tiling_reports()` writes the tiling reports into the reports folder and builds the run's routines and run graph from them, since the files are the only connection. Each experiment writes into a reports folder of its own, `docs/reports/<experiment>/`, under git. The reports of other experiments are read by their full paths, by convention, as `lr_overview.py` reads `docs/reports/lr_tiles/`.
 
 ## At the prompt
 
@@ -67,7 +67,7 @@ What `%run scripts/lr_basic_blocks_analysis.py` leaves in the session:
 | Commands: hex arithmetic | `hx()`                                                                                                                                                        |
 | Commands: memory map | `memory_map()`                                                                                                                                                |
 | Commands on objects | `print_routines()`, `print_blocks()`, `print_edges()`, `print_loops()`, `listing_rows()`, `print_listing()`, `set_current_run()`                               |
-| For a run of your own | `lode_runner` (a program setup, a module: lowercase), `Tiling` and `StackTracking` (instrumentations, classes: capitalized)                                   |
+| For a run of your own | `lode_runner.boot()` (a ready machine), `Tiling` and `StackTracking` (instrumentations, classes: capitalized)                                                 |
 | Machinery | `shell`, and through it `shell.session` with `shell.session.run_emulator`, `.run_instrumentations`, `.routines`, `.run_graph`, `.run_transitions`, `.annotations`, `.hidden`, `.color_store` |
 | The experiment's own | `REPORTS_FOLDER`, `DOSSIER`, `parse_arguments()`, `arguments`, `entry`, `argparse`, `Path`                                                                    |
 
@@ -148,7 +148,7 @@ Operand colors in `listing()` and Graphviz node colors are not implemented yet. 
 - **Machinery:** everything else reachable at the prompt (`shell.session.run_emulator`, `shell.session.routines`, ...): there for debugging and curiosity, with no guarantee.
 - **Graduate:** a function moves from its experiment into `shell.py`, once it proves useful beyond it.
 - **Program setup:** how `papple2` loads and starts one program, a module in `papple2.programs`: `lode_runner`. Not the program, not its dossier.
-- **Run:** one execution of a program setup for a number of instructions, with instrumentations attached. The **current run** is the one the commands work on. There is one at a time; a second one means a second terminal.
+- **Run:** one execution of an emulator for a number of instructions, from where its `PC` stands, with instrumentations attached. The **current run** is the one the commands work on. There is one at a time; a second one means a second terminal.
 - **Instrumentation:** a class whose objects watch a run through the emulator's hooks: after every instruction, or after reads and writes of memory. `Tiling`, or a class typed at the prompt.
 - **Report:** a file an experiment writes. The reports carry meaning on their own, they are easy to work with.
 - **Reports folder:** an experiment's home, `docs/reports/<experiment>/`: where its reports go, and where it reads its own. One at a time.

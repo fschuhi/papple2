@@ -115,7 +115,7 @@
 <g id="node7" class="node">
 <title>note</title>
 <text xml:space="preserve" text-anchor="start" x="176.15" y="-32.7" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#5f5e5a">Every arrow points down: the machine knows nothing of the tools around it.</text>
-<text xml:space="preserve" text-anchor="start" x="172.77" y="-21.45" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#5f5e5a">Workbench never imports programs: run() takes the program as an argument.</text>
+<text xml:space="preserve" text-anchor="start" x="152.9" y="-21.45" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#5f5e5a">Workbench never imports programs: run() takes the emulator a program&#39;s boot() gives.</text>
 <text xml:space="preserve" text-anchor="start" x="157.4" y="-10.2" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#5f5e5a">assembler has no user inside papple2: only tests/ and scripts/walkthrough.py use it.</text>
 </g>
 <!-- util&#45;&gt;note -->

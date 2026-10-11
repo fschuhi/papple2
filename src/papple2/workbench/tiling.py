@@ -225,19 +225,19 @@ class Tiling:
         self.current_tile = target
 
     def write_reports(
-            self, folder: Path, expected_instructions: int, rwts_reads: int
+            self, folder: Path, expected_instructions: int
     ) -> None:
         """Check the accounting, then write the five reports into `folder`.
 
         `expected_instructions` is the number of instructions the emulator
         ran while this instrumentation was attached; the hook's own count
-        must match it. `rwts_reads` only goes into the measurements.
+        must match it.
         """
         # The checks come first, so a failed check leaves no reports behind.
         check_consistency(self, expected_instructions)
         save_tiles(self, folder / TILES_FILE)
         save_transitions(self, folder / TRANSITIONS_FILE)
-        save_measurements(self, rwts_reads, folder)
+        save_measurements(self, folder)
         print("each CSV includes one additional header line")
 
 
@@ -669,7 +669,7 @@ def split_tiles(
 
 
 def save_measurements(
-        instrumentation: Tiling, rwts_reads: int, folder: Path
+        instrumentation: Tiling, folder: Path
 ) -> None:
     # Convert the unique keys to NamedTuples once:
     records: list[TransitionRecord] = sorted(
@@ -714,7 +714,6 @@ def save_measurements(
         f"  Tiles: {len(instrumentation.tiles):,}",
         f"  Transition records: {len(records):,}",
         f"  Transition traversals: {sum(count for _, count in records):,}",
-        f"  RWTS reads served: {rwts_reads:,}",
         "",
         "SPLIT TILES",
         f"  Original tiles: {len(instrumentation.tiles):,}",

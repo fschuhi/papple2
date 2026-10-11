@@ -16,8 +16,6 @@ attributes are plain, so a test may assign a stand-in to any of them.
 
 import time
 from pathlib import Path
-from types import ModuleType
-from typing import Any
 
 from papple2.core.emulator import Emulator
 from papple2.debug.disassembler import STANDARD_LABELS
@@ -60,13 +58,12 @@ class Session:
         self.hidden: Hidden | None = None
         self.color_store: Colors | None = None
 
-        # The current run: the program setup it ran, the machine as the run
-        # left it (listing() reads its memory), its disk stand-in (with a
-        # log of the reads it served), and the instrumentations that were
-        # attached, in the order given to run(). Empty until run().
-        self.run_program: ModuleType | None = None
+        # The current run: where PC stood when it began (the start of its
+        # routines), the machine as the run left it (listing() reads its
+        # memory), and the instrumentations that were attached, in the
+        # order given to run(). Empty until run().
+        self.run_start: int | None = None
         self.run_emulator: Emulator | None = None
-        self.run_rwts: Any = None
         self.run_instrumentations: list[object] = []
         # The run's routines and the graph of every block it ran
         # (listing()'s arrows), built from the tiling's split reports. None
@@ -148,16 +145,13 @@ class Session:
 
     def run(
         self,
-        program: ModuleType,
+        emulator: Emulator,
         instructions: int,
         *instrumentations: type,
-        binary: str | None = None,
     ) -> tuple[int, float]:
-        """Run program headless with the instrumentations attached; return
-        the instructions run and the seconds they took."""
-        emulator, rwts = program.boot(
-            binary or program.DEFAULT_BINARY, headless=True
-        )
+        """Run emulator from where its PC stands, with the instrumentations
+        attached; return the instructions run and the seconds they took."""
+        start_address = emulator.cpu.PC
         attached = [
             instrumentation(emulator.cpu) for instrumentation in instrumentations
         ]
@@ -172,9 +166,8 @@ class Session:
             for instrumentation in attached:
                 emulator.detach(instrumentation)
 
-        self.run_program = program
+        self.run_start = start_address
         self.run_emulator = emulator
-        self.run_rwts = rwts
         self.run_instrumentations = attached
         self.routines = None
         self.run_graph = None
@@ -186,14 +179,14 @@ class Session:
     def tiling_reports(self) -> int:
         """Write the tiling reports into the reports folder, build the run's
         routines from them; return how many routines it has."""
-        if self.run_emulator is None or self.run_program is None:
+        if self.run_emulator is None or self.run_start is None:
             raise RuntimeError("no run; call run() first")
         tilings = [
             each for each in self.run_instrumentations if isinstance(each, Tiling)
         ]
         if not tilings:
             raise RuntimeError(
-                "the current run had no Tiling attached; run(program, n, Tiling)"
+                "the current run had no Tiling attached; run(emulator, n, Tiling)"
             )
         if self.reports_folder is None:
             raise RuntimeError(
@@ -202,13 +195,11 @@ class Session:
         # The emulator counts from 0, so emulator.instructions is what ran
         # while the tiling was attached.
         tilings[0].write_reports(
-            self.reports_folder,
-            self.run_emulator.instructions,
-            len(self.run_rwts.log),
+            self.reports_folder, self.run_emulator.instructions
         )
         return self.set_current_run(
             self.run_emulator,
-            self.run_program.LOAD_ADDRESS,
+            self.run_start,
             self.reports_folder / SPLIT_TILES_FILE,
             self.reports_folder / SPLIT_TRANSITIONS_FILE,
         )
@@ -217,7 +208,7 @@ class Session:
         """Write the stack tracking report into the reports folder; if the
         routines are built, build them again with it, and return how many
         there are, else None."""
-        if self.run_emulator is None:
+        if self.run_emulator is None or self.run_start is None:
             raise RuntimeError("no run; call run() first")
         trackings = [
             each
@@ -227,7 +218,7 @@ class Session:
         if not trackings:
             raise RuntimeError(
                 "the current run had no StackTracking attached; "
-                "run(program, n, StackTracking)"
+                "run(emulator, n, StackTracking)"
             )
         if self.reports_folder is None:
             raise RuntimeError(
@@ -238,7 +229,7 @@ class Session:
             return None
         return self.set_current_run(
             self.run_emulator,
-            self.run_program.LOAD_ADDRESS,
+            self.run_start,
             self.reports_folder / SPLIT_TILES_FILE,
             self.reports_folder / SPLIT_TRANSITIONS_FILE,
             returns=self.reports_folder / RETURNS_FILE,

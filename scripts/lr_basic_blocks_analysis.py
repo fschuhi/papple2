@@ -137,13 +137,7 @@ if __name__ == "__main__":
     arguments = parse_arguments()
     use_reports_folder(REPORTS_FOLDER)
     use_dossier(DOSSIER)
-    run(
-        lode_runner,
-        arguments.instructions,
-        Tiling,
-        StackTracking,
-        binary=arguments.binary,
-    )
+    run(lode_runner.boot(arguments.binary), arguments.instructions, Tiling, StackTracking)
     tiling_reports()
     stack_tracking_reports()
 

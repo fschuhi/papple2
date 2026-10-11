@@ -131,7 +131,7 @@ def walkthrough(
 
     # run() counts from 0, so emulator.instructions is what ran while the
     # tiling was attached. No disk routine here, so no RWTS reads.
-    tiling.write_reports(folder, emulator.instructions, rwts_reads=0)
+    tiling.write_reports(folder, emulator.instructions)
 
     # The analysis reads the reports back from the folder, as it would
     # for any other run: the files are the only connection.

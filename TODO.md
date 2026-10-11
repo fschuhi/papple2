@@ -18,7 +18,7 @@
 - Directions noticed after the `Session` (2026-10-10), none urgent:
   - Analysis on plain data types. `basic_blocks_analysis.py` works on `SplitTile`, `SplitTransition` and `ReturnRow`, and the CSV files only turn files into those. A later `TilingManager` held by the `Session` could hand over the same types from memory, with the files as one output. The rule "analysis works on reports" would become "analysis works on plain data types". It needs a test that both paths give the same result.
   - Names for what instrumentations write. Tiles, transitions and returns are recordings of one run, as counts, not reports; the loop CSVs and `lr_overview.txt` are reports. The word: `profile`; "trace" stays free for something with an order (e.g. a future `lr_frames.csv`). When it is applied, look at the file names and places together: the `lr_` prefix names Lode Runner, but `Tiling` writes it for any program (the walkthrough's files are `lr_unbroken_tiles.csv`), and `docs/reports/<experiment>/` sits apart from `dossiers/<program>/`. Until then, `lr_` stays. _Needs a discussion first._
-  - `set_current_run()` leaves `run_program` and `run_instrumentations` as they were. It matters only when a run is set from reports made elsewhere.
+  - `set_current_run()` leaves `run_start` and `run_instrumentations` as they were. It matters only when a run is set from reports made elsewhere.
   - A `pysm` state machine for the `Session`'s state (no run, run made, routines built), much later. A computed `state` property would come first.
 
 ## Routine structure (in this order)

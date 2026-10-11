@@ -12,10 +12,10 @@ buffer, clears carry, and returns to the caller as RTS would. Anything
 else (the high-score write at game over, format) prints the request and
 stops the emulator.
 
-Used by scripts/boot_lode_runner.py (the window and the headless run),
-by the lr_* recipes, and by run() in papple2.workbench.shell, which takes
-this module as its program: a program setup has LOAD_ADDRESS,
-DEFAULT_BINARY and boot().
+boot() gives a ready machine, the game in memory and the RWTS hook
+installed: run(lode_runner.boot(), 4_000_000, Tiling) at the prompt and in
+the lr_* recipes. scripts/boot_lode_runner.py calls the two pieces, load()
+and install_rwts(), itself, and keeps the hook to print the reads it served.
 
 Needs the stack wrap and decimal mode fixes in cpu.py (2026-09-23 patch).
 """
@@ -96,11 +96,27 @@ def describe(instructions: int, command: int, track: int, sector: int, buffer: i
             f"returns to ${caller:04X}")
 
 
-def boot(binary: str, headless: bool, speed: float | None = None) -> tuple[Emulator, RwtsHook]:
-    data_dir = load_data_dir()
-    emulator = Emulator(no_display=headless, data_dir=data_dir, speed=speed)
+def load(
+    binary: str = DEFAULT_BINARY, headless: bool = True, speed: float | None = None
+) -> Emulator:
+    """A machine with the game at LOAD_ADDRESS and PC there, no hook yet."""
+    emulator = Emulator(no_display=headless, data_dir=load_data_dir(), speed=speed)
     emulator.load_image(LOAD_ADDRESS, binary)
     emulator.cpu.PC = LOAD_ADDRESS
-    rwts = RwtsHook(DiskImage(Path(data_dir) / "do" / DISK_IMAGE))
+    return emulator
+
+
+def install_rwts(emulator: Emulator) -> RwtsHook:
+    """Serve the game's disk reads from its disk image; return the hook."""
+    rwts = RwtsHook(DiskImage(Path(load_data_dir()) / "do" / DISK_IMAGE))
     emulator.add_trap(DISABLE_INTS_CALL_RWTS, rwts.serve)
-    return emulator, rwts
+    return rwts
+
+
+def boot(
+    binary: str = DEFAULT_BINARY, headless: bool = True, speed: float | None = None
+) -> Emulator:
+    """The game, ready to run: loaded, with the RWTS hook installed."""
+    emulator = load(binary, headless, speed)
+    install_rwts(emulator)
+    return emulator

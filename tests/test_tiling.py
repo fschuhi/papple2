@@ -40,7 +40,7 @@ def run_with_tiling(make_emulator, stop: int, folder: Path) -> Tiling:
     emulator.attach(tiling)
     emulator.run(until=at_address(stop))
     emulator.detach(tiling)
-    tiling.write_reports(folder, emulator.instructions, rwts_reads=0)
+    tiling.write_reports(folder, emulator.instructions)
     return tiling
 
 
