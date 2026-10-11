@@ -119,7 +119,28 @@ Slide layout: the diagram on the left, a smaller pane on the right with bullets 
 - Why every 1000th pass: asking pygame for events on every instruction took about a third of the windowed run time (measured 2026-09-23).
 - The memory access kinds are named for why the CPU accesses a byte, not where it is: `LDA $0100,X` touches the stack page, but it is a data read.
 
-### 5. The pipeline (`pipeline.png`)
+### 5. The emulator's states (`states.png`)
+
+**What I say:**
+
+> This is how the machine stops and goes on. On the left, the window: with pygame, closing it or Print sends `halt`, Ctrl-X sends `ctrlx`, D and L while stopped send `d` and `l`, any other key goes to the Apple II. Headless, a `NoWindow` stands in and sends nothing.
+>
+> In the middle, the run loop: every 1000th pass it asks the window for events and dispatches them. Before each instruction, a breakpoint, an unserved trap or `until` sends `breakpoint`.
+>
+> On the right, the state machine, built on `pysm`: Running and Stopped, and halt. `ctrlx` toggles between them, `breakpoint` only stops. Every stop goes through the state machine, never around it. Without a window, nothing can send `ctrlx`, so a stop ends the run.
+
+**Right pane:**
+
+- two windows, one interface
+- three ways to stop, one event: `breakpoint`
+- `ctrlx` toggles, `halt` ends
+- headless: a stop is the end
+
+**Worth knowing if asked:**
+- `EmulatorStates` composes a `StateMachine` instead of subclassing one.
+- The entry action of Running runs at construction (`fire_events_on_init`), as Harel's statecharts demand.
+
+### 6. The pipeline (`pipeline.png`)
 
 **What I say:**
 
@@ -148,7 +169,7 @@ loop_reports(0x0800)
 
 The recipe from `scripts/lr_basic_blocks_analysis.py`: the same lines could be typed at the prompt.
 
-### 6. The listing and the editor (`listing.png`)
+### 7. The listing and the editor (`listing.png`)
 
 **What I say:**
 
@@ -195,9 +216,11 @@ The recipe from `scripts/lr_basic_blocks_analysis.py`: the same lines could be t
    edit(0x6238)
    ```
    `0x6238` is `LOAD_LEVEL`.
-3. **The routine graph.** `show_routine_graph()` writes `tmp/routine_graph.svg` and puts its link on the clipboard, to paste into a browser.
-4. **The inner loop, live.** `docs/diagrams/inner-loop-hooks.html`: seven instructions, call by call, through the kind methods and hooks.
-5. **A tiny program through the whole pipeline.** `make walkthrough`, reports in `tmp/walkthrough/`.
+3. **Operand colors in the editor.** `edit("load_ax_from_table")`: the mnemonics are colored by class, and each operand has the color of the table it reads from.
+4. **The same colors in the hexdump.** `hexdump("tbl_halfscr_col_byte", 0x1db2)`: the two tables themselves, green running into cyan. Both views use the same `colors.json`.
+5. **The routine graph.** `show_routine_graph()` writes `tmp/routine_graph.svg` and puts its link on the clipboard, to paste into a browser.
+6. **The inner loop, live.** `docs/diagrams/inner-loop-hooks.html`: seven instructions, call by call, through the kind methods and hooks.
+7. **A tiny program through the whole pipeline.** `make walkthrough`, reports in `tmp/walkthrough/`.
 
 ---
 

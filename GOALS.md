@@ -8,17 +8,15 @@
 
 ## 📍 Current Session Pointer
 
-**Where we are:** `papple2` is the workbench for reverse engineering Apple II games by running them, with Lode Runner as the worked example. Dynamic first; the oracle only grades. Routines, blocks, loops and callers are available at the prompt and in the editor; what I learn stays in the dossier. Since 2026-10-09, `hide()` sets overwritten code aside as one grey row in `listing()` and `edit()`, persisted in `hidden.json`. Named color ranges persist separately in `colors.json`: every breadcrumb uses its assigned color, only the current one bold; long listings color code by location while comments and arrows stay unchanged. The editor deliberately has no line coloring. Copied listing text remains plain. Both hiding and initial coloring were checked in the real IPython workflow. Since 2026-10-10 the state of a working session lives in one `Session` object, `shell.session`, and the commands are thin wrappers around it. Since 2026-10-11, seven diagrams made from the code show the packages, the workbench by role, the machine, one pass of the run loop, the pipeline, the listing and the editor, and the emulator's states; `make presentation` renders them, and `PRESENTATION.md` holds the script for each slide and the demos. The code that builds a listing lives in `listing.py`, the part that reads state in the `Session`.
+**Where we are:** `papple2` is the workbench for reverse engineering Apple II games by running them, with Lode Runner as the worked example. Dynamic first; the oracle only grades. Routines, blocks, loops and callers are available at the prompt and in the editor; what I learn stays in the dossier. Since 2026-10-09, `hide()` sets overwritten code aside as one grey row in `listing()` and `edit()`, persisted in `hidden.json`. Named color ranges persist separately in `colors.json`: every breadcrumb uses its assigned color, only the current one bold; long listings color code by location while comments and arrows stay unchanged. Since 2026-10-11 the editor colors its mnemonics by class, as in the 6502 reference at pagetable.com, and each operand in the color of the address it names; `hexdump()` colors its bytes the same way. Copied listing text remains plain. Both hiding and initial coloring were checked in the real IPython workflow. Since 2026-10-10 the state of a working session lives in one `Session` object, `shell.session`, and the commands are thin wrappers around it. Since 2026-10-11, seven diagrams made from the code show the packages, the workbench by role, the machine, one pass of the run loop, the pipeline, the listing and the editor, and the emulator's states; `make presentation` renders them, and `PRESENTATION.md` holds the script for each slide and the demos. The code that builds a listing lives in `listing.py`, the part that reads state in the `Session`.
 
 **What's next, in this order:**
 
-1. Syntax coloring, in the editor only; `listing()` keeps its range colors as beacons (`TODO.md`, "Coloring and memory map").
-2. Operand colors by the address the operand names, e.g. the table base in `LDA table,Y` (`TODO.md`, "Coloring and memory map"). By the final address, for `(zp),Y`, only once the cross reference exists.
-3. The static memory map, and colors in `hexdump()`, which has none yet (`TODO.md`, "Coloring and memory map").
-4. Revisit the walkthrough and write `walkthrough.md` (`TODO.md`, "Explaining `papple2`").
-5. Real-world examples for `Tiling` and `StackTracking` from Lode Runner, homing in with `show_routines()`, added to `walkthrough.md`.
-6. The cross reference (`TODO.md`, "Cross reference").
-7. The README pruning (`TODO.md`, "Explaining `papple2`").
+1. The static memory map: the dossier's color ranges across the whole 64 KB, and how a cell sums up its bytes (`TODO.md`, "Coloring and memory map").
+2. Complete the walkthrough: `StackTracking` in it (its program has no `RTS` stack jump yet), the chapters reviewed, and `walkthrough.md` written from them (`TODO.md`, "Walkthrough").
+3. Real-world examples for `Tiling` and `StackTracking` from Lode Runner, homing in with `show_routines()`, added to `walkthrough.md` (`TODO.md`, "Walkthrough").
+4. The cross reference (`TODO.md`, "Cross reference").
+5. The README pruning (`TODO.md`, "Explaining `papple2`").
 
 **Still to prune:** `README.md`. The Dev parts and the data files move out, `docs/decisions.md` gets thinned, and the Vision is rewritten (remember, appreciate, tinker, create; no history). Details, with the additions of 2026-10-11: `TODO.md`, "README pruning".
 
