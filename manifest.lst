@@ -153,6 +153,7 @@ src/papple2/workbench/colors.py
 src/papple2/workbench/hidden.py
 src/papple2/workbench/listing.py
 src/papple2/workbench/listing_editor.py
+src/papple2/workbench/memory_map.py
 src/papple2/workbench/session.py
 src/papple2/workbench/shell.py
 #src/papple2/workbench/stack_tracking.py
@@ -194,6 +195,7 @@ tests/test_listing_editor.py
 tests/test_listing_editor_syntax.py
 #tests/test_memory.py
 #tests/test_memory_hooks.py
+tests/test_memory_map.py
 #tests/test_shell.py
 tests/test_shell_colors.py
 tests/test_shell_hidden.py
