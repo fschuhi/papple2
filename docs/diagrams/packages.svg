@@ -20,11 +20,11 @@
 <!-- workbench -->
 <g id="node2" class="node">
 <title>workbench</title>
-<path fill="#eeedfe" stroke="#534ab7" d="M416.8,-408.35C416.8,-408.35 58,-408.35 58,-408.35 52,-408.35 46,-402.35 46,-396.35 46,-396.35 46,-363.95 46,-363.95 46,-357.95 52,-351.95 58,-351.95 58,-351.95 416.8,-351.95 416.8,-351.95 422.8,-351.95 428.8,-357.95 428.8,-363.95 428.8,-363.95 428.8,-396.35 428.8,-396.35 428.8,-402.35 422.8,-408.35 416.8,-408.35"/>
+<path fill="#eeedfe" stroke="#534ab7" d="M443.8,-408.35C443.8,-408.35 31,-408.35 31,-408.35 25,-408.35 19,-402.35 19,-396.35 19,-396.35 19,-363.95 19,-363.95 19,-357.95 25,-351.95 31,-351.95 31,-351.95 443.8,-351.95 443.8,-351.95 449.8,-351.95 455.8,-357.95 455.8,-363.95 455.8,-363.95 455.8,-396.35 455.8,-396.35 455.8,-402.35 449.8,-408.35 443.8,-408.35"/>
 <text xml:space="preserve" text-anchor="start" x="181.15" y="-390.75" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="12.00" fill="#3c3489">papple2.workbench</text>
 <text xml:space="preserve" text-anchor="start" x="119.28" y="-380.65" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#534ab7">reverse engineering: run, reports, analysis, commands</text>
 <text xml:space="preserve" text-anchor="start" x="99.4" y="-370.65" font-family="monospace" font-size="10.00">tiling, stack_tracking, basic_blocks_analysis,</text>
-<text xml:space="preserve" text-anchor="start" x="60.4" y="-360.65" font-family="monospace" font-size="10.00">session, annotations, hidden, colors, shell, listing_editor</text>
+<text xml:space="preserve" text-anchor="start" x="33.4" y="-360.65" font-family="monospace" font-size="10.00">session, annotations, hidden, colors, shell, listing, listing_editor</text>
 </g>
 <!-- scripts&#45;&gt;workbench -->
 <g id="edge1" class="edge">

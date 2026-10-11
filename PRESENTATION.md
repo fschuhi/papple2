@@ -52,6 +52,8 @@ Slide layout: the diagram on the left, a smaller pane on the right with bullets 
 >
 > In green, the commands in `shell`. They are the contract: what I type at the IPython prompt, and what the scripts call. The prompt is one client, the scripts are another. The tests even skip `shell` and talk to the `Session` directly.
 >
+> In lavender, `listing`: it builds the rows of a listing, which the prompt and the editor both show.
+>
 > In pink, the listing editor: one screen on all of it.
 
 **Right pane:**
@@ -60,10 +62,11 @@ Slide layout: the diagram on the left, a smaller pane on the right with bullets 
 - red: find routines and loops
 - grey: the state, and the dossier on disk
 - green: the commands, the contract
+- lavender: the rows of a listing
 - pink: one screen on it
 
 **Worth knowing if asked:**
-- `shell` still reaches past `session` to `basic_blocks_analysis`, `hidden` and `tiling`. Those are helpers kept next to the commands; moving them is Session step 2a in `TODO.md`.
+- `shell` still reaches past `session` to `basic_blocks_analysis` and `tiling`. Those are helpers kept next to the commands; moving them is Session step 2a in `TODO.md`.
 - Headless use, e.g. writing reports for another tool, works today as "`shell` without the prompt".
 
 ### 3. Inside the machine (`core.png`)
