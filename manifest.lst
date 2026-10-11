@@ -40,7 +40,7 @@ dossiers/lode_runner/hidden.json
 #docs/reports/lr_basic_blocks_analysis/lr_loop_members_0800.csv
 #docs/reports/lr_basic_blocks_analysis/lr_loops_0800.csv
 #docs/reports/lr_basic_blocks_analysis/lr_measurements.txt
-#docs/reports/lr_basic_blocks_analysis/lr_returns.csv
+docs/reports/lr_basic_blocks_analysis/lr_returns.csv
 #docs/reports/lr_basic_blocks_analysis/lr_split_tiles.csv
 #docs/reports/lr_basic_blocks_analysis/lr_split_transitions.csv
 #docs/reports/lr_basic_blocks_analysis/lr_unbroken_tiles.csv
@@ -54,13 +54,13 @@ dossiers/lode_runner/hidden.json
 #docs/reports/lr_tiles/lr_unbroken_tiles.csv
 #docs/reports/lr_tiles/lr_unbroken_transitions.csv
 
-#docs/reports/walkthrough/lr_loop_members.csv
-#docs/reports/walkthrough/lr_loops.csv
-#docs/reports/walkthrough/lr_measurements.txt
-#docs/reports/walkthrough/lr_split_tiles.csv
-#docs/reports/walkthrough/lr_split_transitions.csv
-#docs/reports/walkthrough/lr_unbroken_tiles.csv
-#docs/reports/walkthrough/lr_unbroken_transitions.csv
+docs/reports/walkthrough/lr_loop_members.csv
+docs/reports/walkthrough/lr_loops.csv
+docs/reports/walkthrough/lr_measurements.txt
+docs/reports/walkthrough/lr_split_tiles.csv
+docs/reports/walkthrough/lr_split_transitions.csv
+docs/reports/walkthrough/lr_unbroken_tiles.csv
+docs/reports/walkthrough/lr_unbroken_transitions.csv
 
 # sections from XekriRedmane's literate-source `main.asm` and `dasm` listing from it
 #docs/listings/LOAD_LEVEL.lst
@@ -80,12 +80,12 @@ docs/workbench.md
 #docs/diagrams/routine_graph.svg
 
 # architecture diagrams (dot)
-docs/diagrams/core.dot
-docs/diagrams/listing.dot
-docs/diagrams/packages.dot
+#docs/diagrams/core.dot
+#docs/diagrams/listing.dot
+#docs/diagrams/packages.dot
 docs/diagrams/pipeline.dot
-docs/diagrams/states.dot
-docs/diagrams/run-loop.dot
+#docs/diagrams/states.dot
+#docs/diagrams/run-loop.dot
 docs/diagrams/workbench.dot
 
 # architecture diagrams (svg, for GitHub)
@@ -139,7 +139,7 @@ src/papple2/core/emulator.py
 #src/papple2/core/window.py
 
 ## debug
-#src/papple2/debug/assembler.py
+src/papple2/debug/assembler.py
 src/papple2/debug/disassembler.py
 #src/papple2/debug/stop_conditions.py
 
@@ -148,16 +148,16 @@ src/papple2/debug/disassembler.py
 
 ## workbench
 src/papple2/workbench/annotations.py
-#src/papple2/workbench/basic_blocks_analysis.py
-src/papple2/workbench/colors.py
-src/papple2/workbench/hidden.py
+src/papple2/workbench/basic_blocks_analysis.py
+#src/papple2/workbench/colors.py
+#src/papple2/workbench/hidden.py
 src/papple2/workbench/listing.py
-src/papple2/workbench/listing_editor.py
-src/papple2/workbench/memory_map.py
+#src/papple2/workbench/listing_editor.py
+#src/papple2/workbench/memory_map.py
 src/papple2/workbench/session.py
 src/papple2/workbench/shell.py
-#src/papple2/workbench/stack_tracking.py
-#src/papple2/workbench/tiling.py
+src/papple2/workbench/stack_tracking.py
+src/papple2/workbench/tiling.py
 
 ### --- Tests and fixtures data ---
 tests/conftest.py
@@ -165,8 +165,8 @@ tests/conftest.py
 #tests/test_attach.py
 #tests/test_basic_blocks_analysis.py
 #tests/test_breakpoints.py
-tests/test_annotations.py
-tests/test_breadcrumbs_colors.py
+#tests/test_annotations.py
+#tests/test_breadcrumbs_colors.py
 #tests/test_colors.py
 #tests/test_cpu_arithmetic.py
 #tests/test_cpu_branch.py
@@ -186,23 +186,23 @@ tests/test_breadcrumbs_colors.py
 #tests/test_display_memory.py
 #tests/test_emulator_debug_keys.py
 #tests/test_emulator_silent.py
-tests/test_hexdump_colors.py
-tests/test_hidden.py
-tests/test_hidden_listing.py
+#tests/test_hexdump_colors.py
+#tests/test_hidden.py
+#tests/test_hidden_listing.py
 #tests/test_instruction_count.py
-tests/test_listing_colors.py
-tests/test_listing_editor.py
-tests/test_listing_editor_syntax.py
+#tests/test_listing_colors.py
+#tests/test_listing_editor.py
+#tests/test_listing_editor_syntax.py
 #tests/test_memory.py
 #tests/test_memory_hooks.py
-tests/test_memory_map.py
+#tests/test_memory_map.py
 #tests/test_shell.py
-tests/test_shell_colors.py
-tests/test_shell_hidden.py
-tests/test_shell_hx.py
+#tests/test_shell_colors.py
+#tests/test_shell_hidden.py
+#tests/test_shell_hx.py
 #tests/test_softswitches.py
-#tests/test_stack_tracking.py
-#tests/test_tiling.py
+tests/test_stack_tracking.py
+tests/test_tiling.py
 #tests/test_throttle.py
 #tests/test_util.py
 tests/test_walkthrough.py
