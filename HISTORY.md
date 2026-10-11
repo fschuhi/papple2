@@ -7,8 +7,6 @@
 - For *forward* work see `TODO.md`; for direction see `GOALS.md`; for the architecture as it stands see `README.md`.
 - See "Workflow for the Whole Session (CRITICAL)" in `LLM_INSTRUCTIONS.md` for the interplay between `TODO.md` and this file. 
 
-- The detailed entries up to 2026-09-26 are at the git tag `pre-redesign`: `git show pre-redesign:HISTORY.md`.
-
 ---
 
 - **2026-10-11:** Syntax coloring in the editor: mnemonics in the colors of the 6502 reference, operands in the color of the table they read, and the same colors in the hexdump. Structure I had never seen so fast jumps out at once.
@@ -41,3 +39,5 @@
 - **2026-09-23:** The new direction: understanding Apple II games by running them. Lode Runner boots.
 - **2026-09-11:** `papple2` runs without a window.
 - **2026-09-03:** Revived after six years at rest.
+
+(The detailed entries up to 2026-09-26 are at the git tag `pre-redesign`: `git show pre-redesign:HISTORY.md`.)
