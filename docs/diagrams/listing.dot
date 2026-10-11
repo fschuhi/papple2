@@ -1,0 +1,118 @@
+// The listing and the editor, as data flow: where the rows come from,
+// where labels, comments, arrows and colors enter, and where edits go
+// back to the dossier. Like pipeline.dot, an arrow here is data flowing,
+// not an import. The colours are those of workbench.dot; listing.py has
+// the lavender of the workbench package.
+// Rendered by `make presentation`.
+
+digraph listing {
+    rankdir=TB;
+    newrank=true;
+    compound=true;
+    size="13.3,7.5";
+    nodesep=0.35;
+    ranksep=0.4;
+    bgcolor="white";
+    fontname="Helvetica";
+    fontsize=10;
+    fontcolor="#5F5E5A";
+    labelloc="b";
+    label="\nAn arrow is data flowing, not an import. Both views get the same rows; color enters at two places only (orange).\nEvery change goes into the dossier at once, and the dossier is read again before every view.";
+    node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=11,
+          fillcolor="white", color="#5F5E5A", penwidth=1, margin="0.12,0.06"];
+    edge [color="#5F5E5A", fontname="Helvetica", fontsize=10, fontcolor="#444441",
+          arrowsize=0.7];
+
+    // the dossier, on disk
+    subgraph cluster_dossier {
+        label=<<B>the dossier</B>  <FONT POINT-SIZE="10" FACE="monospace">dossiers/lode_runner/</FONT>>;
+        labelloc="t"; style="rounded,dashed"; color="#888780";
+        fontcolor="#444441"; fontsize=12;
+        node [shape=note, style="filled", fillcolor="#F1EFE8", color="#5F5E5A",
+              fontname="monospace", fontsize=10];
+
+        annotations [label="annotations.json\nlabels, comments"];
+        hidden [label="hidden.json\nhidden ranges"];
+        colors [label="colors.json\ncolor ranges"];
+        { rank=same; annotations; hidden; colors; }
+    }
+
+    // what the prompt changes directly
+    notes [label="label(), comment()\nhide(), color()", fontname="monospace",
+           fontsize=10, fillcolor="#EAF3DE", color="#3B6D11"];
+
+    // the session: the run, and the two methods that make the rows
+    subgraph cluster_session {
+        label=<<B>Session</B>>;
+        labelloc="t"; style="rounded,filled"; fillcolor="#F1EFE8"; color="#444441";
+        fontcolor="#444441"; fontsize=12;
+
+        run [label=<<B>the current run</B><BR/><FONT FACE="monospace" POINT-SIZE="10">run_emulator: memory after the run<BR/>run_graph: every block that ran<BR/>routines</FONT>>,
+             fillcolor="#D3D1C7", color="#444441", penwidth=1.5];
+        listing_range [label=<<FONT FACE="monospace">listing_range()</FONT><BR/><FONT POINT-SIZE="10">a routine: lowest block to highest,</FONT><BR/><FONT POINT-SIZE="10">or two bounds, labels resolved</FONT>>];
+        current_rows [label=<<FONT FACE="monospace">current_listing_rows()</FONT><BR/><FONT POINT-SIZE="10">reads the dossier again,</FONT><BR/><FONT POINT-SIZE="10">then asks for the rows</FONT>>];
+        { rank=same; run; listing_range; }
+
+        run -> listing_range [label=" routines "];
+        listing_range -> current_rows [label=" start, end "];
+    }
+
+    // listing.py: building the rows, step by step
+    subgraph cluster_listing {
+        label=<<B>listing.py</B>  <FONT FACE="monospace" POINT-SIZE="10">listing_rows()</FONT>>;
+        labelloc="t"; style="rounded,filled"; fillcolor="#EEEDFE"; color="#534AB7";
+        fontcolor="#3C3489"; fontsize=12;
+        node [color="#534AB7"];
+
+        step_hidden [label=<<B>hidden ranges</B><BR/><FONT POINT-SIZE="10">each one grey row</FONT>>];
+        step_gaps [label=<<B>what never ran</B><BR/><FONT POINT-SIZE="10">one grey row per gap</FONT>>];
+        step_decode [label=<<B>decode</B><BR/><FONT POINT-SIZE="10">Disassembler (papple2.debug),</FONT><BR/><FONT POINT-SIZE="10">with labels and comments</FONT>>,
+                     fillcolor="#FAEEDA", color="#854F0B"];
+        step_arrows [label=<<B>arrows</B><BR/><FONT POINT-SIZE="10">the jumps the run took,</FONT><BR/><FONT POINT-SIZE="10">in the gutter</FONT>>];
+        { rank=same; step_hidden; step_gaps; step_decode; step_arrows; }
+        step_hidden -> step_gaps -> step_decode -> step_arrows;
+
+        rows [label=<<FONT FACE="monospace"><B>list[ListingRow]</B></FONT><BR/><FONT POINT-SIZE="10">the rows both views share</FONT>>,
+              penwidth=2, color="#3C3489"];
+        print_listing [label=<<FONT FACE="monospace">print_listing()</FONT><BR/><FONT POINT-SIZE="10">once plain, once with colors</FONT>>];
+
+        step_arrows -> rows;
+        rows -> print_listing;
+    }
+
+    // the two views
+    listing [label=<<FONT FACE="monospace"><B>listing()</B></FONT><BR/><FONT POINT-SIZE="10">Text: plain for the clipboard,</FONT><BR/><FONT POINT-SIZE="10">colored at the prompt</FONT>>,
+             fillcolor="#EAF3DE", color="#3B6D11"];
+    edit [label=<<FONT FACE="monospace"><B>edit()</B></FONT><BR/><FONT POINT-SIZE="10">the listing editor:</FONT><BR/><FONT POINT-SIZE="10">rows plain, breadcrumbs colored</FONT>>,
+          fillcolor="#FBEAF0", color="#993556"];
+    save_edit [label=<<FONT FACE="monospace">save_edit()</FONT><BR/><FONT POINT-SIZE="10">a label or comment changed</FONT>>,
+               fillcolor="#EAF3DE", color="#3B6D11"];
+    { rank=same; listing; edit; save_edit; }
+
+    // into the rows
+    run -> step_gaps [lhead=cluster_listing, label=" memory,\n run graph "];
+    current_rows -> step_hidden [lhead=cluster_listing,
+                                 label=" labels, comments,\n hidden ranges "];
+    annotations -> current_rows [style=dashed, label=" reloaded before\n every view "];
+    hidden -> current_rows [style=dashed];
+
+    // the views
+    print_listing -> listing;
+    rows -> edit;
+
+    // where color enters: twice, differently
+    colors -> print_listing [style=dashed, color="#D85A30", fontcolor="#993C1D",
+                             penwidth=1.5, label=" color_at():\n each row by its address "];
+    colors -> edit [style=dashed, color="#D85A30", fontcolor="#993C1D", penwidth=1.5,
+                    label=" color_for_range():\n breadcrumbs only "];
+
+    // back into the dossier
+    edit -> save_edit [label=" Enter "];
+    save_edit -> annotations [constraint=false, penwidth=1.5,
+                              label=" written at once "];
+    save_edit -> current_rows [constraint=false, style=dashed,
+                               label=" rows loaded again "];
+    notes -> annotations [label=" written\n at once "];
+    notes -> hidden;
+    notes -> colors;
+}
