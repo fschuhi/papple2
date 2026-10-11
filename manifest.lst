@@ -19,6 +19,9 @@ GOALS.md
 TODO.md
 #HISTORY.md
 
+# We are currently working on the presentation on 2026-10-12.
+PRESENTATION.md
+
 # This project is educational. LLMs should check this file to finetune their "Educator" role.
 #EDUCATION.md
 
@@ -80,6 +83,7 @@ docs/workbench.md
 # presentation diagrams
 docs/diagrams/core.dot
 docs/diagrams/packages.dot
+docs/diagrams/pipeline.dot
 docs/diagrams/workbench.svg
 
 # older schematics

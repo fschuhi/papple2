@@ -1,0 +1,127 @@
+// The workbench's pipeline: from a run of the program to the commands.
+// Unlike packages.dot, workbench.dot and core.dot, an arrow here is data
+// flowing, not an import. The colours are those of workbench.dot.
+// Each step names the Session method that makes it happen; the recipe in
+// scripts/lr_basic_blocks_analysis.py calls them in this order.
+// Rendered by `make presentation`.
+
+digraph pipeline {
+    rankdir=LR;
+    newrank=true;
+    size="13.3,7.5";
+    nodesep=0.3;
+    ranksep=0.5;
+    bgcolor="white";
+    fontname="Helvetica";
+    fontsize=10;
+    fontcolor="#5F5E5A";
+    labelloc="b";
+    label="\nAn arrow is data flowing, not an import. The analysis reads its input from the report files, not from the instrumentations:\nthe reports are the interface, readable by us, by other LLMs, and by any later tool. The grey reports are for reading only.";
+    node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=11,
+          fillcolor="white", color="#5F5E5A", penwidth=1, margin="0.12,0.06"];
+    edge [color="#5F5E5A", fontname="Helvetica", fontsize=10, fontcolor="#444441",
+          arrowsize=0.7];
+
+    // 1 the run
+    subgraph cluster_run {
+        label=<<B>1  run</B><BR/><FONT FACE="Menlo" POINT-SIZE="10">session.run(program, n,<BR/>Tiling, StackTracking)</FONT>>;
+        labelloc="t"; style="rounded,filled"; fillcolor="#E6F1FB"; color="#185FA5";
+        fontcolor="#0C447C"; fontsize=12;
+
+        boot [label=<<FONT FACE="Menlo">lode_runner.boot()</FONT><BR/><FONT POINT-SIZE="10">Emulator, headless,</FONT><BR/><FONT POINT-SIZE="10">with the RWTS hook</FONT>>,
+              fillcolor="#E1F5EE", color="#0F6E56"];
+        loop [label=<<FONT FACE="Menlo">Emulator.run()</FONT><BR/><FONT POINT-SIZE="10">until instruction_count_reaches(n),</FONT><BR/><FONT POINT-SIZE="10">4,000,000 in the recipe</FONT>>,
+              penwidth=1.5, color="#444441"];
+        tiling [label=<<FONT FACE="Menlo"><B>Tiling</B></FONT><BR/><FONT POINT-SIZE="10">which code ran,</FONT><BR/><FONT POINT-SIZE="10">where it leapt</FONT>>,
+                color="#185FA5"];
+        stack [label=<<FONT FACE="Menlo"><B>StackTracking</B></FONT><BR/><FONT POINT-SIZE="10">a second stack:</FONT><BR/><FONT POINT-SIZE="10">real returns, tricks</FONT>>,
+               color="#185FA5"];
+        { rank=same; boot; loop; }
+        { rank=same; tiling; stack; }
+
+        boot -> loop;
+        loop -> tiling [label=" hooks "];
+        loop -> stack [label=" hooks "];
+    }
+
+    // 2 the reports, files in the reports folder
+    subgraph cluster_reports {
+        label=<<B>2  reports</B><BR/><FONT FACE="Menlo" POINT-SIZE="10">tiling_reports()<BR/>stack_tracking_reports()</FONT>>;
+        labelloc="t"; style="rounded,dashed"; color="#185FA5";
+        fontcolor="#0C447C"; fontsize=12;
+        node [shape=note, style="filled", fillcolor="white", fontname="Menlo",
+              fontsize=10, color="#185FA5"];
+
+        split_tiles [label="lr_split_tiles.csv"];
+        split_transitions [label="lr_split_transitions.csv"];
+        returns [label="lr_returns.csv"];
+        unbroken [label="lr_unbroken_tiles.csv\nlr_unbroken_transitions.csv\nlr_measurements.txt",
+                  color="#888780", fontcolor="#5F5E5A"];
+        { rank=same; split_tiles; split_transitions; returns; unbroken; }
+    }
+
+    tiling -> split_tiles;
+    tiling -> split_transitions;
+    tiling -> unbroken;
+    stack -> returns;
+
+    // 3 the analysis
+    subgraph cluster_analysis {
+        label=<<B>3  analysis</B><BR/><FONT FACE="Menlo" POINT-SIZE="10">set_current_run()</FONT>>;
+        labelloc="t"; style="rounded,filled"; fillcolor="#FAECE7"; color="#993C1D";
+        fontcolor="#712B13"; fontsize=12;
+
+        read [label=<<FONT FACE="Menlo">read_split_tiles()<BR/>read_split_transitions()<BR/>read_returns()</FONT>>,
+              fontsize=10, color="#993C1D"];
+        find [label=<<FONT FACE="Menlo">find_routines()</FONT><BR/><FONT POINT-SIZE="10">the start and every JSR target,</FONT><BR/><FONT POINT-SIZE="10">stack jumps counted in</FONT>>,
+              color="#993C1D"];
+        run_graph [label=<<FONT FACE="Menlo">build_run_graph()</FONT><BR/><FONT POINT-SIZE="10">every block the run ran</FONT>>,
+                   color="#993C1D"];
+        { rank=same; find; run_graph; }
+        read -> find;
+        read -> run_graph;
+    }
+
+    split_tiles -> read;
+    split_transitions -> read;
+    returns -> read [label=" if written "];
+
+    // 4 what the session keeps
+    subgraph cluster_state {
+        label=<<B>4  the session keeps</B>>;
+        labelloc="t"; style="rounded,filled"; fillcolor="#F1EFE8"; color="#444441";
+        fontcolor="#444441"; fontsize=12;
+
+        state [label=<<FONT FACE="Menlo">routines<BR/>run_graph<BR/>run_transitions<BR/>run_stack_jumps<BR/>run_emulator</FONT>>,
+               fontsize=10, fillcolor="#D3D1C7", color="#444441", penwidth=1.5];
+        dossier [label=<<B>dossier</B><BR/><FONT POINT-SIZE="10" FACE="Menlo">annotations, hidden, colors</FONT><BR/><FONT POINT-SIZE="10">dossiers/lode_runner/</FONT>>,
+                 fillcolor="#F1EFE8", color="#5F5E5A", style="rounded,filled,dashed"];
+        { rank=same; state; dossier; }
+        state -> dossier [label=" label_routines():\n routine_xxxx where\n no label yet "];
+    }
+
+    find -> state;
+    run_graph -> state;
+
+    // 5 the commands
+    subgraph cluster_commands {
+        label=<<B>5  commands</B><BR/><FONT POINT-SIZE="10">papple2.workbench.shell,</FONT><BR/><FONT POINT-SIZE="10">at the prompt or in a recipe</FONT>>;
+        labelloc="t"; style="rounded,filled"; fillcolor="#EAF3DE"; color="#3B6D11";
+        fontcolor="#27500A"; fontsize=12;
+        node [fontname="Menlo", fontsize=10, color="#3B6D11"];
+
+        show [label="show_routines()\nshow_blocks()\nshow_callers()\nshow_routine_graph()"];
+        listing [label="listing()\nhexdump()"];
+        edit [label="edit()\nthe listing editor", fillcolor="#FBEAF0", color="#993556"];
+        loop_reports [label="loop_reports()\n-> lr_loops_<entry>.csv,\n   lr_loop_members_<entry>.csv"];
+        notes [label="label(), comment()\nhide(), color()"];
+        { rank=same; show; listing; edit; loop_reports; notes; }
+    }
+
+    state -> show;
+    state -> listing;
+    state -> edit;
+    state -> loop_reports;
+    dossier -> notes [dir=both, label=" read, and\n saved at once "];
+    dossier -> edit [dir=both, style=dashed];
+}

@@ -11,7 +11,7 @@ RUN           = $(ACTIVATE) && python
 SETUP_STAMP   = $(VENV_DIR)/.setup_stamp
 
 # --- Phony targets ---
-.PHONY: all setup test test-verbose boot-basic boot-robotron boot-lode-runner boot-lode-runner-throttled boot-lode-runner-headless boot-bandits lr-count lr-tiles lr-overview lr-basic-blocks-analysis walkthrough ipython presentation clean showtree gentree commit-hash patch filesdump filesdump-detailed help
+.PHONY: all setup test test-verbose boot-basic boot-robotron boot-lode-runner boot-lode-runner-break boot-lode-runner-throttled boot-lode-runner-headless boot-bandits lr-count lr-tiles lr-overview lr-basic-blocks-analysis walkthrough ipython presentation clean showtree gentree commit-hash patch filesdump filesdump-detailed help
 
 all: setup
 
@@ -45,6 +45,9 @@ boot-robotron: $(SETUP_STAMP) ## Boot Robotron with the pygame window
 
 boot-lode-runner: $(SETUP_STAMP) ## Boot Lode Runner with the pygame window
 	$(RUN) scripts/boot_lode_runner.py data/bin/LODE_RUNNER.BIN
+
+boot-lode-runner-break: $(SETUP_STAMP) ## Boot Lode Runner with the pygame window, stop after 4m instructions
+	$(RUN) scripts/boot_lode_runner.py data/bin/LODE_RUNNER.BIN --instructions 4000000
 
 boot-lode-runner-throttled: $(SETUP_STAMP) ## Boot Lode Runner with the pygame window, at the speed of a real Apple II
 	$(RUN) scripts/boot_lode_runner.py data/bin/LODE_RUNNER.BIN --speed 1.0
