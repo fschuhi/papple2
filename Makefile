@@ -11,7 +11,7 @@ RUN           = $(ACTIVATE) && python
 SETUP_STAMP   = $(VENV_DIR)/.setup_stamp
 
 # --- Phony targets ---
-.PHONY: all setup test test-verbose boot-basic boot-robotron boot-lode-runner boot-lode-runner-throttled boot-lode-runner-headless boot-bandits lr-count lr-tiles lr-overview lr-basic-blocks-analysis walkthrough ipython clean showtree gentree commit-hash patch filesdump filesdump-detailed help
+.PHONY: all setup test test-verbose boot-basic boot-robotron boot-lode-runner boot-lode-runner-throttled boot-lode-runner-headless boot-bandits lr-count lr-tiles lr-overview lr-basic-blocks-analysis walkthrough ipython presentation clean showtree gentree commit-hash patch filesdump filesdump-detailed help
 
 all: setup
 
@@ -76,6 +76,16 @@ walkthrough: $(SETUP_STAMP) ## Walk a tiny program through tiling and the basic 
 # --- Interactive ---
 ipython: $(SETUP_STAMP) ## Start IPython in the venv (e.g. %run scripts/walkthrough.py)
 	$(ACTIVATE) && ipython
+
+# --- Presentation (the diagrams in docs/diagrams/, rendered by Graphviz's dot) ---
+presentation: ## Render docs/diagrams/*.dot to PDF and PNG in tmp/presentation/
+	mkdir -p tmp/presentation
+	@for f in docs/diagrams/*.dot; do \
+		name=$$(basename $$f .dot); \
+		echo "$$f -> tmp/presentation/$$name.pdf, $$name.png"; \
+		dot -Tpdf $$f -o tmp/presentation/$$name.pdf || exit 1; \
+		dot -Tpng -Gdpi=200 $$f -o tmp/presentation/$$name.png || exit 1; \
+	done
 
 # --- Utility Targets ---
 clean: ## Remove venv, cache, and tmp files

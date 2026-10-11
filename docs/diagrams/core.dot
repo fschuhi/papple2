@@ -1,0 +1,83 @@
+// Inside papple2.core: who imports whom, and the two references held
+// back up. The other packages appear as grey stubs. Overview in
+// packages.dot.
+//
+// A solid arrow points from the module that imports to the module
+// imported. Rendered by `make presentation`.
+
+digraph core {
+    compound=true;
+    rankdir=TB;
+    newrank=true;
+    size="13.3,7.5";
+    nodesep=0.45;
+    ranksep=0.5;
+    bgcolor="white";
+    fontname="Helvetica";
+    node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=11,
+          fillcolor="white", color="#5F5E5A", penwidth=1, margin="0.15,0.08"];
+    edge [color="#5F5E5A", fontname="Helvetica", fontsize=10, fontcolor="#444441",
+          arrowsize=0.7];
+
+    // the other packages, as stubs
+    workbench [label="papple2.workbench", color="#B4B2A9", fontcolor="#5F5E5A",
+               style="rounded,filled,dashed"];
+    debug [label="papple2.debug", color="#B4B2A9", fontcolor="#5F5E5A",
+           style="rounded,filled,dashed"];
+    programs [label="papple2.programs", color="#B4B2A9", fontcolor="#5F5E5A",
+              style="rounded,filled,dashed"];
+    { rank=same; workbench; debug; programs; }
+
+    subgraph cluster_core {
+        style="rounded,filled"; fillcolor="#F1EFE8"; color="#5F5E5A";
+        fontname="Helvetica"; fontsize=12; labelloc="b";
+        label=<<FONT POINT-SIZE="14" COLOR="#444441"><B>papple2.core</B></FONT><BR/><FONT COLOR="#5F5E5A">the machine</FONT>>;
+
+        emulator [penwidth=2, color="#444441", label=<<FONT FACE="Menlo"><B>emulator</B></FONT><BR/><FONT POINT-SIZE="10">Emulator: builds the Apple2 and the window,</FONT><BR/><FONT POINT-SIZE="10">runs the loop: breakpoints, traps, until, hooks</FONT>>];
+
+        window [label=<<FONT FACE="Menlo">window</FONT><BR/><FONT POINT-SIZE="10">PygameWindow or NoWindow:</FONT><BR/><FONT POINT-SIZE="10">keys in, frames out</FONT>>];
+
+        apple [label=<<FONT FACE="Menlo">apple</FONT><BR/><FONT POINT-SIZE="10">Apple2 builds Display, Speaker,</FONT><BR/><FONT POINT-SIZE="10">SoftSwitches, Memory, CPU</FONT>>];
+
+        cpu [label=<<FONT FACE="Menlo">cpu</FONT><BR/><FONT POINT-SIZE="10">the 6502</FONT>>];
+
+        memory [label=<<FONT FACE="Menlo">memory</FONT><BR/><FONT POINT-SIZE="10">64K, one method and hook list</FONT><BR/><FONT POINT-SIZE="10">per kind of access</FONT>>];
+
+        disk_image [label=<<FONT FACE="Menlo">disk_image</FONT><BR/><FONT POINT-SIZE="10">imports nothing,</FONT><BR/><FONT POINT-SIZE="10">only programs uses it</FONT>>];
+
+        { rank=same; window; apple; }
+
+        emulator -> window;
+        emulator -> apple;
+        emulator -> cpu;
+        apple -> cpu;
+        apple -> memory;
+        cpu -> memory;
+
+        // held back up at runtime; the import is for type hints only
+        memory:e -> apple:se [style=dashed, color="#993C1D", fontcolor="#993C1D",
+                         constraint=false,
+                         label=" holds its Apple2:\n soft switches,\n display.update() "];
+        window -> emulator [style=dashed, color="#993C1D", fontcolor="#993C1D",
+                            constraint=false,
+                            label=" holds its Emulator:\n frame timing "];
+    }
+
+    util [label="papple2.util", fontname="Menlo", fillcolor="#F1EFE8"];
+    pygame [label="pygame\n(outside)", color="#B4B2A9", fontcolor="#5F5E5A",
+            style="rounded,filled,dashed"];
+    { rank=same; util; pygame; }
+
+    // one arrow per package, to the box, labelled with the modules imported
+    workbench -> emulator [lhead=cluster_core, label=" cpu, emulator "];
+    debug -> emulator [lhead=cluster_core, label=" cpu, emulator "];
+    programs -> disk_image [lhead=cluster_core, label=" disk_image, emulator "];
+
+    memory -> util [ltail=cluster_core, label=" emulator, cpu, memory "];
+    apple -> pygame [label=" Display, Speaker "];
+    window -> pygame;
+
+    note [shape=plaintext, style="", fontsize=10, fontcolor="#5F5E5A",
+          label="Dashed red: memory and window import apple and emulator for type hints only,\nbut hold a reference to them while the machine runs."];
+    util -> note [style=invis];
+}

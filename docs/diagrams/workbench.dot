@@ -1,0 +1,95 @@
+// Inside papple2.workbench: who imports whom, coloured by role.
+// The other packages appear as grey stubs. Overview in packages.dot.
+//
+// An arrow points from the module that imports to the module imported.
+// Rendered by `make presentation`.
+
+digraph workbench {
+    compound=true;
+    rankdir=TB;
+    newrank=true;
+    size="13.3,7.5";
+    nodesep=0.3;
+    ranksep=0.45;
+    bgcolor="white";
+    fontname="Helvetica";
+    node [shape=box, style="rounded,filled", fontname="Menlo", fontsize=11,
+          penwidth=1, height=0.3];
+    edge [color="#5F5E5A", fontname="Helvetica", fontsize=10, fontcolor="#444441",
+          arrowsize=0.7];
+
+    // clients, outside the package
+    scripts [label="scripts/\nlr_*, walkthrough", fillcolor="#F1EFE8",
+             color="#888780", style="rounded,filled,dashed"];
+    prompt [label="IPython prompt", fontname="Helvetica", fillcolor="#F1EFE8",
+            color="#888780", style="rounded,filled,dashed"];
+    tests [label="tests/", fillcolor="#F1EFE8", color="#888780",
+           style="rounded,filled,dashed"];
+    { rank=same; scripts; prompt; tests; }
+
+    subgraph cluster_workbench {
+        style="rounded,filled"; fillcolor="#FBFBFE"; color="#534AB7";
+        fontname="Helvetica"; fontsize=12; labelloc="b";
+        label=<<FONT POINT-SIZE="14" COLOR="#3C3489"><B>papple2.workbench</B></FONT><BR/><FONT COLOR="#185FA5"><B>instrumentations</B></FONT> watch the run and write reports · <FONT COLOR="#993C1D"><B>analysis</B></FONT> finds routines and loops<BR/><FONT COLOR="#444441"><B>session</B></FONT> keeps the state of every step · <FONT COLOR="#3B6D11"><B>commands</B></FONT> are the contract · <FONT COLOR="#993556"><B>editor</B></FONT> is one screen on it>;
+
+        // commands
+        shell [fillcolor="#EAF3DE", color="#3B6D11"];
+        // screen
+        listing_editor [fillcolor="#FBEAF0", color="#993556"];
+        // state
+        session [fillcolor="#D3D1C7", color="#444441", penwidth=1.5,
+                 label="session\nreports folder, dossier, current run,\nroutines, run graph, editor views"];
+
+        subgraph cluster_dossier {
+            label="the dossier, on disk"; labelloc="b"; fontsize=10;
+            fontcolor="#5F5E5A"; style="rounded,dashed"; color="#888780";
+            annotations [fillcolor="#F1EFE8", color="#5F5E5A"];
+            hidden [fillcolor="#F1EFE8", color="#5F5E5A"];
+            colors [fillcolor="#F1EFE8", color="#5F5E5A"];
+        }
+
+        // analysis
+        basic_blocks_analysis [fillcolor="#FAECE7", color="#993C1D"];
+        // instrumentations
+        stack_tracking [fillcolor="#E6F1FB", color="#185FA5"];
+        tiling [fillcolor="#E6F1FB", color="#185FA5"];
+
+        shell -> session;
+        shell -> listing_editor;
+        shell -> basic_blocks_analysis;
+        shell -> hidden;
+        shell -> tiling;
+
+        session -> annotations;
+        session -> hidden;
+        session -> colors;
+        session -> basic_blocks_analysis;
+        session -> stack_tracking;
+        session -> tiling;
+
+        basic_blocks_analysis -> stack_tracking;
+        basic_blocks_analysis -> tiling;
+        stack_tracking -> tiling;
+    }
+
+    prompt -> shell;
+    scripts -> shell;
+    tests -> session [style=dashed, label=" Session() directly "];
+
+    // the other packages, as stubs
+    debug [label="papple2.debug", fontname="Helvetica", fillcolor="white",
+           color="#B4B2A9", fontcolor="#5F5E5A", style="rounded,filled,dashed"];
+    core [label="papple2.core", fontname="Helvetica", fillcolor="white",
+          color="#B4B2A9", fontcolor="#5F5E5A", style="rounded,filled,dashed"];
+    { rank=same; debug; core; }
+
+    tiling -> debug [ltail=cluster_workbench,
+                     label=" disassembler (session, shell)\n stop_conditions (session) "];
+    tiling -> core [ltail=cluster_workbench,
+                    label=" cpu (tiling, stack_tracking,\n basic_blocks_analysis, shell)\n emulator (session, shell) "];
+
+    note [shape=plaintext, style="", fontname="Helvetica", fontsize=10,
+          fontcolor="#5F5E5A",
+          label="shell reaches past session to basic_blocks_analysis, hidden and tiling:\nhelpers still kept next to the commands (TODO, Session step 2a)."];
+    core -> note [style=invis];
+}

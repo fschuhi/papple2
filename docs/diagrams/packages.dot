@@ -1,0 +1,45 @@
+// Overview: the four packages of papple2 and who imports whom.
+// The insides of workbench and core are in workbench.dot and core.dot.
+//
+// An arrow points from the package that imports to the package imported,
+// labelled with the modules imported. Rendered by `make presentation`.
+
+digraph packages {
+    rankdir=TB;
+    newrank=true;
+    size="13.3,7.5";
+    nodesep=0.5;
+    ranksep=0.45;
+    bgcolor="white";
+    fontname="Helvetica";
+    node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=12,
+          color="#5F5E5A", penwidth=1, margin="0.2,0.1"];
+    edge [color="#5F5E5A", fontname="Helvetica", fontsize=10, fontcolor="#444441",
+          arrowsize=0.7];
+
+    scripts [style="rounded,filled,dashed", fillcolor="#F1EFE8", label=<<B>scripts/</B><BR/><FONT POINT-SIZE="10" FACE="Menlo">boot_*, lr_*, walkthrough</FONT><BR/><FONT POINT-SIZE="10">use papple2, outside the package</FONT>>];
+
+    workbench [fillcolor="#EEEDFE", color="#534AB7", label=<<FONT COLOR="#3C3489"><B>papple2.workbench</B></FONT><BR/><FONT POINT-SIZE="10" COLOR="#534AB7">reverse engineering: run, reports, analysis, commands</FONT><BR/><FONT POINT-SIZE="10" FACE="Menlo">tiling, stack_tracking, basic_blocks_analysis,<BR/>session, annotations, hidden, colors, shell, listing_editor</FONT>>];
+
+    debug [fillcolor="#FAEEDA", color="#854F0B", label=<<FONT COLOR="#633806"><B>papple2.debug</B></FONT><BR/><FONT POINT-SIZE="10" COLOR="#854F0B">tools around the machine: read, stop, write</FONT><BR/><FONT POINT-SIZE="10" FACE="Menlo">disassembler, stop_conditions, assembler</FONT>>];
+
+    programs [fillcolor="#E1F5EE", color="#0F6E56", label=<<FONT COLOR="#085041"><B>papple2.programs</B></FONT><BR/><FONT POINT-SIZE="10" COLOR="#0F6E56">program setups</FONT><BR/><FONT POINT-SIZE="10" FACE="Menlo">lode_runner</FONT>>];
+
+    core [fillcolor="#F1EFE8", color="#5F5E5A", label=<<FONT COLOR="#444441"><B>papple2.core</B></FONT><BR/><FONT POINT-SIZE="10" COLOR="#5F5E5A">the machine</FONT><BR/><FONT POINT-SIZE="10" FACE="Menlo">emulator, window, apple, cpu, memory, disk_image</FONT>>];
+
+    util [fillcolor="#F1EFE8", label=<<FONT FACE="Menlo">papple2.util</FONT>>];
+
+    { rank=same; debug; programs; }
+
+    scripts -> workbench [style=dashed, label=" all four packages "];
+    workbench -> debug [label=" disassembler,\n stop_conditions "];
+    workbench -> core [label=" cpu, emulator "];
+    debug -> core [label=" cpu, emulator "];
+    programs -> core [label=" disk_image,\n emulator "];
+    core -> util;
+    debug -> util;
+    programs -> util;
+
+    note [shape=plaintext, style="", fontsize=10, fontcolor="#5F5E5A", label=<Every arrow points down: the machine knows nothing of the tools around it.<BR/>Workbench never imports programs: run() takes the program as an argument.<BR/>assembler has no user inside papple2: only tests/ and scripts/walkthrough.py use it.>];
+    util -> note [style=invis];
+}
