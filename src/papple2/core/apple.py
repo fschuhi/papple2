@@ -262,66 +262,119 @@ class Display:
                 del pixels
 
         def update_hires() -> None:
+            # Map the linear address to Apple II's interleaved screen memory coordinates
             base = address - start_hires
             row8, b = divmod(base, 0x400)
             hi, lo = divmod(b, 0x80)
             row_group, column = divmod(lo, 0x28)
             row = 8 * (hi + 8 * row_group) + row8
 
+            # Skip drawing if we are in mixed mode and in the text area at the bottom
             if self.mix and row >= 160:
                 return
 
-            if row < 192 and column < 40:
+            # Sanity check to avoid drawing out of bounds
+            if row >= 192 or column >= 40:
+                return
 
-                pixels = pygame.PixelArray(self.screen)
-                msb = value // 0x80
+            # Lock the pygame surface once to allow fast pixel manipulation
+            pixels = pygame.PixelArray(self.screen)
 
-                for b in range(7):
-                    c = value & (1 << b)
-                    xx = (column * 7 + b)
-                    x = 2 * xx
-                    y = 2 * row
+            def render_byte(render_addr, col):
+                # Fetch the byte. Apple II hi-res uses the lowest 7 bits for pixels.
+                # Bit 7 (MSB) shifts the color palette (Orange/Blue vs Green/Violet).
+                val = self.apple2.memory._mem[render_addr]
+                msb = val // 0x80
+                bits = [(val >> i) & 1 for i in range(7)]
 
-                    if SOLID_PIXELS:
-                        color = (0, 0, 0)
-                        if c:
-                            if msb:
-                                color = (255, 192, 0) if xx % 2 else (0, 192, 255)
-                            else:
-                                color = (0, 255, 0) if xx % 2 else (255, 0, 255)
+                # To simulate NTSC artifacting (where colors smear horizontally),
+                # we need to know the state of the pixels immediately to the left.
+                # Since pixels cross byte boundaries, we peek at the previous byte.
+                prev_bit = 0
+                prev_prev_bit = 0
+                if col > 0:
+                    prev_val = self.apple2.memory._mem[render_addr - 1]
+                    prev_bit = (prev_val >> 6) & 1
+                    prev_prev_bit = (prev_val >> 5) & 1
 
-                        pixels[x][y] = color
-                        pixels[x + 1][y] = color
-                        pixels[x][y + 1] = color
-                        pixels[x + 1][y + 1] = color
+                # We also need to know if a pixel is immediately followed by another 'on' pixel.
+                next_bit = 0
+                if col < 39:
+                    next_bit = self.apple2.memory._mem[render_addr + 1] & 1
+
+                # Loop through the 7 printable bits in the byte
+                for i in range(7):
+                    xx = col * 7 + i  # Absolute horizontal pixel index (0 to 279)
+                    x = 2 * xx  # Scaled x coordinate for the 2x2 display
+                    y = 2 * row  # Scaled y coordinate
+
+                    c = bits[i]
+                    # Determine immediate neighbors, crossing byte boundaries if necessary
+                    left_c = bits[i - 1] if i > 0 else prev_bit
+                    right_c = bits[i + 1] if i < 6 else next_bit
+
+                    # Determine the pixel two spots to the left (needed to detect lone pixels vs white blocks)
+                    if i > 1:
+                        left_left_c = bits[i - 2]
+                    elif i == 1:
+                        left_left_c = prev_bit
                     else:
-                        if msb:
-                            if xx % 2:
-                                pixels[x][y] = (0, 0, 0)
-                                # orange
-                                pixels[x][y] = (255, 192, 0) if c else (0, 0, 0)
-                                pixels[x + 1][y] = (255, 192, 0) if c else (0, 0, 0)
-                            else:
-                                # blue
-                                pixels[x][y] = (0, 192, 255) if c else (0, 0, 0)
-                                pixels[x + 1][y] = (0, 0, 0)
-                                pixels[x + 1][y] = (0, 192, 255) if c else (0, 0, 0)
+                        left_left_c = prev_prev_bit
+
+                    color = (0, 0, 0)
+
+                    if c:
+                        # In NTSC artifacting, any two adjacent '1' bits bleed together to form solid white.
+                        if left_c or right_c:
+                            color = (255, 255, 255)
                         else:
-                            if xx % 2:
-                                pixels[x][y] = (0, 0, 0)
-                                # green
-                                pixels[x][y] = (0, 255, 0) if c else (0, 0, 0)
-                                pixels[x + 1][y] = (0, 255, 0) if c else (0, 0, 0)
+                            # A lone '1' bit gets a color depending on its x-coordinate (even or odd)
+                            # and the MSB palette shift of its parent byte.
+                            if msb:
+                                # First line for `color =` are old colors, the new ones look nicer but might not be legit.
+                                #color = (255, 192, 0) if xx % 2 else (0, 192, 255)
+                                color = (255, 128, 0) if xx % 2 else (0, 165, 255)
                             else:
-                                # violet
-                                pixels[x][y] = (255, 0, 255) if c else (0, 0, 0)
-                                pixels[x + 1][y] = (0, 0, 0)
-                                pixels[x + 1][y] = (255, 0, 255) if c else (0, 0, 0)
+                                #color = (0, 255, 0) if xx % 2 else (255, 0, 255)
+                                color = (0, 230, 0) if xx % 2 else (255, 0, 255)
+                    else:
+                        # If the current bit is '0', it is usually black.
+                        # However, NTSC signals take time to drop. If the pixel to the left was a lone colored pixel,
+                        # its color smears into this empty space.
+                        # We specifically check `not left_left_c` to ensure we don't smear color out of a solid white block.
+                        if left_c and not left_left_c:
+                            left_msb = msb
+                            # If we are at bit 0, the smeared color comes from the MSB of the previous byte
+                            if i == 0 and col > 0:
+                                left_msb = self.apple2.memory._mem[render_addr - 1] // 0x80
 
-                        pixels[x][y + 1] = (0, 0, 0)
-                        pixels[x + 1][y + 1] = (0, 0, 0)
+                            # Apply the same color logic based on the left pixel's coordinate
+                            if left_msb:
+                                #color = (255, 192, 0) if (xx - 1) % 2 else (0, 192, 255)
+                                color = (255, 128, 0) if (xx - 1) % 2 else (0, 165, 255)
+                            else:
+                                #color = (0, 255, 0) if (xx - 1) % 2 else (255, 0, 255)
+                                color = (0, 230, 0) if (xx - 1) % 2 else (255, 0, 255)
 
-                del pixels
+                    # Draw the top row of the 2x2 scaled block with our resolved color
+                    pixels[x][y] = color
+                    pixels[x + 1][y] = color
+
+                    # Force the bottom row of the 2x2 block to black.
+                    # This creates the distinctive horizontal CRT scanline effect.
+                    pixels[x][y + 1] = (0, 0, 0)
+                    pixels[x + 1][y + 1] = (0, 0, 0)
+
+            # Because a single byte write can change how its neighbors are rendered
+            # (due to the left/right smear artifacting crossing byte boundaries),
+            # we must always render the target byte AND its immediate left/right neighbors.
+            render_byte(address, column)
+            if column > 0:
+                render_byte(address - 1, column - 1)
+            if column < 39:
+                render_byte(address + 1, column + 1)
+
+            del pixels  # Release the surface lock so pygame can update the screen
 
         if self.page == 1:
             start_text = 0x400
