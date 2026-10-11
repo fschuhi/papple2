@@ -59,10 +59,10 @@ from papple2.workbench.basic_blocks_analysis import (
     routine_exits,
     write_loop_reports,
 )
-# assign_lanes and draw_gutter are not used here: imported for
-# tests/test_shell.py, which takes them from the shell.
+# Not used here, but offered by the shell: listing_rows() for the
+# commands on objects (docs/workbench.md), assign_lanes and draw_gutter
+# for tests/test_shell.py.
 from papple2.workbench.listing import (  # noqa: F401
-    ListingRow,
     assign_lanes,
     draw_gutter,
     listing_rows,
@@ -223,7 +223,7 @@ def to_range(
     """
     session.refresh_annotations()
     if end is None:
-        return listing_range(start)
+        return session.listing_range(start)
     return session.address_of(start), session.address_of(end)
 
 
@@ -474,55 +474,11 @@ def clip(text: str | None = None) -> None:
     print(f"copied {lines:,} line{'' if lines == 1 else 's'}")
 
 
-def listing_range(
-    start: int | str, end: int | str | None = None
-) -> tuple[int, int]:
-    """The addresses from start up to, not including, end. start and end are
-    addresses or labels.
-
-    With start alone, start is a routine's entry, and the range covers the
-    whole routine: from its lowest block to its highest, so any gap between
-    its blocks shows too, e.g. code the run never reached."""
-    found = session.current_routines()
-    if end is None:
-        blocks = found.graphs[session.routine_at(start)].blocks.values()
-        return (
-            min(block.start for block in blocks),
-            max(block.end for block in blocks),
-        )
-    return session.address_of(start), session.address_of(end)
-
-
-def current_listing_rows(
-    start: int | str, end: int | str | None = None
-) -> list[ListingRow]:
-    """The rows of the current run's memory in the range listing_range()
-    gives, with the arrows of the whole run and the dossier's labels,
-    comments and hidden ranges. The dossier files are read first, so
-    changes made in another session show too."""
-    session.refresh_annotations()
-    hidden_ranges = None
-    if session.dossier_folder is not None and session.hidden is not None:
-        session.hidden.reload()
-        hidden_ranges = session.hidden.ranges
-    start, end = listing_range(start, end)
-    return listing_rows(
-        session.run_emulator,
-        start,
-        end,
-        session.annotations.labels if session.annotations is not None else None,
-        session.run_graph,
-        session.annotations.comments if session.annotations is not None else None,
-        only_ran=True,
-        hidden_ranges=hidden_ranges,
-    )
-
-
 def listing(start: int | str, end: int | str | None = None) -> Text:
     """Show the current listing with location colors, retaining plain text
     for string operations and the clipboard. Comments, arrows and collapsed
-    rows remain uncolored. Bounds as for current_listing_rows()."""
-    rows = current_listing_rows(start, end)
+    rows remain uncolored. Bounds as for Session.current_listing_rows()."""
+    rows = session.current_listing_rows(start, end)
     with contextlib.redirect_stdout(io.StringIO()) as printed:
         print_listing(rows)
     plain = printed.getvalue().rstrip("\n")
@@ -537,7 +493,7 @@ def listing(start: int | str, end: int | str | None = None) -> Text:
 
 def edit(start: int | str, end: int | str | None = None, height: int = 25) -> None:
     """Open the listing editor on the same lines listing() prints. start and
-    end as for current_listing_rows(). Every label and comment changed there
+    end as for Session.current_listing_rows(). Every label and comment changed there
     is saved to the current dossier at once, through save_edit(). The
     operand field labels the address an operand names, wherever the line
     is. Enter on a JSR opens the routine it calls; each routine opens as it
@@ -554,7 +510,7 @@ def edit(start: int | str, end: int | str | None = None, height: int = 25) -> No
         if session.color_store is None:
             return None
         session.color_store.reload()
-        first, behind = listing_range(entry)
+        first, behind = session.listing_range(entry)
         return session.color_store.color_for_range(first, behind)
 
     def label_of(address: int) -> str:
@@ -566,9 +522,9 @@ def edit(start: int | str, end: int | str | None = None, height: int = 25) -> No
         # Turned into addresses once: the editor reloads the rows after
         # every save, and a label given as start could be the one just
         # renamed.
-        first, behind = listing_range(start, end)
+        first, behind = session.listing_range(start, end)
         place = Place(
-            first, lambda: current_listing_rows(first, behind), routine=False
+            first, lambda: session.current_listing_rows(first, behind), routine=False
         )
     edit_rows(
         place,
@@ -589,8 +545,8 @@ def routine_place(entry: int) -> Place | None:
     no routine starts there."""
     if session.routines is None or entry not in session.routines.graphs:
         return None
-    first, behind = listing_range(entry)
-    return Place(entry, lambda: current_listing_rows(first, behind))
+    first, behind = session.listing_range(entry)
+    return Place(entry, lambda: session.current_listing_rows(first, behind))
 
 
 def save_edit(address: int, field: str, text: str) -> str | None:

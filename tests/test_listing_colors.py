@@ -42,7 +42,7 @@ def colored_listing(
     ) -> list[ListingRow]:
         return ROWS
 
-    monkeypatch.setattr(shell, "current_listing_rows", current_rows)
+    monkeypatch.setattr(shell.session, "current_listing_rows", current_rows)
     return store
 
 

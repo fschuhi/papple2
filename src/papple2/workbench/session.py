@@ -36,6 +36,7 @@ from papple2.workbench.basic_blocks_analysis import (
 )
 from papple2.workbench.colors import Colors
 from papple2.workbench.hidden import Hidden
+from papple2.workbench.listing import ListingRow, listing_rows
 from papple2.workbench.stack_tracking import RETURNS_FILE, StackTracking
 from papple2.workbench.tiling import (
     SPLIT_TILES_FILE,
@@ -299,3 +300,45 @@ class Session:
                 f"{address(entry)} is not a routine; show_routines() lists them"
             )
         return entry
+
+    def listing_range(
+        self, start: int | str, end: int | str | None = None
+    ) -> tuple[int, int]:
+        """The addresses from start up to, not including, end. start and end are
+        addresses or labels.
+
+        With start alone, start is a routine's entry, and the range covers the
+        whole routine: from its lowest block to its highest, so any gap between
+        its blocks shows too, e.g. code the run never reached."""
+        found = self.current_routines()
+        if end is None:
+            blocks = found.graphs[self.routine_at(start)].blocks.values()
+            return (
+                min(block.start for block in blocks),
+                max(block.end for block in blocks),
+            )
+        return self.address_of(start), self.address_of(end)
+
+    def current_listing_rows(
+        self, start: int | str, end: int | str | None = None
+    ) -> list[ListingRow]:
+        """The rows of the current run's memory in the range listing_range()
+        gives, with the arrows of the whole run and the dossier's labels,
+        comments and hidden ranges. The dossier files are read first, so
+        changes made in another session show too."""
+        self.refresh_annotations()
+        hidden_ranges = None
+        if self.dossier_folder is not None and self.hidden is not None:
+            self.hidden.reload()
+            hidden_ranges = self.hidden.ranges
+        start, end = self.listing_range(start, end)
+        return listing_rows(
+            self.run_emulator,
+            start,
+            end,
+            self.annotations.labels if self.annotations is not None else None,
+            self.run_graph,
+            self.annotations.comments if self.annotations is not None else None,
+            only_ran=True,
+            hidden_ranges=hidden_ranges,
+        )
