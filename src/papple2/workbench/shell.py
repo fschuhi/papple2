@@ -63,6 +63,7 @@ from papple2.workbench.basic_blocks_analysis import (
 # commands on objects (docs/workbench.md), assign_lanes and draw_gutter
 # for tests/test_shell.py.
 from papple2.workbench.listing import (  # noqa: F401
+    LISTING_COLORS,
     assign_lanes,
     draw_gutter,
     listing_rows,
@@ -601,13 +602,16 @@ class HexdumpRow:
     values: list[int]
 
 
-@returns_text
-def hexdump(start: int | str, end: int | str | None = None) -> None:
-    """Print the current run's memory from start up to, not including, end,
+def hexdump(start: int | str, end: int | str | None = None) -> Text:
+    """Show the current run's memory from start up to, not including, end,
     16 bytes per line: hex on the left, text on the right. start and end are
     addresses or labels. start may lie anywhere in the first line, and end
     is rounded up to a full line, see hexdump_rows(). Without end, 16
-    lines: one page, 256 bytes."""
+    lines: one page, 256 bytes.
+
+    Each hex byte has the color of its address, if it lies in a color
+    range; the text column stays plain. The text kept for str() and clip()
+    has no colors, as in listing()."""
     session.refresh_annotations()
     if session.run_emulator is None:
         raise RuntimeError("no run; call run() or set_current_run() first")
@@ -616,7 +620,17 @@ def hexdump(start: int | str, end: int | str | None = None) -> None:
         behind = first - first % HEXDUMP_WIDTH + HEXDUMP_WIDTH * HEXDUMP_LINES
     else:
         behind = session.address_of(end)
-    print_hexdump(hexdump_rows(session.run_emulator, first, behind))
+    rows = hexdump_rows(session.run_emulator, first, behind)
+    with contextlib.redirect_stdout(io.StringIO()) as printed:
+        print_hexdump(rows)
+    plain = printed.getvalue().rstrip("\n")
+
+    if session.dossier_folder is None or session.color_store is None:
+        return Text(plain)
+    session.color_store.reload()
+    with contextlib.redirect_stdout(io.StringIO()) as printed:
+        print_hexdump(rows, color_of=session.color_store.color_at)
+    return Text(plain, printed.getvalue().rstrip("\n"))
 
 
 def hexdump_rows(emulator: Emulator, start: int, end: int) -> list[HexdumpRow]:
@@ -644,12 +658,30 @@ def apple_char(value: int) -> str:
     return chr(low) if 0x20 <= low < 0x7F else "."
 
 
-def print_hexdump(rows: list[HexdumpRow]) -> None:
+def print_hexdump(
+    rows: list[HexdumpRow],
+    color_of: Callable[[int], str | None] | None = None,
+) -> None:
     """Print the rows hexdump_rows() gives: address, the bytes in two groups
-    of eight, and the text between bars."""
+    of eight, and the text between bars.
+
+    With color_of, each hex byte is printed in the color of its address;
+    the spaces between the bytes, the address and the text stay plain. The
+    text column is read like a comment, so it takes no color."""
+
+    def hex_byte(address: int, value: int) -> str:
+        shade = color_of(address) if color_of is not None else None
+        if shade is None:
+            return f"{value:02x}"
+        return f"{LISTING_COLORS[shade]}{value:02x}\x1b[0m"
+
     for row in rows:
-        left = " ".join(f"{value:02x}" for value in row.values[:8])
-        right = " ".join(f"{value:02x}" for value in row.values[8:])
+        values = [
+            hex_byte(row.address + offset, value)
+            for offset, value in enumerate(row.values)
+        ]
+        left = " ".join(values[:8])
+        right = " ".join(values[8:])
         text = "".join(apple_char(value) for value in row.values)
         print(f"{row.address:04x}  {left}  {right}  |{text}|")
 

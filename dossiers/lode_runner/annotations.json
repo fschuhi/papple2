@@ -101,7 +101,7 @@
     "884b": "routine_884b",
     "885d": "routine_885d",
     "8868": "routine_8868",
-    "8872": "load_ax_from_table",
+    "8872": "load_halfscr_col_AX",
     "887c": "routine_887c",
     "888f": "routine_888f",
     "88a2": "routine_88a2",
