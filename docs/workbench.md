@@ -15,7 +15,7 @@ Since 2026-10-02, `papple2.workbench` holds two kinds of packages, connected by 
 
 <p align="center"><img src="diagrams/pipeline.svg" alt="The workbench's pipeline, from a run to the commands" width="100%"></p>
 
-`scripts/walkthrough.py` takes a tiny program through the same pipeline: twenty bytes, two nested loops and one `JSR`, small enough to follow by hand; its labels are still typed into `NAMES`. Everything the pipeline finds is observed structure: only what ran in this run.
+`scripts/walkthrough.py` takes a tiny program, `nested_loops`, through the same pipeline with a recipe of its own: twenty bytes, two nested loops and one `JSR`, small enough to follow by hand. Everything the pipeline finds is observed structure: only what ran in this run.
 
 Ranges are half-open throughout the workbench: a block printed as `6004-6007` holds the bytes `$6004` to `$6006`, its length is `end - start`, and the next block starts where it ends. Listings, hidden ranges and color ranges use the same convention.
 

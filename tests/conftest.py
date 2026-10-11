@@ -6,7 +6,7 @@ from papple2.core.memory import Memory
 from papple2.core.cpu import CPU
 from papple2.core.emulator import Emulator
 from papple2.debug.assembler import Assembler
-from papple2.debug.stop_conditions import at_address
+from papple2.programs import nested_loops
 from papple2.workbench import shell
 from papple2.workbench.basic_blocks_analysis import (
     BlockGraph,
@@ -17,6 +17,7 @@ from papple2.workbench.basic_blocks_analysis import (
     read_split_reports,
 )
 from papple2.workbench.session import Session
+from papple2.workbench.shell import run, tiling_reports, use_reports_folder
 from papple2.workbench.tiling import Tiling
 
 
@@ -75,26 +76,7 @@ def make_emulator(assemble):
     return _make_emulator
 
 
-# The program of scripts/walkthrough.py: two nested loops, one JSR, and a
-# JMP over the subroutine to DONE. Twenty bytes, $6000-$6013.
-WALKTHROUGH_PROGRAM = """
-        *=$6000
-        LDY #$02
-OUTER   LDX #$03
-INNER   JSR SUB
-        DEX
-        BNE INNER
-        DEY
-        BNE OUTER
-        JMP DONE
-SUB     INC $10
-        RTS
-DONE    NOP
-"""
-WALKTHROUGH_ENTRY = 0x6000
-WALKTHROUGH_END = 0x6014  # the byte behind DONE's NOP: the run stops here
-
-# The names of scripts/walkthrough.py's NAMES.
+# The names for nested_loops' addresses, given by hand.
 WALKTHROUGH_NAMES = {
     0x6002: "OUTER",
     0x6004: "INNER",
@@ -104,8 +86,9 @@ WALKTHROUGH_NAMES = {
 
 
 class Walkthrough(NamedTuple):
-    """What %run scripts/walkthrough.py leaves in IPython's namespace, plus
-    the folder the reports went into."""
+    """The walkthrough's run: the machine as the run left it, its tiling,
+    the graph and loops of the routine at $6000, the names, and the folder
+    the reports went into."""
 
     emulator: Emulator
     tiling: Tiling
@@ -116,19 +99,19 @@ class Walkthrough(NamedTuple):
 
 
 @pytest.fixture
-def walkthrough(make_emulator, tmp_path: Path) -> Walkthrough:
-    """The walkthrough's run, as scripts/walkthrough.py does it: run the
-    program with Tiling attached, write the reports into a folder, read
-    the split reports back, build the graph and find the loops."""
-    _, emulator = make_emulator(WALKTHROUGH_PROGRAM)
-    tiling = Tiling(emulator.cpu)
-    emulator.attach(tiling)
-    emulator.run(until=at_address(WALKTHROUGH_END))
-    emulator.detach(tiling)
-    tiling.write_reports(tmp_path, emulator.instructions)
+def walkthrough(tmp_path: Path, fresh_session: None) -> Walkthrough:
+    """The walkthrough's run, with the recipe of scripts/walkthrough.py:
+    run nested_loops with Tiling attached and write the reports into a
+    folder. Then read the split reports back, build the graph of the
+    routine at $6000 and find its loops."""
+    use_reports_folder(tmp_path)
+    run(nested_loops.boot(), 39, Tiling)
+    tiling_reports()
+    emulator = shell.session.run_emulator
+    (tiling,) = shell.session.run_instrumentations
 
     tiles, transitions = read_split_reports(tmp_path)
-    graph = build_graph(tiles, transitions, entry=WALKTHROUGH_ENTRY)
+    graph = build_graph(tiles, transitions, entry=nested_loops.LOAD_ADDRESS)
     loops = natural_loops(graph, immediate_dominators(graph))
     labels = dict(WALKTHROUGH_NAMES)
     return Walkthrough(emulator, tiling, graph, loops, labels, tmp_path)

@@ -3,10 +3,11 @@
 Twenty bytes go through the whole pipeline: the run with Tiling attached,
 the reports, the graph of basic blocks, the dominators, the loops, and the
 views at the IPython prompt. Each test is one chapter, in the order the
-pipeline goes. The `walkthrough` fixture in conftest.py does what
-scripts/walkthrough.py does.
+pipeline goes; its name says which program it uses. The `walkthrough`
+fixture in conftest.py runs the recipe of scripts/walkthrough.py.
 
-The program, with its addresses:
+The program, nested_loops (papple2.programs.nested_loops), with its
+addresses:
 
     6000  a0 02            LDY #$02   ; outer loop: 2 passes
     6002  a2 03     OUTER  LDX #$03   ; inner loop: 3 passes per outer pass
@@ -44,7 +45,7 @@ def read_rows(filename: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(file))
 
 
-def test_chapter_1_the_run(walkthrough) -> None:
+def test_chapter_1_nested_loops_the_run(walkthrough) -> None:
     # 1 LDY, then 2 outer passes of (LDX + 3 inner passes of JSR, INC, RTS,
     # DEX, BNE) + DEY + BNE, then JMP and NOP: 1 + 2 * (1 + 3 * 5 + 2) + 2.
     assert walkthrough.emulator.instructions == 39
@@ -56,7 +57,7 @@ def test_chapter_1_the_run(walkthrough) -> None:
     assert walkthrough.tiling.current_tile.start_pc == 0x6013
 
 
-def test_chapter_2_split_tiles(walkthrough) -> None:
+def test_chapter_2_nested_loops_split_tiles(walkthrough) -> None:
     # The tile from $6000 ran straight through $6002 and $6004, which later
     # became entry points (the targets of the two BNEs). So it is cut there:
     # every split tile starts at an entry point and ends where the next
@@ -76,7 +77,7 @@ def test_chapter_2_split_tiles(walkthrough) -> None:
     ]
 
 
-def test_chapter_3_transitions(walkthrough) -> None:
+def test_chapter_3_nested_loops_transitions(walkthrough) -> None:
     # Every kind of transition occurs: glides across the two cuts, both
     # outcomes of each BNE, and the plain leaps JSR ($20), RTS ($60) and
     # JMP ($4C), which have no outcome.
@@ -104,7 +105,7 @@ def test_chapter_3_transitions(walkthrough) -> None:
     ]
 
 
-def test_chapter_4_the_graph(walkthrough) -> None:
+def test_chapter_4_nested_loops_the_graph(walkthrough) -> None:
     graph = walkthrough.graph
 
     # SUB ($6010) is not reachable from $6000 without following the call,
@@ -127,7 +128,7 @@ def test_chapter_4_the_graph(walkthrough) -> None:
     }
 
 
-def test_chapter_5_dominators(walkthrough) -> None:
+def test_chapter_5_nested_loops_dominators(walkthrough) -> None:
     # A block's immediate dominator is the closest block that every path
     # from the entry to it must pass. $6002 has two predecessors, $6000 and
     # $600a (the jump back); only $6000 lies on every path.
@@ -142,7 +143,7 @@ def test_chapter_5_dominators(walkthrough) -> None:
     }
 
 
-def test_chapter_6_loops(walkthrough) -> None:
+def test_chapter_6_nested_loops_loops(walkthrough) -> None:
     graph = walkthrough.graph
 
     # An edge is a back edge if its target dominates its source. Here the
@@ -173,7 +174,7 @@ def test_chapter_6_loops(walkthrough) -> None:
     }
 
 
-def test_chapter_7_the_views_at_the_prompt(walkthrough, capsys) -> None:
+def test_chapter_7_nested_loops_the_views_at_the_prompt(walkthrough, capsys) -> None:
     # What print_blocks, print_edges and print_loops print, line by line.
     print_blocks(walkthrough.graph, walkthrough.loops)
     print_edges(walkthrough.graph, walkthrough.loops)
@@ -203,7 +204,7 @@ def test_chapter_7_the_views_at_the_prompt(walkthrough, capsys) -> None:
     ]
 
 
-def test_chapter_8_one_block_disassembled(walkthrough, capsys) -> None:
+def test_chapter_8_nested_loops_one_block_disassembled(walkthrough, capsys) -> None:
     # The block 6004-6007 is one instruction: the JSR. The range is
     # half-open, so the end the block shows is the end listing_rows() takes.
     # Without names, the operand shows the address.
@@ -214,12 +215,11 @@ def test_chapter_8_one_block_disassembled(walkthrough, capsys) -> None:
     ]
 
 
-def test_chapter_9_the_whole_program_disassembled(walkthrough, capsys) -> None:
+def test_chapter_9_nested_loops_the_whole_program_disassembled(walkthrough, capsys) -> None:
     # The twenty bytes, read back from memory after the run, with the names
     # given by hand. The four named addresses show their names twice: in
     # the column before their own instruction, and in the operands that
-    # point at them. INC $10 keeps its address: the disassembler doesn't name
-    # zero-page operands yet.
+    # point at them. INC $10 keeps its address: $10 has no name.
     rows = listing_rows(walkthrough.emulator, 0x6000, 0x6014, walkthrough.labels)
     print_listing(rows)
 
@@ -238,7 +238,7 @@ def test_chapter_9_the_whole_program_disassembled(walkthrough, capsys) -> None:
     ]
 
 
-def test_chapter_10_the_jumps_as_arrows(walkthrough, capsys) -> None:
+def test_chapter_10_nested_loops_the_jumps_as_arrows(walkthrough, capsys) -> None:
     # With the graph, listing_rows() draws the jumps the run took: the two BNEs
     # jumping back, and the JMP over SUB. The inner loop's arrow lies
     # inside the outer loop's, nearer the code. The JMP's arrow shares a
