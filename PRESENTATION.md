@@ -20,9 +20,9 @@ Slide layout: the diagram on the left, a smaller pane on the right with bullets 
 >
 > Every arrow points down. The machine knows nothing of the tools around it. That was a decision, not an accident: the tools use the machine, never the other way round.
 >
-> In the middle are two packages. `debug` is a toolbox around the machine: the disassembler reads it, the stop conditions stop it, the assembler writes programs for it. `programs` knows how to load and start one particular program; today that's Lode Runner.
+> In the middle are two packages. `debug` is a toolbox around the machine: the disassembler reads it, the stop conditions stop it, the assembler writes programs for it. `programs` knows how to load and start one particular program; today that's Lode Runner, and a tiny program with two nested loops.
 >
-> At the top is the `workbench`, where the reverse engineering happens. It never imports `programs`: you hand it the program when you call `run()`, so the same workbench works for any program with a setup.
+> At the top is the `workbench`, where the reverse engineering happens. It never imports `programs`: a program's `boot()` gives a ready machine, and you hand that to `run()`, so the same workbench works for any program.
 >
 > Above everything, outside the package, are the scripts: the boot scripts and the experiments.
 
@@ -35,7 +35,7 @@ Slide layout: the diagram on the left, a smaller pane on the right with bullets 
 - `workbench`: run, reports, analysis, commands
 
 **Worth knowing if asked:**
-- The assembler has no user inside papple2. Only the tests and `scripts/walkthrough.py` use it, to write small test programs.
+- The assembler's one user inside papple2 is `nested_loops`, whose program is written in assembly.
 - `stop_conditions` is "debug" by location, but it is really about controlling a run; `session.py` uses it for every run.
 
 ### 2. Inside the workbench (`workbench.png`)

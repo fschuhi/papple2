@@ -144,6 +144,7 @@ src/papple2/debug/disassembler.py
 
 ## programs
 #src/papple2/programs/lode_runner.py
+src/papple2/programs/nested_loops.py
 
 ## workbench
 src/papple2/workbench/annotations.py
@@ -195,6 +196,7 @@ tests/conftest.py
 #tests/test_memory.py
 #tests/test_memory_hooks.py
 #tests/test_memory_map.py
+tests/test_programs.py
 #tests/test_shell.py
 #tests/test_shell_colors.py
 #tests/test_shell_hidden.py

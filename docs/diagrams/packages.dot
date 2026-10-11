@@ -23,23 +23,22 @@ digraph packages {
 
     debug [fillcolor="#FAEEDA", color="#854F0B", label=<<FONT COLOR="#633806"><B>papple2.debug</B></FONT><BR/><FONT POINT-SIZE="10" COLOR="#854F0B">tools around the machine: read, stop, write</FONT><BR/><FONT POINT-SIZE="10" FACE="monospace">disassembler, stop_conditions, assembler</FONT>>];
 
-    programs [fillcolor="#E1F5EE", color="#0F6E56", label=<<FONT COLOR="#085041"><B>papple2.programs</B></FONT><BR/><FONT POINT-SIZE="10" COLOR="#0F6E56">program setups</FONT><BR/><FONT POINT-SIZE="10" FACE="monospace">lode_runner</FONT>>];
+    programs [fillcolor="#E1F5EE", color="#0F6E56", label=<<FONT COLOR="#085041"><B>papple2.programs</B></FONT><BR/><FONT POINT-SIZE="10" COLOR="#0F6E56">program setups</FONT><BR/><FONT POINT-SIZE="10" FACE="monospace">lode_runner, nested_loops</FONT>>];
 
     core [fillcolor="#F1EFE8", color="#5F5E5A", label=<<FONT COLOR="#444441"><B>papple2.core</B></FONT><BR/><FONT POINT-SIZE="10" COLOR="#5F5E5A">the machine</FONT><BR/><FONT POINT-SIZE="10" FACE="monospace">emulator, window, apple, cpu, memory, disk_image</FONT>>];
 
     util [fillcolor="#F1EFE8", label=<<FONT FACE="monospace">papple2.util</FONT>>];
 
-    { rank=same; debug; programs; }
-
     scripts -> workbench [style=dashed, label=" all four packages "];
     workbench -> debug [label=" disassembler,\n stop_conditions "];
     workbench -> core [label=" cpu, emulator "];
     debug -> core [label=" cpu, emulator "];
+    programs -> debug [label=" assembler "];
     programs -> core [label=" disk_image,\n emulator "];
     core -> util;
     debug -> util;
     programs -> util;
 
-    note [shape=plaintext, style="", fontsize=10, fontcolor="#5F5E5A", label=<Every arrow points down: the machine knows nothing of the tools around it.<BR/>Workbench never imports programs: run() takes the emulator a program's boot() gives.<BR/>assembler has no user inside papple2: only tests/ and scripts/walkthrough.py use it.>];
+    note [shape=plaintext, style="", fontsize=10, fontcolor="#5F5E5A", label=<Every arrow points down: the machine knows nothing of the tools around it.<BR/>Workbench never imports programs: run() takes the emulator a program's boot() gives.>];
     util -> note [style=invis];
 }
