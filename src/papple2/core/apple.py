@@ -18,6 +18,9 @@ import numpy
 from papple2.core.cpu import CPU
 from papple2.core.memory import Memory
 
+# Toggle this to False to restore the original "scanline" look with black gaps
+SOLID_PIXELS = True
+
 class Display:
 
     characters = [
@@ -186,6 +189,9 @@ class Display:
                             bit = (b >> (6 - col)) & 1
                             pixels[2 * col][2 * row] = on if bit else off
                             pixels[2 * col + 1][2 * row] = on if bit else off
+                            if SOLID_PIXELS:
+                                pixels[2 * col][2 * row + 1] = on if bit else off
+                                pixels[2 * col + 1][2 * row + 1] = on if bit else off
                     del pixels
             self.chargen.append(chars)
 
@@ -276,31 +282,44 @@ class Display:
                     x = 2 * xx
                     y = 2 * row
 
-                    if msb:
-                        if xx % 2:
-                            pixels[x][y] = (0, 0, 0)
-                            # orange
-                            pixels[x][y] = (255, 192, 0) if c else (0, 0, 0)
-                            pixels[x + 1][y] = (255, 192, 0) if c else (0, 0, 0)
-                        else:
-                            # blue
-                            pixels[x][y] = (0, 192, 255) if c else (0, 0, 0)
-                            pixels[x + 1][y] = (0, 0, 0)
-                            pixels[x + 1][y] = (0, 192, 255) if c else (0, 0, 0)
-                    else:
-                        if xx % 2:
-                            pixels[x][y] = (0, 0, 0)
-                            # green
-                            pixels[x][y] = (0, 255, 0) if c else (0, 0, 0)
-                            pixels[x + 1][y] = (0, 255, 0) if c else (0, 0, 0)
-                        else:
-                            # violet
-                            pixels[x][y] = (255, 0, 255) if c else (0, 0, 0)
-                            pixels[x + 1][y] = (0, 0, 0)
-                            pixels[x + 1][y] = (255, 0, 255) if c else (0, 0, 0)
+                    if SOLID_PIXELS:
+                        color = (0, 0, 0)
+                        if c:
+                            if msb:
+                                color = (255, 192, 0) if xx % 2 else (0, 192, 255)
+                            else:
+                                color = (0, 255, 0) if xx % 2 else (255, 0, 255)
 
-                    pixels[x][y + 1] = (0, 0, 0)
-                    pixels[x + 1][y + 1] = (0, 0, 0)
+                        pixels[x][y] = color
+                        pixels[x + 1][y] = color
+                        pixels[x][y + 1] = color
+                        pixels[x + 1][y + 1] = color
+                    else:
+                        if msb:
+                            if xx % 2:
+                                pixels[x][y] = (0, 0, 0)
+                                # orange
+                                pixels[x][y] = (255, 192, 0) if c else (0, 0, 0)
+                                pixels[x + 1][y] = (255, 192, 0) if c else (0, 0, 0)
+                            else:
+                                # blue
+                                pixels[x][y] = (0, 192, 255) if c else (0, 0, 0)
+                                pixels[x + 1][y] = (0, 0, 0)
+                                pixels[x + 1][y] = (0, 192, 255) if c else (0, 0, 0)
+                        else:
+                            if xx % 2:
+                                pixels[x][y] = (0, 0, 0)
+                                # green
+                                pixels[x][y] = (0, 255, 0) if c else (0, 0, 0)
+                                pixels[x + 1][y] = (0, 255, 0) if c else (0, 0, 0)
+                            else:
+                                # violet
+                                pixels[x][y] = (255, 0, 255) if c else (0, 0, 0)
+                                pixels[x + 1][y] = (0, 0, 0)
+                                pixels[x + 1][y] = (255, 0, 255) if c else (0, 0, 0)
+
+                        pixels[x][y + 1] = (0, 0, 0)
+                        pixels[x + 1][y + 1] = (0, 0, 0)
 
                 del pixels
 
