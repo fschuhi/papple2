@@ -67,6 +67,7 @@ from papple2.workbench.shell import (  # noqa: F401
     edit,
     hexdump,
     hide,
+    hx,
     label,
     listing,
     listing_rows,

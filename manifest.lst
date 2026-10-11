@@ -197,6 +197,7 @@ tests/test_listing_editor_syntax.py
 #tests/test_shell.py
 tests/test_shell_colors.py
 tests/test_shell_hidden.py
+tests/test_shell_hx.py
 #tests/test_softswitches.py
 #tests/test_stack_tracking.py
 #tests/test_tiling.py

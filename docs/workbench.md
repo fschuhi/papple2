@@ -64,6 +64,7 @@ What `%run scripts/lr_basic_blocks_analysis.py` leaves in the session:
 | Commands: the clipboard | `clip()`                                                                                                                                                    |
 | Commands: the dossier | `label()`, `comment()`, `unlabel()`, `uncomment()`, `hide()`, `unhide()`, `color()`, `uncolor()`, `colors()`                                                      |
 | Commands: range bounds | `to_range()`                                                                                                                                                 |
+| Commands: hex arithmetic | `hx()`                                                                                                                                                        |
 | Commands on objects | `print_routines()`, `print_blocks()`, `print_edges()`, `print_loops()`, `listing_rows()`, `print_listing()`, `set_current_run()`                               |
 | For a run of your own | `lode_runner` (a program setup, a module: lowercase), `Tiling` and `StackTracking` (instrumentations, classes: capitalized)                                   |
 | Machinery | `shell`, and through it `shell.session` with `shell.session.run_emulator`, `.run_instrumentations`, `.routines`, `.run_graph`, `.run_transitions`, `.annotations`, `.hidden`, `.color_store` |

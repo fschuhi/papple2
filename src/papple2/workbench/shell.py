@@ -228,6 +228,15 @@ def to_range(
     return session.address_of(start), session.address_of(end)
 
 
+def hx(value: int) -> Text:
+    """Show value in hex, as the listings do: lowercase, with a $ and at
+    least four digits, e.g. hx(0x1d26 - 0x1c9a) gives $008c. Python does
+    the arithmetic; hx() only shows the result. A negative value keeps its
+    sign (-$008c), and a value past $ffff shows all its digits ($1008c)."""
+    sign = "-" if value < 0 else ""
+    return Text(f"{sign}${abs(value):04x}")
+
+
 # How show_callers() names the leaps that lead into a routine.
 CALL_KINDS = {JSR: "JSR", JMP_absolute: "JMP", JMP_indirect: "JMP ()"}
 
