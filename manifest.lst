@@ -84,6 +84,7 @@ docs/diagrams/core.dot
 docs/diagrams/listing.dot
 docs/diagrams/packages.dot
 docs/diagrams/pipeline.dot
+docs/diagrams/states.dot
 docs/diagrams/run-loop.dot
 docs/diagrams/workbench.dot
 
@@ -91,6 +92,7 @@ docs/diagrams/workbench.dot
 #docs/diagrams/core.svg
 #docs/diagrams/packages.svg
 #docs/diagrams/pipeline.svg
+#docs/diagrams/states.svg
 #docs/diagrams/listing.svg
 #docs/diagrams/run-loop.svg
 #docs/diagrams/workbench.svg

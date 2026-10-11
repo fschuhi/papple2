@@ -86,24 +86,9 @@ The sources of these diagrams are the `.dot` files in `docs/diagrams/`; `make pr
 This part is real and current, as of the M2.5 refactor (`HISTORY.md`, 2026-09-11). `Emulator.run` no longer touches pygame directly -- it polls a `Window`, dispatches whatever comes back to `EmulatorStates`, and lets `EmulatorStates` decide what that means:
 
 
-```mermaid
-graph TD
-    E["Emulator<br/>run(until=None)"]
-    W["Window<br/>PygameWindow / NoWindow"]
-    S["EmulatorStates<br/>composes a StateMachine"]
-    R["Running"]
-    ST["Stopped"]
+<p align="center"><img src="docs/diagrams/states.svg" alt="The emulator, its window and its states, and where the events come from" width="640"></p>
 
-    E -- "poll() -> events" --> W
-    E -- "dispatch(event)" --> S
-    E -- "status(text)" --> W
-    S --> R
-    S --> ST
-    R -- "ctrlx / breakpoint" --> ST
-    ST -- "ctrlx" --> R
-```
-
-`PygameWindow` and `NoWindow` share the same three methods (`poll`, `present`, `status`), so `Emulator` doesn't know or care whether a window exists. An unserved trap, or an `until` condition passed to `run`, dispatches the same `breakpoint` event that `ctrlx` uses, so `Running` -> `Stopped` always goes through the state machine, never around it.
+`PygameWindow` and `NoWindow` share the same three methods (`poll`, `present`, `status`), so `Emulator` doesn't know or care whether a window exists. A breakpoint, an unserved trap, or an `until` condition passed to `run` dispatches the `breakpoint` event, which takes the same transition as `ctrlx`, so `Running` -> `Stopped` always goes through the state machine, never around it.
 
 ### Extension points
 

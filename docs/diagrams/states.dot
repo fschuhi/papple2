@@ -1,0 +1,79 @@
+// The emulator, its window and its states: where events come from, and
+// what the state machine does with them. Replaces the Mermaid chart in
+// README.md, "Emulator / Window / States". The run loop itself, with the
+// throttle and the poll interval, is in run-loop.dot.
+// Rendered by `make presentation`.
+
+digraph states {
+    rankdir=LR;
+    newrank=true;
+    compound=true;
+    size="13.3,7.5";
+    nodesep=0.35;
+    ranksep=0.55;
+    bgcolor="white";
+    fontname="Helvetica";
+    fontsize=10;
+    fontcolor="#5F5E5A";
+    labelloc="b";
+    label="\nEvery stop goes through the state machine, never around it. Without a window, nothing can send ctrlx: a stop ends the run.";
+    node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=11,
+          fillcolor="white", color="#5F5E5A", penwidth=1, margin="0.12,0.06"];
+    edge [color="#5F5E5A", fontname="Helvetica", fontsize=10, fontcolor="#444441",
+          arrowsize=0.7];
+
+    // the window: two forms, one interface
+    subgraph cluster_window {
+        label=<<B>window</B>  <FONT FACE="monospace" POINT-SIZE="10">poll(), present(), status(text)</FONT>>;
+        labelloc="t"; style="rounded,filled"; fillcolor="#F1EFE8"; color="#5F5E5A";
+        fontcolor="#444441"; fontsize=12;
+
+        pygame_window [label=<<FONT FACE="monospace"><B>PygameWindow</B></FONT><BR/><FONT POINT-SIZE="10">closing the window, Print: halt</FONT><BR/><FONT POINT-SIZE="10">Ctrl-X: ctrlx</FONT><BR/><FONT POINT-SIZE="10">D, L while stopped: d, l</FONT><BR/><FONT POINT-SIZE="10">any other key: key</FONT>>];
+        no_window [label=<<FONT FACE="monospace"><B>NoWindow</B></FONT><BR/><FONT POINT-SIZE="10">headless: poll() returns nothing,</FONT><BR/><FONT POINT-SIZE="10">present() and status() do nothing</FONT>>];
+    }
+
+    // the emulator's run loop
+    subgraph cluster_emulator {
+        label=<<B>Emulator</B>>;
+        labelloc="t"; style="rounded,filled"; fillcolor="#F1EFE8"; color="#444441";
+        fontcolor="#444441"; fontsize=12;
+
+        run [label=<<FONT FACE="monospace"><B>run()</B></FONT><BR/><FONT POINT-SIZE="10">every 1000th pass: poll the window,</FONT><BR/><FONT POINT-SIZE="10">dispatch each event, present a frame</FONT>>,
+             penwidth=1.5, color="#444441"];
+        checks [label=<<B>before each instruction</B><BR/><FONT POINT-SIZE="10">a breakpoint says stop,</FONT><BR/><FONT POINT-SIZE="10">a trap is not served,</FONT><BR/><FONT POINT-SIZE="10">or until is met</FONT>>,
+                fillcolor="#FAEEDA", color="#854F0B"];
+    }
+
+    // the state machine
+    subgraph cluster_states {
+        label=<<FONT FACE="monospace"><B>EmulatorStates</B></FONT>  <FONT POINT-SIZE="10">composes a pysm StateMachine</FONT>>;
+        labelloc="t"; style="rounded,filled"; fillcolor="#FBFBFE"; color="#534AB7";
+        fontcolor="#3C3489"; fontsize=12;
+
+        start [shape=point, width=0.12, color="#444441"];
+        running [label=<<B>Running</B><BR/><FONT POINT-SIZE="10">executing on entry, not on exit</FONT><BR/><FONT POINT-SIZE="10">key: press_key()</FONT>>,
+                 fillcolor="#E1F5EE", color="#0F6E56", penwidth=1.5];
+        stopped [label=<<B>Stopped</B><BR/><FONT POINT-SIZE="10">a status line on entry and exit</FONT><BR/><FONT POINT-SIZE="10">d: the registers; l: free for a hook</FONT>>,
+                 fillcolor="#FAEEDA", color="#854F0B", penwidth=1.5];
+        halt [label=<<B>halt</B><BR/><FONT POINT-SIZE="10">run() returns</FONT>>,
+              fillcolor="#D3D1C7", color="#444441"];
+
+        start -> running;
+        running -> stopped [label=" ctrlx,\n breakpoint "];
+        stopped -> running [label=" ctrlx "];
+        running -> halt [label=" halt "];
+        stopped -> halt [label=" halt "];
+        { rank=same; running; stopped; }
+    }
+
+    // where the events come from
+    pygame_window -> run [label=" events "];
+    no_window -> run [style=dashed, label=" none "];
+    checks -> running [lhead=cluster_states, color="#854F0B", fontcolor="#633806",
+                       label=" breakpoint "];
+    run -> running [lhead=cluster_states, label=" dispatch(event) "];
+
+    // what comes back to the window
+    stopped -> pygame_window [style=dashed, constraint=false,
+                              label=" status(text) "];
+}
