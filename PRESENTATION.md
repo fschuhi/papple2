@@ -145,6 +145,39 @@ loop_reports(0x0800)
 
 The recipe from `scripts/lr_basic_blocks_analysis.py`: the same lines could be typed at the prompt.
 
+### 6. The listing and the editor (`listing.png`)
+
+**What I say:**
+
+> This is how a listing comes about, top to bottom. The arrows are data again, as in the pipeline.
+>
+> At the top is the dossier: three small files with what I have learned about Lode Runner. The labels and comments, the ranges I have hidden, and the ranges I have colored.
+>
+> Next to it, the session holds the current run: the memory as the run left it, the graph of every block that ran, and the routines. When I ask for a routine's listing, `listing_range()` turns it into addresses, from its lowest block to its highest.
+>
+> Then `current_listing_rows()` reads the dossier again, every time, and hands everything to `listing_rows()`, in lavender. It builds the rows in four steps. A hidden range becomes one grey row. Code the run never reached becomes one grey row per gap. The disassembler decodes the rest, with my labels and comments. And the jumps the run actually took become arrows in the gutter.
+>
+> What comes out is a list of rows, and that is the point of the picture: both views get the very same rows. `listing()` prints them at the prompt, `edit()` shows them in the editor.
+>
+> Color comes in at exactly two places, the orange arrows. The listing colors each row by its address. The editor colors only the breadcrumbs, the routines I followed into. That is where syntax coloring will attach later.
+>
+> And the way back. When I change a label in the editor, `save_edit()` writes it into the dossier at once, and the rows are loaded again, so the new label shows everywhere it is used. The same goes for `label()` or `hide()` at the prompt. Nothing I learn is kept only in memory.
+
+**Right pane:**
+
+- dossier: what I know, in three files
+- session: the run, and the range
+- `listing.py`: the rows, in four steps
+- one list of rows, two views
+- orange: where color enters
+- every change written at once, read again before every view
+
+**Worth knowing if asked:**
+- `listing.py` is new as of today: the code that builds the rows moved out of `shell.py`, and `listing_range()` and `current_listing_rows()` moved into the `Session`. `shell.py` lost about a third of its lines.
+- Why read the dossier before every view: three small JSON files are cheap to read, and a change made by hand or by git shows at once.
+- The editor's navigation (keys, going back and forward, the picker) is left out on purpose: it does not change where the rows come from.
+- A listing that has already been printed does not change afterwards. It shows the dossier as it was when it was printed.
+
 ---
 
 ## Things to show
