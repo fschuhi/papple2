@@ -611,4 +611,3 @@ def test_chapter_17_rts_dispatch_the_listing(rts_dispatch_run, capsys) -> None:
         "|   ... 601e-6022: 4 bytes never ran ...",  # the table
         "+-> 6022  ea        done      NOP",  # the arrow ends here
     ]
-

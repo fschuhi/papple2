@@ -152,4 +152,3 @@ def rts_dispatch_run(tmp_path: Path, fresh_session: None) -> RtsDispatchRun:
     tiling, _ = shell.session.run_instrumentations
     labels = dict(RTS_DISPATCH_LABELS)
     return RtsDispatchRun(emulator, tiling, labels, tmp_path)
-

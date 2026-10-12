@@ -11,7 +11,7 @@ RUN           = $(ACTIVATE) && python
 SETUP_STAMP   = $(VENV_DIR)/.setup_stamp
 
 # --- Phony targets ---
-.PHONY: all setup test test-verbose boot-basic boot-robotron boot-lode-runner boot-lode-runner-break boot-lode-runner-throttled boot-lode-runner-headless boot-bandits lr-count lr-tiles lr-overview lr-basic-blocks-analysis walkthrough ipython presentation clean showtree gentree commit-hash patch filesdump filesdump-detailed help
+.PHONY: all setup test test-verbose boot-basic boot-robotron boot-lode-runner boot-lode-runner-break boot-lode-runner-throttled boot-lode-runner-headless boot-bandits lr-count lr-tiles lr-overview lr-basic-blocks-analysis walkthrough walkthrough-md ipython presentation clean showtree gentree commit-hash patch filesdump filesdump-detailed help
 
 all: setup
 
@@ -75,6 +75,9 @@ lr-basic-blocks-analysis: $(SETUP_STAMP) ## Experiment: tiling, returns and loop
 # --- Walkthrough (its programs through the workbench's pipeline, output in tmp/walkthrough/<program>/) ---
 walkthrough: $(SETUP_STAMP) ## Run the walkthrough's program nested_loops through tiling and the basic blocks analysis (reports in tmp/walkthrough/nested_loops/)
 	$(RUN) scripts/walkthrough.py nested_loops
+
+walkthrough-md: $(SETUP_STAMP) ## Render the walkthrough's chapters (tests/test_walkthrough.py) as tmp/walkthrough/walkthrough.md
+	$(RUN) tools/render_walkthrough_md.py
 
 # --- Interactive ---
 ipython: $(SETUP_STAMP) ## Start IPython in the venv (e.g. %run scripts/walkthrough.py nested_loops)

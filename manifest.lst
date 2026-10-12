@@ -105,6 +105,7 @@ papple2.example.toml
 
 ### --- DevOps tools ---
 #tools/concat_files.py
+#tools/render_walkthrough_md.py
 
 ### --- Scripts, outside of the controlled package src ---
 scripts/lr_basic_blocks_analysis.py
