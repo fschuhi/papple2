@@ -1,22 +1,27 @@
 {
-  "halfscr_col_byte": {
+  "draw_at_hx": {
+    "start": "83a7",
+    "end": "8438",
+    "shade": "blue"
+  },
+  "erase_at_hx": {
+    "start": "8336",
+    "end": "83a7",
+    "shade": "blue"
+  },
+  "tbl_hx_byte": {
     "start": "1c9a",
     "end": "1d26",
     "shade": "green"
   },
-  "halfscr_col_shift": {
+  "tbl_hx_shift": {
     "start": "1d26",
     "end": "1db2",
     "shade": "cyan"
   },
-  "hgr_lookup": {
+  "y_to_ptrs": {
     "start": "7a3e",
     "end": "7a51",
     "shade": "cyan"
-  },
-  "sprites": {
-    "start": "8336",
-    "end": "83a7",
-    "shade": "blue"
   }
 }

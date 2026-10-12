@@ -216,8 +216,8 @@ The recipe from `scripts/lr_basic_blocks_analysis.py`: the same lines could be t
    edit(0x6238)
    ```
    `0x6238` is `LOAD_LEVEL`.
-3. **Operand colors in the editor.** `edit("load_ax_from_table")`: the mnemonics are colored by class, and each operand has the color of the table it reads from.
-4. **The same colors in the hexdump.** `hexdump("tbl_halfscr_col_byte", 0x1db2)`: the two tables themselves, green running into cyan. Both views use the same `colors.json`.
+3. **Operand colors in the editor.** `edit("hx_to_byte_shift")`: the mnemonics are colored by class, and each operand has the color of the table it reads from.
+4. **The same colors in the hexdump.** `hexdump("tbl_hx_byte", 0x1db2)`: the two tables themselves, green running into cyan. Both views use the same `colors.json`.
 5. **Overlaps in light yellow.** Three cells, one line each: IPython shows `Out` only for the last line of a cell.
    ```
    color("probe", 0x1d20, 0x1d30, "red")
