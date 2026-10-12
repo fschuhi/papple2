@@ -343,6 +343,27 @@ def test_label_and_comment_change_the_current_dossier(
     assert saved.comments == {0x627e: "two 4-bit values per byte"}
 
 
+def test_the_dossier_commands_take_a_label_for_an_address(
+    tmp_path: Path, no_dossier: None
+) -> None:
+    # As in the run commands, a label stands for its address. Given a label,
+    # label() renames it.
+    Annotations(tmp_path).label(0x6238, "load_level")  # not new: no seeding
+    use_dossier(tmp_path)
+
+    comment("load_level", "two 4-bit values per byte")
+    label("load_level", "unpack_level")
+    saved = Annotations(tmp_path)
+    assert saved.labels == {0x6238: "unpack_level"}
+    assert saved.comments == {0x6238: "two 4-bit values per byte"}
+
+    uncomment("unpack_level")
+    unlabel("unpack_level")
+    saved = Annotations(tmp_path)
+    assert saved.labels == {}
+    assert saved.comments == {}
+
+
 @pytest.mark.parametrize(
     "command, arguments",
     [

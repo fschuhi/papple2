@@ -1,7 +1,12 @@
 {
-  "relocation_bytes": {
+  "relocation_bytes_1": {
     "start": "2800",
     "end": "2832",
-    "note": "overwritten after it ran"
+    "note": "1st part of relocation"
+  },
+  "relocation_bytes_2": {
+    "start": "5f32",
+    "end": "6056",
+    "note": "2nd part of relocation"
   }
 }

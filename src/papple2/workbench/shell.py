@@ -142,24 +142,28 @@ def use_dossier(folder: Path) -> None:
     session.use_dossier(folder)
 
 
-def label(address: int, text: str) -> None:
-    """Give address the label text in the current dossier."""
-    session.current_annotations().label(address, text)
+def label(address: int | str, text: str) -> None:
+    """Give address, an address or a label, the label text in the current
+    dossier. Given a label, this renames it."""
+    session.current_annotations().label(session.address_of(address), text)
 
 
-def unlabel(address: int) -> None:
-    """Remove address's label from the current dossier."""
-    session.current_annotations().unlabel(address)
+def unlabel(address: int | str) -> None:
+    """Remove the label of address, an address or a label, from the current
+    dossier."""
+    session.current_annotations().unlabel(session.address_of(address))
 
 
-def comment(address: int, text: str) -> None:
-    """Give address the comment text in the current dossier."""
-    session.current_annotations().comment(address, text)
+def comment(address: int | str, text: str) -> None:
+    """Give address, an address or a label, the comment text in the current
+    dossier."""
+    session.current_annotations().comment(session.address_of(address), text)
 
 
-def uncomment(address: int) -> None:
-    """Remove address's comment from the current dossier."""
-    session.current_annotations().uncomment(address)
+def uncomment(address: int | str) -> None:
+    """Remove the comment of address, an address or a label, from the
+    current dossier."""
+    session.current_annotations().uncomment(session.address_of(address))
 
 
 def hide(name: str, start: int | str, end: int | str, note: str) -> None:
