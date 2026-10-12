@@ -19,6 +19,11 @@
     "end": "1db2",
     "shade": "cyan"
   },
+  "tbl_shift_page": {
+    "start": "84c1",
+    "end": "84c8",
+    "shade": "red"
+  },
   "y_to_ptrs": {
     "start": "7a3e",
     "end": "7a51",
