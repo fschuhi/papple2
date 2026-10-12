@@ -1,8 +1,9 @@
-"""Walk a tiny program through the workbench's pipeline.
+"""Run one of the walkthrough's programs through the workbench's pipeline.
 
-Runs nested_loops (papple2.programs.nested_loops: two nested loops, one
-JSR) with the tiling instrumentation attached, and writes seven reports
-into tmp/walkthrough/:
+The walkthrough is the book of chapters in tests/test_walkthrough.py; this
+script is its chapter 0. It runs a program's recipe and writes the
+reports into tmp/walkthrough/<program>/. For nested_loops
+(papple2.programs.nested_loops: two nested loops, one JSR), seven reports:
     from Tiling (papple2.workbench.tiling):
         lr_unbroken_tiles.csv
         lr_unbroken_transitions.csv
@@ -13,22 +14,24 @@ into tmp/walkthrough/:
         lr_loops_6000.csv
         lr_loop_members_6000.csv
 
-The program is small enough to follow by hand, so each report's rows can
-be predicted before looking.
+The programs are small enough to follow by hand, so each report's rows
+can be predicted before looking.
 
 Run from the repo root:
 
     make walkthrough
 
 or in IPython, which keeps the commands of papple2.workbench.shell in its
-namespace afterwards, with the run as the current run:
+namespace afterwards, with the run as the current run, so you can read
+the chapters along at the prompt:
 
-    %run scripts/walkthrough.py
+    %run scripts/walkthrough.py nested_loops
     show_routines()
     show_blocks(0x6000)
     listing(0x6000)
 """
 
+import argparse
 from pathlib import Path
 
 from papple2.programs import nested_loops
@@ -43,14 +46,26 @@ from papple2.workbench.shell import (  # noqa: F401
 )
 from papple2.workbench.tiling import Tiling
 
-# One folder per script, named after it.
+# One folder per script, named after it, and in it one per program.
 REPORTS_FOLDER = Path("tmp/walkthrough")
 
 
-if __name__ == "__main__":
-    # The recipe: the same lines could be typed at the prompt. 39
-    # instructions run the program to its end, done's NOP included.
-    use_reports_folder(REPORTS_FOLDER)
+def nested_loops_recipe() -> None:
+    """The recipe: the same lines could be typed at the prompt. 39
+    instructions run the program to its end, done's NOP included."""
+    use_reports_folder(REPORTS_FOLDER / "nested_loops")
     run(nested_loops.boot(), 39, Tiling)
     tiling_reports()
     loop_reports(nested_loops.LOAD_ADDRESS)
+
+
+# Each program of the walkthrough, and its recipe.
+RECIPES = {
+    "nested_loops": nested_loops_recipe,
+}
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("program", choices=RECIPES)
+    RECIPES[parser.parse_args().program]()

@@ -1,5 +1,5 @@
 """A tiny program with two nested loops and one JSR, small enough to
-follow by hand: the program of the walkthrough.
+follow by hand: a program of the walkthrough.
 
 boot() gives a ready machine, the program at $6000 and PC there:
 run(nested_loops.boot(), 39, Tiling) at the prompt. 39 instructions run it

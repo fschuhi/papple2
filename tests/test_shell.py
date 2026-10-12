@@ -60,7 +60,7 @@ from papple2.workbench.tiling import Tiling
 
 
 def test_an_arrow_inside_another_gets_the_lane_nearer_the_code() -> None:
-    # Like the walkthrough's inner loop inside the outer one.
+    # Like nested_loops' inner loop inside the outer one.
     assert assign_lanes([(0, 4), (1, 3)]) == [1, 0]
 
 
@@ -247,10 +247,10 @@ def test_listing_rows_show_local_labels_short_within_their_scope(
     ]
 
 
-def test_print_blocks_shows_the_labels_of_the_blocks(walkthrough, capsys) -> None:
+def test_print_blocks_shows_the_labels_of_the_blocks(nested_loops_run, capsys) -> None:
     # A block whose first address has a label shows it at the end; the
     # loop column is padded so the labels line up.
-    print_blocks(walkthrough.graph, walkthrough.loops, walkthrough.labels)
+    print_blocks(nested_loops_run.graph, nested_loops_run.loops, nested_loops_run.labels)
 
     assert capsys.readouterr().out.splitlines() == [
         "block        runs  loop  label",
@@ -265,20 +265,20 @@ def test_print_blocks_shows_the_labels_of_the_blocks(walkthrough, capsys) -> Non
 
 
 def test_print_routines_lists_every_routine_with_its_label(
-    walkthrough, capsys
+    nested_loops_run, capsys
 ) -> None:
-    # The walkthrough has two routines: the program from 6000, and sub,
+    # nested_loops has two routines: the program from 6000, and sub,
     # the target of the JSR, called six times (two rounds of outer, three
     # of inner each).
-    tiles, transitions = read_split_reports(walkthrough.folder)
+    tiles, transitions = read_split_reports(nested_loops_run.folder)
     sub = build_graph(tiles, transitions, entry=0x6010)
-    graphs = {0x6000: walkthrough.graph, 0x6010: sub}
+    graphs = {0x6000: nested_loops_run.graph, 0x6010: sub}
     loops_of = {
-        0x6000: walkthrough.loops,
+        0x6000: nested_loops_run.loops,
         0x6010: natural_loops(sub, immediate_dominators(sub)),
     }
 
-    print_routines(graphs, loops_of, {0x6000: 1, 0x6010: 6}, walkthrough.labels)
+    print_routines(graphs, loops_of, {0x6000: 1, 0x6010: 6}, nested_loops_run.labels)
 
     assert capsys.readouterr().out.splitlines() == [
         "routine  blocks  bytes  called  loops  label",
@@ -446,20 +446,20 @@ def no_run(fresh_session: None) -> None:
     shell's own is back after the test."""
 
 
-def make_walkthrough_current(walkthrough) -> None:
-    """The walkthrough's run as the current run, read from its reports."""
+def make_nested_loops_current(nested_loops_run) -> None:
+    """nested_loops' run as the current run, read from its reports."""
     set_current_run(
-        walkthrough.emulator,
+        nested_loops_run.emulator,
         0x6000,
-        split_tiles=walkthrough.folder / "lr_split_tiles.csv",
-        split_transitions=walkthrough.folder / "lr_split_transitions.csv",
+        split_tiles=nested_loops_run.folder / "lr_split_tiles.csv",
+        split_transitions=nested_loops_run.folder / "lr_split_transitions.csv",
     )
 
 
 def test_show_routines_lists_the_routines_of_the_current_run(
-    walkthrough, tmp_path: Path, no_run: None, no_dossier: None
+    nested_loops_run, tmp_path: Path, no_run: None, no_dossier: None
 ) -> None:
-    make_walkthrough_current(walkthrough)
+    make_nested_loops_current(nested_loops_run)
     use_dossier(tmp_path / "dossier")
     label(0x6010, "sub")
 
@@ -470,44 +470,44 @@ def test_show_routines_lists_the_routines_of_the_current_run(
 
 
 def test_set_current_run_labels_the_routine_entries_without_a_label(
-    walkthrough, tmp_path: Path, no_run: None, no_dossier: None
+    nested_loops_run, tmp_path: Path, no_run: None, no_dossier: None
 ) -> None:
-    # The walkthrough's routines start at 6000 and 6010. 6010 has a label
+    # nested_loops' routines start at 6000 and 6010. 6010 has a label
     # given by hand, which stays; 6000 gets the default name.
     Annotations(tmp_path).label(0x6010, "sub")  # not new: no seeding
     use_dossier(tmp_path)
 
-    make_walkthrough_current(walkthrough)
+    make_nested_loops_current(nested_loops_run)
 
     assert Annotations(tmp_path).labels == {0x6000: "routine_6000", 0x6010: "sub"}
 
 
 def test_show_blocks_shows_a_routine_of_the_current_run(
-    walkthrough, capsys, no_run: None, no_dossier: None
+    nested_loops_run, capsys, no_run: None, no_dossier: None
 ) -> None:
     # No dossier open: the blocks are shown without labels.
-    make_walkthrough_current(walkthrough)
+    make_nested_loops_current(nested_loops_run)
     capsys.readouterr()
 
     shown = show_blocks(0x6000)
-    print_blocks(walkthrough.graph, walkthrough.loops)
+    print_blocks(nested_loops_run.graph, nested_loops_run.loops)
     assert shown == capsys.readouterr().out.rstrip("\n")
 
 
 def test_show_blocks_refuses_an_address_that_is_no_routine(
-    walkthrough, no_run: None
+    nested_loops_run, no_run: None
 ) -> None:
-    make_walkthrough_current(walkthrough)
+    make_nested_loops_current(nested_loops_run)
     with pytest.raises(ValueError, match="show_routines"):
         show_blocks(0x6002)
 
 
 def test_show_callers_lists_the_call_sites_with_the_routines_holding_them(
-    walkthrough, tmp_path: Path, no_run: None, no_dossier: None
+    nested_loops_run, tmp_path: Path, no_run: None, no_dossier: None
 ) -> None:
     # sub has one caller: the JSR in inner, taken six times, in the
     # routine from 6000.
-    make_walkthrough_current(walkthrough)
+    make_nested_loops_current(nested_loops_run)
     use_dossier(tmp_path / "dossier")
     label(0x6000, "main")
     label(0x6010, "sub")
@@ -519,10 +519,10 @@ def test_show_callers_lists_the_call_sites_with_the_routines_holding_them(
 
 
 def test_caller_items_lead_to_the_call_site_in_the_routine_holding_it(
-    walkthrough, tmp_path: Path, no_run: None, no_dossier: None
+    nested_loops_run, tmp_path: Path, no_run: None, no_dossier: None
 ) -> None:
     # sub's one caller: the JSR at 6004, taken six times, in main.
-    make_walkthrough_current(walkthrough)
+    make_nested_loops_current(nested_loops_run)
     use_dossier(tmp_path / "dossier")
     label(0x6000, "main")
 
@@ -532,10 +532,10 @@ def test_caller_items_lead_to_the_call_site_in_the_routine_holding_it(
 
 
 def test_show_callers_of_a_routine_nothing_leaps_into(
-    walkthrough, no_run: None, no_dossier: None
+    nested_loops_run, no_run: None, no_dossier: None
 ) -> None:
     # The run starts at 6000; no JSR or JMP leads there.
-    make_walkthrough_current(walkthrough)
+    make_nested_loops_current(nested_loops_run)
 
     assert show_callers(0x6000).splitlines() == [
         "no JSR or JMP leads into 6000"
@@ -543,11 +543,11 @@ def test_show_callers_of_a_routine_nothing_leaps_into(
 
 
 def test_routine_graph_has_a_box_per_routine_and_an_arrow_per_call(
-    walkthrough, no_run: None
+    nested_loops_run, no_run: None
 ) -> None:
     # Two routines: the program from 6000, without a label, and sub. One
     # arrow: the JSR in inner, taken six times.
-    make_walkthrough_current(walkthrough)
+    make_nested_loops_current(nested_loops_run)
     calls = routine_calls(shell.session.routines, shell.session.run_transitions)
 
     graph = routine_graph(shell.session.routines, calls, {0x6010: "sub"})
@@ -561,11 +561,11 @@ def test_routine_graph_has_a_box_per_routine_and_an_arrow_per_call(
 
 
 def test_routine_graph_draws_an_exit_in_the_look_of_its_kind(
-    walkthrough, no_run: None
+    nested_loops_run, no_run: None
 ) -> None:
-    # The walkthrough has no exits, so one is made up: a JMP from 6000
+    # nested_loops has no exits, so one is made up: a JMP from 6000
     # into sub, taken twice. It is drawn dashed and blue, its kind named.
-    make_walkthrough_current(walkthrough)
+    make_nested_loops_current(nested_loops_run)
 
     graph = routine_graph(shell.session.routines, {}, exits={(0x6000, 0x6010, "jmp"): 2})
 
@@ -575,20 +575,20 @@ def test_routine_graph_draws_an_exit_in_the_look_of_its_kind(
 
 
 def test_listing_reads_the_memory_of_the_current_run(
-    walkthrough, no_run: None, no_dossier: None
+    nested_loops_run, no_run: None, no_dossier: None
 ) -> None:
-    make_walkthrough_current(walkthrough)
+    make_nested_loops_current(nested_loops_run)
 
     assert listing(0x6000, 0x6002).splitlines()[0].startswith("6000")
 
 
 def test_a_command_returns_its_text_for_ipython_to_show(
-    walkthrough, no_run: None, no_dossier: None
+    nested_loops_run, no_run: None, no_dossier: None
 ) -> None:
     # IPython shows the returned text as it is, as Out[n]: no quotes, no \n.
     from IPython.lib.pretty import pretty
 
-    make_walkthrough_current(walkthrough)
+    make_nested_loops_current(nested_loops_run)
 
     shown = listing(0x6000, 0x6004)
 
@@ -597,9 +597,9 @@ def test_a_command_returns_its_text_for_ipython_to_show(
 
 
 def test_loop_reports_write_into_the_reports_folder(
-    walkthrough, tmp_path: Path, no_run: None, no_reports_folder: None
+    nested_loops_run, tmp_path: Path, no_run: None, no_reports_folder: None
 ) -> None:
-    make_walkthrough_current(walkthrough)
+    make_nested_loops_current(nested_loops_run)
     use_reports_folder(tmp_path / "experiment")
 
     loop_reports(0x6000)
@@ -609,11 +609,11 @@ def test_loop_reports_write_into_the_reports_folder(
 
 
 def test_listing_shows_a_label_given_in_another_session(
-    walkthrough, tmp_path: Path, no_run: None, no_dossier: None
+    nested_loops_run, tmp_path: Path, no_run: None, no_dossier: None
 ) -> None:
     # Two terminals on one dossier: the label comes from the other one,
     # after this session opened the dossier.
-    make_walkthrough_current(walkthrough)
+    make_nested_loops_current(nested_loops_run)
     use_dossier(tmp_path / "dossier")
     Annotations(tmp_path / "dossier").label(0x6010, "sub")
 
@@ -621,28 +621,28 @@ def test_listing_shows_a_label_given_in_another_session(
 
 
 def test_listing_of_a_routine_alone_lists_its_whole_range(
-    walkthrough, no_run: None, no_dossier: None
+    nested_loops_run, no_run: None, no_dossier: None
 ) -> None:
-    make_walkthrough_current(walkthrough)
+    make_nested_loops_current(nested_loops_run)
 
     # sub is one block, $6010-$6013.
     assert listing(0x6010) == listing(0x6010, 0x6013)
 
 
 def test_listing_of_a_routine_alone_shows_the_gaps_between_its_blocks(
-    walkthrough, no_run: None, no_dossier: None
+    nested_loops_run, no_run: None, no_dossier: None
 ) -> None:
     # The start routine runs from $6000 to done's NOP, $6013-$6014; sub's
     # code lies between its blocks, not in it, and shows all the same.
-    make_walkthrough_current(walkthrough)
+    make_nested_loops_current(nested_loops_run)
 
     assert listing(0x6000) == listing(0x6000, 0x6014)
 
 
 def test_the_run_commands_take_a_label_for_an_address(
-    walkthrough, tmp_path: Path, no_run: None, no_dossier: None
+    nested_loops_run, tmp_path: Path, no_run: None, no_dossier: None
 ) -> None:
-    make_walkthrough_current(walkthrough)
+    make_nested_loops_current(nested_loops_run)
     use_dossier(tmp_path / "dossier")
     label(0x6010, "sub")
 
@@ -651,18 +651,18 @@ def test_the_run_commands_take_a_label_for_an_address(
 
 
 def test_an_unknown_label_stops(
-    walkthrough, tmp_path: Path, no_run: None, no_dossier: None
+    nested_loops_run, tmp_path: Path, no_run: None, no_dossier: None
 ) -> None:
-    make_walkthrough_current(walkthrough)
+    make_nested_loops_current(nested_loops_run)
     use_dossier(tmp_path / "dossier")
     with pytest.raises(ValueError, match="NOWHERE"):
         show_blocks("NOWHERE")
 
 
 def test_listing_of_an_address_alone_that_is_no_routine_stops(
-    walkthrough, no_run: None
+    nested_loops_run, no_run: None
 ) -> None:
-    make_walkthrough_current(walkthrough)
+    make_nested_loops_current(nested_loops_run)
     with pytest.raises(ValueError, match="show_routines"):
         listing(0x6002)
 
@@ -687,7 +687,7 @@ def test_the_run_commands_stop_without_a_current_run(
 
 
 # An endless loop at $6000, so any number of instructions can run. Only
-# lines like the walkthrough's: begun with INX, the program made the
+# lines like nested_loops': begun with INX, the program made the
 # assembler fail (UnboundLocalError for operand), which is not looked into
 # yet.
 ENDLESS_PROGRAM = """

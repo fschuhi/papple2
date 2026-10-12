@@ -72,12 +72,12 @@ lr-overview: $(SETUP_STAMP) ## Overview of the whole run: routines, loops, calls
 lr-basic-blocks-analysis: $(SETUP_STAMP) ## Experiment: tiling, returns and loop reports (start 0800) of Lode Runner's attract play into docs/reports/lr_basic_blocks_analysis/
 	$(RUN) scripts/lr_basic_blocks_analysis.py data/bin/LODE_RUNNER.BIN
 
-# --- Walkthrough (a tiny program through the workbench's pipeline, output in tmp/walkthrough/) ---
-walkthrough: $(SETUP_STAMP) ## Walk a tiny program through tiling and the basic blocks analysis (reports in tmp/walkthrough/)
-	$(RUN) scripts/walkthrough.py
+# --- Walkthrough (its programs through the workbench's pipeline, output in tmp/walkthrough/<program>/) ---
+walkthrough: $(SETUP_STAMP) ## Run the walkthrough's program nested_loops through tiling and the basic blocks analysis (reports in tmp/walkthrough/nested_loops/)
+	$(RUN) scripts/walkthrough.py nested_loops
 
 # --- Interactive ---
-ipython: $(SETUP_STAMP) ## Start IPython in the venv (e.g. %run scripts/walkthrough.py)
+ipython: $(SETUP_STAMP) ## Start IPython in the venv (e.g. %run scripts/walkthrough.py nested_loops)
 	$(ACTIVATE) && ipython
 
 # --- Presentation (the diagrams in docs/diagrams/, rendered by Graphviz's dot) ---

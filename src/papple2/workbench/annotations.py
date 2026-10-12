@@ -1,7 +1,7 @@
 """Annotations: what we know about a program's addresses, kept in its dossier.
 
 A dossier is a folder for one program (dossiers/lode_runner/,
-dossiers/walkthrough/). Its annotations live in annotations.json there,
+dossiers/nested_loops/). Its annotations live in annotations.json there,
 under git: labels now, comments next. They belong to the program, not to
 a run or an IPython session, so a label given today shows tomorrow in a
 run that covers far more code.

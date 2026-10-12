@@ -183,7 +183,7 @@ Place the three binaries in `data/bin/`, the disk image in `data/do/`, and Bandi
 The tools interacting with `papple2` live in the `scripts/` folder and generally fall into two categories:
 
 - **The `boot_*` scripts:** Manual, visual checks that boot the emulator with a specific game or ROM payload attached to the pygame window. These are test-bed wrappers used for visual verification (`boot_basic.py`, `boot_robotron.py`, `boot_lode_runner.py`, `boot_bandits.py`). Lode Runner's setup (the load at `$0800`, the stand-in for its disk routines) lives in `papple2.programs.lode_runner`; `boot_lode_runner.py` runs it in a window or headless.
-- **The `lr_*` experiments and `walkthrough.py`:** headless experiments on Lode Runner's attract play, and a tiny program through the same pipeline. See [`docs/workbench.md`](docs/workbench.md), "Experiments in `scripts/`".
+- **The `lr_*` experiments and `walkthrough.py`:** headless experiments on Lode Runner's attract play, and the walkthrough's tiny programs through the same pipeline. See [`docs/workbench.md`](docs/workbench.md), "Experiments in `scripts/`".
 
 ---
 
@@ -203,7 +203,7 @@ make lr-count        # Early experiment (frozen): map which addresses Lode Runne
 make lr-tiles        # Early experiment (frozen): tiling reports into tmp/lr_tiles/ (CSV and text)
 make lr-overview     # Overview of the whole run from docs/reports/lr_tiles/, into docs/reports/lr_overview/
 make lr-basic-blocks-analysis  # Every routine of the run; tiling, returns and loop reports (start 0800) in docs/reports/lr_basic_blocks_analysis/
-make walkthrough     # A tiny program through tiling and the basic blocks analysis, reports in tmp/walkthrough/
+make walkthrough     # nested_loops through tiling and the basic blocks analysis, reports in tmp/walkthrough/nested_loops/
 make ipython         # IPython in the venv; then e.g. %run scripts/lr_basic_blocks_analysis.py
 make presentation    # Render the diagrams: SVG next to docs/diagrams/*.dot, PDF and PNG into tmp/presentation/
 ```

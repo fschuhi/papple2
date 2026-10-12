@@ -76,8 +76,8 @@ def make_emulator(assemble):
     return _make_emulator
 
 
-# The names for nested_loops' addresses, given by hand.
-WALKTHROUGH_NAMES = {
+# The labels for nested_loops' addresses, given by hand.
+NESTED_LOOPS_LABELS = {
     0x6002: "outer",
     0x6004: "inner",
     0x6010: "sub",
@@ -85,10 +85,10 @@ WALKTHROUGH_NAMES = {
 }
 
 
-class Walkthrough(NamedTuple):
-    """The walkthrough's run: the machine as the run left it, its tiling,
-    the graph and loops of the routine at $6000, the names, and the folder
-    the reports went into."""
+class NestedLoopsRun(NamedTuple):
+    """nested_loops' run: the machine as the run left it, its tiling, the
+    graph and loops of the routine at $6000, the labels, and the folder the
+    reports went into."""
 
     emulator: Emulator
     tiling: Tiling
@@ -99,8 +99,8 @@ class Walkthrough(NamedTuple):
 
 
 @pytest.fixture
-def walkthrough(tmp_path: Path, fresh_session: None) -> Walkthrough:
-    """The walkthrough's run, with the recipe of scripts/walkthrough.py:
+def nested_loops_run(tmp_path: Path, fresh_session: None) -> NestedLoopsRun:
+    """nested_loops' run, with its recipe in scripts/walkthrough.py:
     run nested_loops with Tiling attached and write the reports into a
     folder. Then read the split reports back, build the graph of the
     routine at $6000 and find its loops."""
@@ -113,5 +113,5 @@ def walkthrough(tmp_path: Path, fresh_session: None) -> Walkthrough:
     tiles, transitions = read_split_reports(tmp_path)
     graph = build_graph(tiles, transitions, entry=nested_loops.LOAD_ADDRESS)
     loops = natural_loops(graph, immediate_dominators(graph))
-    labels = dict(WALKTHROUGH_NAMES)
-    return Walkthrough(emulator, tiling, graph, loops, labels, tmp_path)
+    labels = dict(NESTED_LOOPS_LABELS)
+    return NestedLoopsRun(emulator, tiling, graph, loops, labels, tmp_path)
