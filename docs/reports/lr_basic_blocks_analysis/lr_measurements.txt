@@ -6,7 +6,6 @@ ACCOUNTING
   Tiles: 642
   Transition records: 900
   Transition traversals: 1,102,344
-  RWTS reads served: 0
 
 SPLIT TILES
   Original tiles: 642

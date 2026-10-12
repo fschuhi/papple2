@@ -1,8 +1,9 @@
 """The walkthrough, told as tests.
 
 Twenty bytes go through the whole pipeline: the run with Tiling attached,
-the reports, the graph of basic blocks, the dominators, the loops, and the
-views at the IPython prompt. Each test is one chapter, in the order the
+the unbroken and the split reports, the graph of basic blocks, the
+routines, the dominators, the loops and their reports, and the views at
+the IPython prompt. Each test is one chapter, in the order the
 pipeline goes; its name says which program it uses. The `walkthrough`
 fixture in conftest.py runs the recipe of scripts/walkthrough.py.
 
@@ -26,18 +27,27 @@ import csv
 from pathlib import Path
 
 from papple2.workbench.basic_blocks_analysis import (
+    LOOP_MEMBERS_FILE,
+    LOOPS_FILE,
     Loop,
     back_edges,
     immediate_dominators,
 )
 from papple2.workbench.shell import (
     listing_rows,
+    loop_reports,
     print_blocks,
     print_edges,
     print_listing,
     print_loops,
+    show_routines,
 )
-from papple2.workbench.tiling import SPLIT_TILES_FILE, SPLIT_TRANSITIONS_FILE
+from papple2.workbench.tiling import (
+    SPLIT_TILES_FILE,
+    SPLIT_TRANSITIONS_FILE,
+    TILES_FILE,
+    TRANSITIONS_FILE,
+)
 
 
 def read_rows(filename: Path) -> list[dict[str, str]]:
@@ -46,9 +56,11 @@ def read_rows(filename: Path) -> list[dict[str, str]]:
 
 
 def test_chapter_1_nested_loops_the_run(walkthrough) -> None:
-    # 1 LDY, then 2 outer passes of (LDX + 3 inner passes of JSR, INC, RTS,
-    # DEX, BNE) + DEY + BNE, then JMP and NOP: 1 + 2 * (1 + 3 * 5 + 2) + 2.
-    assert walkthrough.emulator.instructions == 39
+    # 39 instructions run the program to its end: 1 LDY, then 2 outer
+    # passes of (LDX + 3 inner passes of JSR, INC, RTS, DEX, BNE) + DEY +
+    # BNE, then JMP and NOP: 1 + 2 * (1 + 3 * 5 + 2) + 2. PC stands behind
+    # DONE's NOP.
+    assert walkthrough.emulator.cpu.PC == 0x6014
 
     first_tile = next(
         tile for tile in walkthrough.tiling.tiles.values() if tile.initial_entries
@@ -57,7 +69,61 @@ def test_chapter_1_nested_loops_the_run(walkthrough) -> None:
     assert walkthrough.tiling.current_tile.start_pc == 0x6013
 
 
-def test_chapter_2_nested_loops_split_tiles(walkthrough) -> None:
+def test_chapter_2_nested_loops_unbroken_tiles(walkthrough) -> None:
+    # Tiling starts a tile wherever the run arrives by a leap, and the tile
+    # runs on until the next leap. The run starts at $6000 and runs LDY,
+    # LDX and JSR before its first leap. Later the two BNEs leap back to
+    # $6002 and $6004, and each starts a tile of its own, over bytes that
+    # the first tile already ran. So the tiles overlap: the JSR at $6004
+    # lies in three of them, and its leap into SUB is counted under three
+    # sources, 1 + 1 + 4 times. Chapter 3 cuts the tiles apart.
+    tiles = read_rows(walkthrough.folder / TILES_FILE)
+    assert [
+        (
+            row["start_PC"],
+            row["furthest_PC"],
+            row["length_bytes"],
+            row["leaped_to"],
+            row["leaped_from"],
+            row["instructions"],
+        )
+        for row in tiles
+    ] == [
+        ("6000", "6004", "7", "0", "1", "3"),  # the start: LDY, LDX, JSR
+        ("6002", "6004", "5", "1", "1", "2"),  # OUTER, once by BNE OUTER
+        ("6004", "6004", "3", "4", "4", "4"),  # INNER, 4 times by BNE INNER
+        ("6007", "6008", "3", "6", "6", "12"),  # back from SUB
+        ("600a", "600b", "3", "2", "2", "4"),
+        ("600d", "600d", "3", "1", "1", "1"),
+        ("6010", "6012", "3", "6", "6", "12"),  # SUB
+        ("6013", "6013", "1", "1", "0", "1"),  # DONE: the run ends in it
+    ]
+
+    transitions = read_rows(walkthrough.folder / TRANSITIONS_FILE)
+    assert [
+        (
+            row["source_tile"],
+            row["leap_from_PC"],
+            row["opcode"],
+            row["outcome"],
+            row["target_tile"],
+            row["count"],
+        )
+        for row in transitions
+    ] == [
+        ("6000", "6004", "$20", "", "6010", "1"),  # the one JSR,
+        ("6002", "6004", "$20", "", "6010", "1"),  # in three tiles
+        ("6004", "6004", "$20", "", "6010", "4"),
+        ("6007", "6008", "$D0", "fall_through", "600a", "2"),
+        ("6007", "6008", "$D0", "taken", "6004", "4"),
+        ("600a", "600b", "$D0", "fall_through", "600d", "1"),
+        ("600a", "600b", "$D0", "taken", "6002", "1"),
+        ("600d", "600d", "$4C", "", "6013", "1"),
+        ("6010", "6012", "$60", "", "6007", "6"),
+    ]
+
+
+def test_chapter_3_nested_loops_split_tiles(walkthrough) -> None:
     # The tile from $6000 ran straight through $6002 and $6004, which later
     # became entry points (the targets of the two BNEs). So it is cut there:
     # every split tile starts at an entry point and ends where the next
@@ -77,7 +143,7 @@ def test_chapter_2_nested_loops_split_tiles(walkthrough) -> None:
     ]
 
 
-def test_chapter_3_nested_loops_transitions(walkthrough) -> None:
+def test_chapter_4_nested_loops_transitions(walkthrough) -> None:
     # Every kind of transition occurs: glides across the two cuts, both
     # outcomes of each BNE, and the plain leaps JSR ($20), RTS ($60) and
     # JMP ($4C), which have no outcome.
@@ -105,7 +171,7 @@ def test_chapter_3_nested_loops_transitions(walkthrough) -> None:
     ]
 
 
-def test_chapter_4_nested_loops_the_graph(walkthrough) -> None:
+def test_chapter_5_nested_loops_the_graph(walkthrough) -> None:
     graph = walkthrough.graph
 
     # SUB ($6010) is not reachable from $6000 without following the call,
@@ -128,7 +194,19 @@ def test_chapter_4_nested_loops_the_graph(walkthrough) -> None:
     }
 
 
-def test_chapter_5_nested_loops_dominators(walkthrough) -> None:
+def test_chapter_6_nested_loops_routines(walkthrough) -> None:
+    # A routine starts at the run's start and at every JSR target. The
+    # program has two: the run from $6000, entered once by the run itself,
+    # and SUB at $6010, called six times. show_routines() lists them; with
+    # no dossier open, there are no labels.
+    assert show_routines().splitlines() == [
+        "routine  blocks  bytes  called  loops",
+        "6000          7     17       1      2",
+        "6010          1      3       6      0",
+    ]
+
+
+def test_chapter_7_nested_loops_dominators(walkthrough) -> None:
     # A block's immediate dominator is the closest block that every path
     # from the entry to it must pass. $6002 has two predecessors, $6000 and
     # $600a (the jump back); only $6000 lies on every path.
@@ -143,7 +221,7 @@ def test_chapter_5_nested_loops_dominators(walkthrough) -> None:
     }
 
 
-def test_chapter_6_nested_loops_loops(walkthrough) -> None:
+def test_chapter_8_nested_loops_loops(walkthrough) -> None:
     graph = walkthrough.graph
 
     # An edge is a back edge if its target dominates its source. Here the
@@ -174,7 +252,31 @@ def test_chapter_6_nested_loops_loops(walkthrough) -> None:
     }
 
 
-def test_chapter_7_nested_loops_the_views_at_the_prompt(walkthrough, capsys) -> None:
+def test_chapter_9_nested_loops_loop_reports(walkthrough) -> None:
+    # loop_reports() writes chapter 8's loops into the reports folder, with
+    # the routine's entry in the file names: one row per loop, and one row
+    # per block, with the innermost loop holding it.
+    loop_reports(0x6000)
+
+    loops = read_rows(walkthrough.folder / LOOPS_FILE.format(entry=0x6000))
+    assert [list(row.values()) for row in loops] == [
+        ["L01", "6002", "600a", "1", "0", "-", "6002 6004 6007 600a"],
+        ["L02", "6004", "6007", "4", "1", "L01", "6004 6007"],
+    ]
+
+    members = read_rows(walkthrough.folder / LOOP_MEMBERS_FILE.format(entry=0x6000))
+    assert [list(row.values()) for row in members] == [
+        ["6000", "6002", "1", "-", "0"],
+        ["6002", "6004", "2", "L01", "1"],
+        ["6004", "6007", "6", "L02", "2"],
+        ["6007", "600a", "6", "L02", "2"],
+        ["600a", "600d", "2", "L01", "1"],
+        ["600d", "6010", "1", "-", "0"],
+        ["6013", "6014", "1", "-", "0"],
+    ]
+
+
+def test_chapter_10_nested_loops_the_views_at_the_prompt(walkthrough, capsys) -> None:
     # What print_blocks, print_edges and print_loops print, line by line.
     print_blocks(walkthrough.graph, walkthrough.loops)
     print_edges(walkthrough.graph, walkthrough.loops)
@@ -204,7 +306,7 @@ def test_chapter_7_nested_loops_the_views_at_the_prompt(walkthrough, capsys) -> 
     ]
 
 
-def test_chapter_8_nested_loops_one_block_disassembled(walkthrough, capsys) -> None:
+def test_chapter_11_nested_loops_one_block_disassembled(walkthrough, capsys) -> None:
     # The block 6004-6007 is one instruction: the JSR. The range is
     # half-open, so the end the block shows is the end listing_rows() takes.
     # Without names, the operand shows the address.
@@ -215,7 +317,7 @@ def test_chapter_8_nested_loops_one_block_disassembled(walkthrough, capsys) -> N
     ]
 
 
-def test_chapter_9_nested_loops_the_whole_program_disassembled(walkthrough, capsys) -> None:
+def test_chapter_12_nested_loops_the_whole_program_disassembled(walkthrough, capsys) -> None:
     # The twenty bytes, read back from memory after the run, with the names
     # given by hand. The four named addresses show their names twice: in
     # the column before their own instruction, and in the operands that
@@ -238,7 +340,7 @@ def test_chapter_9_nested_loops_the_whole_program_disassembled(walkthrough, caps
     ]
 
 
-def test_chapter_10_nested_loops_the_jumps_as_arrows(walkthrough, capsys) -> None:
+def test_chapter_13_nested_loops_the_jumps_as_arrows(walkthrough, capsys) -> None:
     # With the graph, listing_rows() draws the jumps the run took: the two BNEs
     # jumping back, and the JMP over SUB. The inner loop's arrow lies
     # inside the outer loop's, nearer the code. The JMP's arrow shares a
