@@ -126,9 +126,10 @@ The views share the lookup but use colors differently:
 - **`edit()` colors syntax and targets.** Each mnemonic has the color of its class, as in the 6502 reference at pagetable.com: load, trans, stack, shift, logic, arith, inc, ctrl, bra, flags, nop. The hex bytes are dark gray. The name in an operand has the color of the address it names (`ListingRow.target`): the table in `LDA tbl,X`, the pointer in `STA (ptr),Y`, the target of a `JSR` or a branch. Brackets, index, immediates, labels and comments stay plain.
 - **`hexdump()` colors bytes.** Each hex byte uses the color at its own address. The text column stays plain, read like a comment.
 - **`memory_map()` colors cells.** `memory_map(start, end, cell_bytes)` shows 16 cells per row, each `cell_bytes` bytes, a power of 2: by default the whole 64 KB, a page per cell; `cell_bytes=0x10` makes each row one page. A cell has the color of the bytes in it, even if only some of them are classified; different colors in one cell give the mix color. Rows start at round addresses, columns show offsets, and there are no gridlines, so neighbouring cells of one color form a band. A legend below lists the color ranges in the range shown; `legend=False` leaves it out. No run is needed.
+- **`show_routine_graph()` colors routines.** A routine gets a thick border in the color of the definitions containing its whole span, by the same lookup as the breadcrumbs; partial coverage alone gives no border, and neither does the mix color, which Graphviz cannot draw. The arrows keep their own colors, which name the way into a routine: a call, a `JMP`, a branch, a glide or a stack jump.
 - **Clipboard text stays plain.** `listing()` and `hexdump()` return a `Text` string with plain content and a separate colored display version for IPython. `str()`, `splitlines()` and `clip()` use the plain content. `memory_map()` does the same; its plain content shows a letter per colored cell (`g` for green, `Y` for the mix) and dots for the others.
 
-Operand colors in `listing()` and Graphviz node colors are not implemented yet. A breadcrumb's whole-span containment lookup is not a summary of byte colors for a map cell.
+Operand colors in `listing()` are not implemented yet. A breadcrumb's whole-span containment lookup is not a summary of byte colors for a map cell.
 
 ## Experiments in `scripts/`
 
