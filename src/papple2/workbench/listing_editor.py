@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """The listing editor, built on prompt_toolkit.
 
-Shows the rows of a listing inline, below the prompt, and erases itself
-on exit, so nothing of it stays on the screen. The label of the bar's row,
+Shows the rows of a listing inline, below the prompt. Leaving with q
+keeps its last lines on the screen, to read next to what the prompt shows
+next; leaving with Esc or Ctrl+C erases them. The label of the bar's row,
 and the label of the address its operand names, are edited in place; its
 comment in a box over the bottom lines of the listing.
 
@@ -17,7 +18,8 @@ Keys in the listing:
   g                    : open the picker, to go to another routine
   u                    : open the picker on the callers of the routine shown
   c                    : copy the visible lines to the clipboard
-  q, Esc or Ctrl+C     : leave
+  q                    : leave, the lines stay on the screen
+  Esc or Ctrl+C        : leave, the lines go
 
 Keys in a field:
   Tab                  : save, then go on: label -> operand -> label
@@ -575,8 +577,10 @@ def edit_rows(
     target_color_of: Callable[[int], str | None] = lambda address: None,
 ) -> None:
     """Show the rows of place, inline, height lines at a time, and let
-    labels and comments be edited, until q, Esc or Ctrl+C. Nothing stays on
-    the screen afterwards.
+    labels and comments be edited, until q, Esc or Ctrl+C. After q, the
+    last lines stay on the screen; after Esc or Ctrl+C, nothing does.
+    height is kept for every routine shown, whatever its length, so a
+    short routine leaves empty lines below it.
 
     save_edit(address, field, text) saves a label or a comment and returns
     why it refused, or None; after every save the rows are loaded again.
@@ -599,7 +603,6 @@ def edit_rows(
     if not any(row.address is not None for row in rows):
         print("Nothing to show: no lines in this range.")
         return
-    height = min(height, len(rows))
     remembered = {} if remembered is None else remembered
     goto_entries = [] if goto_entries is None else goto_entries
     state = EditorState(rows, column_widths(rows), cursor=0, place=place)
@@ -1052,11 +1055,18 @@ def edit_rows(
     def _picker_close(event: KeyPressEvent) -> None:
         close_picker()
 
-    @bindings.add("q", filter=in_listing)
     @bindings.add("escape", filter=in_listing)
     @bindings.add("c-c")
     def _leave(event: KeyPressEvent) -> None:
         remember()
+        event.app.exit()
+
+    @bindings.add("q", filter=in_listing)
+    def _leave_and_keep(event: KeyPressEvent) -> None:
+        # prompt_toolkit reads erase_when_done only as the app ends, so
+        # switching it off here keeps the lines on the screen.
+        remember()
+        event.app.erase_when_done = False
         event.app.exit()
 
     @bindings.add("tab", filter=in_field)

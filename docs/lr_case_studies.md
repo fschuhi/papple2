@@ -83,7 +83,7 @@ This runs Lode Runner's attract play, 4,000,000 instructions. Afterwards the run
 
 **Help.** A command followed by a question mark shows how to use it: `edit?`, `hexdump?`, `memory_map?`.
 
-**In the editor.** Enter on a `JSR` opens the routine it calls. Backspace goes back. `u` lists the callers of the routine shown, `g` all routines. Escape or `q` leaves the editor; its lines disappear, so `listing("draw_at_hx")` prints the same lines at the prompt, where they stay.
+**In the editor.** Enter on a `JSR` opens the routine it calls. Backspace goes back. `u` lists the callers of the routine shown, `g` all routines. `q` leaves the editor and keeps its lines on the screen, to read next to a hexdump or a map; Escape leaves and clears them.
 
 1. **The memory at a glance.**
 

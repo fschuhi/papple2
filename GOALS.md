@@ -8,12 +8,11 @@
 
 ## 📍 Current Session Pointer
 
-**Where we are:** `papple2` is the workbench for reverse engineering Apple II games by running them, with Lode Runner as the worked example: dynamic first, the oracle only grades. Routines, blocks, loops and callers are available at the prompt and in the listing editor; what I learn stays in the dossier: labels, comments, hidden ranges and color ranges. The colors carry that knowledge into every view: listings by location, the editor by syntax and by the tables its operands name, the hexdump by byte, and `memory_map()` across any stretch of memory, from all 64 KB down to single bytes. One `Session` holds the state of a working session. Seven diagrams made from the code show the structure; `PRESENTATION.md` holds the script for presenting it. The walkthrough, a book of chapters that are tests, takes two tiny programs through the whole pipeline, and renders as a document.
+**Where we are:** `papple2` is the workbench for reverse engineering Apple II games by running them, with Lode Runner as the worked example: dynamic first, the oracle only grades. Routines, blocks, loops and callers are available at the prompt and in the listing editor; what I learn stays in the dossier: labels, comments, hidden ranges and color ranges. The colors carry that knowledge into every view: listings by location, the editor by syntax and by the tables its operands name, the hexdump by byte, and `memory_map()` across any stretch of memory, from all 64 KB down to single bytes. One `Session` holds the state of a working session. Seven diagrams made from the code show the structure; `PRESENTATION.md` holds the script for presenting it. The walkthrough, a book of chapters that are tests, takes two tiny programs through the whole pipeline, and renders as a document. The first case study reads real code with all of it: drawing and erasing a sprite, in `docs/lr_case_studies.md`, with the naming rules every label follows.
 
-**What's next, in this order:**
+**What's next:**
 
-1. Case studies from Lode Runner: a sprite drawing routine, read with `Tiling` and `StackTracking`, homing in with `show_routines()` (`TODO.md`, "Case studies"). In a fresh session.
-2. The cross reference (`TODO.md`, "Cross reference").
+1. The cross reference (`TODO.md`, "Cross reference").
 
 **Still to prune:** the Vision in `README.md`, a draft of 2026-10-12, for me to edit (`TODO.md`, "Explaining `papple2`").
 

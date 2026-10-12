@@ -9,6 +9,9 @@
 
 ---
 
+- **2026-10-12:** The first case study: drawing and erasing a sprite in Lode Runner, read with the tools from `draw_player` down through `draw_at_hx` to the div 7 and mod 7 tables, colored in the editor, the hexdump and the map. Names first: cell, y, hx, byte, shift, one word for one thing, and the riddle of the "half-screen column" solved: it is the pixel column halved, every second column, so a sprite never changes its colors as it walks. A walk at the prompt in `docs/lr_case_studies.md`, ready to present.
+- **2026-10-12:** In the editor, `q` leaves and keeps the lines on the screen, to read next to a hexdump or a map; the height given stays for every routine.
+- **2026-10-12:** The README describes what is there now: the history out, the developer sections in `docs/architecture.md` and `docs/data-files.md`, the workbench a section of its own with four screenshots. `docs/decisions.md` is gone: the project keeps no decision records.
 - **2026-10-12:** The walkthrough becomes a book of chapters that are tests, every row explained: `nested_loops` through the whole pipeline, and `rts_dispatch`, where an `RTS` jumps and the shadow stack sees through it, its targets becoming routines in one before-and-after. `make walkthrough-md` renders the chapters as a document: a tutorial that cannot go out of date.
 - **2026-10-12:** A program's `boot()` now gives a ready emulator, and `run()` only runs it.
 - **2026-10-11:** The memory map: `memory_map()` shows the dossier's color ranges across all 64 KB at once, with a legend, and zooms down to single bytes. Where two colors meet, the cell turns light yellow. The first picture of what I know about Lode Runner's memory as a place, not a list.
