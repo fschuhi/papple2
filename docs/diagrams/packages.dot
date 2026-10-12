@@ -23,7 +23,7 @@ digraph packages {
 
     debug [fillcolor="#FAEEDA", color="#854F0B", label=<<FONT COLOR="#633806"><B>papple2.debug</B></FONT><BR/><FONT POINT-SIZE="10" COLOR="#854F0B">tools around the machine: read, stop, write</FONT><BR/><FONT POINT-SIZE="10" FACE="monospace">disassembler, stop_conditions, assembler</FONT>>];
 
-    programs [fillcolor="#E1F5EE", color="#0F6E56", label=<<FONT COLOR="#085041"><B>papple2.programs</B></FONT><BR/><FONT POINT-SIZE="10" COLOR="#0F6E56">program setups</FONT><BR/><FONT POINT-SIZE="10" FACE="monospace">lode_runner, nested_loops</FONT>>];
+    programs [fillcolor="#E1F5EE", color="#0F6E56", label=<<FONT COLOR="#085041"><B>papple2.programs</B></FONT><BR/><FONT POINT-SIZE="10" COLOR="#0F6E56">program setups</FONT><BR/><FONT POINT-SIZE="10" FACE="monospace">lode_runner, nested_loops, rts_dispatch</FONT>>];
 
     core [fillcolor="#F1EFE8", color="#5F5E5A", label=<<FONT COLOR="#444441"><B>papple2.core</B></FONT><BR/><FONT POINT-SIZE="10" COLOR="#5F5E5A">the machine</FONT><BR/><FONT POINT-SIZE="10" FACE="monospace">emulator, window, apple, cpu, memory, disk_image</FONT>>];
 

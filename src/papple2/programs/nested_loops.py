@@ -7,7 +7,7 @@ to its end; after them, PC stands at $6014, the byte behind done's NOP.
 """
 
 from papple2.core.emulator import Emulator
-from papple2.debug.assembler import Assembler
+from papple2.debug.assembler import assemble
 
 # Must match the *= line of PROGRAM.
 LOAD_ADDRESS = 0x6000
@@ -29,13 +29,6 @@ sub     INC $10
         RTS
 done    NOP
 """
-
-
-def assemble(program: str) -> list[int]:
-    """The bytes of program, from its *= address on."""
-    asm = Assembler()
-    tokens = asm.tokenize(program, verbose=False)
-    return asm.to_byte_array(asm.generate_code(tokens, verbose=False))
 
 
 def boot() -> Emulator:

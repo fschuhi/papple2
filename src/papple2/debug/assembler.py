@@ -720,3 +720,9 @@ class Assembler:
     def dump_byte_array(self, byte_array: list[int]) -> None:
         print(self.byte_array_to_text(byte_array))
 
+
+def assemble(program: str) -> list[int]:
+    """The bytes of program, from its *= address on."""
+    asm = Assembler()
+    tokens = asm.tokenize(program, verbose=False)
+    return asm.to_byte_array(asm.generate_code(tokens, verbose=False))

@@ -137,6 +137,7 @@ src/papple2/debug/disassembler.py
 ## programs
 #src/papple2/programs/lode_runner.py
 src/papple2/programs/nested_loops.py
+src/papple2/programs/rts_dispatch.py
 
 ## workbench
 src/papple2/workbench/annotations.py
