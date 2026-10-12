@@ -51,7 +51,7 @@
 ## Coloring and memory map
 
 - Operand colors in `listing()`: decide whether the target color or the location color wins on the operand, which the location color already covers. The editor has no location color, so it needed no rule. Runtime effective addresses are separate instrumentation work, not inferred from the static operand.
-- Graphviz node colors: use the same whole-routine range lookup as breadcrumbs, with dossier definitions reloaded before drawing. First choose the presentation together: colored border, pale fill, label color, or a combination. Existing edge colors describe transfer kinds and must remain distinct from node classification. No graph-layout refactor in this step. *(Chosen 2026-10-12: a thick border in the routine's shade, the shade names exactly as at the prompt; then see whether blue clashes with the blue `JMP` arrows. The mix color needs no mapping: a routine has a color only if one range covers it whole. Files: `shell.py` (`routine_graph()`), `colors.py`, `session.py` (`listing_range()`), `tests/test_shell.py`.)*
+- ~~Graphviz node colors: use the same whole-routine range lookup as breadcrumbs, with dossier definitions reloaded before drawing. First choose the presentation together: colored border, pale fill, label color, or a combination. Existing edge colors describe transfer kinds and must remain distinct from node classification. No graph-layout refactor in this step. *(Chosen 2026-10-12: a thick border in the routine's shade, the shade names exactly as at the prompt; then see whether blue clashes with the blue `JMP` arrows. The mix color needs no mapping: a routine has a color only if one range covers it whole. Files: `shell.py` (`routine_graph()`), `colors.py`, `session.py` (`listing_range()`), `tests/test_shell.py`.)*~~ *(Done 2026-10-12: `show_routine_graph()` draws a routine in a thick border of its shade when color ranges of one shade cover it whole, by the same lookup as the breadcrumbs, `colors.json` read once per graph; a routine in the mix color gets no border. `routine_graph()` takes the shades as a dict, entry -> shade. In Lode Runner: `draw_at_hx` and `erase_at_hx` blue, `y_to_ptrs` cyan.)*
 
 ## More colors
 
@@ -60,7 +60,7 @@
 - _Needs investigation:_ does Terminal.app show 24-bit color? Test at the prompt: `print("\x1b[48;2;70;130;180m  steelblue  \x1b[0m")`. If not, the 256-color palette, each color rounded to its nearest entry.
 - _Open:_ the old names change meaning with HTML colors (`green` is `#008000`, darker than the terminal's green), and dark colors such as `navy` are hard to read as text in `listing()` on a dark background.
 - _Open:_ the plain text of the map, for `clip()` and `str()`: today a colored cell shows its shade's first letter (`gg`), which stops being unique with many colors. Simplest: `##` for every colored cell, the legend names the ranges. The screen shows only colored cells either way.
-- Rename `color_for_range()` to `color_of_whole_range()`: it is a containment lookup (a color only if one definition covers the whole span), used by the breadcrumbs and later by the Graphviz node colors, next to `color_at()` and `color_of_bytes()`.
+- Rename `color_for_range()` to `color_of_whole_range()`: it is a containment lookup (a color only if one definition covers the whole span), used by the breadcrumbs and by the Graphviz node colors, next to `color_at()` and `color_of_bytes()`.
 
 ## Listing editor
 
@@ -117,7 +117,6 @@
 
 ## Case studies
 
-- ~~Real code of Lode Runner, read with the tools the way the walkthrough reads its tiny programs: relate a situation in the code to the rows of the reports (`Tiling`'s unbroken and split tiles, `StackTracking`'s returns), homing in with `show_routines()`. They need not be explained completely; this also starts documenting the reports. First candidate: a sprite drawing routine, e.g. `draw_sprite_at_px`; half-screen coordinates make them hard, so start in a fresh session. Their form, where they live, and whether they become tests like the chapters: _Needs a discussion first._~~ *(Done 2026-10-12: case study 1, drawing and erasing a sprite, in `docs/lr_case_studies.md`: the names first, then a walk at the prompt from `draw_player` through `draw_at_hx` down to `tbl_hx_byte` and `tbl_hx_shift`. The form is a document, not tests, for now.)*
 - Case study 1, the rest: fill the headings "Draw", "Erase, the twin" and "Draw by cell" in `docs/lr_case_studies.md`; a second box grid for up and down (`ROW_OFFSET_TABLE`: steps of 2, 3, 2, 2 and 2 rows per cell); a good explanation of 2 or 3 bytes per row.
 - Labels for the cell tables at `1c35` (col -> hx), `1c51` (row -> y), `1c62` (col -> byte) and `1c7e` (col -> shift), and the page at `$1f`, by the naming rules in `docs/lr_case_studies.md`. `SCREEN_ROW_TABLE`'s last entry is 181, not 176: the status line sits 5 rows lower than the grid would put it.
 
