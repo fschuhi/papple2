@@ -6,7 +6,7 @@ from papple2.core.memory import Memory
 from papple2.core.cpu import CPU
 from papple2.core.emulator import Emulator
 from papple2.debug.assembler import Assembler
-from papple2.programs import nested_loops
+from papple2.programs import nested_loops, rts_dispatch
 from papple2.workbench import shell
 from papple2.workbench.basic_blocks_analysis import (
     BlockGraph,
@@ -18,6 +18,7 @@ from papple2.workbench.basic_blocks_analysis import (
 )
 from papple2.workbench.session import Session
 from papple2.workbench.shell import run, tiling_reports, use_reports_folder
+from papple2.workbench.stack_tracking import StackTracking
 from papple2.workbench.tiling import Tiling
 
 
@@ -115,3 +116,40 @@ def nested_loops_run(tmp_path: Path, fresh_session: None) -> NestedLoopsRun:
     loops = natural_loops(graph, immediate_dominators(graph))
     labels = dict(NESTED_LOOPS_LABELS)
     return NestedLoopsRun(emulator, tiling, graph, loops, labels, tmp_path)
+
+
+# The labels for rts_dispatch's addresses, given by hand.
+RTS_DISPATCH_LABELS = {
+    0x600D: "dispatch",
+    0x6018: "cmd0",
+    0x601B: "cmd1",
+    0x601E: "table",
+    0x6022: "done",
+}
+
+
+class RtsDispatchRun(NamedTuple):
+    """rts_dispatch's run: the machine as the run left it, its tiling, the
+    labels, and the folder the reports went into."""
+
+    emulator: Emulator
+    tiling: Tiling
+    labels: dict[int, str]
+    folder: Path
+
+
+@pytest.fixture
+def rts_dispatch_run(tmp_path: Path, fresh_session: None) -> RtsDispatchRun:
+    """rts_dispatch's run, with its recipe in scripts/walkthrough.py, up to
+    the tiling reports: run rts_dispatch with Tiling and StackTracking
+    attached, and write the tiling reports into a folder. The stack
+    tracking report is left to the chapters, so that they can show the
+    routines before it and after it."""
+    use_reports_folder(tmp_path)
+    run(rts_dispatch.boot(), 24, Tiling, StackTracking)
+    tiling_reports()
+    emulator = shell.session.run_emulator
+    tiling, _ = shell.session.run_instrumentations
+    labels = dict(RTS_DISPATCH_LABELS)
+    return RtsDispatchRun(emulator, tiling, labels, tmp_path)
+

@@ -23,6 +23,29 @@ addresses:
     6012  60               RTS
     6013  ea        done   NOP
 
+The second program, rts_dispatch (papple2.programs.rts_dispatch), from
+chapter 14 on. It calls two commands through a jump table, with RTS:
+
+    6000  a9 00              LDA #$00
+    6002  20 0d 60           JSR dispatch   ; command 0
+    6005  a9 01              LDA #$01
+    6007  20 0d 60           JSR dispatch   ; command 1
+    600a  4c 22 60           JMP done
+    600d  0a        dispatch ASL            ; A * 2: index into table
+    600e  aa                 TAX
+    600f  bd 1f 60           LDA table+1,X  ; high byte of address - 1
+    6012  48                 PHA
+    6013  bd 1e 60           LDA table,X    ; low byte
+    6016  48                 PHA
+    6017  60                 RTS            ; "returns" into the command
+    6018  e6 10     cmd0     INC $10
+    601a  60                 RTS            ; a real return: behind the JSR
+    601b  e6 11     cmd1     INC $11
+    601d  60                 RTS
+    601e  17 60     table    .WORD cmd0-1
+    6020  1a 60              .WORD cmd1-1
+    6022  ea        done     NOP
+
 Two words come back in every chapter. A *leap* is an instruction that
 can send the run somewhere other than the next instruction: JSR, RTS,
 JMP, and a branch, whether it is taken or falls through. A *glide* is
@@ -39,6 +62,7 @@ from papple2.workbench.basic_blocks_analysis import (
     back_edges,
     immediate_dominators,
 )
+from papple2.workbench import shell
 from papple2.workbench.shell import (
     listing_rows,
     loop_reports,
@@ -47,7 +71,9 @@ from papple2.workbench.shell import (
     print_listing,
     print_loops,
     show_routines,
+    stack_tracking_reports,
 )
+from papple2.workbench.stack_tracking import RETURNS_FILE
 from papple2.workbench.tiling import (
     SPLIT_TILES_FILE,
     SPLIT_TRANSITIONS_FILE,
@@ -461,3 +487,128 @@ def test_chapter_13_nested_loops_the_jumps_as_arrows(nested_loops_run, capsys) -
         "  |   6012  60               RTS",
         "  +-> 6013  ea        done   NOP",
     ]
+
+
+def test_chapter_14_rts_dispatch_the_run(rts_dispatch_run) -> None:
+    # The recipe ran 24 instructions. That is the whole program: the main
+    # line, LDA, JSR, LDA, JSR, JMP and NOP, is 6; each of the two commands
+    # takes 9, dispatch's 7 (ASL, TAX, LDA, PHA, LDA, PHA, RTS) and its own
+    # INC and RTS. 6 + 2 * 9. So PC stands behind done's NOP.
+    assert rts_dispatch_run.emulator.cpu.PC == 0x6023
+
+    # The run stopped inside the tile at done, $6022, which the JMP led
+    # into. The table at $601e-$6021 is no tile: it never ran.
+    assert rts_dispatch_run.tiling.current_tile.start_pc == 0x6022
+    assert 0x601E not in rts_dispatch_run.tiling.tiles
+
+
+def test_chapter_15_rts_dispatch_returns(rts_dispatch_run) -> None:
+    # The 6502 knows no calls. JSR pushes the address of its own last byte
+    # and jumps; RTS pulls two bytes, adds one and jumps there. StackTracking
+    # keeps a second stack beside the real one: each JSR opens a frame
+    # there, and each RTS looks for the frame it should close.
+    #
+    # dispatch pushes two bytes itself, so its RTS finds no frame: it is
+    # unmatched. It jumps into the command. The command's own RTS then
+    # finds the frame that dispatch's JSR opened, and returns where that
+    # frame expected, behind the JSR: matched. The frame was opened for
+    # dispatch, but closed in the command's code.
+    stack_tracking_reports()
+
+    # The columns: the JSR that opened the frame and where it jumped; the
+    # RTS that ended it and where that RTS went; the outcome; how often.
+    # Tricks come first, then the matched returns.
+    rows = read_rows(rts_dispatch_run.folder / RETURNS_FILE)
+    assert [
+        (
+            row["call_site"],
+            row["entry"],
+            row["return_site"],
+            row["return_target"],
+            row["outcome"],
+            row["count"],
+        )
+        for row in rows
+    ] == [
+        # dispatch's RTS, no frame to close: into cmd0, then into cmd1.
+        ("", "", "6017", "6018", "unmatched", "1"),
+        ("", "", "6017", "601b", "unmatched", "1"),
+        # cmd0's RTS closes the frame of the JSR at $6002: back to $6005.
+        ("6002", "600d", "601a", "6005", "matched", "1"),
+        # cmd1's RTS closes the frame of the JSR at $6007: back to $600a.
+        ("6007", "600d", "601d", "600a", "matched", "1"),
+    ]
+
+    # An unmatched RTS whose target lies behind no JSR is a stack jump: a
+    # jump made with RTS. Both of dispatch's are.
+    assert shell.session.run_stack_jumps == {
+        (0x6017, 0x6018): 1,
+        (0x6017, 0x601B): 1,
+    }
+
+
+def test_chapter_16_rts_dispatch_routines_before_and_after(rts_dispatch_run) -> None:
+    # The routines from the tiling reports alone: the run's start, and
+    # every JSR target. No JSR leads into cmd0 or cmd1, only dispatch's
+    # RTS, so they are not routines yet. The columns as in chapter 6.
+    assert show_routines().splitlines() == [
+        "routine  blocks  bytes  called  loops",
+        # $6000-$6005, $6005-$600a, $600a-$600d, and done's $6022-$6023:
+        # 5 + 5 + 3 + 1 bytes. The two JSRs come back behind themselves.
+        "6000          4     14       1      0",
+        # dispatch: one block, ASL to RTS, called by both JSRs.
+        "600d          1     11       2      0",
+    ]
+
+    # With the stack tracking report, the targets of the stack jumps of
+    # chapter 15 become routines too, each entered once.
+    stack_tracking_reports()
+
+    assert show_routines().splitlines() == [
+        "routine  blocks  bytes  called  loops",
+        "6000          4     14       1      0",
+        "600d          1     11       2      0",
+        "6018          1      3       1      0",  # cmd0: INC $10, RTS
+        "601b          1      3       1      0",  # cmd1: INC $11, RTS
+    ]
+
+
+def test_chapter_17_rts_dispatch_the_listing(rts_dispatch_run, capsys) -> None:
+    # The whole program, with the labels and the arrows of the whole run,
+    # as listing() shows a range. The only arrow is the JMP over dispatch,
+    # the commands and the table. Calls are not drawn, and neither are
+    # dispatch's stack jumps: an RTS gives no edge. The table never ran,
+    # so it shows as one row of bytes, not as instructions.
+    rows = listing_rows(
+        rts_dispatch_run.emulator,
+        0x6000,
+        0x6023,
+        rts_dispatch_run.labels,
+        shell.session.run_graph,
+        only_ran=True,
+    )
+    print_listing(rows)
+
+    assert capsys.readouterr().out.splitlines() == [
+        "    6000  a9 00               LDA #$00",
+        "    6002  20 0d 60            JSR dispatch",
+        "    6005  a9 01               LDA #$01",
+        "    6007  20 0d 60            JSR dispatch",
+        "+-- 600a  4c 22 60            JMP done",  # the arrow starts here
+        "|   600d  0a        dispatch  ASL",
+        "|   600e  aa                  TAX",
+        # table+1 has no label of its own, and table never ran, so the
+        # operand shows the address. The next LDA hits table itself.
+        "|   600f  bd 1f 60            LDA $601f,X",
+        "|   6012  48                  PHA",
+        "|   6013  bd 1e 60            LDA table,X",
+        "|   6016  48                  PHA",
+        "|   6017  60                  RTS",  # the stack jump
+        "|   6018  e6 10     cmd0      INC $10",
+        "|   601a  60                  RTS",  # a real return
+        "|   601b  e6 11     cmd1      INC $11",
+        "|   601d  60                  RTS",
+        "|   ... 601e-6022: 4 bytes never ran ...",  # the table
+        "+-> 6022  ea        done      NOP",  # the arrow ends here
+    ]
+
