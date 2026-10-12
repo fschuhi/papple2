@@ -225,8 +225,9 @@ class Assembler:
             (0x94,'STY','ZPX',2,4),
             (0x8c,'STY','ABS',3,4),
 
-            # .word will be 2 bytes
-            # we need to fake an operation w/ 3 bytes, to resolve the label correctly
+            # .word is 2 bytes. It poses as a 3-byte absolute instruction, so
+            # that its label operand is resolved like one; its opcode byte is
+            # dropped, and generate_code() advances the PC by 2.
             (0x00, '.WORD','ABS',3,0),
 
         ]
@@ -630,7 +631,8 @@ class Assembler:
                             pl = (pc, len(ir), RESOLVE, [info[0], 0, 0], num)
 
                     ir.append(pl)
-                    pc = pc + numbytes
+                    # .WORD loses its fake opcode byte: 2 bytes, not 3
+                    pc = pc + (2 if mnemonic == '.WORD' else numbytes)
                     i = 100 # done with this line
                 else:
                     errors[lexedPgmIdx] = str(lpline[0]) + " unhandled token %s" % (str(token))
@@ -695,7 +697,6 @@ class Assembler:
                     line[3][1] = targetpc & 0xff
                     line[3][2] = (targetpc >> 8) & 0xff
                     if line[3][0] == 0x00:
-                        # ((VHQSELL)) from here on line[0] will be incorrect
                         del line[3][0]
 
     @staticmethod
@@ -703,10 +704,6 @@ class Assembler:
         pc = code[0][0]
         byte_array = []
         for line in code:
-            # FS: ignore PC because it might be wrong, see ((VHQSELL))
-            #while pc < line[0]:
-            #    byte_array.append(0)
-            #    pc += 1
             for by in line[3]:
                 byte_array.append(by)
                 pc += 1

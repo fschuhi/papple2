@@ -88,6 +88,20 @@ def dump_state(
     print(' '.join(res))
 
 
+def test_a_label_behind_a_word_gets_its_address() -> None:
+    # A .WORD is 2 bytes, so done lies at $6005, behind the JMP's 3 bytes
+    # and the word's 2. The word holds done - 1, as in an RTS jump table.
+    asm = Assembler()
+    byte_array = compile(asm, """
+            *=$6000
+            JMP done
+    table   .WORD done-1
+    done    NOP
+    """)
+
+    assert byte_array == [0x4C, 0x05, 0x60, 0x04, 0x60, 0xEA]
+
+
 def test_chromatix01(apple2: Apple2) -> None:
     cpu = apple2.cpu
     asm = Assembler()
