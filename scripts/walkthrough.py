@@ -49,7 +49,7 @@ REPORTS_FOLDER = Path("tmp/walkthrough")
 
 if __name__ == "__main__":
     # The recipe: the same lines could be typed at the prompt. 39
-    # instructions run the program to its end, DONE's NOP included.
+    # instructions run the program to its end, done's NOP included.
     use_reports_folder(REPORTS_FOLDER)
     run(nested_loops.boot(), 39, Tiling)
     tiling_reports()

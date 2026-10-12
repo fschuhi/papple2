@@ -78,10 +78,10 @@ def make_emulator(assemble):
 
 # The names for nested_loops' addresses, given by hand.
 WALKTHROUGH_NAMES = {
-    0x6002: "OUTER",
-    0x6004: "INNER",
-    0x6010: "SUB",
-    0x6013: "DONE",
+    0x6002: "outer",
+    0x6004: "inner",
+    0x6010: "sub",
+    0x6013: "done",
 }
 
 

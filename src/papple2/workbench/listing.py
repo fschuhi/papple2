@@ -123,7 +123,7 @@ def listing_rows(
     CPU. Prints nothing; print_listing() prints the rows.
 
     With labels, an operand whose address has a name shows the name
-    (JSR SUB instead of JSR $6010), and an instruction whose own address
+    (JSR sub instead of JSR $6010), and an instruction whose own address
     has a name carries it in its label. A local label (routine_6238.loop1)
     shows by its short part, .loop1: always in the label column, since the
     dossier keeps every local label under the global label above it; in an

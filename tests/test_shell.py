@@ -255,21 +255,21 @@ def test_print_blocks_shows_the_labels_of_the_blocks(walkthrough, capsys) -> Non
     assert capsys.readouterr().out.splitlines() == [
         "block        runs  loop  label",
         "6000-6002       1  -",
-        "6002-6004       2  L01   OUTER",
-        "6004-6007       6  L02   INNER",
+        "6002-6004       2  L01   outer",
+        "6004-6007       6  L02   inner",
         "6007-600a       6  L02",
         "600a-600d       2  L01",
         "600d-6010       1  -",
-        "6013-6014       1  -     DONE",
+        "6013-6014       1  -     done",
     ]
 
 
 def test_print_routines_lists_every_routine_with_its_label(
     walkthrough, capsys
 ) -> None:
-    # The walkthrough has two routines: the program from 6000, and SUB,
-    # the target of the JSR, called six times (two rounds of OUTER, three
-    # of INNER each).
+    # The walkthrough has two routines: the program from 6000, and sub,
+    # the target of the JSR, called six times (two rounds of outer, three
+    # of inner each).
     tiles, transitions = read_split_reports(walkthrough.folder)
     sub = build_graph(tiles, transitions, entry=0x6010)
     graphs = {0x6000: walkthrough.graph, 0x6010: sub}
@@ -283,7 +283,7 @@ def test_print_routines_lists_every_routine_with_its_label(
     assert capsys.readouterr().out.splitlines() == [
         "routine  blocks  bytes  called  loops  label",
         "6000          7     17       1      2",
-        "6010          1      3       6      0  SUB",
+        "6010          1      3       6      0  sub",
     ]
 
 
@@ -461,12 +461,12 @@ def test_show_routines_lists_the_routines_of_the_current_run(
 ) -> None:
     make_walkthrough_current(walkthrough)
     use_dossier(tmp_path / "dossier")
-    label(0x6010, "SUB")
+    label(0x6010, "sub")
 
     lines = show_routines().splitlines()
-    # The program from 6000 and SUB, the target of its JSR.
+    # The program from 6000 and sub, the target of its JSR.
     assert [line.split()[0] for line in lines[1:]] == ["6000", "6010"]
-    assert lines[2].endswith("SUB")
+    assert lines[2].endswith("sub")
 
 
 def test_set_current_run_labels_the_routine_entries_without_a_label(
@@ -474,12 +474,12 @@ def test_set_current_run_labels_the_routine_entries_without_a_label(
 ) -> None:
     # The walkthrough's routines start at 6000 and 6010. 6010 has a label
     # given by hand, which stays; 6000 gets the default name.
-    Annotations(tmp_path).label(0x6010, "SUB")  # not new: no seeding
+    Annotations(tmp_path).label(0x6010, "sub")  # not new: no seeding
     use_dossier(tmp_path)
 
     make_walkthrough_current(walkthrough)
 
-    assert Annotations(tmp_path).labels == {0x6000: "routine_6000", 0x6010: "SUB"}
+    assert Annotations(tmp_path).labels == {0x6000: "routine_6000", 0x6010: "sub"}
 
 
 def test_show_blocks_shows_a_routine_of_the_current_run(
@@ -505,29 +505,29 @@ def test_show_blocks_refuses_an_address_that_is_no_routine(
 def test_show_callers_lists_the_call_sites_with_the_routines_holding_them(
     walkthrough, tmp_path: Path, no_run: None, no_dossier: None
 ) -> None:
-    # SUB has one caller: the JSR in INNER, taken six times, in the
+    # sub has one caller: the JSR in inner, taken six times, in the
     # routine from 6000.
     make_walkthrough_current(walkthrough)
     use_dossier(tmp_path / "dossier")
-    label(0x6000, "MAIN")
-    label(0x6010, "SUB")
+    label(0x6000, "main")
+    label(0x6010, "sub")
 
-    assert show_callers("SUB").splitlines() == [
+    assert show_callers("sub").splitlines() == [
         "site  leap     count  routines",
-        "6004  JSR          6  6000 MAIN",
+        "6004  JSR          6  6000 main",
     ]
 
 
 def test_caller_items_lead_to_the_call_site_in_the_routine_holding_it(
     walkthrough, tmp_path: Path, no_run: None, no_dossier: None
 ) -> None:
-    # SUB's one caller: the JSR at 6004, taken six times, in MAIN.
+    # sub's one caller: the JSR at 6004, taken six times, in main.
     make_walkthrough_current(walkthrough)
     use_dossier(tmp_path / "dossier")
-    label(0x6000, "MAIN")
+    label(0x6000, "main")
 
     assert caller_items(0x6010) == [
-        PickerItem("6004  JSR     MAIN (6)", 0x6000, 0x6004)
+        PickerItem("6004  JSR     main (6)", 0x6000, 0x6004)
     ]
 
 
@@ -545,17 +545,17 @@ def test_show_callers_of_a_routine_nothing_leaps_into(
 def test_routine_graph_has_a_box_per_routine_and_an_arrow_per_call(
     walkthrough, no_run: None
 ) -> None:
-    # Two routines: the program from 6000, without a label, and SUB. One
-    # arrow: the JSR in INNER, taken six times.
+    # Two routines: the program from 6000, without a label, and sub. One
+    # arrow: the JSR in inner, taken six times.
     make_walkthrough_current(walkthrough)
     calls = routine_calls(shell.session.routines, shell.session.run_transitions)
 
-    graph = routine_graph(shell.session.routines, calls, {0x6010: "SUB"})
+    graph = routine_graph(shell.session.routines, calls, {0x6010: "sub"})
 
     assert graph.body == [
         "\tnode [fontname=Menlo shape=box]\n",
         "\t6000 [label=6000]\n",
-        '\t6010 [label="SUB\\n6010"]\n',
+        '\t6010 [label="sub\\n6010"]\n',
         "\t6000 -> 6010 [label=6]\n",
     ]
 
@@ -564,7 +564,7 @@ def test_routine_graph_draws_an_exit_in_the_look_of_its_kind(
     walkthrough, no_run: None
 ) -> None:
     # The walkthrough has no exits, so one is made up: a JMP from 6000
-    # into SUB, taken twice. It is drawn dashed and blue, its kind named.
+    # into sub, taken twice. It is drawn dashed and blue, its kind named.
     make_walkthrough_current(walkthrough)
 
     graph = routine_graph(shell.session.routines, {}, exits={(0x6000, 0x6010, "jmp"): 2})
@@ -615,9 +615,9 @@ def test_listing_shows_a_label_given_in_another_session(
     # after this session opened the dossier.
     make_walkthrough_current(walkthrough)
     use_dossier(tmp_path / "dossier")
-    Annotations(tmp_path / "dossier").label(0x6010, "SUB")
+    Annotations(tmp_path / "dossier").label(0x6010, "sub")
 
-    assert "SUB" in listing(0x6010).splitlines()[0]
+    assert "sub" in listing(0x6010).splitlines()[0]
 
 
 def test_listing_of_a_routine_alone_lists_its_whole_range(
@@ -625,14 +625,14 @@ def test_listing_of_a_routine_alone_lists_its_whole_range(
 ) -> None:
     make_walkthrough_current(walkthrough)
 
-    # SUB is one block, $6010-$6013.
+    # sub is one block, $6010-$6013.
     assert listing(0x6010) == listing(0x6010, 0x6013)
 
 
 def test_listing_of_a_routine_alone_shows_the_gaps_between_its_blocks(
     walkthrough, no_run: None, no_dossier: None
 ) -> None:
-    # The start routine runs from $6000 to DONE's NOP, $6013-$6014; SUB's
+    # The start routine runs from $6000 to done's NOP, $6013-$6014; sub's
     # code lies between its blocks, not in it, and shows all the same.
     make_walkthrough_current(walkthrough)
 
@@ -644,10 +644,10 @@ def test_the_run_commands_take_a_label_for_an_address(
 ) -> None:
     make_walkthrough_current(walkthrough)
     use_dossier(tmp_path / "dossier")
-    label(0x6010, "SUB")
+    label(0x6010, "sub")
 
-    assert listing("SUB") == listing(0x6010)
-    assert show_blocks("SUB") == show_blocks(0x6010)
+    assert listing("sub") == listing(0x6010)
+    assert show_blocks("sub") == show_blocks(0x6010)
 
 
 def test_an_unknown_label_stops(

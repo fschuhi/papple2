@@ -1,7 +1,7 @@
 """Tests for papple2.workbench.tiling.
 
 The program is nested_loops (papple2.programs.nested_loops): two nested
-loops, one JSR, and a JMP over the subroutine to DONE.
+loops, one JSR, and a JMP over the subroutine to done.
 """
 
 import csv
@@ -39,7 +39,7 @@ def read_rows(filename: Path) -> list[dict[str, str]]:
 def test_run_stopped_right_after_a_leap_writes_its_reports(
     tmp_path: Path
 ) -> None:
-    # Stopping at DONE ends the run right after the JMP: the tile at DONE
+    # Stopping at done ends the run right after the JMP: the tile at done
     # is entered, but its NOP never runs.
     tiling = run_with_tiling(DONE, tmp_path)
 
@@ -58,7 +58,7 @@ def test_run_stopped_right_after_a_leap_writes_its_reports(
 def test_run_stopped_after_the_last_tile_ran_leaves_nothing_out(
     tmp_path: Path
 ) -> None:
-    # Stopping behind the NOP: the tile at DONE has run, so it is a split
+    # Stopping behind the NOP: the tile at done has run, so it is a split
     # tile like any other.
     run_with_tiling(DONE + 1, tmp_path)
 
