@@ -31,7 +31,7 @@ LOAD_ADDRESS = 0x0800
 # Relative to the repo root, where make and IPython are started.
 DEFAULT_BINARY = "data/bin/LODE_RUNNER.BIN"
 
-# The game's disk, from the Internet Archive; see README.md, "Data files".
+# The game's disk, from the Internet Archive; see docs/data-files.md.
 DISK_IMAGE = "Lode_Runner_1983_Broderbund_cr_Reset_Vector.do"
 
 # DOS's RWTS entry as the game calls it: Y/A point to the IOB, carry clear

@@ -66,7 +66,7 @@ def load_data_dir() -> str:
     """Return data_dir from papple2.toml, or the project default "data".
 
     papple2.toml is read relative to the current working directory -- the
-    repo root, when run via make. See README.md's "Settled decisions".
+    repo root, when run via make.
     """
     config_path = Path("papple2.toml")
     if config_path.exists():

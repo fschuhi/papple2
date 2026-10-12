@@ -59,6 +59,8 @@ docs/reports/lr_basic_blocks_analysis/lr_returns.csv
 
 # working documents for finding the direction `papple2` wants to take
 #DIRECTION.md
+docs/architecture.md
+docs/data-files.md
 docs/instrumentation-design.md
 docs/workbench.md
 

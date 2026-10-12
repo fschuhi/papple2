@@ -10,17 +10,12 @@
 - [The games](#the-games)
 - [Architecture](#architecture)
   - [Package split](#package-split-m4-done-2026-09-12)
-  - [Emulator / Window / States](#emulator--window--states)
-  - [Extension points](#extension-points)
-  - [Memory access by kind](#memory-access-by-kind)
-  - [Speed](#speed)
   - [Workbench](#workbench)
 - [Relation to sibling projects](#relation-to-sibling-projects)
 - [Testing strategy](#testing-strategy)
 - [Data files](#data-files)
 - [Scripts & Experiments](#scripts--experiments)
 - [Running](#running)
-- [Settled decisions](#settled-decisions)
 
 ---
 
@@ -81,39 +76,7 @@ Inside the machine, `emulator` builds everything else and runs the loop; `apple`
 
 The sources of these diagrams are the `.dot` files in `docs/diagrams/`; `make presentation` renders them, as SVG next to their sources for these pages, and as PDF and PNG into `tmp/presentation/`.
 
-### Emulator / Window / States
-
-This part is real and current, as of the M2.5 refactor (`HISTORY.md`, 2026-09-11). `Emulator.run` no longer touches pygame directly -- it polls a `Window`, dispatches whatever comes back to `EmulatorStates`, and lets `EmulatorStates` decide what that means:
-
-
-<p align="center"><img src="docs/diagrams/states.svg" alt="The emulator, its window and its states, and where the events come from" width="640"></p>
-
-`PygameWindow` and `NoWindow` share the same three methods (`poll`, `present`, `status`), so `Emulator` doesn't know or care whether a window exists. A breakpoint, an unserved trap, or an `until` condition passed to `run` dispatches the `breakpoint` event, which takes the same transition as `ctrlx`, so `Running` -> `Stopped` always goes through the state machine, never around it.
-
-### Extension points
-
-Since the redesign began (`HISTORY.md` 2026-09-27/28), `papple2` has four deliberately small ways to act on a running program. The old ones (checkpoints, CPU read/write hooks, the memory map) are at the tag `pre-redesign`; the decisions taken so far are in `docs/instrumentation-design.md`.
-
-- **Hooks** (lists in `Memory` and `CPU`) watch every instruction and memory access, and experiments attach to them by method name; see "Memory access by kind" below.
-- **Traps** (`add_trap(address, handler)`) stand in for a routine at a fixed address. Before each instruction, `run()` looks up `PC` in the trap table (only while there are any traps). A handler returns whether it *served* the address: `True`, and the run continues at whatever `PC` the handler set; `False`, and the run stops before the instruction there, via `breakpoint`. The two disk stand-ins, `RwtsHook` (Lode Runner, `$B7B5`) and `MliHook` (Bandits, `$BF00`), are traps.
-- **`until`** is a parameter of `run()`, not an attachment point: a condition checked before each instruction (`instruction_count_reaches(n)`, `at_address(a)`). When it is met, `run()` stops via `breakpoint`; without a window it then returns, with a window it pauses as if Ctrl-X had been pressed. The ready-made conditions are in `papple2/debug/stop_conditions.py`.
-- **Debug-key handlers** (`EmulatorStates.stopped_state`/`running_state`) are keyed to the window's events, not to instructions: `D` and `L` while Stopped. `tests/test_emulator_debug_keys.py` shows how to attach one from outside.
-
-One pass of `Emulator.run()`: the breakpoints, the trap and `until` before the instruction, the instruction with its memory accesses and hooks, and the window's turn every 1000 passes.
-
-<p align="center"><img src="docs/diagrams/run-loop.svg" alt="One pass of Emulator.run()" width="640"></p>
-
-### Memory access by kind
-
-The CPU reads and writes memory through one `Memory` method per kind of access: `read_opcode`, `read_operand`, `read_pointer`, `read_data`, `read_immediate`, `read_stack` and `read_vector` for reads, `write_data` and `write_stack` for writes, plus three 16-bit reads built from them (`read_operand_word`, `read_pointer_word` with the 6502's page wrap, `read_vector_word`). The name says why the CPU accesses a byte, not where the byte is: `LDA $0100,X` touches the stack page, but it is a data read. Each method passes the access on to the shared `read_byte`/`write_byte`, where the soft switches and the display stay. Each method then calls the hooks in its own list (`after_read_opcode` ... `after_write_stack`); see `docs/instrumentation-design.md`, section 3.
-
-`CPU` counts its instructions in `instruction_count` (zeroed like `cycles`, in `__init__` and `reset()`) and, at the end of each instruction, calls the hooks in `after_instruction`. These hooks get no arguments: they read `instruction_count`, `last_PC` and `last_opcode` from the `CPU`, so an experiment keeps the `CPU` it watches in `self.cpu`. See `docs/instrumentation-design.md`, section 4.
-
-An experiment is a plain object whose methods are named after the hook lists. `Emulator.attach(experiment)` puts each such method into its list in `Memory` or `CPU`, and `detach(experiment)` takes them out again; both log one line at INFO. Two experiments use them: `scripts/lr_count.py` (a map of what Lode Runner's attract play runs, as opcode, operand or immediate) and the tiling instrumentation `papple2.workbench.tiling`, which `scripts/lr_tiles.py` attaches (tiles split into disjoint basic blocks after the run, with their transitions; see "Workbench" below). The stack tracking `papple2.workbench.stack_tracking` uses `after_instruction` as well.
-
-### Speed
-
-Unthrottled, `papple2` runs as fast as Python allows: about 3.5 times a real Apple II on an M4. Windowed runs take a `speed` (`Emulator(speed=...)`): 1.0 is a real Apple II (about 1.023 MHz), `None` is unthrottled, and 1.0 is the default. Every 1000 loop passes, `run()` compares the cycles the CPU has counted with the wall-clock time and sleeps the difference; after a pause it measures afresh. Headless runs and tests are never throttled. `scripts/boot_lode_runner.py` passes `None` unless it gets `--speed`, so `make boot-lode-runner` runs at full speed and `make boot-lode-runner-throttled` at the speed of a real Apple II. The display is shown 40 times per second (`frame_rate`).
+How the machine runs, its extension points, memory access by kind and the speed control: [`docs/architecture.md`](docs/architecture.md).
 
 ### Workbench
 
@@ -155,26 +118,7 @@ The manual checks are plain scripts in `scripts/`, not pytest tests: they assert
 
 ## Data files
 
-`papple2` needs three Apple II binaries, one disk image and Bandits' files from Total Replay, none of which can be distributed in this repo -- all of them are still under copyright. `data_dir` in `papple2.toml` points to `data/`; its folders `data/bin/` (binaries), `data/do/` (disk images) and `data/tr/bandits/` (Total Replay files) ship with a `.gitkeep` and nothing else. Get the files yourself:
-
-- **`A2ROM.BIN`** -- the Apple II ROM. Available from [Reactive Micro's downloads](https://downloads.reactivemicro.com/Users/Grant_Stockley/), Grant Stockley's page -- also a good source of hard-to-find Apple II documentation and software generally, worth knowing about on its own.
-- **`ROBOTRON.BIN`** -- a raw memory image of Robotron 2084. Not distributed as a standalone binary anywhere; has to be produced from the original DOS 3.3 disk image:
-  1. Download `Robotron 2084 (1983)(Atari).do` from [myabandonware](https://www.myabandonware.com/game/robotron-2084-2t#download).
-  2. Open it in [CiderPress II](https://github.com/fadden/CiderPress2), an open-source Apple II disk/file archive tool.
-  3. Right-click on the `ROBOTRON` entry (Type `B`, binary) and extract it.
-  4. Check the extracted file's size: 25088 bytes, matching the Data Len CiderPress II shows for the entry, and `ROBOTRON.BIN`'s expected size. If it doesn't match, something went wrong in the extraction.
-- **`LODE_RUNNER.BIN`** -- the main program of Lode Runner (Broderbund, 1983), for `make boot-lode-runner`. Also produced from a disk image:
-  1. Download the disk image from [archive.org](https://archive.org/details/a2_Lode_Runner_1983_Broderbund_cr_Reset_Vector) (the release cracked by Reset Vector).
-  2. Open it in CiderPress II.
-  3. Right-click on the `LODE RUNNER` entry (Type `B`, binary) and extract it. Its auxiliary type is `$0800`, the address DOS loads it to, which is also where `scripts/boot_lode_runner.py` loads it.
-  4. Check the extracted file's size: 33024 bytes, matching the Data Len CiderPress II shows for the entry. Rename it to `LODE_RUNNER.BIN`.
-- **`Lode_Runner_1983_Broderbund_cr_Reset_Vector.do`** -- the Lode Runner disk image itself, the same archive.org download as in step 1 above. Keep its name. `make boot-lode-runner` reads the levels and the high-score table from it once a real game starts. Its size must be 143360 bytes (35 tracks, 16 sectors of 256 bytes, DOS 3.3 order); `papple2.core.disk_image` refuses anything else.
-- **Bandits' files** -- the main program `BANDITS` and its data files `BANDITS.A` to `BANDITS.Z`, from Total Replay v6.1 (by 4am and qkumba), for `make boot-bandits`:
-  1. Get the Total Replay v6.1 disk image.
-  2. Open it in CiderPress II.
-  3. Extract `BANDITS` (Type `BIN`, loads at `$0800`, 9479 bytes) and the data files `BANDITS.A` to `BANDITS.Z` (Type `NON`), keeping their names.
-
-Place the three binaries in `data/bin/`, the disk image in `data/do/`, and Bandits' files in `data/tr/bandits/` (all below wherever `data_dir` in your `papple2.toml` points).
+`papple2` needs Apple II binaries, a disk image and Total Replay files, none of which can be distributed in this repo. Where to get them, and where to put them: [`docs/data-files.md`](docs/data-files.md).
 
 ---
 
@@ -213,9 +157,3 @@ make presentation    # Render the diagrams: SVG next to docs/diagrams/*.dot, PDF
 <p align="center"><img src="docs/images/basic-demo.jpg" alt="A small Integer BASIC program entered and run via make boot-basic" width="560"></p>
 
 <p align="center"><em><code>make boot-basic</code>, then <code>Ctrl-B</code> into Integer BASIC, running a small hand-typed program -- the real ROM, not a simulation of it.</em></p>
-
----
-
-## Settled decisions
-
-The decisions that cannot be seen in the code or in a test are in [`docs/decisions.md`](docs/decisions.md).
