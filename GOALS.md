@@ -8,16 +8,14 @@
 
 ## 📍 Current Session Pointer
 
-**Where we are:** `papple2` is the workbench for reverse engineering Apple II games by running them, with Lode Runner as the worked example: dynamic first, the oracle only grades. Routines, blocks, loops and callers are available at the prompt and in the listing editor; what I learn stays in the dossier: labels, comments, hidden ranges and color ranges. The colors carry that knowledge into every view: listings by location, the editor by syntax and by the tables its operands name, the hexdump by byte, and `memory_map()` across any stretch of memory, from all 64 KB down to single bytes. One `Session` holds the state of a working session. Seven diagrams made from the code show the structure; `PRESENTATION.md` holds the script for presenting it.
+**Where we are:** `papple2` is the workbench for reverse engineering Apple II games by running them, with Lode Runner as the worked example: dynamic first, the oracle only grades. Routines, blocks, loops and callers are available at the prompt and in the listing editor; what I learn stays in the dossier: labels, comments, hidden ranges and color ranges. The colors carry that knowledge into every view: listings by location, the editor by syntax and by the tables its operands name, the hexdump by byte, and `memory_map()` across any stretch of memory, from all 64 KB down to single bytes. One `Session` holds the state of a working session. Seven diagrams made from the code show the structure; `PRESENTATION.md` holds the script for presenting it. The walkthrough, a book of chapters that are tests, takes two tiny programs through the whole pipeline, and renders as a document.
 
 **What's next, in this order:**
 
-1. Complete the walkthrough: `StackTracking` in it (its program has no `RTS` stack jump yet), the chapters reviewed, and `walkthrough.md` written from them (`TODO.md`, "Walkthrough").
-2. Real-world examples for `Tiling` and `StackTracking` from Lode Runner, homing in with `show_routines()`, added to `walkthrough.md` (`TODO.md`, "Walkthrough").
-3. The cross reference (`TODO.md`, "Cross reference").
-4. The README pruning (`TODO.md`, "Explaining `papple2`").
+1. Case studies from Lode Runner: a sprite drawing routine, read with `Tiling` and `StackTracking`, homing in with `show_routines()` (`TODO.md`, "Case studies"). In a fresh session.
+2. The cross reference (`TODO.md`, "Cross reference").
 
-**Still to prune:** `README.md`. The Dev parts and the data files move out, `docs/decisions.md` gets thinned, and the Vision is rewritten (remember, appreciate, tinker, create; no history). Details, with the additions of 2026-10-11: `TODO.md`, "README pruning".
+**Still to prune:** the Vision in `README.md`, a draft of 2026-10-12, for me to edit (`TODO.md`, "Explaining `papple2`").
 
 ---
 

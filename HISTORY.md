@@ -9,6 +9,8 @@
 
 ---
 
+- **2026-10-12:** The walkthrough becomes a book of chapters that are tests, every row explained: `nested_loops` through the whole pipeline, and `rts_dispatch`, where an `RTS` jumps and the shadow stack sees through it, its targets becoming routines in one before-and-after. `make walkthrough-md` renders the chapters as a document: a tutorial that cannot go out of date.
+- **2026-10-12:** A program's `boot()` now gives a ready emulator, and `run()` only runs it.
 - **2026-10-11:** The memory map: `memory_map()` shows the dossier's color ranges across all 64 KB at once, with a legend, and zooms down to single bytes. Where two colors meet, the cell turns light yellow. The first picture of what I know about Lode Runner's memory as a place, not a list.
 - **2026-10-11:** Syntax coloring in the editor: mnemonics in the colors of the 6502 reference, operands in the color of the table they read, and the same colors in the hexdump. Structure I had never seen so fast jumps out at once.
 - **2026-10-11:** De-spaghettification: `listing.py` and the `Session` take over from `shell.py`, which is a third shorter, and two more diagrams show how both views get one list of rows and how the emulator stops.
