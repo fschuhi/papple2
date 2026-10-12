@@ -8,9 +8,8 @@
 
 - [Vision](#vision)
 - [The games](#the-games)
+- [The workbench](#the-workbench)
 - [Architecture](#architecture)
-  - [Package split](#package-split-m4-done-2026-09-12)
-  - [Workbench](#workbench)
 - [Relation to sibling projects](#relation-to-sibling-projects)
 - [Testing strategy](#testing-strategy)
 - [Data files](#data-files)
@@ -36,7 +35,7 @@ The core comes from ApplePy by James Tauber, ported to Python 3 and stripped of 
 
 ## The games
 
-Four programs boot in `papple2`: the Apple II's own Monitor and Integer BASIC, and three games that are among the best the Apple II has to offer. Only Lode Runner has been completely disassembled so far; the other two are the challenges ahead, with enough food for thought for countless hours.
+The Apple II's own Monitor and Integer BASIC boot in `papple2`, and so do games that are among the best the Apple II has to offer. Only Lode Runner has been completely disassembled so far; the others are the challenges ahead, with enough food for thought for countless hours.
 
 **Lode Runner** (Doug Smith, Broderbund, 1983) is the worked example. XekriRedmane's literate-source disassembly, published at https://github.com/XekriRedmane/lode_runner_reveng, assembles byte for byte into the original, so it serves as the oracle: whatever `papple2` finds out by running the game is checked against it, and never fed into the tools. `papple2` plays real games from the original disk image, through a stand-in for the game's disk routine. All 150 levels, a celebration of Doug Smith's creativity, are on a single page: https://fschuhi.github.io/a2-lode-runner/levels.html.
 
@@ -60,15 +59,43 @@ Four programs boot in `papple2`: the Apple II's own Monitor and Integer BASIC, a
 
 ---
 
+## The workbench
+
+`papple2.workbench` is where the reverse engineering happens. You run a program with instrumentations attached, and they record what ran: `Tiling` which code ran and where it leapt, `StackTracking` which returns were real and which were tricks. They write their records as reports, plain files that carry meaning on their own, for you and for an LLM. The analysis reads the reports back and finds the routines, their basic blocks and their loops.
+
+At the IPython prompt, the commands of `papple2.workbench.shell` show what was found: the routines, a routine's blocks, its callers, a graph of the routines, listings, a hexdump, a memory map. The same commands are the recipes of the experiments in `scripts/`. What you learn goes into the program's dossier, under git: labels, comments, hidden ranges and color ranges. Every later view shows them.
+
+<p align="center"><img src="docs/images/prompt-edit.jpg" alt="Running Lode Runner's attract play at the IPython prompt, then a sprite routine in the listing editor" width="640"></p>
+
+<p align="center"><em>The experiment runs Lode Runner's attract play and finds its routines; <code>edit()</code> then opens one of them in the listing editor, with its labels and its loops as arrows.</em></p>
+
+<p align="center"><img src="docs/images/prompt-map-edit.jpg" alt="A memory map of two color ranges, and a routine whose operands carry their colors" width="640"></p>
+
+<p align="center"><em><code>memory_map()</code> shows the color ranges given to two tables; in the editor, the operands that name them carry the same colors.</em></p>
+
+<p align="center"><img src="docs/images/prompt-edit-jsr.jpg" alt="The listing editor after following a JSR into the routine it calls" width="640"></p>
+
+<p align="center"><em>Enter on a <code>JSR</code> opens the routine it calls; the breadcrumb on top says where you came from.</em></p>
+
+<p align="center"><img src="docs/images/show-routines-graph-01.jpg" alt="Part of Lode Runner's routine graph, with calls, tail calls, a branch and a stack jump" width="720"></p>
+
+<p align="center"><em>Part of the routine graph: calls with how often they were made, and the other ways into a routine, a <code>JMP</code> (tail call), a branch and an <code>RTS</code> used as a jump, each drawn in its own way.</em></p>
+
+**The walkthrough** is the way in. Tiny programs, small enough to follow by hand, go through the whole pipeline in chapters, and each chapter is a test (`tests/test_walkthrough.py`), so it stays true. `make walkthrough-md` renders the chapters as a document, into `tmp/walkthrough/`.
+
+<p align="center"><img src="docs/diagrams/workbench.svg" alt="Inside papple2.workbench, coloured by role" width="720"></p>
+
+See [`docs/workbench.md`](docs/workbench.md) for the commands, the experiments, the reports and the glossary.
+
+---
+
 ## Architecture
 
-### Package split (M4, done 2026-09-12)
-
-`papple2` is split into three layers, plus the program setups:
+The packages of `papple2`, and who imports whom:
 
 <p align="center"><img src="docs/diagrams/packages.svg" alt="The four packages of papple2 and who imports whom" width="640"></p>
 
-`papple2.core` never imports from `papple2.debug` (since 2026-09-27): the debugging tools use the machine, never the other way round. `papple2.workbench` (since 2026-10-02) holds the reverse-engineering tools meant for reuse, and uses the machine the same way; for disassembly and for stopping a run, `shell.py` and `session.py` also use `papple2.debug`. `papple2.programs` (since 2026-10-04) holds the program setups: how `papple2` loads and starts one program, e.g. `lode_runner.boot()`, which gives a ready emulator: the game loaded, its stand-in for the disk routines installed. The workbench does not import them; `run()` takes the emulator. Programs that use `papple2` live outside the packages -- the boot scripts and experiments in `scripts/`, and the sibling projects below.
+`papple2.core` is the machine, and it never imports from the packages above it: the tools use the machine, never the other way round. `papple2.debug` is a toolbox around the machine: the disassembler reads it, the stop conditions stop it, the assembler writes programs for it. `papple2.programs` knows how to load and start one program: its `boot()` gives a ready emulator, e.g. Lode Runner loaded, with its stand-in for the disk routines installed. `papple2.workbench` holds the reverse-engineering tools. It never imports `programs`: `run()` takes the emulator a program's `boot()` gives. Programs that use `papple2` live outside the packages: the boot scripts and experiments in `scripts/`, the tools in `tools/`, and the sibling projects below.
 
 Inside the machine, `emulator` builds everything else and runs the loop; `apple` is the Apple II itself, with its display, speaker, soft switches, memory and CPU. Two references point back up, not as imports that run, but as objects held while the machine runs:
 
@@ -78,37 +105,23 @@ The sources of these diagrams are the `.dot` files in `docs/diagrams/`; `make pr
 
 How the machine runs, its extension points, memory access by kind and the speed control: [`docs/architecture.md`](docs/architecture.md).
 
-### Workbench
-
-`papple2.workbench` holds the tools for reverse engineering: instrumentations that record what a run does, analyses that recover routines, basic blocks and loops from the recorded reports, the commands of `shell.py` for experiments and for the IPython prompt (listings, the listing editor, a hexdump, a memory map of the color ranges, the clipboard), and the dossier, where labels, comments, hidden ranges and color ranges stay. These live separately in `annotations.json`, `hidden.json` and `colors.json`. `hide()` and `unhide()` control spans shown as one grey row in `listing()` and `edit()`, without decoding their bytes. `color()`, `uncolor()` and `colors()` manage persistent address classifications: long listings color code by location, leaving comments and arrows unchanged; the editor colors its breadcrumbs, not its instruction lines. `hexdump()` colors each byte, and `memory_map()` shows the color ranges across any stretch of memory, all 64 KB by default. All views use the same color store, and copied text remains plain. The reports carry meaning on their own, they are easy to work with.
-
-<p align="center"><img src="docs/diagrams/workbench.svg" alt="Inside papple2.workbench, coloured by role" width="720"></p>
-
-See [`docs/workbench.md`](docs/workbench.md) for the commands, the experiments, the reports and the glossary.
-
----
-
-
 ## Relation to sibling projects
 
-**`a2-lode-runner`:** a private educational project to understand the Apple II game thoroughly, based on XekriRedmane's literate-source disassembly project published at https://github.com/XekriRedmane/lode_runner_reveng. All 150 levels are extracted and shown on one page: https://fschuhi.github.io/a2-lode-runner/levels.html. The first target is the level loader (`LOAD_LEVEL`, chapter 6). `make dasm-listing` there turns XekriRedmane's source into a listing `papple2`'s workbench can grade against.
+**`a2-lode-runner`:** a private educational project to understand the Apple II game thoroughly, based on XekriRedmane's literate-source disassembly project published at https://github.com/XekriRedmane/lode_runner_reveng. All the levels are extracted and shown on one page: https://fschuhi.github.io/a2-lode-runner/levels.html. The first target is the level loader (`LOAD_LEVEL`, chapter 6). `make dasm-listing` there turns XekriRedmane's source into a listing `papple2`'s workbench can grade against.
 
-**`a2-hires-lab`:** a standalone Excel/VBA lab exploring Apple II hi-res graphics mechanics, built around Chapter 3 of the `a2-lode-runner` disassembly. No shared code or repo with `papple2`. Its NTSC color decision table, once fully verified by hand against the chapter's worked examples, is meant to become test fixtures for `papple2`'s `Display.update_hires`, which currently uses a simplified per-pixel color model with no neighbor-adjacency rules. That handoff hasn't happened yet.
+**`a2-hires-lab`:** a standalone Excel/VBA lab exploring Apple II hi-res graphics mechanics, built around Chapter 3 of the `a2-lode-runner` disassembly. No shared code or repo with `papple2`. Its NTSC color decision table, once verified by hand against the chapter's worked examples, is meant to become test fixtures for `papple2`'s hi-res renderer, `Display.update_hires`.
 
-**`probotron`:** my private project with the Robotron 2084 disassembly and its Excel/PyXLL workbench, carved out of `papple2` in M7.5. Since 2026-09-27 it holds its own copy of `papple2` (the state at the tag `pre-redesign`), so it no longer depends on this repo. Its predecessor from 2019/2020 is public: https://github.com/fschuhi/Robotron_2084. `scripts/boot_robotron.py` remains here as `papple2`'s own manual check of the with-window path.
+**`probotron`:** my private project with the Robotron 2084 disassembly and its Excel/PyXLL workbench. It holds its own copy of `papple2`, from the tag `pre-redesign`, so it doesn't depend on this repo. Its public predecessor: https://github.com/fschuhi/Robotron_2084. `scripts/boot_robotron.py` remains here as `papple2`'s own manual check of the with-window path.
 
 ---
 
 ## Testing strategy
 
-`papple2` is verified at two tiers, deliberately:
+`papple2` is tested in three ways:
 
-- **Automated (`make test`).** The pytest suite covers 6502 instruction semantics and the classic hardware quirks, Apple II specifics (soft switches, the hi-res memory buffer, the disk image), running headless with traps and `until`, the state machine, the throttle's calculation, the assembler and disassembler, the workbench's basic blocks analysis on small hand-made graphs, the dossier's annotations on temporary folders, and the shell's commands on the walkthrough's run and on a stand-in program. `tests/test_walkthrough.py` tells the walkthrough as a story in chapters, one test each: the run, split tiles, transitions, graph, dominators, loops, the shell's views and `dis()`, all on the tiny program from `scripts/walkthrough.py`. All of it runs with `no_display=True` -- no pygame window involved, and none of it can be, meaningfully: a headless run has no way to assert "does this look right on screen."
-- **Manual, with-window (`make boot-robotron`).** Runs `scripts/boot_robotron.py`, a plain script that boots `Emulator(no_display=False)` with the real `ROBOTRON.BIN` and calls `run()` with no `until` -- the same path the old in-repo Robotron showcase exercised, but with zero dependency on `probotron`'s workbench or Excel bridge.
-- **Manual, with-window, text mode (`make boot-basic`).** Runs `scripts/boot_basic.py`. Boots the Monitor and, on `Ctrl-B`, Integer BASIC -- the same real ROM path as `make boot-robotron`, but through the text page instead of hires. Catches display and keyboard bugs specific to `Display.update_text()` that a hires-only Robotron run never would.
-- **Manual, with-window, games (`make boot-lode-runner`, `make boot-lode-runner-throttled`, `make boot-bandits`).** Lode Runner's attract mode, then a real game on a key press, at full speed or at the speed of a real Apple II; Bandits from its cutscene into the game. Both reach their games through the disk stand-ins, so these runs check the traps as well.
-
-The manual checks are plain scripts in `scripts/`, not pytest tests: they assert nothing, and the point is a human watching the window. So `make test` never opens a window, and each script runs via its own `make` target.
+- **Automated (`make test`).** The pytest suite, always headless: the 6502 and its quirks, the Apple II's soft switches, display memory and disk image, headless runs with traps and `until`, the state machine, the throttle, the assembler and disassembler, the workbench's analyses, the dossier, and the shell's commands.
+- **The walkthrough's chapters (`tests/test_walkthrough.py`).** Part of the same suite, but written to be read: tiny programs through the whole pipeline, each chapter a test that checks one step's output row by row, with comments that say why each row is what it is. `make walkthrough-md` renders them as a document.
+- **Manual, with a window (`make boot-basic`, `make boot-robotron`, `make boot-lode-runner`, `make boot-bandits`).** Plain scripts in `scripts/`, for a human watching: the Monitor and Integer BASIC through the text page, Robotron through hi-res, Lode Runner and Bandits through their disk stand-ins, so the traps get checked too. They assert nothing, and `make test` never opens a window.
 
 <p align="center"><img src="docs/images/robotron-stopped.jpg" alt="Robotron 2084 gameplay stopped mid-run via Ctrl-X, status bar showing PC, A, X, Y, SP, and flags" width="560"></p>
 
@@ -148,6 +161,7 @@ make lr-tiles        # Early experiment (frozen): tiling reports into tmp/lr_til
 make lr-overview     # Overview of the whole run from docs/reports/lr_tiles/, into docs/reports/lr_overview/
 make lr-basic-blocks-analysis  # Every routine of the run; tiling, returns and loop reports (start 0800) in docs/reports/lr_basic_blocks_analysis/
 make walkthrough     # nested_loops through tiling and the basic blocks analysis, reports in tmp/walkthrough/nested_loops/
+make walkthrough-md  # The walkthrough's chapters as a document, tmp/walkthrough/walkthrough.md
 make ipython         # IPython in the venv; then e.g. %run scripts/lr_basic_blocks_analysis.py
 make presentation    # Render the diagrams: SVG next to docs/diagrams/*.dot, PDF and PNG into tmp/presentation/
 ```
