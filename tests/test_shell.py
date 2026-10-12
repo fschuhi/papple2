@@ -595,6 +595,23 @@ def test_routine_graph_draws_an_exit_in_the_look_of_its_kind(
     )
 
 
+def test_routine_graph_draws_a_routine_with_a_shade_with_a_thick_border(
+    nested_loops_run, no_run: None
+) -> None:
+    # sub has a shade, blue; the routine from 6000 has none, and stays
+    # plain.
+    make_nested_loops_current(nested_loops_run)
+
+    graph = routine_graph(
+        shell.session.routines, {}, {0x6010: "sub"}, shades={0x6010: "blue"}
+    )
+
+    assert graph.body[1:3] == [
+        "\t6000 [label=6000]\n",
+        '\t6010 [label="sub\\n6010" color=blue penwidth=3]\n',
+    ]
+
+
 def test_listing_reads_the_memory_of_the_current_run(
     nested_loops_run, no_run: None, no_dossier: None
 ) -> None:

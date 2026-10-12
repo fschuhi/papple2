@@ -58,6 +58,7 @@ from papple2.workbench.basic_blocks_analysis import (
     routine_exits,
     write_loop_reports,
 )
+from papple2.workbench.colors import MIX_COLOR
 # Not used here, but offered by the shell: listing_rows() for the
 # commands on objects (docs/workbench.md), assign_lanes and draw_gutter
 # for tests/test_shell.py.
@@ -490,14 +491,29 @@ def show_routine_graph() -> None:
     into tmp/routine_graph.svg, and put its link on the clipboard, to
     paste into a browser. It doesn't open the picture itself: the system's
     viewer for SVG may be the wrong one, e.g. Edge in the Windows VM.
+    A routine that lies wholly in color ranges of one shade gets a thick
+    border in that shade, as its breadcrumb in the editor does.
     Needs Graphviz's dot program."""
     session.refresh_annotations()
     found = session.current_routines()
+    shades: dict[int, str] = {}
+    if session.color_store is not None:
+        # Read once for the whole graph, not once per routine.
+        session.color_store.reload()
+        for entry in found.graphs:
+            shade = session.color_store.color_for_range(
+                *session.listing_range(entry)
+            )
+            # A routine covered by ranges of different shades gets no
+            # border: Graphviz knows no color by the mix color's name.
+            if shade is not None and shade != MIX_COLOR:
+                shades[entry] = shade
     graph = routine_graph(
         found,
         routine_calls(found, session.run_transitions or []),
         session.annotations.labels if session.annotations is not None else None,
         routine_exits(found, session.run_transitions or [], session.run_stack_jumps),
+        shades,
     )
     path = graph.render(ROUTINE_GRAPH_FILE, format="svg", cleanup=True)
     print(f"wrote {path}")
@@ -865,14 +881,18 @@ def routine_graph(
     calls: dict[tuple[int, int], int],
     labels: dict[int, str] | None = None,
     exits: dict[tuple[int, int, str], int] | None = None,
+    shades: dict[int, str] | None = None,
 ) -> graphviz.Digraph:
     """The routine graph: one box per routine, in address order, and one
     arrow per caller and callee, with how often the calls were made, as
     routine_calls() gives them. If labels are given, a routine whose entry
     has a label shows it above its address. If exits are given, as
     routine_exits() gives them, each one is one more arrow, drawn in the
-    look of its kind (EXIT_LOOKS). Draws nothing: render() does."""
+    look of its kind (EXIT_LOOKS). If shades are given, a routine whose
+    entry has a shade there gets a thick border in it. Draws nothing:
+    render() does."""
     labels = labels or {}
+    shades = shades or {}
     graph = graphviz.Digraph("routines")
     graph.attr("node", shape="box", fontname="Menlo")
     #graph.attr(rankdir="LR")
@@ -881,7 +901,11 @@ def routine_graph(
         if entry in labels:
             # \n, two characters: dot's own line break, centred
             text = labels[entry] + "\\n" + text
-        graph.node(address(entry), text)
+        look: dict[str, str] = {}
+        if entry in shades:
+            # Graphviz knows the shade names as colors: blue, cyan, ...
+            look = {"color": shades[entry], "penwidth": "3"}
+        graph.node(address(entry), text, **look)
     for (caller, callee), count in calls.items():
         graph.edge(address(caller), address(callee), label=f"{count:,}")
     for (source, target, kind), count in (exits or {}).items():
