@@ -123,7 +123,7 @@ def xref_rows(folder: Path, start: int, end: int) -> list[tuple[str, ...]]:
     return [
         tuple(row.values())
         for row in read_rows(folder / XREFS_FILE)
-        if start <= int(row["instruction"], 16) < end
+        if start <= int(row["instruction_address"], 16) < end
     ]
 
 

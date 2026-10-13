@@ -64,7 +64,7 @@ KIND_ORDER = (READ_IMMEDIATE, READ_POINTER, READ_DATA, WRITE_DATA)
 # choice.
 XREFS_FILE = "lr_xrefs.csv"
 XREFS_FIELDS = (
-    "instruction",
+    "instruction_address",
     "kind",
     "target",
     "effective_address",
@@ -92,7 +92,7 @@ class Xref(NamedTuple):
     """What makes one row of the report: the instruction, the kind of
     access, the target (None for an immediate) and the byte touched."""
 
-    instruction: int
+    instruction_address: int
     kind: str
     target: int | None
     effective_address: int
@@ -187,7 +187,7 @@ class CrossReferencing:
         def order(item: tuple[Xref, Tally]) -> tuple:
             xref = item[0]
             return (
-                xref.instruction,
+                xref.instruction_address,
                 KIND_ORDER.index(xref.kind),
                 -1 if xref.target is None else xref.target,
                 xref.effective_address,
@@ -206,7 +206,7 @@ class CrossReferencing:
             for xref, tally in rows:
                 writer.writerow(
                     [
-                        address(xref.instruction),
+                        address(xref.instruction_address),
                         xref.kind,
                         "" if xref.target is None else address(xref.target),
                         address(xref.effective_address),

@@ -69,7 +69,7 @@ def xref_summary(path: Path) -> None:
             kind = row["kind"]
             rows[kind] += 1
             accesses[kind] += int(row["count"])
-            instructions.add(row["instruction"])
+            instructions.add(row["instruction_address"])
             effective_address = int(row["effective_address"], 16)
             for page, (start, end) in HGR_PAGES.items():
                 if start <= effective_address < end:

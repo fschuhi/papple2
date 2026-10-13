@@ -68,7 +68,7 @@ docs/reports/lr_overview/lr_overview.txt
 #docs/architecture.md
 #docs/data-files.md
 #docs/instrumentation-design.md
-#docs/workbench.md
+docs/workbench.md
 
 # instrumentation architecture
 # dynamic html to explain hooks for various 6502 operations
