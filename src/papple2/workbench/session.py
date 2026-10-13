@@ -33,6 +33,7 @@ from papple2.workbench.basic_blocks_analysis import (
     stack_jumps,
 )
 from papple2.workbench.colors import Colors
+from papple2.workbench.cross_referencing import CrossReferencing
 from papple2.workbench.hidden import Hidden
 from papple2.workbench.listing import ListingRow, listing_rows
 from papple2.workbench.stack_tracking import RETURNS_FILE, StackTracking
@@ -234,6 +235,26 @@ class Session:
             self.reports_folder / SPLIT_TRANSITIONS_FILE,
             returns=self.reports_folder / RETURNS_FILE,
         )
+
+    def cross_referencing_reports(self) -> None:
+        """Write the cross reference report into the reports folder."""
+        if self.run_emulator is None:
+            raise RuntimeError("no run; call run() first")
+        cross_referencings = [
+            each
+            for each in self.run_instrumentations
+            if isinstance(each, CrossReferencing)
+        ]
+        if not cross_referencings:
+            raise RuntimeError(
+                "the current run had no CrossReferencing attached; "
+                "run(emulator, n, CrossReferencing)"
+            )
+        if self.reports_folder is None:
+            raise RuntimeError(
+                "no reports folder set; call use_reports_folder() first"
+            )
+        cross_referencings[0].write_reports(self.reports_folder)
 
     def set_current_run(
         self,

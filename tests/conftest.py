@@ -6,7 +6,7 @@ from papple2.core.memory import Memory
 from papple2.core.cpu import CPU
 from papple2.core.emulator import Emulator
 from papple2.debug.assembler import Assembler
-from papple2.programs import nested_loops, rts_dispatch
+from papple2.programs import memory_tour, nested_loops, rts_dispatch
 from papple2.workbench import shell
 from papple2.workbench.basic_blocks_analysis import (
     BlockGraph,
@@ -16,8 +16,14 @@ from papple2.workbench.basic_blocks_analysis import (
     natural_loops,
     read_split_reports,
 )
+from papple2.workbench.cross_referencing import CrossReferencing
 from papple2.workbench.session import Session
-from papple2.workbench.shell import run, tiling_reports, use_reports_folder
+from papple2.workbench.shell import (
+    cross_referencing_reports,
+    run,
+    tiling_reports,
+    use_reports_folder,
+)
 from papple2.workbench.stack_tracking import StackTracking
 from papple2.workbench.tiling import Tiling
 
@@ -152,3 +158,38 @@ def rts_dispatch_run(tmp_path: Path, fresh_session: None) -> RtsDispatchRun:
     tiling, _ = shell.session.run_instrumentations
     labels = dict(RTS_DISPATCH_LABELS)
     return RtsDispatchRun(emulator, tiling, labels, tmp_path)
+
+
+# The labels for memory_tour's addresses, given by hand.
+MEMORY_TOUR_LABELS = {
+    0x6002: "copy",
+    0x6019: "again",
+    0x6022: "patch",
+    0x6025: "imm",
+    0x602F: "table",
+    0x6032: "lows",
+    0x6034: "done",
+}
+
+
+class MemoryTourRun(NamedTuple):
+    """memory_tour's run: the machine as the run left it, the labels, and
+    the folder the reports went into."""
+
+    emulator: Emulator
+    labels: dict[int, str]
+    folder: Path
+
+
+@pytest.fixture
+def memory_tour_run(tmp_path: Path, fresh_session: None) -> MemoryTourRun:
+    """memory_tour's run, with its recipe in scripts/walkthrough.py: run
+    memory_tour with Tiling and CrossReferencing attached, and write the
+    tiling reports and the cross reference report into a folder."""
+    use_reports_folder(tmp_path)
+    run(memory_tour.boot(), 38, Tiling, CrossReferencing)
+    tiling_reports()
+    cross_referencing_reports()
+    emulator = shell.session.run_emulator
+    labels = dict(MEMORY_TOUR_LABELS)
+    return MemoryTourRun(emulator, labels, tmp_path)

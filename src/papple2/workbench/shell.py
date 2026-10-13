@@ -29,9 +29,10 @@ The current run is what one run left behind: the machine and the
 instrumentations that were attached to it, and, once the tiling's reports
 are written, the run's routines and the graph of every block it ran.
 run() only runs, with the instrumentations it is given; what is written
-afterwards is up to the experiment, one command per kind of report, e.g.
-tiling_reports(). set_current_run() sets the routines from a run made
-elsewhere, by its reports. show_routines(), show_blocks(), show_callers(),
+afterwards is up to the experiment, one command per kind of report:
+tiling_reports(), stack_tracking_reports(), cross_referencing_reports().
+set_current_run() sets the routines from a run made elsewhere, by its
+reports. show_routines(), show_blocks(), show_callers(),
 listing() and loop_reports() work on the routines, with the current
 dossier's labels and comments if one is open. The print_* functions take
 the objects they print instead, for any graph.
@@ -363,6 +364,14 @@ def stack_tracking_reports() -> None:
     count = session.stack_tracking_reports()
     if count is not None:
         print(f"{count} routines")
+
+
+def cross_referencing_reports() -> None:
+    """Write the cross reference report of the current run into the
+    reports folder: lr_xrefs.csv, one row per instruction, kind of access,
+    target and effective address, with how often, and the indexes, values
+    and old values seen. The run must have had CrossReferencing attached."""
+    session.cross_referencing_reports()
 
 
 @returns_text

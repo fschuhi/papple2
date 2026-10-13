@@ -1,7 +1,7 @@
 """Tests for papple2.programs: each boot() gives a ready machine."""
 
 from papple2.debug.stop_conditions import instruction_count_reaches
-from papple2.programs import nested_loops, rts_dispatch
+from papple2.programs import memory_tour, nested_loops, rts_dispatch
 
 # nested_loops.PROGRAM, assembled by hand:
 #   6000 LDY #$02   6002 LDX #$03   6004 JSR $6010   6007 DEX
@@ -65,3 +65,41 @@ def test_rts_dispatch_runs_both_commands_in_24_instructions() -> None:
         (before[0] + 1) & 0xFF,
         (before[1] + 1) & 0xFF,
     )
+
+
+# memory_tour.PROGRAM, assembled by hand:
+#   6000 LDX #$02     6002 LDA $602f,X  6005 STA $0300,X  6008 DEX
+#   6009 BPL $6002    600b LDA #$00     600d STA $06      600f LDA #$03
+#   6011 STA $07      6013 LDY #$01     6015 LDA ($06),Y  6017 LDX #$01
+#   6019 LDA $6032,X  601c STA $6023    601f STX $6026    6022 LDA $0300
+#   6025 LDY #$00     6027 INC $08      6029 DEX          602a BPL $6019
+#   602c JMP $6034    602f .BYTE $11,$22,$33              6032 .BYTE $00,$01
+#   6034 NOP
+MEMORY_TOUR_BYTES = [
+    0xA2, 0x02, 0xBD, 0x2F, 0x60, 0x9D, 0x00, 0x03, 0xCA, 0x10,
+    0xF7, 0xA9, 0x00, 0x85, 0x06, 0xA9, 0x03, 0x85, 0x07, 0xA0,
+    0x01, 0xB1, 0x06, 0xA2, 0x01, 0xBD, 0x32, 0x60, 0x8D, 0x23,
+    0x60, 0x8E, 0x26, 0x60, 0xAD, 0x00, 0x03, 0xA0, 0x00, 0xE6,
+    0x08, 0xCA, 0x10, 0xED, 0x4C, 0x34, 0x60, 0x11, 0x22, 0x33,
+    0x00, 0x01, 0xEA,
+]
+
+
+def test_memory_tour_boots_with_the_program_at_6000_and_pc_there() -> None:
+    emulator = memory_tour.boot()
+
+    assert [emulator.mem[a] for a in range(0x6000, 0x6035)] == MEMORY_TOUR_BYTES
+    assert emulator.cpu.PC == 0x6000
+
+
+def test_memory_tour_runs_to_its_end_in_38_instructions() -> None:
+    # LDX, 3 passes of copy's 4, the 7 around the pointer, 2 passes of
+    # again's 8, JMP and NOP: 1 + 12 + 7 + 16 + 2.
+    emulator = memory_tour.boot()
+
+    emulator.run(until=instruction_count_reaches(38))
+
+    assert emulator.cpu.PC == 0x6035
+    # The table went into page 3, and INC counted the two passes.
+    assert [emulator.mem[a] for a in range(0x0300, 0x0303)] == [0x11, 0x22, 0x33]
+    assert emulator.mem[0x08] == 2

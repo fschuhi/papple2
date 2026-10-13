@@ -46,6 +46,35 @@ chapter 14 on. It calls two commands through a jump table, with RTS:
     6020  1a 60              .WORD cmd1-1
     6022  ea        done     NOP
 
+The third program, memory_tour (papple2.programs.memory_tour), from
+chapter 18 on. It touches memory in every way the cross reference counts:
+a table, a pointer, and code that writes code:
+
+    6000  a2 02            LDX #$02
+    6002  bd 2f 60  copy   LDA table,X    ; a table read
+    6005  9d 00 03         STA $0300,X    ; and a table write, into page 3
+    6008  ca               DEX
+    6009  10 f7            BPL copy
+    600b  a9 00            LDA #$00
+    600d  85 06            STA $06        ; the pointer, low byte
+    600f  a9 03            LDA #$03
+    6011  85 07            STA $07        ; high byte: it points at $0300
+    6013  a0 01            LDY #$01
+    6015  b1 06            LDA ($06),Y    ; reads the pointer, then $0301
+    6017  a2 01            LDX #$01
+    6019  bd 32 60  again  LDA lows,X     ; a low byte for patch's operand
+    601c  8d 23 60         STA patch+1    ; writes into patch's operand
+    601f  8e 26 60         STX imm+1      ; writes into imm's operand
+    6022  ad 00 03  patch  LDA $0300      ; reads $0301, then $0300
+    6025  a0 00     imm    LDY #$00       ; holds $01, then $00
+    6027  e6 08            INC $08        ; a read and a write at $08
+    6029  ca               DEX
+    602a  10 ed            BPL again
+    602c  4c 34 60         JMP done       ; jump over the data
+    602f  11 22 33  table  .BYTE $11,$22,$33
+    6032  00 01     lows   .BYTE $00,$01
+    6034  ea        done   NOP
+
 Two words come back in every chapter. A *leap* is an instruction that
 can send the run somewhere other than the next instruction: JSR, RTS,
 JMP, and a branch, whether it is taken or falls through. A *glide* is
@@ -63,6 +92,7 @@ from papple2.workbench.basic_blocks_analysis import (
     immediate_dominators,
 )
 from papple2.workbench import shell
+from papple2.workbench.cross_referencing import XREFS_FILE
 from papple2.workbench.shell import (
     listing_rows,
     loop_reports,
@@ -85,6 +115,16 @@ from papple2.workbench.tiling import (
 def read_rows(filename: Path) -> list[dict[str, str]]:
     with filename.open(newline="", encoding="utf-8") as file:
         return list(csv.DictReader(file))
+
+
+def xref_rows(folder: Path, start: int, end: int) -> list[tuple[str, ...]]:
+    """The rows of the cross reference report whose instruction lies in
+    start-end, half-open, as tuples of the report's columns."""
+    return [
+        tuple(row.values())
+        for row in read_rows(folder / XREFS_FILE)
+        if start <= int(row["instruction"], 16) < end
+    ]
 
 
 def test_chapter_1_nested_loops_the_run(nested_loops_run) -> None:
@@ -610,4 +650,130 @@ def test_chapter_17_rts_dispatch_the_listing(rts_dispatch_run, capsys) -> None:
         "|   601d  60                  RTS",
         "|   ... 601e-6022: 4 bytes never ran ...",  # the table
         "+-> 6022  ea        done      NOP",  # the arrow ends here
+    ]
+
+
+def test_chapter_18_memory_tour_the_run(memory_tour_run) -> None:
+    # This program is about the bytes the code touches, not about the
+    # code: the cross reference. Tiling runs along, as in every recipe,
+    # and CrossReferencing beside it. It listens to four of the memory's
+    # hook lists, and counts every access by the instruction that made it.
+    #
+    # The recipe ran 38 instructions. That is the whole program: LDX, then
+    # 3 passes of copy (LDA, STA, DEX, BPL), the 7 instructions that build
+    # the pointer and read through it, then 2 passes of again (LDA, STA,
+    # STX, LDA, LDY, INC, DEX, BPL), and JMP and NOP: 1 + 3 * 4 + 7 + 2 * 8
+    # + 2. So PC stands behind done's NOP. The data between JMP and done
+    # never ran.
+    assert memory_tour_run.emulator.cpu.PC == 0x6035
+
+
+def test_chapter_19_memory_tour_a_table(memory_tour_run) -> None:
+    # The report has one row per instruction, kind of access, target and
+    # effective address. The kinds are the names of the hook lists: an
+    # immediate operand, a byte of a pointer, a byte read or written as
+    # data. The target is the address the operand names; the effective
+    # address is the byte actually touched.
+    #
+    # The columns: the instruction; the kind; the target; the effective
+    # address; how often; and three sets, as hex bytes: the indexes, the
+    # value of X or Y the addressing mode added; the values read or
+    # written; and for a write, the old values it overwrote.
+    #
+    # LDA table,X names one address, the table, but reaches three: X is 2,
+    # then 1, then 0. So one target, three effective addresses, each with
+    # the X that reached it. This is how a table looks in the report: the
+    # range one instruction sweeps over.
+    assert xref_rows(memory_tour_run.folder, 0x6000, 0x600B) == [
+        # LDX #$02: an immediate names no address, so no target. Its byte
+        # sits in the instruction, behind the opcode, and is the value.
+        ("6000", "read_immediate", "", "6001", "1", "", "02", ""),
+        # LDA table,X: three bytes of the table, with the X for each.
+        ("6002", "read_data", "602f", "602f", "1", "00", "11", ""),
+        ("6002", "read_data", "602f", "6030", "1", "01", "22", ""),
+        ("6002", "read_data", "602f", "6031", "1", "02", "33", ""),
+        # STA $0300,X: the same three values into page 3, over zeros.
+        ("6005", "write_data", "0300", "0300", "1", "00", "11", "00"),
+        ("6005", "write_data", "0300", "0301", "1", "01", "22", "00"),
+        ("6005", "write_data", "0300", "0302", "1", "02", "33", "00"),
+    ]
+
+
+def test_chapter_20_memory_tour_a_pointer(memory_tour_run) -> None:
+    # Two stores build a pointer in zero page, $06 and $07, low byte first:
+    # $0300. LDA ($06),Y names the pointer, $06, so all three of its rows
+    # have that target: it reads the pointer's two bytes, then the byte the
+    # pointer points at, plus Y. The values of the pointer rows say where
+    # it pointed. Y is the index of the data row only: the pointer itself
+    # is read without it.
+    assert xref_rows(memory_tour_run.folder, 0x600B, 0x6017) == [
+        ("600b", "read_immediate", "", "600c", "1", "", "00", ""),
+        # STA $06 writes $00 over $00: a write that changed nothing.
+        ("600d", "write_data", "0006", "0006", "1", "", "00", "00"),
+        ("600f", "read_immediate", "", "6010", "1", "", "03", ""),
+        ("6011", "write_data", "0007", "0007", "1", "", "03", "00"),
+        ("6013", "read_immediate", "", "6014", "1", "", "01", ""),
+        # LDA ($06),Y: the pointer, $00 and $03, so $0300; then $0300 + Y,
+        # which is 1: the $22 the copy loop put there.
+        ("6015", "read_pointer", "0006", "0006", "1", "", "00", ""),
+        ("6015", "read_pointer", "0006", "0007", "1", "", "03", ""),
+        ("6015", "read_data", "0006", "0301", "1", "01", "22", ""),
+    ]
+
+
+def test_chapter_21_memory_tour_code_that_writes_code(memory_tour_run) -> None:
+    # The loop at again runs twice, X 1 then 0. Each pass writes into the
+    # operands of two instructions further on: a low byte from lows into
+    # patch's address, and X into imm's immediate. The target is read
+    # from the instruction's bytes at the moment it runs, so the report
+    # sees each pass as it ran.
+    assert xref_rows(memory_tour_run.folder, 0x6017, 0x602F) == [
+        ("6017", "read_immediate", "", "6018", "1", "", "01", ""),
+        ("6019", "read_data", "6032", "6032", "1", "00", "00", ""),
+        ("6019", "read_data", "6032", "6033", "1", "01", "01", ""),
+        # STA patch+1 and STX imm+1: writes into code. Each wrote $01 over
+        # $00 on the first pass, and $00 back over $01 on the second.
+        ("601c", "write_data", "6023", "6023", "2", "", "00 01", "00 01"),
+        ("601f", "write_data", "6026", "6026", "2", "", "00 01", "00 01"),
+        # patch: one instruction, two targets. $0301 on the first pass,
+        # $0300 on the second; each target a row of its own.
+        ("6022", "read_data", "0300", "0300", "1", "", "11", ""),
+        ("6022", "read_data", "0301", "0301", "1", "", "22", ""),
+        # imm: one immediate, two values. An immediate seen with more than
+        # one value has been written by the program: an in-code variable.
+        ("6025", "read_immediate", "", "6026", "2", "", "00 01", ""),
+        # INC $08 reads and writes the same byte: two kinds, one address.
+        # It read $00 and $01, and wrote $01 and $02 over them: a counter.
+        ("6027", "read_data", "0008", "0008", "2", "", "00 01", ""),
+        ("6027", "write_data", "0008", "0008", "2", "", "01 02", "00 01"),
+    ]
+
+
+def test_chapter_22_memory_tour_the_listing_after_the_run(
+    memory_tour_run, capsys
+) -> None:
+    # The listing reads the bytes as the run left them. The second pass
+    # wrote back what the assembler had put there, so patch reads $0300
+    # and imm holds $00, exactly as in the source. Nothing in the listing
+    # shows that patch once read $0301, or that imm once held $01: only
+    # the report of chapter 21 does. STA patch+1 and STX imm+1 name their
+    # targets by the label of the instruction they write into.
+    rows = listing_rows(
+        memory_tour_run.emulator,
+        0x6019,
+        0x602C,
+        memory_tour_run.labels,
+        shell.session.run_graph,
+    )
+    print_listing(rows)
+
+    assert capsys.readouterr().out.splitlines() == [
+        "+-> 6019  bd 32 60  again  LDA lows,X",
+        "|   601c  8d 23 60         STA patch+1",
+        "|   601f  8e 26 60         STX imm+1",
+        "|   6022  ad 00 03  patch  LDA $0300",  # as the source says
+        "|   6025  a0 00     imm    LDY #$00",  # as the source says
+        "|   6027  e6 08            INC $08",
+        "|   6029  ca               DEX",
+        "+-- 602a  10 ed            BPL again",
     ]

@@ -17,6 +17,10 @@ For rts_dispatch (papple2.programs.rts_dispatch: two commands called
 through a jump table, with RTS), the five tiling reports, and from
 StackTracking (papple2.workbench.stack_tracking):
         lr_returns.csv
+For memory_tour (papple2.programs.memory_tour: a table, a pointer, and
+code that writes code), the five tiling reports, and from
+CrossReferencing (papple2.workbench.cross_referencing):
+        lr_xrefs.csv
 
 The programs are small enough to follow by hand, so each report's rows
 can be predicted before looking.
@@ -34,14 +38,16 @@ the chapters along at the prompt:
     show_blocks(0x6000)
     listing(0x6000)
 
-and the same with rts_dispatch.
+and the same with rts_dispatch and memory_tour.
 """
 
 import argparse
 from pathlib import Path
 
-from papple2.programs import nested_loops, rts_dispatch
+from papple2.programs import memory_tour, nested_loops, rts_dispatch
+from papple2.workbench.cross_referencing import CrossReferencing
 from papple2.workbench.shell import (  # noqa: F401
+    cross_referencing_reports,
     listing,
     loop_reports,
     run,
@@ -76,10 +82,20 @@ def rts_dispatch_recipe() -> None:
     stack_tracking_reports()
 
 
+def memory_tour_recipe() -> None:
+    """The recipe: the same lines could be typed at the prompt. 38
+    instructions run the program to its end, done's NOP included."""
+    use_reports_folder(REPORTS_FOLDER / "memory_tour")
+    run(memory_tour.boot(), 38, Tiling, CrossReferencing)
+    tiling_reports()
+    cross_referencing_reports()
+
+
 # Each program of the walkthrough, and its recipe.
 RECIPES = {
     "nested_loops": nested_loops_recipe,
     "rts_dispatch": rts_dispatch_recipe,
+    "memory_tour": memory_tour_recipe,
 }
 
 
