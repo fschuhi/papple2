@@ -12,7 +12,7 @@
 
 **What's next:**
 
-1. The cross reference, step 3: reading the report back, and `show_xrefs()` (`TODO.md`, "Cross reference"). First light, `show_xrefs("tbl_hx_byte")`, is mine to run at the prompt. How: one finding at a time, each with the rows or the command that shows it; nothing from code the program has overwritten (e.g. the relocation, hidden in `routine_0800`).
+1. The cross reference, step 3: reading the report back, and `show_xrefs()` (`TODO.md`, "Cross reference"). First light, `show_xrefs("tbl_hx_byte")`. How: one finding at a time, each with the rows or the command that shows it; nothing from code the program has overwritten (e.g. the relocation, hidden in `routine_0800`).
 
 **Still to prune:** the Vision in `README.md`, a draft of 2026-10-12, for me to edit (`TODO.md`, "Explaining `papple2`").
 
