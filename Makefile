@@ -11,7 +11,7 @@ RUN           = $(ACTIVATE) && python
 SETUP_STAMP   = $(VENV_DIR)/.setup_stamp
 
 # --- Phony targets ---
-.PHONY: all setup test test-verbose boot-basic boot-robotron boot-lode-runner boot-lode-runner-break boot-lode-runner-throttled boot-lode-runner-headless boot-bandits lr-count lr-tiles lr-overview lr-basic-blocks-analysis walkthrough walkthrough-md ipython presentation clean showtree gentree commit-hash patch filesdump filesdump-detailed help
+.PHONY: all setup test test-verbose boot-basic boot-robotron boot-lode-runner boot-lode-runner-break boot-lode-runner-throttled boot-lode-runner-headless boot-bandits lr-count lr-tiles lr-overview lr-basic-blocks-analysis lr-cross-reference walkthrough walkthrough-md ipython presentation clean showtree gentree commit-hash patch filesdump filesdump-detailed help
 
 all: setup
 
@@ -71,6 +71,9 @@ lr-overview: $(SETUP_STAMP) ## Overview of the whole run: routines, loops, calls
 
 lr-basic-blocks-analysis: $(SETUP_STAMP) ## Experiment: tiling, returns and loop reports (start 0800) of Lode Runner's attract play into docs/reports/lr_basic_blocks_analysis/
 	$(RUN) scripts/lr_basic_blocks_analysis.py data/bin/LODE_RUNNER.BIN
+
+lr-cross-reference: $(SETUP_STAMP) ## Experiment: the cross reference of Lode Runner's attract play into docs/reports/lr_cross_reference/, and a summary of it
+	$(RUN) scripts/lr_cross_reference.py data/bin/LODE_RUNNER.BIN
 
 # --- Walkthrough (its programs through the workbench's pipeline, output in tmp/walkthrough/<program>/) ---
 walkthrough: $(SETUP_STAMP) ## Run the walkthrough's program nested_loops through tiling and the basic blocks analysis (reports in tmp/walkthrough/nested_loops/)
