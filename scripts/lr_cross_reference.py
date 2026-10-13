@@ -17,10 +17,12 @@ Run from the repo root:
     make lr-cross-reference
 
 or in IPython, which keeps the commands of papple2.workbench.shell in its
-namespace afterwards, with the run as the current run:
+namespace afterwards, with the run as the current run and Lode Runner's
+dossier as the current dossier:
 
     %run scripts/lr_cross_reference.py
     xref_summary(REPORTS_FOLDER / XREFS_FILE)
+    show_xrefs("tbl_hx_byte")
 
 Only CrossReferencing is attached, so the time the run takes is its own.
 """
@@ -42,12 +44,17 @@ from papple2.workbench.shell import (  # noqa: F401
     hexdump,
     hx,
     run,
+    show_xrefs,
+    use_dossier,
     use_reports_folder,
 )
 
 # One folder per script, named after it. Under git: the reports are what
 # the analysis leaves behind for reading, by us and by other LLMs.
 REPORTS_FOLDER = Path("docs/reports/lr_cross_reference")
+
+# What we know about Lode Runner's addresses, kept across runs, under git.
+DOSSIER = Path("dossiers/lode_runner")
 
 # The hi-res screen pages, half-open, as everywhere in the workbench.
 HGR_PAGES = {
@@ -112,6 +119,7 @@ if __name__ == "__main__":
     # The recipe: the same lines could be typed at the prompt.
     arguments = parse_arguments()
     use_reports_folder(REPORTS_FOLDER)
+    use_dossier(DOSSIER)
     run(lode_runner.boot(arguments.binary), arguments.instructions, CrossReferencing)
     cross_referencing_reports()
 

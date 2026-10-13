@@ -30,6 +30,7 @@ from papple2.workbench.shell import (
     caller_items,
     clip,
     comment,
+    contiguous_ranges,
     draw_gutter,
     hexdump,
     label,
@@ -47,6 +48,7 @@ from papple2.workbench.shell import (
     show_callers,
     show_routine_graph,
     show_routines,
+    show_xrefs,
     stack_tracking_reports,
     tiling_reports,
     uncomment,
@@ -920,6 +922,46 @@ def test_cross_referencing_reports_keep_the_rows_until_the_next_run(
     _, emulator = make_emulator(ENDLESS_PROGRAM)
     run(emulator, 10)
     assert shell.session.run_xrefs is None
+
+
+def test_contiguous_ranges_are_half_open_and_split_at_gaps() -> None:
+    assert contiguous_ranges({5, 0, 2, 1}) == [(0, 3), (5, 6)]
+    assert contiguous_ranges(set()) == []
+
+
+def test_show_xrefs_merges_a_table_read_into_one_line(
+    memory_tour_run, tmp_path: Path, no_dossier: None
+) -> None:
+    # LDA table,X read the table's three bytes, X 2, 1, 0, once each
+    # (chapter 19): one line, its effective addresses and indexes as
+    # half-open ranges.
+    use_dossier(tmp_path / "dossier")
+    label(0x602F, "table")
+
+    assert show_xrefs("table").splitlines() == [
+        "instruction_address  code         kind       effective_address  bytes    count  indexes",
+        "6002                 LDA table,X  read_data  602f-6032              3        3  00-03",
+    ]
+
+
+def test_show_xrefs_of_a_pointer_shows_each_kind_on_a_line_of_its_own(
+    memory_tour_run, no_dossier: None
+) -> None:
+    # $06 is named by the STA that builds the pointer, and by LDA ($06),Y,
+    # which reads the pointer's two bytes, then the byte it points at plus
+    # Y (chapter 20). That byte is far from $06, but its row has the target
+    # $06 too.
+    assert show_xrefs(0x0006).splitlines() == [
+        "instruction_address  code         kind          effective_address  bytes    count  indexes",
+        "600d                 STA $06      write_data    0006-0007              1        1  -",
+        "6015                 LDA ($06),Y  read_pointer  0006-0008              2        2  -",
+        "6015                 LDA ($06),Y  read_data     0301-0302              1        1  01-02",
+    ]
+
+
+def test_show_xrefs_without_xrefs_stops(no_run: None) -> None:
+    with pytest.raises(RuntimeError, match="cross_referencing_reports"):
+        show_xrefs(0x0006)
 
 
 # The hexdump. Sixteen bytes at $6000, over the stand-in program: H and I

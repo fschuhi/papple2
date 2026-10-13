@@ -1,4 +1,4 @@
-instruction,kind,target,effective_address,count,indexes,values,old_values
+instruction_address,kind,target,effective_address,count,indexes,values,old_values
 2800,read_immediate,,2801,1,,64,
 2802,write_data,0800,0800,1,,64,4c
 2805,read_immediate,,2806,1,,76,

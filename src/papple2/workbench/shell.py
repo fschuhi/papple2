@@ -42,7 +42,8 @@ import contextlib
 import functools
 import io
 import subprocess
-from collections.abc import Callable
+from collections import defaultdict
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -60,6 +61,7 @@ from papple2.workbench.basic_blocks_analysis import (
     write_loop_reports,
 )
 from papple2.workbench.colors import MIX_COLOR
+from papple2.workbench.cross_referencing import KIND_ORDER, Tally, Xref
 # Not used here, but offered by the shell: listing_rows() for the
 # commands on objects (docs/workbench.md), assign_lanes and draw_gutter
 # for tests/test_shell.py.
@@ -373,6 +375,119 @@ def cross_referencing_reports() -> None:
     and old values seen. The run must have had CrossReferencing attached.
     The rows are read back from the file and kept in session.run_xrefs."""
     session.cross_referencing_reports()
+
+
+@dataclass(frozen=True)
+class XrefRange:
+    """One line of show_xrefs(): the rows of one instruction and one kind
+    with one target, whose effective addresses run on without a gap. start
+    and end are those effective addresses, half-open; count is summed over
+    the rows, and indexes is the union of theirs."""
+
+    instruction_address: int
+    kind: str
+    target: int
+    start: int
+    end: int
+    count: int
+    indexes: frozenset[int]
+
+
+def contiguous_ranges(values: Iterable[int]) -> list[tuple[int, int]]:
+    """values as half-open ranges without gaps, in order: {0, 1, 2, 5}
+    gives [(0, 3), (5, 6)]."""
+    ranges: list[tuple[int, int]] = []
+    for value in sorted(set(values)):
+        if ranges and ranges[-1][1] == value:
+            ranges[-1] = (ranges[-1][0], value + 1)
+        else:
+            ranges.append((value, value + 1))
+    return ranges
+
+
+def xref_ranges(xrefs: dict[Xref, Tally], target: int) -> list[XrefRange]:
+    """The rows of xrefs whose target is target, merged into XrefRanges:
+    by instruction address, then by kind in the report's order, then by
+    effective address. Prints nothing; show_xrefs() prints them."""
+    # (instruction address, kind) -> effective address -> its tally. One
+    # target, so each effective address has one row per instruction and kind.
+    tallies_of: dict[tuple[int, str], dict[int, Tally]] = defaultdict(dict)
+    for xref, tally in xrefs.items():
+        if xref.target == target:
+            key = (xref.instruction_address, xref.kind)
+            tallies_of[key][xref.effective_address] = tally
+
+    lines = []
+    for instruction_address, kind in sorted(
+        tallies_of, key=lambda key: (key[0], KIND_ORDER.index(key[1]))
+    ):
+        tallies = tallies_of[(instruction_address, kind)]
+        for start, end in contiguous_ranges(tallies):
+            inside = [tallies[effective_address] for effective_address in range(start, end)]
+            lines.append(
+                XrefRange(
+                    instruction_address,
+                    kind,
+                    target,
+                    start,
+                    end,
+                    sum(tally.count for tally in inside),
+                    frozenset().union(*(tally.indexes for tally in inside)),
+                )
+            )
+    return lines
+
+
+@returns_text
+def show_xrefs(target: int | str) -> None:
+    """Every access of the current run whose instruction names target, an
+    address or a label, as its operand: e.g. show_xrefs("tbl_hx_byte")
+    shows who read the table, and where in it. The rows of one instruction
+    and kind are merged where their effective addresses run on, as
+    xref_ranges() does. Each line shows the instruction as code, as the
+    run left it in memory, with the dossier's labels; indexes are the
+    values of X or Y it added, as half-open ranges."""
+    session.refresh_annotations()
+    if session.run_xrefs is None:
+        raise RuntimeError(
+            "no xrefs; call cross_referencing_reports() after run()"
+        )
+    target_address = session.address_of(target)
+    lines = xref_ranges(session.run_xrefs, target_address)
+    if not lines:
+        print(f"no instruction names {address(target_address)} as its operand")
+        return
+
+    labels = session.annotations.labels if session.annotations is not None else None
+
+    def code_of(instruction_address: int) -> str:
+        (row,) = listing_rows(
+            session.run_emulator, instruction_address, instruction_address + 1, labels
+        )
+        return row.instruction
+
+    def indexes_of(line: XrefRange) -> str:
+        if not line.indexes:
+            return "-"
+        return " ".join(
+            f"{start:02x}-{end:02x}" for start, end in contiguous_ranges(line.indexes)
+        )
+
+    codes = [code_of(line.instruction_address) for line in lines]
+    code_width = max(len("code"), *(len(code) for code in codes))
+    kind_width = max(len("kind"), *(len(line.kind) for line in lines))
+    print(
+        f"{'instruction_address':<19}  {'code':<{code_width}}  "
+        f"{'kind':<{kind_width}}  {'effective_address':<17}  "
+        f"{'bytes':>5}  {'count':>7}  indexes"
+    )
+    for line, code in zip(lines, codes):
+        effective = f"{address(line.start)}-{address(line.end)}"
+        print(
+            f"{address(line.instruction_address):<19}  {code:<{code_width}}  "
+            f"{line.kind:<{kind_width}}  {effective:<17}  "
+            f"{line.end - line.start:>5}  {line.count:>7,}  {indexes_of(line)}"
+        )
 
 
 @returns_text
