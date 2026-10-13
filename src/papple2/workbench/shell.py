@@ -370,7 +370,8 @@ def cross_referencing_reports() -> None:
     """Write the cross reference report of the current run into the
     reports folder: lr_xrefs.csv, one row per instruction, kind of access,
     target and effective address, with how often, and the indexes, values
-    and old values seen. The run must have had CrossReferencing attached."""
+    and old values seen. The run must have had CrossReferencing attached.
+    The rows are read back from the file and kept in session.run_xrefs."""
     session.cross_referencing_reports()
 
 

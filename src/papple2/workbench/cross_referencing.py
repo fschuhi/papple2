@@ -223,3 +223,31 @@ def hex_bytes(values: set[int]) -> str:
     """A set of bytes as the report shows it: sorted, two hex digits each,
     separated by spaces; empty for an empty set."""
     return " ".join(f"{value:02x}" for value in sorted(values))
+
+
+def parse_hex_bytes(text: str) -> set[int]:
+    """The other way round from hex_bytes(): "00 01" -> {0, 1}, and an
+    empty field -> an empty set."""
+    return {int(part, 16) for part in text.split()}
+
+
+def read_xrefs(filename: Path) -> dict[Xref, Tally]:
+    """Read a cross reference report (lr_xrefs.csv) by its full path. The
+    rows come back as CrossReferencing.tallies holds them during the run,
+    so whatever reads them need not know where they came from."""
+    with filename.open(newline="", encoding="utf-8") as xrefs_file:
+        return {
+            Xref(
+                instruction_address=int(row["instruction_address"], 16),
+                kind=row["kind"],
+                # An immediate has no target: an empty field.
+                target=int(row["target"], 16) if row["target"] else None,
+                effective_address=int(row["effective_address"], 16),
+            ): Tally(
+                count=int(row["count"]),
+                indexes=parse_hex_bytes(row["indexes"]),
+                values=parse_hex_bytes(row["values"]),
+                old_values=parse_hex_bytes(row["old_values"]),
+            )
+            for row in csv.DictReader(xrefs_file)
+        }

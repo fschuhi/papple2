@@ -11,13 +11,16 @@ The programs keep their labels in column 0, as in conftest.py.
 """
 
 from papple2.debug.stop_conditions import at_address
+from papple2.workbench import shell
 from papple2.workbench.cross_referencing import (
     READ_DATA,
     READ_IMMEDIATE,
     READ_POINTER,
     WRITE_DATA,
+    XREFS_FILE,
     CrossReferencing,
     Xref,
+    read_xrefs,
 )
 
 
@@ -142,3 +145,12 @@ def test_an_instruction_writing_its_own_operand_counts_the_write_under_the_new_t
         Xref(0x6000, READ_DATA, 0x6001, 0x6001): (1, [], [0x01], []),
         Xref(0x6000, WRITE_DATA, 0x6002, 0x6001): (1, [], [0x02], [0x01]),
     }
+
+
+def test_read_xrefs_gives_back_what_the_run_counted(memory_tour_run) -> None:
+    # memory_tour fills every column: immediates without a target, and
+    # rows with several indexes, values and old values. Read back from the
+    # file, the rows are the ones CrossReferencing counted during the run.
+    _, cross_referencing = shell.session.run_instrumentations
+
+    assert read_xrefs(memory_tour_run.folder / XREFS_FILE) == cross_referencing.tallies

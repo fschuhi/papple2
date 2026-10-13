@@ -908,6 +908,20 @@ def test_stack_tracking_reports_without_a_reports_folder_stop(
         stack_tracking_reports()
 
 
+def test_cross_referencing_reports_keep_the_rows_until_the_next_run(
+    memory_tour_run, make_emulator
+) -> None:
+    # memory_tour_run has called cross_referencing_reports(): the rows the
+    # run counted are kept, read back from the file.
+    _, cross_referencing = shell.session.run_instrumentations
+    assert shell.session.run_xrefs == cross_referencing.tallies
+
+    # A new run forgets them, as it forgets the routines.
+    _, emulator = make_emulator(ENDLESS_PROGRAM)
+    run(emulator, 10)
+    assert shell.session.run_xrefs is None
+
+
 # The hexdump. Sixteen bytes at $6000, over the stand-in program: H and I
 # in Apple's normal text (bit 7 set), a carriage return, and a plain A.
 HEXDUMP_BYTES = [0xC8, 0xC9, 0x8D, 0x41] + [0x00] * 12

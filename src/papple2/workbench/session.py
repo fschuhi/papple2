@@ -33,7 +33,13 @@ from papple2.workbench.basic_blocks_analysis import (
     stack_jumps,
 )
 from papple2.workbench.colors import Colors
-from papple2.workbench.cross_referencing import CrossReferencing
+from papple2.workbench.cross_referencing import (
+    XREFS_FILE,
+    CrossReferencing,
+    Tally,
+    Xref,
+    read_xrefs,
+)
 from papple2.workbench.hidden import Hidden
 from papple2.workbench.listing import ListingRow, listing_rows
 from papple2.workbench.stack_tracking import RETURNS_FILE, StackTracking
@@ -79,6 +85,9 @@ class Session:
         # as stack_jumps() finds them in the stack tracking's report. None
         # until set_current_run() is given that report.
         self.run_stack_jumps: dict[tuple[int, int], int] | None = None
+        # The run's cross reference, as read from its report: every row,
+        # with what it adds up. None until cross_referencing_reports().
+        self.run_xrefs: dict[Xref, Tally] | None = None
         # The listing editor's memory: for every routine edit() showed, the
         # first row in its window and the bar's row when it was left,
         # (top, cursor), so that it opens again as it was. Forgotten with
@@ -174,6 +183,7 @@ class Session:
         self.run_graph = None
         self.run_transitions = None
         self.run_stack_jumps = None
+        self.run_xrefs = None
         self.editor_views.clear()
         return emulator.instructions, seconds
 
@@ -237,7 +247,8 @@ class Session:
         )
 
     def cross_referencing_reports(self) -> None:
-        """Write the cross reference report into the reports folder."""
+        """Write the cross reference report into the reports folder, and
+        keep its rows, read back from the file, as the run's xrefs."""
         if self.run_emulator is None:
             raise RuntimeError("no run; call run() first")
         cross_referencings = [
@@ -255,6 +266,9 @@ class Session:
                 "no reports folder set; call use_reports_folder() first"
             )
         cross_referencings[0].write_reports(self.reports_folder)
+        # Read back, not taken from the instrumentation: the file is the
+        # only connection, as for the tiling's reports.
+        self.run_xrefs = read_xrefs(self.reports_folder / XREFS_FILE)
 
     def set_current_run(
         self,
