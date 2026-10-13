@@ -9,6 +9,7 @@
 
 ---
 
+- **2026-10-13:** The cross reference: every byte the code reads or writes, counted by the instruction that touched it, with the target as it ran, so code that writes code shows itself. `memory_tour` tells it as Part 3 of the walkthrough, rendered by `make walkthrough-md`; 720 tests green. First light on Lode Runner: 216,787 rows in 5.4 seconds, and `tbl_hx_byte` read exactly the 404 times the first case study predicted.
 - **2026-10-12:** The routine graph wears the dossier's colors. A routine that lies wholly in one color range gets a thick border in its shade: `draw_at_hx` and `erase_at_hx` in blue, `y_to_ptrs` in cyan, the routines of the first case study found at a glance in the picture of the whole run. From idea to green in one evening, every new name checked before the first line of code.
 - **2026-10-12:** The first case study: drawing and erasing a sprite in Lode Runner, read with the tools from `draw_player` down through `draw_at_hx` to the div 7 and mod 7 tables, colored in the editor, the hexdump and the map. Names first: cell, y, hx, byte, shift, one word for one thing, and the riddle of the "half-screen column" solved: it is the pixel column halved, every second column, so a sprite never changes its colors as it walks. A walk at the prompt in `docs/lr_case_studies.md`, ready to present.
 - **2026-10-12:** In the editor, `q` leaves and keeps the lines on the screen, to read next to a hexdump or a map; the height given stays for every routine.
