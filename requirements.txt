@@ -5,3 +5,4 @@ pytest
 ipython
 graphviz
 prompt_toolkit
+pandas
