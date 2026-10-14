@@ -82,6 +82,7 @@ from papple2.workbench.memory_map import (
 from papple2.workbench.session import Session
 from papple2.workbench.tiling import address
 
+
 class Text(str):
     """What a command shows, returned instead of printed. IPython shows it
     as it is, line by line, not as a string in quotes, and keeps it in _
@@ -251,10 +252,10 @@ def hx(value: int) -> Text:
 
 
 def memory_map(
-    start: int | str = 0x0000,
-    end: int | str = 0x10000,
-    cell_bytes: int = 0x100,
-    legend: bool = True,
+        start: int | str = 0x0000,
+        end: int | str = 0x10000,
+        cell_bytes: int = 0x100,
+        legend: bool = True,
 ) -> Text:
     """Show the current dossier's color ranges from start up to, not
     including, end: 16 cells per row, each cell_bytes bytes, a power of 2.
@@ -419,7 +420,7 @@ def xref_ranges(xrefs: dict[Xref, Tally], target: int) -> list[XrefRange]:
 
     lines = []
     for instruction_address, kind in sorted(
-        tallies_of, key=lambda key: (key[0], KIND_ORDER.index(key[1]))
+            tallies_of, key=lambda key: (key[0], KIND_ORDER.index(key[1]))
     ):
         tallies = tallies_of[(instruction_address, kind)]
         for start, end in contiguous_ranges(tallies):
@@ -439,24 +440,23 @@ def xref_ranges(xrefs: dict[Xref, Tally], target: int) -> list[XrefRange]:
 
 
 @returns_text
-def show_xrefs(target: int | str) -> None:
+def show_xrefs(target: int | str, raw: bool = False) -> None:
     """Every access of the current run whose instruction names target, an
-    address or a label, as its operand: e.g. show_xrefs("tbl_hx_byte")
-    shows who read the table, and where in it. The rows of one instruction
-    and kind are merged where their effective addresses run on, as
-    xref_ranges() does. Each line shows the instruction as code, as the
-    run left it in memory, with the dossier's labels; indexes are the
-    values of X or Y it added, as half-open ranges."""
+    address or a label: e.g. show_xrefs("tbl_hx_byte")
+    shows who read the table, and where in it.
+
+    If raw=True, the rows are printed exactly as they were recorded
+    in the report, one line per effective address, including the values seen.
+    Otherwise, rows of one instruction and kind are merged where their
+    effective addresses run on, as xref_ranges() does. Each line shows the
+    instruction as code, as the run left it in memory, with the dossier's
+    labels; indexes are the values of X or Y it added."""
     session.refresh_annotations()
     if session.run_xrefs is None:
         raise RuntimeError(
             "no xrefs; call cross_referencing_reports() after run()"
         )
     target_address = session.address_of(target)
-    lines = xref_ranges(session.run_xrefs, target_address)
-    if not lines:
-        print(f"no instruction names {address(target_address)} as its operand")
-        return
 
     labels = session.annotations.labels if session.annotations is not None else None
 
@@ -465,6 +465,48 @@ def show_xrefs(target: int | str) -> None:
             session.run_emulator, instruction_address, instruction_address + 1, labels
         )
         return row.instruction
+
+    if raw:
+        from papple2.workbench.cross_referencing import hex_bytes
+
+        raw_rows = [
+            (xref, tally) for xref, tally in session.run_xrefs.items()
+            if xref.target == target_address
+        ]
+        if not raw_rows:
+            print(f"no instruction names {address(target_address)} as its operand")
+            return
+
+        raw_rows.sort(key=lambda item: (
+            item[0].instruction_address,
+            KIND_ORDER.index(item[0].kind),
+            item[0].effective_address
+        ))
+
+        codes = [code_of(xref.instruction_address) for xref, _ in raw_rows]
+        code_width = max(len("code"), *(len(code) for code in codes))
+        kind_width = max(len("kind"), *(len(xref.kind) for xref, _ in raw_rows))
+
+        print(
+            f"{'instruction_address':<19}  {'code':<{code_width}}  "
+            f"{'kind':<{kind_width}}  {'effective_address':<17}  "
+            f"{'count':>7}  {'indexes':<7}  {'values':<8}  old_values"
+        )
+        for (xref, tally), code in zip(raw_rows, codes):
+            val_str = hex_bytes(tally.values) if tally.values else "-"
+            old_val_str = hex_bytes(tally.old_values) if tally.old_values else "-"
+            idx_str = hex_bytes(tally.indexes) if tally.indexes else "-"
+            print(
+                f"{address(xref.instruction_address):<19}  {code:<{code_width}}  "
+                f"{xref.kind:<{kind_width}}  {address(xref.effective_address):<17}  "
+                f"{tally.count:>7,}  {idx_str:<7}  {val_str:<8}  {old_val_str}"
+            )
+        return
+
+    lines = xref_ranges(session.run_xrefs, target_address)
+    if not lines:
+        print(f"no instruction names {address(target_address)} as its operand")
+        return
 
     def indexes_of(line: XrefRange) -> str:
         if not line.indexes:
@@ -844,7 +886,7 @@ def hexdump_rows(emulator: Emulator, start: int, end: int) -> list[HexdumpRow]:
     first = start - start % HEXDUMP_WIDTH
     behind = min(-(-end // HEXDUMP_WIDTH) * HEXDUMP_WIDTH, len(memory))
     return [
-        HexdumpRow(address, list(memory[address : address + HEXDUMP_WIDTH]))
+        HexdumpRow(address, list(memory[address: address + HEXDUMP_WIDTH]))
         for address in range(first, behind, HEXDUMP_WIDTH)
     ]
 
@@ -858,8 +900,8 @@ def apple_char(value: int) -> str:
 
 
 def print_hexdump(
-    rows: list[HexdumpRow],
-    color_of: Callable[[int], str | None] | None = None,
+        rows: list[HexdumpRow],
+        color_of: Callable[[int], str | None] | None = None,
 ) -> None:
     """Print the rows hexdump_rows() gives: address, the bytes in two groups
     of eight, and the text between bars.
@@ -883,7 +925,6 @@ def print_hexdump(
         right = " ".join(values[8:])
         text = "".join(apple_char(value) for value in row.values)
         print(f"{row.address:04x}  {left}  {right}  |{text}|")
-
 
 
 def loop_reports(entry: int | str) -> None:
@@ -913,9 +954,9 @@ def innermost_loop(block: int, loops: dict[int, Loop]) -> Loop | None:
 
 
 def print_blocks(
-    graph: BlockGraph,
-    loops: dict[int, Loop] | None = None,
-    labels: dict[int, str] | None = None,
+        graph: BlockGraph,
+        loops: dict[int, Loop] | None = None,
+        labels: dict[int, str] | None = None,
 ) -> None:
     """One line per basic block: its bytes, how often it ran, and, if loops
     are given, the innermost loop it belongs to. If labels are given, a
@@ -939,10 +980,10 @@ def print_blocks(
 
 
 def print_routines(
-    graphs: dict[int, BlockGraph],
-    loops_of: dict[int, dict[int, Loop]],
-    calls_into: dict[int, int],
-    labels: dict[int, str] | None = None,
+        graphs: dict[int, BlockGraph],
+        loops_of: dict[int, dict[int, Loop]],
+        calls_into: dict[int, int],
+        labels: dict[int, str] | None = None,
 ) -> None:
     """One line per routine, in address order: its entry, how many basic
     blocks and bytes it has, how often it was called, and how many loops
@@ -1002,11 +1043,11 @@ def print_loops(loops: dict[int, Loop]) -> None:
 
 
 def routine_graph(
-    routines: Routines,
-    calls: dict[tuple[int, int], int],
-    labels: dict[int, str] | None = None,
-    exits: dict[tuple[int, int, str], int] | None = None,
-    shades: dict[int, str] | None = None,
+        routines: Routines,
+        calls: dict[tuple[int, int], int],
+        labels: dict[int, str] | None = None,
+        exits: dict[tuple[int, int, str], int] | None = None,
+        shades: dict[int, str] | None = None,
 ) -> graphviz.Digraph:
     """The routine graph: one box per routine, in address order, and one
     arrow per caller and callee, with how often the calls were made, as
@@ -1020,7 +1061,7 @@ def routine_graph(
     shades = shades or {}
     graph = graphviz.Digraph("routines")
     graph.attr("node", shape="box", fontname="Menlo")
-    #graph.attr(rankdir="LR")
+    # graph.attr(rankdir="LR")
     for entry in sorted(routines.graphs):
         text = address(entry)
         if entry in labels:
