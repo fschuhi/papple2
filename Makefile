@@ -11,7 +11,7 @@ RUN           = $(ACTIVATE) && python
 SETUP_STAMP   = $(VENV_DIR)/.setup_stamp
 
 # --- Phony targets ---
-.PHONY: all setup test test-verbose boot-basic boot-robotron boot-lode-runner boot-lode-runner-break boot-lode-runner-throttled boot-lode-runner-headless boot-bandits lr-count lr-tiles lr-overview lr-basic-blocks-analysis lr-cross-reference xlref-overview walkthrough walkthrough-md ipython presentation clean showtree gentree commit-hash patch filesdump filesdump-detailed help
+.PHONY: all setup test test-verbose boot-basic boot-robotron boot-lode-runner boot-lode-runner-break boot-lode-runner-throttled boot-lode-runner-headless boot-bandits lr-count lr-tiles lr-overview lr-basic-blocks-analysis lr-cross-reference xrefs-overview xrefs-compress walkthrough walkthrough-md ipython presentation clean showtree gentree commit-hash patch filesdump filesdump-detailed help
 
 all: setup
 
@@ -77,8 +77,11 @@ lr-cross-reference: $(SETUP_STAMP) ## Experiment: the cross reference of Lode Ru
 
 # --- Analysis of `lr_xrefs.csv`
 xrefs-overview: $(SETUP_STAMP) ## Very basic analysis of `lr_xrefs.csv`
-	$(RUN) scripts/explore_xrefs.py docs/reports/lr_cross_reference/lr_xrefs.csv
+	$(RUN) scripts/explore_xrefs.py docs/reports/lr_cross_reference/lr_xrefs.csv --top 10
 
+# --- Compress `lr_xrefs.csv` into ranges ---
+xrefs-compress: $(SETUP_STAMP) ## Compress contiguous xrefs into ranges
+	$(RUN) scripts/compress_xrefs.py docs/reports/lr_cross_reference/lr_xrefs.csv docs/reports/lr_cross_reference/lr_xrefs_compressed.csv
 
 # --- Walkthrough (its programs through the workbench's pipeline, output in tmp/walkthrough/<program>/) ---
 walkthrough: $(SETUP_STAMP) ## Run the walkthrough's program nested_loops through tiling and the basic blocks analysis (reports in tmp/walkthrough/nested_loops/)
