@@ -924,6 +924,41 @@ def test_cross_referencing_reports_keep_the_rows_until_the_next_run(
     assert shell.session.run_xrefs is None
 
 
+def test_set_current_run_reads_the_xrefs_given(
+    memory_tour_run, make_emulator
+) -> None:
+    # As lr_current does: a run without instrumentations, then the current
+    # run from the reports, the cross reference's included.
+    _, cross_referencing = shell.session.run_instrumentations
+    _, emulator = make_emulator(ENDLESS_PROGRAM)
+    run(emulator, 10)
+
+    set_current_run(
+        emulator,
+        0x6000,
+        split_tiles=memory_tour_run.folder / "lr_split_tiles.csv",
+        split_transitions=memory_tour_run.folder / "lr_split_transitions.csv",
+        xrefs=memory_tour_run.folder / "lr_xrefs.csv",
+    )
+
+    assert shell.session.run_xrefs == cross_referencing.tallies
+
+
+def test_set_current_run_without_xrefs_keeps_the_xrefs(memory_tour_run) -> None:
+    # tiling_reports() calls set_current_run() without xrefs: rows read
+    # before must stay.
+    kept = shell.session.run_xrefs
+
+    set_current_run(
+        memory_tour_run.emulator,
+        0x6000,
+        split_tiles=memory_tour_run.folder / "lr_split_tiles.csv",
+        split_transitions=memory_tour_run.folder / "lr_split_transitions.csv",
+    )
+
+    assert shell.session.run_xrefs is kept
+
+
 def test_contiguous_ranges_are_half_open_and_split_at_gaps() -> None:
     assert contiguous_ranges({5, 0, 2, 1}) == [(0, 3), (5, 6)]
     assert contiguous_ranges(set()) == []

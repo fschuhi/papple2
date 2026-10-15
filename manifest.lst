@@ -123,11 +123,12 @@ papple2.example.toml
 scripts/lr_basic_blocks_analysis.py
 #scripts/boot_bandits.py
 #scripts/boot_basic.py
+scripts/lr_current.py
 #scripts/boot_lode_runner.py
 #scripts/boot_robotron.py
 #scripts/lr_count.py
 scripts/lr_cross_reference.py
-#scripts/lr_overview.py
+scripts/lr_overview.py
 #scripts/lr_tiles.py
 #scripts/speed_test.py
 scripts/walkthrough.py

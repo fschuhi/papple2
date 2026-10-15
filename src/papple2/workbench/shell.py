@@ -318,16 +318,18 @@ def set_current_run(
         split_tiles: Path,
         split_transitions: Path,
         returns: Path | None = None,
+        xrefs: Path | None = None,
 ) -> None:
     """Make the run emulator has made the current run. Its routines and the
     graph of every block are built from its two split reports, each read by
     its full path: the files are the only connection, as in the walkthrough.
     start is where the run began, which no report records. With returns,
     the stack tracking's report, the targets of the run's stack jumps
-    become routines too. Every routine entry without a label gets one in
-    the current dossier, see label_routines()."""
+    become routines too. With xrefs, the cross reference's report,
+    show_xrefs() works on the run. Every routine entry without a label
+    gets one in the current dossier, see label_routines()."""
     count = session.set_current_run(
-        emulator, start, split_tiles, split_transitions, returns
+        emulator, start, split_tiles, split_transitions, returns, xrefs
     )
     print(f"{count} routines")
 

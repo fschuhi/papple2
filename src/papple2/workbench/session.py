@@ -277,9 +277,12 @@ class Session:
         split_tiles: Path,
         split_transitions: Path,
         returns: Path | None = None,
+        xrefs: Path | None = None,
     ) -> int:
         """Make the run emulator has made the current one, built from its
-        reports; return how many routines it has."""
+        reports; return how many routines it has. With xrefs, a cross
+        reference report, its rows become the run's xrefs; without it, the
+        xrefs stay as they are, since tiling_reports() calls this too."""
         tiles = read_split_tiles(split_tiles)
         transitions = read_split_transitions(split_transitions)
         self.run_stack_jumps = (
@@ -294,6 +297,8 @@ class Session:
         self.editor_views.clear()
         self.run_graph = build_run_graph(tiles, transitions, start)
         self.run_transitions = transitions
+        if xrefs is not None:
+            self.run_xrefs = read_xrefs(xrefs)
         self.label_routines()
         return len(self.routines.graphs)
 
