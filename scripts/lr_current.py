@@ -1,9 +1,9 @@
 """Lode Runner's current run at the IPython prompt, from the committed reports.
 
-Writes nothing. Boots Lode Runner headless and runs the attract play
-without instrumentations, only to have the memory as the run left it:
-listing(), edit(), hexdump() and show_xrefs() read it. Then it makes that
-run the current one, built from the reports the experiments committed:
+Boots Lode Runner headless and runs the attract play without
+instrumentations, only to have the memory as the run left it: listing(),
+edit(), hexdump() and show_xrefs() read it. Then it makes that run the
+current one, built from the reports the experiments committed:
     docs/reports/lr_basic_blocks_analysis/
         lr_split_tiles.csv
         lr_split_transitions.csv
@@ -11,6 +11,12 @@ run the current one, built from the reports the experiments committed:
     docs/reports/lr_cross_reference/
         lr_xrefs.csv
 So the routines, edit() and show_xrefs() all work in one session.
+
+It writes the overview of the run, with the dossier's labels as they are
+now (papple2.workbench.overview), into docs/reports/lr_current/:
+    lr_overview.txt
+    lr_routines.csv
+    lr_listing.tsv
 
 The reports must come from a run of the same length: RUN_INSTRUCTIONS
 here, --instructions there. The run without instrumentations is a
@@ -33,6 +39,7 @@ from pathlib import Path
 from papple2.programs import lode_runner
 from papple2.workbench import shell  # noqa: F401
 from papple2.workbench.cross_referencing import XREFS_FILE
+from papple2.workbench.overview import write_overview_reports
 from papple2.workbench.stack_tracking import RETURNS_FILE
 from papple2.workbench.tiling import SPLIT_TILES_FILE, SPLIT_TRANSITIONS_FILE
 
@@ -69,11 +76,15 @@ from papple2.workbench.shell import (  # noqa: F401
     unhide,
     unlabel,
     use_dossier,
+    use_reports_folder,
 )
 
 # Where the reports come from, under git.
 BASIC_BLOCKS_REPORTS = Path("docs/reports/lr_basic_blocks_analysis")
 CROSS_REFERENCE_REPORTS = Path("docs/reports/lr_cross_reference")
+
+# Where this script writes: only what it derives, with today's labels.
+REPORTS_FOLDER = Path("docs/reports/lr_current")
 
 # What we know about Lode Runner's addresses, kept across runs, under git.
 DOSSIER = Path("dossiers/lode_runner")
@@ -85,6 +96,7 @@ RUN_INSTRUCTIONS = 4_000_000
 
 if __name__ == "__main__":
     # The recipe: the same lines could be typed at the prompt.
+    use_reports_folder(REPORTS_FOLDER)
     use_dossier(DOSSIER)
     run(lode_runner.boot(), RUN_INSTRUCTIONS)
     set_current_run(
@@ -95,3 +107,4 @@ if __name__ == "__main__":
         returns=BASIC_BLOCKS_REPORTS / RETURNS_FILE,
         xrefs=CROSS_REFERENCE_REPORTS / XREFS_FILE,
     )
+    write_overview_reports(shell.session)

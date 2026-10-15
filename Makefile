@@ -11,7 +11,7 @@ RUN           = $(ACTIVATE) && python
 SETUP_STAMP   = $(VENV_DIR)/.setup_stamp
 
 # --- Phony targets ---
-.PHONY: all setup test test-verbose boot-basic boot-robotron boot-lode-runner boot-lode-runner-break boot-lode-runner-throttled boot-lode-runner-headless boot-bandits lr-count lr-tiles lr-overview lr-basic-blocks-analysis lr-cross-reference lr-current xrefs-overview xrefs-compress walkthrough walkthrough-md ipython presentation clean showtree gentree commit-hash patch filesdump filesdump-detailed help
+.PHONY: all setup test test-verbose boot-basic boot-robotron boot-lode-runner boot-lode-runner-break boot-lode-runner-throttled boot-lode-runner-headless boot-bandits lr-count lr-tiles lr-basic-blocks-analysis lr-cross-reference lr-current xrefs-overview xrefs-compress walkthrough walkthrough-md ipython presentation clean showtree gentree commit-hash patch filesdump filesdump-detailed help
 
 all: setup
 
@@ -65,9 +65,6 @@ lr-count: $(SETUP_STAMP) ## Early experiment (frozen): map which addresses Lode 
 
 lr-tiles: $(SETUP_STAMP) ## Early experiment (frozen): collect tiles and transitions, plus measurements (CSV and text)
 	$(RUN) scripts/lr_tiles.py data/bin/LODE_RUNNER.BIN
-
-lr-overview: $(SETUP_STAMP) ## Overview of the whole run: routines, loops, calls (reads docs/reports/lr_tiles/, writes docs/reports/lr_overview/)
-	$(RUN) scripts/lr_overview.py
 
 lr-basic-blocks-analysis: $(SETUP_STAMP) ## Experiment: tiling, returns and loop reports (start 0800) of Lode Runner's attract play into docs/reports/lr_basic_blocks_analysis/
 	$(RUN) scripts/lr_basic_blocks_analysis.py data/bin/LODE_RUNNER.BIN

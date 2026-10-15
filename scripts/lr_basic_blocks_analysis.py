@@ -10,6 +10,11 @@ their reports into docs/reports/lr_basic_blocks_analysis/, under git:
     lr_split_tiles.csv
     lr_split_transitions.csv
     lr_returns.csv
+    lr_overview.txt
+    lr_routines.csv
+    lr_listing.tsv
+The last three (papple2.workbench.overview) carry the dossier's labels as
+they were at the time of the run.
 Then the basic blocks analysis (papple2.workbench.basic_blocks_analysis)
 finds every routine of the run: the run's start and every JSR target.
 It writes the loop reports of the start, $0800, into the same folder:
@@ -53,6 +58,7 @@ import argparse
 from pathlib import Path
 
 from papple2.programs import lode_runner
+from papple2.workbench.overview import write_overview_reports
 from papple2.workbench import shell  # noqa: F401
 from papple2.workbench.stack_tracking import StackTracking
 from papple2.workbench.tiling import Tiling
@@ -140,6 +146,7 @@ if __name__ == "__main__":
     run(lode_runner.boot(arguments.binary), arguments.instructions, Tiling, StackTracking)
     tiling_reports()
     stack_tracking_reports()
+    write_overview_reports(shell.session)
 
     # The loop reports the run leaves behind: those of the start, and of
     # every routine named with --loop-reports, each written once.

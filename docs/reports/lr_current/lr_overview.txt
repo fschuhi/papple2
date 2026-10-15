@@ -1,0 +1,158 @@
+WHOLE RUN
+  4,000,000 instructions
+  642 blocks, 4,746 bytes
+  73 routines
+  45 loops, at most 2 inside each other
+
+ROUTINES (in address order)
+  routine  label              end   span_bytes  blocks  blocks_bytes   called  loops  calls
+  0800     routine_0800       61d0      22,992      40           332        1      5  routine_6238 routine_64bd routine_6c82 routine_75f4 routine_79ad routine_8811
+  6238     routine_6238       62c4         140      16           124        1      4  routine_630e routine_63b3
+  630e     routine_630e       6359          75       4            28        1      1
+  63b3     routine_63b3       64bd         266      31           228        1      4  draw_at_cell2 routine_88a2
+  64bd     routine_64bd       686e         945      63           380       85      0  routine_67db routine_6a12 routine_6b85 routine_6b9d routine_6bf4 draw_player routine_6c13 routine_6c26 draw_at_cell1 erase_at_hx draw_at_hx routine_87d5 routine_884b cell_to_y_hx
+  67db     routine_67db       686e         147      24           147        1      0  routine_6b85 draw_player routine_6c13 routine_6c26 draw_at_cell1 erase_at_hx draw_at_hx routine_87d5 routine_884b cell_to_y_hx
+  6a12     routine_6a12       6a18           6       8            80       79      0
+  6b85     routine_6b85       6b9d          24       3            24      166      0  routine_887c routine_888f
+  6b9d     routine_6b9d       6be6          73       8            73       61      0  routine_7a92 draw_at_cell2 erase_at_hx routine_87e1 cell_to_y_hx
+  6bf3     routine_6bf3       6bf4           1       1             1        1      0
+  6bf4     routine_6bf4       6c02          14       4            14       76      0
+  6c02     draw_player        6c13          17       4            11        7      0  routine_6b85 draw_at_hx
+  6c13     routine_6c13       6c26          19       4            14        7      0
+  6c26     routine_6c26       6c39          19       3             9       83      0
+  6c82     routine_6c82       6ca7          37       9            37       84      1  routine_6cdb
+  6cdb     routine_6cdb       6e97         444      18           125      112      0  routine_70d8 routine_75ce
+  6f39     routine_6f39       75ce       1,685      20           181       76      0  routine_74df routine_74f7 routine_753e routine_7574 routine_7582 erase_at_hx draw_at_hx
+  6fbc     routine_6fbc       75ce       1,554      22           166       26      0  routine_74df routine_74f7 routine_753e routine_7574 routine_7595 erase_at_hx draw_at_hx
+  7047     routine_7047       75ce       1,415      22           172       10      0  routine_74df routine_74f7 routine_753e routine_7574 routine_7595 erase_at_hx draw_at_hx
+  70d8     routine_70d8       71a1         201      16           129      112      1  routine_71a2 routine_720c routine_7275 routine_743e
+  71a2     routine_71a2       720b         105      15           100      110      1  routine_72d4 routine_7300 routine_739d
+  720c     routine_720c       7275         105      15           100      110      1  routine_72d4 routine_7300 routine_739d
+  7275     routine_7275       72d4          95      13            89      110      0  routine_72d4 routine_7300 routine_739d
+  72d4     routine_72d4       72fd          41       6            34      820      0
+  7300     routine_7300       739a         154      17           148      194      1
+  739d     routine_739d       7438         155      19           158      626      1
+  743e     routine_743e       74df         161      24           161      110      2
+  74df     routine_74df       74f7          24       3            24      224      0  routine_887c routine_888f
+  74f7     routine_74f7       753e          71       4            33       88      0
+  753e     routine_753e       7574          54       2             5       24      0
+  7574     routine_7574       7582          14       4            14      112      0
+  7582     routine_7582       7595          19       5            19       76      0
+  7595     routine_7595       75a8          19       4            14       36      0
+  75ce     routine_75ce       75f4          38       1            38      112      0
+  75f4     routine_75f4       7716         290       9            36       84      1  routine_7716
+  7716     routine_7716       776c          86       5            19       84      1
+  79ad     routine_79ad       7a08          91       6            59        1      1  routine_7a51 routine_7a57 routine_86e0
+  7a25     routine_7a25       7a31          12       3            12        1      0  routine_7a70 routine_7a8c
+  7a31     y_to_ptr           7a3e          13       1            13    5,654      0
+  7a3e     y_to_ptrs          7a51          19       1            19   30,406      0
+  7a51     routine_7a51       7a70          31       5            27        1      1
+  7a57     routine_7a57       7a70          25       5            25        1      1
+  7a70     routine_7a70       7a8c          28       5            28        2      0  routine_7af8 routine_7b15
+  7a8c     routine_7a8c       7a92           6       5            30        2      0  routine_7af8 routine_7b15
+  7a92     routine_7a92       7ae9          87      11            87        1      0  routine_7ae9 routine_7b15
+  7ae9     routine_7ae9       7af8          15       1            15        8      0
+  7af8     routine_7af8       7b15          29       3            17        4      0
+  7b15     routine_7b15       7b24          15       3            15       20      0  draw_at_cell1
+  7b2a     routine_7b2a       7b64          58       5            19       28      0
+  7b64     routine_7b64       7b77          19       5            19       28      0  routine_7b2a draw_at_cell1
+  82aa     draw_at_cell1      8328         126      11           122       61      2  y_to_ptr shift_sprite cell_to_y_hx col_to_byte_shift
+  82b0     draw_at_cell2      8328         120      11           120      453      2  y_to_ptr shift_sprite cell_to_y_hx col_to_byte_shift
+  8336     erase_at_hx        83a7         113       9           113      202      2  y_to_ptrs shift_sprite hx_to_byte_shift
+  83a7     draw_at_hx         8438         145       9           145      202      2  y_to_ptrs shift_sprite hx_to_byte_shift
+  8438     shift_sprite       84c1         137       3           137      918      1
+  86b1     routine_86b1       86b5           4       1             4      156      0
+  86b5     routine_86b5       86be           9       4             9       10      2
+  86e0     routine_86e0       8700          32       5            28        1      1  routine_7b64
+  87ba     routine_87ba       87d5          27       7            24       13      2
+  87d5     routine_87d5       87e1          12       1            12        7      0
+  87e1     routine_87e1       8811          48       5            42        1      1
+  8811     routine_8811       884b          58       9            44      169      0  routine_86b1 routine_86b5 routine_87ba
+  884b     routine_884b       885d          18       1            18       14      0
+  885d     cell_to_y_hx       8868          11       1            11    1,308      0
+  8868     col_to_byte_shift  8872          10       1            10      514      0
+  8872     hx_to_byte_shift   887c          10       1            10      404      0
+  887c     routine_887c       888a          14       2            14      390      0  cell_to_y_hx
+  888f     routine_888f       889d          14       2            14      390      0  cell_to_y_hx
+  88a2     routine_88a2       88d7          53       6            38        1      1  routine_7a70 routine_7a8c routine_88d7
+  88d7     routine_88d7       8a45         366      32           360      169      1  routine_8a45 four_blocks
+  8a45     routine_8a45       8a69          36       8            36      507      1
+  8a69     four_blocks        8af6         141      29           141   10,150      0  y_to_ptrs routine_8af6
+  8af6     routine_8af6       8b0c          22       2            14   36,839      0
+
+BLOCKS IN NO ROUTINE: 0
+
+LOOPS PER ROUTINE (runs = how often the loop's header ran)
+  routine 0800  routine_0800
+    loop 2821     33,024x
+    loop 5f34          4x
+      loop 5f4b     32,768x
+    loop 60e4         85x
+    loop 619b        290x  post_relocation_entry
+  routine 6238  routine_6238
+    loop 6252         31x  routine_6238.loop1
+    loop 625a          6x  routine_6238.loop2
+    loop 6269         16x  routine_6238.loop3
+      loop 627e        448x  routine_6238.loop4
+  routine 630e  routine_630e
+    loop 6350        256x
+  routine 63b3  routine_63b3
+    loop 63b7         16x
+      loop 63cc        448x
+    loop 6492         16x
+      loop 64a0        448x
+  routine 6c82  routine_6c82
+    loop 6c97        112x
+  routine 70d8  routine_70d8
+    loop 7108          4x
+  routine 71a2  routine_71a2
+    loop 71a2        518x  routine_71a2
+  routine 720c  routine_720c
+    loop 720c        960x  routine_720c
+  routine 7300  routine_7300
+    loop 7304        586x
+  routine 739d  routine_739d
+    loop 73a1      2,417x
+  routine 743e  routine_743e
+    loop 7444        464x
+    loop 7490        923x
+  routine 75f4  routine_75f4
+    loop 7605      2,604x
+  routine 7716  routine_7716
+    loop 771d        252x
+  routine 79ad  routine_79ad
+    loop 79bb         20x
+  routine 7a51  routine_7a51
+    loop 7a64     16,384x
+  routine 7a57  routine_7a57
+    loop 7a64     16,384x
+  routine 82aa  draw_at_cell1
+    loop 82df      4,037x  draw_at_cell.two
+    loop 8301      1,617x  draw_at_cell.three
+  routine 82b0  draw_at_cell2
+    loop 82df      4,037x  draw_at_cell.two
+    loop 8301      1,617x  draw_at_cell.three
+  routine 8336  erase_at_hx
+    loop 8350      1,782x  erase_at_hx.two
+    loop 8376        440x  erase_at_hx.three
+  routine 83a7  draw_at_hx
+    loop 83c3      1,782x  draw_at_hx.two
+    loop 83f5        440x  draw_at_hx.three
+  routine 8438  shift_sprite
+    loop 8455     10,098x  shift_sprite.loop1
+  routine 86b5  routine_86b5
+    loop 86b5      2,206x  routine_86b5
+      loop 86b7    397,080x
+  routine 86e0  routine_86e0
+    loop 86f1         29x
+  routine 87ba  routine_87ba
+    loop 87be        248x
+      loop 87c5     10,463x
+  routine 87e1  routine_87e1
+    loop 8802          7x
+  routine 88a2  routine_88a2
+    loop 88cb        169x
+  routine 88d7  routine_88d7
+    loop 8951     10,319x
+  routine 8a45  routine_8a45
+    loop 8a4c      4,056x
