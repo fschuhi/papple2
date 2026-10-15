@@ -9,6 +9,7 @@
 
 ---
 
+- **2026-10-14:** Further explorations with `scripts/explore_xrefs.py` and `scripts/compress_xrefs.py`. 
 - **2026-10-13:** The cross reference at the prompt: `read_xrefs()` reads `lr_xrefs.csv` back into the same shape the run counted, the `Session` keeps it, and `show_xrefs("tbl_hx_byte")` shows who reads the table, its rows merged where their addresses follow each other.
 - **2026-10-13:** The cross reference: every byte the code reads or writes, counted by the instruction that touched it, with the target as it ran, so code that writes code shows itself. `memory_tour` tells it as Part 3 of the walkthrough, rendered by `make walkthrough-md`; 720 tests green. First light on Lode Runner: 216,787 rows in 5.4 seconds, and `tbl_hx_byte` read exactly the 404 times the first case study predicted.
 - **2026-10-12:** The routine graph wears the dossier's colors. A routine that lies wholly in one color range gets a thick border in its shade: `draw_at_hx` and `erase_at_hx` in blue, `y_to_ptrs` in cyan, the routines of the first case study found at a glance in the picture of the whole run. From idea to green in one evening, every new name checked before the first line of code.

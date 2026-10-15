@@ -1,0 +1,37 @@
+instruction_address	kind	target	effective_address	count	indexes	values	old_values
+6fa6	read_pointer	0006	0006	16		18 34 50 6c 88 c4 e0 fc	
+6fa6	read_pointer	0006	0007	16		08 09	
+6fa6	read_data	0006	08d0	1	0c	03	
+6fa6	read_data	0006	08dc	1	18	03	
+6fa6	read_data	0006	08ec	1	0c	03	
+6fa6	read_data	0006	08f8	1	18	03	
+6fa6	read_data	0006	0908	1	0c	03	
+6fa6	read_data	0006	0914	1	18	03	
+6fa6	read_data	0006	0924	1	0c	03	
+6fa6	read_data	0006	0930	1	18	03	
+6fa6	read_data	0006	0934	1	00	03	
+6fa6	read_data	0006	0940	1	0c	03	
+6fa6	read_data	0006	094c	1	18	03	
+6fa6	read_data	0006	0950	1	00	03	
+6fa6	read_data	0006	095c	1	0c	03	
+6fa6	read_data	0006	0968	1	18	03	
+6fa6	read_data	0006	096c	1	00	03	
+6fa6	read_data	0006	0988	1	00	03	
+6fb0	read_pointer	0006	0006	16		18 34 50 6c 88 c4 e0 fc	
+6fb0	read_pointer	0006	0007	16		08 09	
+6fb0	write_data	0006	08d0	1	0c	08	03
+6fb0	write_data	0006	08dc	1	18	08	03
+6fb0	write_data	0006	08ec	1	0c	08	03
+6fb0	write_data	0006	08f8	1	18	08	03
+6fb0	write_data	0006	0908	1	0c	08	03
+6fb0	write_data	0006	0914	1	18	08	03
+6fb0	write_data	0006	0924	1	0c	08	03
+6fb0	write_data	0006	0930	1	18	08	03
+6fb0	write_data	0006	0934	1	00	08	03
+6fb0	write_data	0006	0940	1	0c	08	03
+6fb0	write_data	0006	094c	1	18	08	03
+6fb0	write_data	0006	0950	1	00	08	03
+6fb0	write_data	0006	095c	1	0c	08	03
+6fb0	write_data	0006	0968	1	18	08	03
+6fb0	write_data	0006	096c	1	00	08	03
+6fb0	write_data	0006	0988	1	00	08	03
