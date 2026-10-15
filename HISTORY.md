@@ -9,6 +9,7 @@
 
 ---
 
+- **2026-10-15:** `make lr-current`: the whole attract play at the prompt, built from the committed reports, with `edit()` and `show_xrefs()` in one session. Next to it, files to read outside the prompt, with my labels in them: `lr_overview.txt`, `lr_routines.csv` for Excel, and `lr_listing.tsv`, the listings of all routines one after the other. `scripts/lr_overview.py` is retired; the overview is written by `lr_basic_blocks_analysis` and `lr_current` alike.
 - **2026-10-14:** Further explorations with `scripts/explore_xrefs.py` and `scripts/compress_xrefs.py`. 
 - **2026-10-13:** The cross reference at the prompt: `read_xrefs()` reads `lr_xrefs.csv` back into the same shape the run counted, the `Session` keeps it, and `show_xrefs("tbl_hx_byte")` shows who reads the table, its rows merged where their addresses follow each other.
 - **2026-10-13:** The cross reference: every byte the code reads or writes, counted by the instruction that touched it, with the target as it ran, so code that writes code shows itself. `memory_tour` tells it as Part 3 of the walkthrough, rendered by `make walkthrough-md`; 720 tests green. First light on Lode Runner: 216,787 rows in 5.4 seconds, and `tbl_hx_byte` read exactly the 404 times the first case study predicted.

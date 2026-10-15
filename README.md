@@ -79,9 +79,9 @@ At the IPython prompt, the commands of `papple2.workbench.shell` show what was f
 
 <p align="center"><em>Enter on a <code>JSR</code> opens the routine it calls; the breadcrumb on top says where you came from.</em></p>
 
-<p align="center"><img src="docs/images/show-routines-graph-01.jpg" alt="Part of Lode Runner's routine graph, with calls, tail calls, a branch and a stack jump" width="720"></p>
+<p align="center"><img src="docs/images/show-routines-graph-01.jpg" alt="Part of Lode Runner's routine graph, with calls, a JMP into an entry, a branch and a stack jump" width="720"></p>
 
-<p align="center"><em>Part of the routine graph: calls with how often they were made, and the other ways into a routine, a <code>JMP</code> (tail call), a branch and an <code>RTS</code> used as a jump, each drawn in its own way.</em></p>
+<p align="center"><em>Part of the routine graph: calls with how often they were made, and the other ways into a routine, a <code>JMP</code> into its entry, a branch and an <code>RTS</code> used as a jump, each drawn in its own way.</em></p>
 
 **The walkthrough** is the way in. Tiny programs, small enough to follow by hand, go through the whole pipeline in chapters, and each chapter is a test (`tests/test_walkthrough.py`), so it stays true. `make walkthrough-md` renders the chapters as a document, into `tmp/walkthrough/`.
 
@@ -160,8 +160,8 @@ make boot-lode-runner-break     # the same with the window, stopped after 4,000,
 make boot-bandits               # boot Bandits from Total Replay's ProDOS files
 make lr-count        # Early experiment (frozen): map which addresses Lode Runner's attract play runs (PNG and HTML)
 make lr-tiles        # Early experiment (frozen): tiling reports into tmp/lr_tiles/ (CSV and text)
-make lr-overview     # Overview of the whole run from docs/reports/lr_tiles/, into docs/reports/lr_overview/
 make lr-basic-blocks-analysis  # Every routine of the run; tiling, returns and loop reports (start 0800) in docs/reports/lr_basic_blocks_analysis/
+make lr-current      # IPython with the run from the committed reports; overview, routines and listing into docs/reports/lr_current/
 make walkthrough     # nested_loops through tiling and the basic blocks analysis, reports in tmp/walkthrough/nested_loops/
 make walkthrough-md  # The walkthrough's chapters as a document, tmp/walkthrough/walkthrough.md
 make ipython         # IPython in the venv; then e.g. %run scripts/lr_basic_blocks_analysis.py
