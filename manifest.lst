@@ -11,7 +11,7 @@ CRITICAL_RULES.md
 
 LLM_INSTRUCTIONS.md
 manifest.lst
-tmp/project_tree.txt
+#tmp/project_tree.txt
 
 # standard project documentation -- work in progress
 #README.md
@@ -22,6 +22,7 @@ GOALS.md
 # intermediate step: discover structures from Xekri's source
 docs/structures_handover.md
 docs/listings/listing_clean.tsv
+docs/lr_structures.md
 
 # `lr_xref.csv`
 #docs/lr_case_studies.md
@@ -39,7 +40,7 @@ docs/listings/listing_clean.tsv
 #docs/editor-ideas.md
 
 # dossiers
-dossiers/lode_runner/annotations.json
+#dossiers/lode_runner/annotations.json
 #dossiers/lode_runner/colors.json
 #dossiers/lode_runner/hidden.json
 
@@ -55,7 +56,7 @@ dossiers/lode_runner/annotations.json
 
 #docs/reports/lr_current/lr_listing.tsv
 docs/reports/lr_current/lr_overview.txt
-docs/reports/lr_current/lr_routines.csv
+#docs/reports/lr_current/lr_routines.csv
 
 #docs/reports/lr_basic_blocks_analysis/lr_loop_members_0800.csv
 #docs/reports/lr_basic_blocks_analysis/lr_loops_0800.csv
@@ -111,8 +112,8 @@ docs/reports/lr_basic_blocks_analysis/lr_split_transitions.csv
 
 ### --- Build & Python Configuration ---
 Makefile
-pyproject.toml
-requirements.txt
+#pyproject.toml
+#requirements.txt
 #.gitignore
 #.gitattributes
 
@@ -121,8 +122,8 @@ requirements.txt
 
 ### --- Project-specific Configuration ---
 # treat the actually used toml as secret; we don't include it in the filesdump, and it's .gitignore'd
-papple2.toml
-papple2.example.toml
+#papple2.toml
+#papple2.example.toml
 
 ### --- DevOps tools ---
 #tools/concat_files.py
@@ -168,7 +169,7 @@ papple2.example.toml
 #src/papple2/programs/rts_dispatch.py
 
 ## workbench
-src/papple2/workbench/annotations.py
+#src/papple2/workbench/annotations.py
 src/papple2/workbench/basic_blocks_analysis.py
 #src/papple2/workbench/colors.py
 #src/papple2/workbench/cross_referencing.py
@@ -176,7 +177,7 @@ src/papple2/workbench/basic_blocks_analysis.py
 #src/papple2/workbench/listing.py
 #src/papple2/workbench/listing_editor.py
 #src/papple2/workbench/memory_map.py
-src/papple2/workbench/overview.py
+#src/papple2/workbench/overview.py
 #src/papple2/workbench/session.py
 #src/papple2/workbench/shell.py
 #src/papple2/workbench/stack_tracking.py
@@ -222,7 +223,7 @@ src/papple2/workbench/overview.py
 #tests/test_memory_map.py
 #tests/test_overview.py
 #tests/test_programs.py
-tests/test_shell.py
+#tests/test_shell.py
 #tests/test_shell_colors.py
 #tests/test_shell_hidden.py
 #tests/test_shell_hx.py
