@@ -28,7 +28,10 @@ TODO.md
 docs/lr_structures.md
 #docs/lr_structures.html
 docs/lr_answer_key.csv
-#docs/TRY_GUARD_MOVE_DOWN-as-it-ran.html
+
+# html-only doc
+docs/TRY_GUARD_MOVE_DOWN-as-it-ran.html
+docs/lode-runner-routine-ranges.html
 
 # `lr_xref.csv`
 #docs/lr_case_studies.md
@@ -177,16 +180,16 @@ scripts/lr_grade.py
 
 ## workbench
 #src/papple2/workbench/annotations.py
-src/papple2/workbench/basic_blocks_analysis.py
+#src/papple2/workbench/basic_blocks_analysis.py
 #src/papple2/workbench/colors.py
 #src/papple2/workbench/cross_referencing.py
 #src/papple2/workbench/hidden.py
 #src/papple2/workbench/listing.py
-#src/papple2/workbench/listing_editor.py
+src/papple2/workbench/listing_editor.py
 #src/papple2/workbench/memory_map.py
-src/papple2/workbench/overview.py
-#src/papple2/workbench/session.py
-src/papple2/workbench/shell.py
+#src/papple2/workbench/overview.py
+src/papple2/workbench/session.py
+#src/papple2/workbench/shell.py
 #src/papple2/workbench/stack_tracking.py
 #src/papple2/workbench/tiling.py
 
