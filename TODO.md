@@ -28,7 +28,11 @@
 
 ## Routine structure (in this order)
 
-- _First (2026-10-15):_ a rule for routines that gives code reached by `JMP` from several routines (`STORE_GUARD_DATA`), or jumped into from another routine (`6f26`, `6f29` in `TRY_GUARD_MOVE_UP`), a routine of its own, so that every block belongs to exactly one routine. Designed and graded against `docs/lr_structures.md` (`GOALS.md`), not before. Today the blue `JMP` arrows only mark a `JMP` into code that is already an entry.
+- ~~_First (2026-10-15):_ a rule for routines that gives code reached by `JMP` from several routines (`STORE_GUARD_DATA`), or jumped into from another routine (`6f26`, `6f29` in `TRY_GUARD_MOVE_UP`), a routine of its own, so that every block belongs to exactly one routine. Designed and graded against `docs/lr_structures.md` (`GOALS.md`), not before. Today the blue `JMP` arrows only mark a `JMP` into code that is already an entry.~~ *(Replaced 2026-10-18 by the two changes below, chosen from what a run shows. The target to grade against is `docs/lr_answer_key.csv`; `docs/lr_structures.md` explains the disagreements.)*
+- _First (2026-10-18):_ returns behind a payload are returns. `LOAD_SOUND_DATA` and `PUT_STRING` read the bytes behind their `JSR` and return behind them; today `stack_jumps()` counts both as stack jumps, which cuts `CHECK_FOR_GOLD_PICKED_UP_BY_PLAYER` (`routine_6bf3`) and `PUT_STATUS` (`routine_7a25`) in two. `stack_jumps()` keeps only the returns whose frame no `JSR` opened (the dispatch in `MOVE_GUARD`), not those that end a `JSR`'s frame elsewhere. Check first in `lr_returns.csv` that the two are "redirected" and the dispatch "unmatched". Needs a new edge, from the `JSR`'s block to where the return landed, since no block starts behind the `JSR`; open: the same kind as the edge from a `JSR` to the line behind it, or a kind of its own.
+- _Second (2026-10-18):_ code reached from more than one routine becomes a routine of its own, starting where the shared part begins, so that every block lies in exactly one routine (today 42 blocks lie in two or three). In the attract play: `STORE_GUARD_DATA` (`75a8`), `DRAW_SPRITE` (`82b4`), `CLEAR_PAGE` (`7a5b`), `PUT_STATUS_BYTE` (`7a74`), and `TRY_DIGGING_LEFT` from `67e7`, where `MOVE_PLAYER` jumps in. No new edge kinds: the ways in are `JMP`, branch and glide. Not graded yet. Open: whether `u` in the editor lists callers by `JMP`, which decides how easily I go up from `STORE_GUARD_DATA`.
+- Both changes graded against `docs/lr_answer_key.csv`: does every block lie in exactly one routine, and how many of Xekri's subroutines have a routine with exactly their blocks. The key grades; it does not decide.
+- Left as it is (2026-10-18): code that only one routine jumps into stays inside it (`TRY_MOVING_LEFT` in `MOVE_PLAYER`, `CHECK_FOR_MODE_1_INPUT` in `CHECK_FOR_INPUT`, the end of `TRY_GUARD_MOVE_UP` in `TRY_GUARD_MOVE_DOWN`), until the run shows a signal for it.
 - _Parked (2026-10-07): the new edges made the picture harder to read; more Graphviz doesn't pay off now._ The routine graph is complete but hard to read (2026-10-07). Directions: the neighbourhood of one routine, `show_routine_graph("lookup_hgr")` with only its callers and callees (the cheapest); a dispatcher's fan-out merged into one arrow ("`RTS` to 14 routines"); the layout, left to right, or boxes grouped by address range.
 - `stack_tracking.py` rewritten in plain style and read together, line by line. Not recorded yet: `TXS`, direct writes to page 1, `RTI` and `BRK`; today only their effect shows (frames abandoned or redirected), not the instruction that caused it.
 - Chromatix's four subroutine classes (sorted by what a routine does to the stack between entry and `RTS`) need to be implemented; they have surfaced several times now.
@@ -119,7 +123,12 @@
 
 ## Files for reading
 
-- `lr_listing.tsv`: the column `routine` names the routine whose span the row lies in, not the routine the instruction belongs to (2026-10-15). Replace it by one listing of the whole run, every instruction once, with a column `routines` (the routines whose blocks hold it), or by listings of each routine's own blocks only. Decide with the new rule for routines.
+- `lr_listing.tsv`: the column `routine` names the routine whose span the row lies in, not the routine the instruction belongs to (2026-10-15). Replace it by one listing of the whole run, every instruction once, with a column `routines` (the routines whose blocks hold it), or by listings of each routine's own blocks only. Decide with the new rule for routines. *(2026-10-18: the rule is chosen, see "Routine structure".)*
+
+## Documentation
+
+- For the session before the break (2026-10-18): markdown stays the source of truth, for the LLMs too. HTML is my reading version of it: in git, but only an output, so a garbled or missing sentence does no harm. Made by an LLM, since it draws the ASCII diagrams as SVG, which no converter does; for prose without diagrams, the `markdown` package and a `make` target would do. To try: a local model through Ollama.
+- A style guide for the HTML pages: light mode, one stylesheet, and `papple2`'s own colors for mnemonics (the 6502 reference colors of the editor, 2026-10-11), taken from `papple2`'s code so that the editor and the pages cannot drift apart. `docs/TRY_GUARD_MOVE_DOWN-as-it-ran.html` uses colors of its own, by kind of instruction.
 
 ## Walkthrough
 
@@ -141,6 +150,7 @@
 
 ## Code tidying
 
+- _First in the next session (2026-10-18):_ `make lr-tiles` fails: `scripts/lr_tiles.py` unpacks `emulator, rwts = boot(...)`, but since 2026-10-12 `boot()` returns the ready emulator alone. Fix it, or remove `lr-tiles` with its reports in `docs/reports/lr_tiles/`, if `lr_basic_blocks_analysis` does all it does.
 - Assembler: a program whose first instruction has no operand (`INX`, `NOP`, `PHA`, ...) fails with `UnboundLocalError`. In `assemble()`, `operand` is only set on lines that have one, but `find_info(mnemonic, addressmode, operand)` always passes it; later lines reuse the previous line's value by accident. Reset `operand` at the start of each line, and add a test. Found 2026-09-28; hit again 2026-10-04 by a test's stand-in program (`ENDLESS_PROGRAM` in `tests/test_shell.py` works around it).
 - The indexed modes (`abs,X`, `abs,Y`, `(zp),Y`) don't wrap at `$FFFF` as the 6502 does, in the CPU. (The disassembler wraps since 2026-10-09.)
 - `read_word_bug`: the three indirect modes in `core/cpu.py` call `memory.read_pointer_word()` directly; `CPU.read_word_bug()` goes; `Memory.read_word_bug()` has already gone. No change in behaviour: the page wrap lives in `read_pointer_word()`.

@@ -9,6 +9,8 @@
 
 ---
 
+- **2026-10-18:** The way forward for routines, chosen from what a run shows, with Xekri's listing only grading: two changes to `find_routines()`. A return behind a payload (`LOAD_SOUND_DATA`, `PUT_STRING` return a few bytes further on) is a return, not a stack jump. Code reached from more than one routine becomes a routine of its own (`STORE_GUARD_DATA`, `DRAW_SPRITE`, `PUT_STATUS_BYTE`), so that no block lies in two routines.
+- **2026-10-17:** The answer key, `docs/lr_answer_key.csv`: every one of the 642 blocks of the attract play with the Xekri subroutine whose span it lies within. `docs/lr_structures.md` completed in one go: the 22 rows of the pilot, the six structures, and `find_routines()` graded against the key (57 of 79 units agree, 42 blocks lie in more than one routine). Then `TRY_GUARD_MOVE_DOWN` as it ran, as a page: the listing in colors, the count on every line, an arrow for every branch and `JMP`. 
 - **2026-10-15:** `make lr-current`: the whole attract play at the prompt, built from the committed reports, with `edit()` and `show_xrefs()` in one session. Next to it, files to read outside the prompt, with my labels in them: `lr_overview.txt`, `lr_routines.csv` for Excel, and `lr_listing.tsv`, the listings of all routines one after the other. `scripts/lr_overview.py` is retired; the overview is written by `lr_basic_blocks_analysis` and `lr_current` alike.
 - **2026-10-14:** Further explorations with `scripts/explore_xrefs.py` and `scripts/compress_xrefs.py`. 
 - **2026-10-13:** The cross reference at the prompt: `read_xrefs()` reads `lr_xrefs.csv` back into the same shape the run counted, the `Session` keeps it, and `show_xrefs("tbl_hx_byte")` shows who reads the table, its rows merged where their addresses follow each other.
