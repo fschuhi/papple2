@@ -544,6 +544,30 @@ def natural_loops(graph: BlockGraph, idom: dict[int, int]) -> dict[int, Loop]:
     }
 
 
+def shared_entries(
+    graphs: Mapping[int, BlockGraph], edges: Mapping[tuple[int, int], int]
+) -> dict[int, int]:
+    """The blocks where code shared by several routines begins, each with
+    how often it was entered from outside: block -> count, in address
+    order. graphs are the routines' graphs, keyed by entry; edges are all
+    edges of the run, as collect_edges() gives them.
+
+    A block is shared if more than one routine's graph holds it. Its
+    shared part begins there if an edge leads into it from a block held
+    by a different set of routines. Blocks further in, whose predecessors
+    are all held by the same set, are no beginning, and neither is an
+    edge back from inside, e.g. a loop's own branch."""
+    holders: dict[int, frozenset[int]] = defaultdict(frozenset)
+    for entry, graph in graphs.items():
+        for block in graph.blocks:
+            holders[block] = holders[block] | {entry}
+    entered: dict[int, int] = defaultdict(int)
+    for (source, target), count in edges.items():
+        if len(holders[target]) > 1 and holders[source] != holders[target]:
+            entered[target] += count
+    return dict(sorted(entered.items()))
+
+
 def find_routines(
     tiles: list[SplitTile],
     transitions: list[SplitTransition],
@@ -559,7 +583,12 @@ def find_routines(
     routine ends where another begins: an edge into another routine's
     entry, by JMP, branch or glide, is not followed. With redirected, as
     redirected_returns() gives them, a call that came back further on
-    continues its caller there."""
+    continues its caller there.
+
+    Code reached from more than one routine becomes a routine of its own,
+    starting where the shared part begins (shared_entries()), entered as
+    often as the edges into it from the other routines were taken. This
+    is repeated until no block lies in two routines."""
     block_starts = {tile.start for tile in tiles}
     extra = {
         entry: count
@@ -567,7 +596,25 @@ def find_routines(
         if entry in block_starts
     }
     jsr_targets = {row.target_tile for row in transitions if row.opcode == JSR}
-    entries = [start] + sorted((jsr_targets | set(extra)) - {start})
+    all_edges = collect_edges(transitions, block_starts, redirected)
+
+    # Each round may make new entries of shared code. Entries are only
+    # added, never removed, so the rounds come to an end.
+    while True:
+        entries = [start] + sorted((jsr_targets | set(extra)) - {start})
+        all_entries = frozenset(entries)
+        graphs = {
+            entry: build_graph(
+                tiles, transitions, entry, stop_at=all_entries - {entry},
+                redirected=redirected,
+            )
+            for entry in entries
+        }
+        shared = shared_entries(graphs, all_edges)
+        if not shared:
+            break
+        for entry, count in shared.items():
+            extra[entry] = extra.get(entry, 0) + count
 
     # How often each routine was entered: the counts of the JSRs into it,
     # plus those of the extra entries.
@@ -579,14 +626,8 @@ def find_routines(
         calls_into[entry] += count
     calls_into[start] += 1  # the run itself enters there once
 
-    graphs = {}
     loops_of = {}
-    all_entries = frozenset(entries)
     for entry in entries:
-        graphs[entry] = build_graph(
-            tiles, transitions, entry, stop_at=all_entries - {entry},
-            redirected=redirected,
-        )
         loops_of[entry] = natural_loops(
             graphs[entry], immediate_dominators(graphs[entry])
         )

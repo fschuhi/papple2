@@ -1,8 +1,8 @@
 WHOLE RUN
   4,000,000 instructions
   642 blocks, 4,746 bytes
-  71 routines
-  45 loops, at most 2 inside each other
+  76 routines
+  42 loops, at most 2 inside each other
 
 ROUTINES (in address order)
   routine  label                                   end   span_bytes  blocks  blocks_bytes   called  loops  calls
@@ -10,8 +10,9 @@ ROUTINES (in address order)
   6238     LOAD_LEVEL                              62c4         140      16           124        1      4  ACCESS_COMPRESSED_LEVEL_DATA DRAW_LEVEL_PAGE2
   630e     ACCESS_COMPRESSED_LEVEL_DATA            6359          75       4            28        1      1
   63b3     DRAW_LEVEL_PAGE2                        64bd         266      31           228        1      4  DRAW_SPRITE_PAGE2 IRIS_WIPE
-  64bd     MOVE_PLAYER                             686e         945      63           380       85      0  TRY_DIGGING_LEFT CHECK_FOR_INPUT GET_SPRITE_AND_SCREEN_COORD_AT_PLAYER CHECK_FOR_GOLD_PICKED_UP_BY_PLAYER INC_ANIM_STATE DRAW_PLAYER NUDGE_PLAYER_TOWARDS_EXACT_COLUMN NUDGE_PLAYER_TOWARDS_EXACT_ROW DRAW_SPRITE_PAGE1 ERASE_SPRITE_AT_PIXEL_COORDS DRAW_SPRITE_AT_PIXEL_COORDS APPEND_NOTE GET_PTRS_TO_CURR_LEVEL_SPRITE_DATA GET_SCREEN_COORDS_FOR
-  67db     TRY_DIGGING_LEFT                        686e         147      24           147        1      0  GET_SPRITE_AND_SCREEN_COORD_AT_PLAYER DRAW_PLAYER NUDGE_PLAYER_TOWARDS_EXACT_COLUMN NUDGE_PLAYER_TOWARDS_EXACT_ROW DRAW_SPRITE_PAGE1 ERASE_SPRITE_AT_PIXEL_COORDS DRAW_SPRITE_AT_PIXEL_COORDS APPEND_NOTE GET_PTRS_TO_CURR_LEVEL_SPRITE_DATA GET_SCREEN_COORDS_FOR
+  64bd     MOVE_PLAYER                             6645         392      40           245       85      0  TRY_DIGGING_LEFT CHECK_FOR_INPUT GET_SPRITE_AND_SCREEN_COORD_AT_PLAYER CHECK_FOR_GOLD_PICKED_UP_BY_PLAYER INC_ANIM_STATE NUDGE_PLAYER_TOWARDS_EXACT_ROW ERASE_SPRITE_AT_PIXEL_COORDS
+  67db     TRY_DIGGING_LEFT                        67e7          12       1            12        1      0
+  67e7     TRY_DIGGING_LEFT_check_can_dig_left     686e         135      23           135        7      0  GET_SPRITE_AND_SCREEN_COORD_AT_PLAYER DRAW_PLAYER NUDGE_PLAYER_TOWARDS_EXACT_COLUMN NUDGE_PLAYER_TOWARDS_EXACT_ROW DRAW_SPRITE_PAGE1 ERASE_SPRITE_AT_PIXEL_COORDS DRAW_SPRITE_AT_PIXEL_COORDS APPEND_NOTE GET_PTRS_TO_CURR_LEVEL_SPRITE_DATA GET_SCREEN_COORDS_FOR
   6a12     CHECK_FOR_INPUT                         6a18           6       8            80       79      0
   6b85     GET_SPRITE_AND_SCREEN_COORD_AT_PLAYER   6b9d          24       3            24      166      0  GET_SCREEN_ROW_OFFSET_IN_X_FOR GET_HALF_SCREEN_COL_OFFSET_IN_Y_FOR
   6b9d     CHECK_FOR_GOLD_PICKED_UP_BY_PLAYER      6bf4          87       9            74       61      0  ADD_AND_UPDATE_SCORE DRAW_SPRITE_PAGE2 ERASE_SPRITE_AT_PIXEL_COORDS LOAD_SOUND_DATA GET_SCREEN_COORDS_FOR
@@ -21,9 +22,9 @@ ROUTINES (in address order)
   6c26     NUDGE_PLAYER_TOWARDS_EXACT_ROW          6c39          19       3             9       83      0
   6c82     MOVE_GUARDS                             6ca7          37       9            37       84      1  MOVE_GUARD
   6cdb     MOVE_GUARD                              6e97         444      18           125      112      0  DETERMINE_GUARD_MOVE LOAD_GUARD_DATA
-  6f39     TRY_GUARD_MOVE_DOWN                     75ce       1,685      20           181       76      0  GET_GUARD_SPRITE_AND_COORDS CHECK_FOR_GOLD_PICKED_UP_BY_GUARD GUARD_DROP_GOLD INC_GUARD_ANIM_STATE NUDGE_GUARD_TOWARDS_EXACT_COLUMN ERASE_SPRITE_AT_PIXEL_COORDS DRAW_SPRITE_AT_PIXEL_COORDS
-  6fbc     TRY_GUARD_MOVE_LEFT                     75ce       1,554      22           166       26      0  GET_GUARD_SPRITE_AND_COORDS CHECK_FOR_GOLD_PICKED_UP_BY_GUARD GUARD_DROP_GOLD INC_GUARD_ANIM_STATE NUDGE_GUARD_TOWARDS_EXACT_ROW ERASE_SPRITE_AT_PIXEL_COORDS DRAW_SPRITE_AT_PIXEL_COORDS
-  7047     TRY_GUARD_MOVE_RIGHT                    75ce       1,415      22           172       10      0  GET_GUARD_SPRITE_AND_COORDS CHECK_FOR_GOLD_PICKED_UP_BY_GUARD GUARD_DROP_GOLD INC_GUARD_ANIM_STATE NUDGE_GUARD_TOWARDS_EXACT_ROW ERASE_SPRITE_AT_PIXEL_COORDS DRAW_SPRITE_AT_PIXEL_COORDS
+  6f39     TRY_GUARD_MOVE_DOWN                     6fbc         131      19           143       76      0  GET_GUARD_SPRITE_AND_COORDS CHECK_FOR_GOLD_PICKED_UP_BY_GUARD GUARD_DROP_GOLD INC_GUARD_ANIM_STATE NUDGE_GUARD_TOWARDS_EXACT_COLUMN ERASE_SPRITE_AT_PIXEL_COORDS DRAW_SPRITE_AT_PIXEL_COORDS
+  6fbc     TRY_GUARD_MOVE_LEFT                     7047         139      21           128       26      0  GET_GUARD_SPRITE_AND_COORDS CHECK_FOR_GOLD_PICKED_UP_BY_GUARD GUARD_DROP_GOLD INC_GUARD_ANIM_STATE NUDGE_GUARD_TOWARDS_EXACT_ROW ERASE_SPRITE_AT_PIXEL_COORDS DRAW_SPRITE_AT_PIXEL_COORDS
+  7047     TRY_GUARD_MOVE_RIGHT                    70d8         145      21           134       10      0  GET_GUARD_SPRITE_AND_COORDS CHECK_FOR_GOLD_PICKED_UP_BY_GUARD GUARD_DROP_GOLD INC_GUARD_ANIM_STATE NUDGE_GUARD_TOWARDS_EXACT_ROW ERASE_SPRITE_AT_PIXEL_COORDS DRAW_SPRITE_AT_PIXEL_COORDS
   70d8     DETERMINE_GUARD_MOVE                    71a1         201      16           129      112      1  SHOULD_GUARD_MOVE_LEFT SHOULD_GUARD_MOVE_RIGHT SHOULD_GUARD_MOVE_UP_OR_DOWN DETERMINE_GUARD_LEFT_RIGHT_LIMITS
   71a2     SHOULD_GUARD_MOVE_LEFT                  720b         105      15           100      110      1  PSEUDO_DISTANCE GUARD_FIND_CANDIDATE_ROW_ABOVE GUARD_FIND_CANDIDATE_ROW_BELOW
   720c     SHOULD_GUARD_MOVE_RIGHT                 7275         105      15           100      110      1  PSEUDO_DISTANCE GUARD_FIND_CANDIDATE_ROW_ABOVE GUARD_FIND_CANDIDATE_ROW_BELOW
@@ -38,24 +39,28 @@ ROUTINES (in address order)
   7574     INC_GUARD_ANIM_STATE                    7582          14       4            14      112      0
   7582     NUDGE_GUARD_TOWARDS_EXACT_COLUMN        7595          19       5            19       76      0
   7595     NUDGE_GUARD_TOWARDS_EXACT_ROW           75a8          19       4            14       36      0
+  75a8     STORE_GUARD_DATA                        75ce          38       1            38      112      0
   75ce     LOAD_GUARD_DATA                         75f4          38       1            38      112      0
   75f4     HANDLE_TIMERS                           7716         290       9            36       84      1  GUARD_RESURRECTIONS
   7716     GUARD_RESURRECTIONS                     776c          86       5            19       84      1
   79ad     PUT_STATUS                              7a31         132       9            71        1      1  CLEAR_HGR1 CLEAR_HGR2 PUT_STATUS_LIVES PUT_STATUS_LEVEL PUT_STRING
   7a31     ROW_TO_ADDR                             7a3e          13       1            13    5,654      0
   7a3e     ROW_TO_ADDR_FOR_BOTH_PAGES              7a51          19       1            19   30,406      0
-  7a51     CLEAR_HGR1                              7a70          31       5            27        1      1
-  7a57     CLEAR_HGR2                              7a70          25       5            25        1      1
-  7a70     PUT_STATUS_LIVES                        7a8c          28       5            28        2      0  TO_DECIMAL3 PUT_DIGIT
-  7a8c     PUT_STATUS_LEVEL                        7a92           6       5            30        2      0  TO_DECIMAL3 PUT_DIGIT
+  7a51     CLEAR_HGR1                              7a57           6       1             6        1      0
+  7a57     CLEAR_HGR2                              7a5b           4       1             4        1      0
+  7a5b     CLEAR_PAGE                              7a70          21       4            21        2      1
+  7a70     PUT_STATUS_LIVES                        7a74           4       1             4        2      0
+  7a74     PUT_STATUS_BYTE                         7a8c          24       4            24        4      0  TO_DECIMAL3 PUT_DIGIT
+  7a8c     PUT_STATUS_LEVEL                        7a92           6       1             6        2      0
   7a92     ADD_AND_UPDATE_SCORE                    7ae9          87      11            87        1      0  BCD_TO_DECIMAL2 PUT_DIGIT
   7ae9     BCD_TO_DECIMAL2                         7af8          15       1            15        8      0
   7af8     TO_DECIMAL3                             7b15          29       3            17        4      0
   7b15     PUT_DIGIT                               7b24          15       3            15       20      0  DRAW_SPRITE_PAGE1
   7b2a     CHAR_TO_SPRITE_NUM                      7b64          58       5            19       28      0
   7b64     PUT_CHAR                                7b77          19       5            19       28      0  CHAR_TO_SPRITE_NUM DRAW_SPRITE_PAGE1
-  82aa     DRAW_SPRITE_PAGE1                       8328         126      11           122       61      2  ROW_TO_ADDR COMPUTE_SHIFTED_SPRITE GET_SCREEN_COORDS_FOR GET_BYTE_AND_SHIFT_FOR_COL
-  82b0     DRAW_SPRITE_PAGE2                       8328         120      11           120      453      2  ROW_TO_ADDR COMPUTE_SHIFTED_SPRITE GET_SCREEN_COORDS_FOR GET_BYTE_AND_SHIFT_FOR_COL
+  82aa     DRAW_SPRITE_PAGE1                       82b0           6       1             6       61      0
+  82b0     DRAW_SPRITE_PAGE2                       82b4           4       1             4      453      0
+  82b4     DRAW_SPRITE                             8328         116      10           116      514      2  ROW_TO_ADDR COMPUTE_SHIFTED_SPRITE GET_SCREEN_COORDS_FOR GET_BYTE_AND_SHIFT_FOR_COL
   8336     ERASE_SPRITE_AT_PIXEL_COORDS            83a7         113       9           113      202      2  ROW_TO_ADDR_FOR_BOTH_PAGES COMPUTE_SHIFTED_SPRITE GET_BYTE_AND_SHIFT_FOR_HALF_SCREEN_COL
   83a7     DRAW_SPRITE_AT_PIXEL_COORDS             8438         145       9           145      202      2  ROW_TO_ADDR_FOR_BOTH_PAGES COMPUTE_SHIFTED_SPRITE GET_BYTE_AND_SHIFT_FOR_HALF_SCREEN_COL
   8438     COMPUTE_SHIFTED_SPRITE                  84c1         137       3           137      918      1
@@ -120,14 +125,9 @@ LOOPS PER ROUTINE (runs = how often the loop's header ran)
     loop 771d        252x
   routine 79ad  PUT_STATUS
     loop 79bb         20x
-  routine 7a51  CLEAR_HGR1
+  routine 7a5b  CLEAR_PAGE
     loop 7a64     16,384x
-  routine 7a57  CLEAR_HGR2
-    loop 7a64     16,384x
-  routine 82aa  DRAW_SPRITE_PAGE1
-    loop 82df      4,037x
-    loop 8301      1,617x
-  routine 82b0  DRAW_SPRITE_PAGE2
+  routine 82b4  DRAW_SPRITE
     loop 82df      4,037x
     loop 8301      1,617x
   routine 8336  ERASE_SPRITE_AT_PIXEL_COORDS

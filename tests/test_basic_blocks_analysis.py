@@ -655,10 +655,11 @@ def test_a_jmp_into_a_routine_gives_no_call():
     }
 
 
-def test_a_jsr_in_shared_code_is_a_call_from_every_routine_holding_it():
-    # $2000 and $3000 both JMP into $4000, whose JSR calls $5000. The run
-    # doesn't record through which routine $4000 was reached, so each one
-    # gets the site's whole count.
+def test_code_shared_by_two_routines_becomes_a_routine_of_its_own():
+    # $2000 and $3000 both JMP into $4000, whose JSR calls $5000. $4000
+    # lies in both routines, and its predecessors lie in only one each:
+    # the shared part begins there, so it becomes a routine, entered by
+    # the two JMPs. $4003 stays in it: its only predecessor is $4000.
     tiles = [
         tile(0x1000, 0x1003), tile(0x1003, 0x1006), tile(0x1006, 0x1007),
         tile(0x2000, 0x2003), tile(0x3000, 0x3003),
@@ -677,12 +678,74 @@ def test_a_jsr_in_shared_code_is_a_call_from_every_routine_holding_it():
     ]
     routines = find_routines(tiles, transitions, start=0x1000)
 
+    assert list(routines.graphs) == [0x1000, 0x2000, 0x3000, 0x4000, 0x5000]
+    assert sorted(routines.graphs[0x2000].blocks) == [0x2000]
+    assert sorted(routines.graphs[0x3000].blocks) == [0x3000]
+    assert sorted(routines.graphs[0x4000].blocks) == [0x4000, 0x4003]
+    assert routines.calls_into[0x4000] == 2
     assert routine_calls(routines, transitions) == {
         (0x1000, 0x2000): 1,
         (0x1000, 0x3000): 1,
-        (0x2000, 0x5000): 2,
-        (0x3000, 0x5000): 2,
+        (0x4000, 0x5000): 2,
     }
+    assert routine_exits(routines, transitions) == {
+        (0x2000, 0x4000, "jmp"): 1,
+        (0x3000, 0x4000, "jmp"): 1,
+    }
+
+
+def test_a_shared_loop_entered_by_branch_and_glide_becomes_a_routine():
+    # Like CLEAR_PAGE: $2000 branches into $3000, $2ffe glides into it.
+    # $3000 is a loop of its own, so one of its predecessors is $3000
+    # itself, in both routines; the other two lie in one routine each,
+    # which is enough. $3002 behind the loop stays with $3000.
+    tiles = [
+        tile(0x1000, 0x1003), tile(0x1003, 0x1006), tile(0x1006, 0x1007),
+        tile(0x2000, 0x2002), tile(0x2FFE, 0x3000),
+        tile(0x3000, 0x3002, 5), tile(0x3002, 0x3003, 2),
+    ]
+    transitions = [
+        leap(0x1000, 0x1000, JSR, 0x2000),
+        leap(0x2000, 0x2000, BNE, 0x3000, outcome="taken"),
+        leap(0x3000, 0x3000, BNE, 0x3000, 3, outcome="taken"),
+        leap(0x3000, 0x3000, BNE, 0x3002, 2, outcome="fall_through"),
+        leap(0x3002, 0x3002, RTS, 0x1003),
+        leap(0x1003, 0x1003, JSR, 0x2FFE),
+        glide(0x2FFE, 0x3000),
+        leap(0x3002, 0x3002, RTS, 0x1006),
+    ]
+    routines = find_routines(tiles, transitions, start=0x1000)
+
+    assert list(routines.graphs) == [0x1000, 0x2000, 0x2FFE, 0x3000]
+    assert sorted(routines.graphs[0x2000].blocks) == [0x2000]
+    assert sorted(routines.graphs[0x2FFE].blocks) == [0x2FFE]
+    assert sorted(routines.graphs[0x3000].blocks) == [0x3000, 0x3002]
+    assert list(routines.loops_of[0x3000]) == [0x3000]
+    # Entered once by the branch, once by the glide; the loop's own
+    # branch back doesn't count.
+    assert routines.calls_into == {0x1000: 1, 0x2000: 1, 0x2FFE: 1, 0x3000: 2}
+    assert routine_exits(routines, transitions) == {
+        (0x2000, 0x3000, "branch"): 1,
+        (0x2FFE, 0x3000, "glide"): 1,
+    }
+
+
+def test_code_only_one_routine_jumps_into_stays_inside_it():
+    # Like TRY_MOVING_LEFT in MOVE_PLAYER: $2000 jumps to $2010, and no
+    # other routine reaches $2010, so it is no routine of its own.
+    tiles = [
+        tile(0x1000, 0x1003), tile(0x1003, 0x1004),
+        tile(0x2000, 0x2003), tile(0x2010, 0x2011),
+    ]
+    transitions = [
+        leap(0x1000, 0x1000, JSR, 0x2000),
+        leap(0x2000, 0x2000, JMP_absolute, 0x2010),
+        leap(0x2010, 0x2010, RTS, 0x1003),
+    ]
+    routines = find_routines(tiles, transitions, start=0x1000)
+
+    assert list(routines.graphs) == [0x1000, 0x2000]
+    assert sorted(routines.graphs[0x2000].blocks) == [0x2000, 0x2010]
 
 
 # --- Loop reports -------------------------------------------------------------
