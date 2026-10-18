@@ -1,0 +1,158 @@
+WHOLE RUN
+  4,000,000 instructions
+  642 blocks, 4,746 bytes
+  73 routines
+  45 loops, at most 2 inside each other
+
+ROUTINES (in address order)
+  routine  label                                   end   span_bytes  blocks  blocks_bytes   called  loops  calls
+  0800     routine_0800                            61d0      22,992      40           332        1      5  LOAD_LEVEL MOVE_PLAYER MOVE_GUARDS HANDLE_TIMERS PUT_STATUS PLAY_SOUND
+  6238     LOAD_LEVEL                              62c4         140      16           124        1      4  ACCESS_COMPRESSED_LEVEL_DATA DRAW_LEVEL_PAGE2
+  630e     ACCESS_COMPRESSED_LEVEL_DATA            6359          75       4            28        1      1
+  63b3     DRAW_LEVEL_PAGE2                        64bd         266      31           228        1      4  DRAW_SPRITE_PAGE2 IRIS_WIPE
+  64bd     MOVE_PLAYER                             686e         945      63           380       85      0  TRY_DIGGING_LEFT CHECK_FOR_INPUT GET_SPRITE_AND_SCREEN_COORD_AT_PLAYER CHECK_FOR_GOLD_PICKED_UP_BY_PLAYER INC_ANIM_STATE DRAW_PLAYER NUDGE_PLAYER_TOWARDS_EXACT_COLUMN NUDGE_PLAYER_TOWARDS_EXACT_ROW DRAW_SPRITE_PAGE1 ERASE_SPRITE_AT_PIXEL_COORDS DRAW_SPRITE_AT_PIXEL_COORDS APPEND_NOTE GET_PTRS_TO_CURR_LEVEL_SPRITE_DATA GET_SCREEN_COORDS_FOR
+  67db     TRY_DIGGING_LEFT                        686e         147      24           147        1      0  GET_SPRITE_AND_SCREEN_COORD_AT_PLAYER DRAW_PLAYER NUDGE_PLAYER_TOWARDS_EXACT_COLUMN NUDGE_PLAYER_TOWARDS_EXACT_ROW DRAW_SPRITE_PAGE1 ERASE_SPRITE_AT_PIXEL_COORDS DRAW_SPRITE_AT_PIXEL_COORDS APPEND_NOTE GET_PTRS_TO_CURR_LEVEL_SPRITE_DATA GET_SCREEN_COORDS_FOR
+  6a12     CHECK_FOR_INPUT                         6a18           6       8            80       79      0
+  6b85     GET_SPRITE_AND_SCREEN_COORD_AT_PLAYER   6b9d          24       3            24      166      0  GET_SCREEN_ROW_OFFSET_IN_X_FOR GET_HALF_SCREEN_COL_OFFSET_IN_Y_FOR
+  6b9d     CHECK_FOR_GOLD_PICKED_UP_BY_PLAYER      6be6          73       8            73       61      0  ADD_AND_UPDATE_SCORE DRAW_SPRITE_PAGE2 ERASE_SPRITE_AT_PIXEL_COORDS LOAD_SOUND_DATA GET_SCREEN_COORDS_FOR
+  6bf3     routine_6bf3                            6bf4           1       1             1        1      0
+  6bf4     INC_ANIM_STATE                          6c02          14       4            14       76      0
+  6c02     DRAW_PLAYER                             6c13          17       4            11        7      0  GET_SPRITE_AND_SCREEN_COORD_AT_PLAYER DRAW_SPRITE_AT_PIXEL_COORDS
+  6c13     NUDGE_PLAYER_TOWARDS_EXACT_COLUMN       6c26          19       4            14        7      0
+  6c26     NUDGE_PLAYER_TOWARDS_EXACT_ROW          6c39          19       3             9       83      0
+  6c82     MOVE_GUARDS                             6ca7          37       9            37       84      1  MOVE_GUARD
+  6cdb     MOVE_GUARD                              6e97         444      18           125      112      0  DETERMINE_GUARD_MOVE LOAD_GUARD_DATA
+  6f39     TRY_GUARD_MOVE_DOWN                     75ce       1,685      20           181       76      0  GET_GUARD_SPRITE_AND_COORDS CHECK_FOR_GOLD_PICKED_UP_BY_GUARD GUARD_DROP_GOLD INC_GUARD_ANIM_STATE NUDGE_GUARD_TOWARDS_EXACT_COLUMN ERASE_SPRITE_AT_PIXEL_COORDS DRAW_SPRITE_AT_PIXEL_COORDS
+  6fbc     TRY_GUARD_MOVE_LEFT                     75ce       1,554      22           166       26      0  GET_GUARD_SPRITE_AND_COORDS CHECK_FOR_GOLD_PICKED_UP_BY_GUARD GUARD_DROP_GOLD INC_GUARD_ANIM_STATE NUDGE_GUARD_TOWARDS_EXACT_ROW ERASE_SPRITE_AT_PIXEL_COORDS DRAW_SPRITE_AT_PIXEL_COORDS
+  7047     TRY_GUARD_MOVE_RIGHT                    75ce       1,415      22           172       10      0  GET_GUARD_SPRITE_AND_COORDS CHECK_FOR_GOLD_PICKED_UP_BY_GUARD GUARD_DROP_GOLD INC_GUARD_ANIM_STATE NUDGE_GUARD_TOWARDS_EXACT_ROW ERASE_SPRITE_AT_PIXEL_COORDS DRAW_SPRITE_AT_PIXEL_COORDS
+  70d8     DETERMINE_GUARD_MOVE                    71a1         201      16           129      112      1  SHOULD_GUARD_MOVE_LEFT SHOULD_GUARD_MOVE_RIGHT SHOULD_GUARD_MOVE_UP_OR_DOWN DETERMINE_GUARD_LEFT_RIGHT_LIMITS
+  71a2     SHOULD_GUARD_MOVE_LEFT                  720b         105      15           100      110      1  PSEUDO_DISTANCE GUARD_FIND_CANDIDATE_ROW_ABOVE GUARD_FIND_CANDIDATE_ROW_BELOW
+  720c     SHOULD_GUARD_MOVE_RIGHT                 7275         105      15           100      110      1  PSEUDO_DISTANCE GUARD_FIND_CANDIDATE_ROW_ABOVE GUARD_FIND_CANDIDATE_ROW_BELOW
+  7275     SHOULD_GUARD_MOVE_UP_OR_DOWN            72d4          95      13            89      110      0  PSEUDO_DISTANCE GUARD_FIND_CANDIDATE_ROW_ABOVE GUARD_FIND_CANDIDATE_ROW_BELOW
+  72d4     PSEUDO_DISTANCE                         72fd          41       6            34      820      0
+  7300     GUARD_FIND_CANDIDATE_ROW_ABOVE          739a         154      17           148      194      1
+  739d     GUARD_FIND_CANDIDATE_ROW_BELOW          7438         155      19           158      626      1
+  743e     DETERMINE_GUARD_LEFT_RIGHT_LIMITS       74df         161      24           161      110      2
+  74df     GET_GUARD_SPRITE_AND_COORDS             74f7          24       3            24      224      0  GET_SCREEN_ROW_OFFSET_IN_X_FOR GET_HALF_SCREEN_COL_OFFSET_IN_Y_FOR
+  74f7     CHECK_FOR_GOLD_PICKED_UP_BY_GUARD       753e          71       4            33       88      0
+  753e     GUARD_DROP_GOLD                         7574          54       2             5       24      0
+  7574     INC_GUARD_ANIM_STATE                    7582          14       4            14      112      0
+  7582     NUDGE_GUARD_TOWARDS_EXACT_COLUMN        7595          19       5            19       76      0
+  7595     NUDGE_GUARD_TOWARDS_EXACT_ROW           75a8          19       4            14       36      0
+  75ce     LOAD_GUARD_DATA                         75f4          38       1            38      112      0
+  75f4     HANDLE_TIMERS                           7716         290       9            36       84      1  GUARD_RESURRECTIONS
+  7716     GUARD_RESURRECTIONS                     776c          86       5            19       84      1
+  79ad     PUT_STATUS                              7a08          91       6            59        1      1  CLEAR_HGR1 CLEAR_HGR2 PUT_STRING
+  7a25     routine_7a25                            7a31          12       3            12        1      0  PUT_STATUS_LIVES PUT_STATUS_LEVEL
+  7a31     ROW_TO_ADDR                             7a3e          13       1            13    5,654      0
+  7a3e     ROW_TO_ADDR_FOR_BOTH_PAGES              7a51          19       1            19   30,406      0
+  7a51     CLEAR_HGR1                              7a70          31       5            27        1      1
+  7a57     CLEAR_HGR2                              7a70          25       5            25        1      1
+  7a70     PUT_STATUS_LIVES                        7a8c          28       5            28        2      0  TO_DECIMAL3 PUT_DIGIT
+  7a8c     PUT_STATUS_LEVEL                        7a92           6       5            30        2      0  TO_DECIMAL3 PUT_DIGIT
+  7a92     ADD_AND_UPDATE_SCORE                    7ae9          87      11            87        1      0  BCD_TO_DECIMAL2 PUT_DIGIT
+  7ae9     BCD_TO_DECIMAL2                         7af8          15       1            15        8      0
+  7af8     TO_DECIMAL3                             7b15          29       3            17        4      0
+  7b15     PUT_DIGIT                               7b24          15       3            15       20      0  DRAW_SPRITE_PAGE1
+  7b2a     CHAR_TO_SPRITE_NUM                      7b64          58       5            19       28      0
+  7b64     PUT_CHAR                                7b77          19       5            19       28      0  CHAR_TO_SPRITE_NUM DRAW_SPRITE_PAGE1
+  82aa     DRAW_SPRITE_PAGE1                       8328         126      11           122       61      2  ROW_TO_ADDR COMPUTE_SHIFTED_SPRITE GET_SCREEN_COORDS_FOR GET_BYTE_AND_SHIFT_FOR_COL
+  82b0     DRAW_SPRITE_PAGE2                       8328         120      11           120      453      2  ROW_TO_ADDR COMPUTE_SHIFTED_SPRITE GET_SCREEN_COORDS_FOR GET_BYTE_AND_SHIFT_FOR_COL
+  8336     ERASE_SPRITE_AT_PIXEL_COORDS            83a7         113       9           113      202      2  ROW_TO_ADDR_FOR_BOTH_PAGES COMPUTE_SHIFTED_SPRITE GET_BYTE_AND_SHIFT_FOR_HALF_SCREEN_COL
+  83a7     DRAW_SPRITE_AT_PIXEL_COORDS             8438         145       9           145      202      2  ROW_TO_ADDR_FOR_BOTH_PAGES COMPUTE_SHIFTED_SPRITE GET_BYTE_AND_SHIFT_FOR_HALF_SCREEN_COL
+  8438     COMPUTE_SHIFTED_SPRITE                  84c1         137       3           137      918      1
+  86b1     SOUND_DELAY                             86b5           4       1             4      156      0
+  86b5     SOUND_DELAY1                            86be           9       4             9       10      2
+  86e0     PUT_STRING                              8700          32       5            28        1      1  PUT_CHAR
+  87ba     PLAY_NOTE                               87d5          27       7            24       13      2
+  87d5     APPEND_NOTE                             87e1          12       1            12        7      0
+  87e1     LOAD_SOUND_DATA                         8811          48       5            42        1      1
+  8811     PLAY_SOUND                              884b          58       9            44      169      0  SOUND_DELAY SOUND_DELAY1 PLAY_NOTE
+  884b     GET_PTRS_TO_CURR_LEVEL_SPRITE_DATA      885d          18       1            18       14      0
+  885d     GET_SCREEN_COORDS_FOR                   8868          11       1            11    1,308      0
+  8868     GET_BYTE_AND_SHIFT_FOR_COL              8872          10       1            10      514      0
+  8872     GET_BYTE_AND_SHIFT_FOR_HALF_SCREEN_COL  887c          10       1            10      404      0
+  887c     GET_SCREEN_ROW_OFFSET_IN_X_FOR          888a          14       2            14      390      0  GET_SCREEN_COORDS_FOR
+  888f     GET_HALF_SCREEN_COL_OFFSET_IN_Y_FOR     889d          14       2            14      390      0  GET_SCREEN_COORDS_FOR
+  88a2     IRIS_WIPE                               88d7          53       6            38        1      1  PUT_STATUS_LIVES PUT_STATUS_LEVEL IRIS_WIPE_STEP
+  88d7     IRIS_WIPE_STEP                          8a45         366      32           360      169      1  DIV_BY_7 DRAW_WIPE_STEP
+  8a45     DIV_BY_7                                8a69          36       8            36      507      1
+  8a69     DRAW_WIPE_STEP                          8af6         141      29           141   10,150      0  ROW_TO_ADDR_FOR_BOTH_PAGES DRAW_WIPE_BLOCK
+  8af6     DRAW_WIPE_BLOCK                         8b0c          22       2            14   36,839      0
+
+BLOCKS IN NO ROUTINE: 0
+
+LOOPS PER ROUTINE (runs = how often the loop's header ran)
+  routine 0800  routine_0800
+    loop 2821     33,024x
+    loop 5f34          4x
+      loop 5f4b     32,768x
+    loop 60e4         85x
+    loop 619b        290x  CHECK_FOR_BUTTON_DOWN
+  routine 6238  LOAD_LEVEL
+    loop 6252         31x
+    loop 625a          6x
+    loop 6269         16x
+      loop 627e        448x
+  routine 630e  ACCESS_COMPRESSED_LEVEL_DATA
+    loop 6350        256x
+  routine 63b3  DRAW_LEVEL_PAGE2
+    loop 63b7         16x
+      loop 63cc        448x
+    loop 6492         16x
+      loop 64a0        448x
+  routine 6c82  MOVE_GUARDS
+    loop 6c97        112x
+  routine 70d8  DETERMINE_GUARD_MOVE
+    loop 7108          4x
+  routine 71a2  SHOULD_GUARD_MOVE_LEFT
+    loop 71a2        518x  SHOULD_GUARD_MOVE_LEFT
+  routine 720c  SHOULD_GUARD_MOVE_RIGHT
+    loop 720c        960x  SHOULD_GUARD_MOVE_RIGHT
+  routine 7300  GUARD_FIND_CANDIDATE_ROW_ABOVE
+    loop 7304        586x
+  routine 739d  GUARD_FIND_CANDIDATE_ROW_BELOW
+    loop 73a1      2,417x
+  routine 743e  DETERMINE_GUARD_LEFT_RIGHT_LIMITS
+    loop 7444        464x
+    loop 7490        923x
+  routine 75f4  HANDLE_TIMERS
+    loop 7605      2,604x
+  routine 7716  GUARD_RESURRECTIONS
+    loop 771d        252x
+  routine 79ad  PUT_STATUS
+    loop 79bb         20x
+  routine 7a51  CLEAR_HGR1
+    loop 7a64     16,384x
+  routine 7a57  CLEAR_HGR2
+    loop 7a64     16,384x
+  routine 82aa  DRAW_SPRITE_PAGE1
+    loop 82df      4,037x
+    loop 8301      1,617x
+  routine 82b0  DRAW_SPRITE_PAGE2
+    loop 82df      4,037x
+    loop 8301      1,617x
+  routine 8336  ERASE_SPRITE_AT_PIXEL_COORDS
+    loop 8350      1,782x
+    loop 8376        440x
+  routine 83a7  DRAW_SPRITE_AT_PIXEL_COORDS
+    loop 83c3      1,782x
+    loop 83f5        440x
+  routine 8438  COMPUTE_SHIFTED_SPRITE
+    loop 8455     10,098x
+  routine 86b5  SOUND_DELAY1
+    loop 86b5      2,206x  SOUND_DELAY1
+      loop 86b7    397,080x
+  routine 86e0  PUT_STRING
+    loop 86f1         29x
+  routine 87ba  PLAY_NOTE
+    loop 87be        248x
+      loop 87c5     10,463x
+  routine 87e1  LOAD_SOUND_DATA
+    loop 8802          7x
+  routine 88a2  IRIS_WIPE
+    loop 88cb        169x
+  routine 88d7  IRIS_WIPE_STEP
+    loop 8951     10,319x
+  routine 8a45  DIV_BY_7
+    loop 8a4c      4,056x
