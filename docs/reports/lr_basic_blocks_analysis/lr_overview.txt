@@ -1,7 +1,7 @@
 WHOLE RUN
   4,000,000 instructions
   642 blocks, 4,746 bytes
-  77 routines
+  78 routines
   42 loops, at most 2 inside each other
 
 ROUTINES (in address order)
@@ -51,7 +51,8 @@ ROUTINES (in address order)
   7a51     CLEAR_HGR1                              7a57           6       1             6        1      0
   7a57     CLEAR_HGR2                              7a5b           4       1             4        1      0
   7a5b     CLEAR_PAGE                              7a70          21       4            21        2      1
-  7a70     PUT_STATUS_LIVES                        7a8c          28       5            28        2      0  TO_DECIMAL3 PUT_DIGIT
+  7a70     PUT_STATUS_LIVES                        7a74           4       1             4        2      0
+  7a74     PUT_STATUS_BYTE                         7a8c          24       4            24        4      0  TO_DECIMAL3 PUT_DIGIT
   7a8c     PUT_STATUS_LEVEL                        7a92           6       1             6        2      0
   7a92     ADD_AND_UPDATE_SCORE                    7ae9          87      11            87        1      0  BCD_TO_DECIMAL2 PUT_DIGIT
   7ae9     BCD_TO_DECIMAL2                         7af8          15       1            15        8      0

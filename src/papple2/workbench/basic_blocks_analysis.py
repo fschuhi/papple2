@@ -582,6 +582,53 @@ def stops_below(tiles: list[SplitTile], entry: int) -> frozenset[int]:
     )
 
 
+def shared_by_jump_back(
+    graphs: Mapping[int, BlockGraph],
+    edges: Mapping[tuple[int, int], int],
+    glides: set[tuple[int, int]],
+) -> dict[int, int]:
+    """The blocks that one routine glides into and another routine jumps
+    back into, past its own entry, each with how often it was entered from
+    outside, by the glide and by the jumps: block -> count, in address
+    order. graphs are the routines' graphs, keyed by entry; edges are all
+    edges of the run, as collect_edges() gives them; glides are the
+    (source, target) pairs of the glide rows.
+
+    A jump back past an entry is not followed (stops_below()), so only the
+    routine that glides in holds the block, and shared_entries() doesn't
+    see the second way in. A jump forward into the same shape is followed,
+    and shared_entries() finds it, e.g. CLEAR_PAGE, which CLEAR_HGR2
+    glides into and CLEAR_HGR1 branches into. With both, the direction of
+    the jump makes no difference: PUT_STATUS_BYTE, which PUT_STATUS_LIVES
+    glides into and PUT_STATUS_LEVEL branches back into, is a routine too.
+
+    Only a block that is glided into counts. A jump back into a block that
+    a call's return leads to, e.g. the JMP at $6fae into $6f29 in the tail
+    of TRY_GUARD_MOVE_UP, leaves the routine holding it whole."""
+    holders: dict[int, frozenset[int]] = defaultdict(frozenset)
+    for entry, graph in graphs.items():
+        for block in graph.blocks:
+            holders[block] = holders[block] | {entry}
+    # Glided into from inside the routine that holds the block.
+    glided_into = {
+        target for source, target in glides if holders[source] & holders[target]
+    }
+    jumped_into: dict[int, int] = defaultdict(int)
+    for (source, target), count in edges.items():
+        if target in graphs or target not in glided_into:
+            continue
+        # From a block of another routine: one that doesn't hold the target.
+        if holders[source] and holders[source].isdisjoint(holders[target]):
+            jumped_into[target] += count
+    # Counted like shared_entries(): the glide is a way in from outside too.
+    entered = {
+        target: count
+        + sum(edges[glide] for glide in glides if glide[1] == target)
+        for target, count in jumped_into.items()
+    }
+    return dict(sorted(entered.items()))
+
+
 def orphans(
     graphs: Mapping[int, BlockGraph], edges: Mapping[tuple[int, int], int]
 ) -> dict[int, int]:
@@ -621,8 +668,9 @@ def find_routines(
 
     Code reached from more than one routine becomes a routine of its own,
     starting where the shared part begins (shared_entries()), entered as
-    often as the edges into it from the other routines were taken. Code
-    that no routine holds, left behind by a jump back past an entry, does
+    often as the edges into it from the other routines were taken. So does
+    code that one routine glides into and another routine jumps back into,
+    past its own entry (shared_by_jump_back()). Code that no routine holds, left behind by a jump back past an entry, does
     too, starting at its lowest orphan (orphans()). This is repeated until
     every block lies in exactly one routine."""
     block_starts = {tile.start for tile in tiles}
@@ -633,6 +681,11 @@ def find_routines(
     }
     jsr_targets = {row.target_tile for row in transitions if row.opcode == JSR}
     all_edges = collect_edges(transitions, block_starts, redirected)
+    glides = {
+        (row.source_tile, row.target_tile)
+        for row in transitions
+        if row.outcome == GLIDE
+    }
 
     # Each round may make new entries, of shared code or of an orphan.
     # Entries are only added, never removed, so the rounds come to an end.
@@ -650,6 +703,8 @@ def find_routines(
             for entry in entries
         }
         shared = shared_entries(graphs, all_edges)
+        for entry, count in shared_by_jump_back(graphs, all_edges, glides).items():
+            shared[entry] = shared.get(entry, 0) + count
         if shared:
             for entry, count in shared.items():
                 extra[entry] = extra.get(entry, 0) + count

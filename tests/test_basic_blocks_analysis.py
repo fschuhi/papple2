@@ -730,6 +730,37 @@ def test_a_shared_loop_entered_by_branch_and_glide_becomes_a_routine():
     }
 
 
+def test_a_branch_back_into_code_another_routine_glides_into_makes_a_routine():
+    # Like PUT_STATUS_BYTE: $2000 glides into $2004, and $2010 branches
+    # back into it. The branch goes back past $2010's own entry, so it is
+    # not followed; $2004 becomes a routine all the same, as it does when
+    # the branch goes forward (the test above, like CLEAR_PAGE).
+    tiles = [
+        tile(0x1000, 0x1003), tile(0x1003, 0x1006), tile(0x1006, 0x1007),
+        tile(0x2000, 0x2004), tile(0x2004, 0x2005, 2), tile(0x2010, 0x2012),
+    ]
+    transitions = [
+        leap(0x1000, 0x1000, JSR, 0x2000),
+        glide(0x2000, 0x2004),
+        leap(0x2004, 0x2004, RTS, 0x1003),
+        leap(0x1003, 0x1003, JSR, 0x2010),
+        leap(0x2010, 0x2010, BNE, 0x2004, outcome="taken"),
+        leap(0x2004, 0x2004, RTS, 0x1006),
+    ]
+    routines = find_routines(tiles, transitions, start=0x1000)
+
+    assert list(routines.graphs) == [0x1000, 0x2000, 0x2004, 0x2010]
+    assert sorted(routines.graphs[0x2000].blocks) == [0x2000]
+    assert sorted(routines.graphs[0x2004].blocks) == [0x2004]
+    assert sorted(routines.graphs[0x2010].blocks) == [0x2010]
+    # Entered once by the glide, once by the branch, as CLEAR_PAGE is.
+    assert routines.calls_into == {0x1000: 1, 0x2000: 1, 0x2004: 2, 0x2010: 1}
+    assert routine_exits(routines, transitions) == {
+        (0x2000, 0x2004, "glide"): 1,
+        (0x2010, 0x2004, "branch"): 1,
+    }
+
+
 def test_code_only_one_routine_jumps_into_stays_inside_it():
     # Like TRY_MOVING_LEFT in MOVE_PLAYER: $2000 jumps to $2010, and no
     # other routine reaches $2010, so it is no routine of its own.
