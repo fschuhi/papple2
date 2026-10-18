@@ -25,7 +25,7 @@ TODO.md
 #docs/listings/listing_clean.tsv
 #docs/structures_handover.md
 #docs/structures_handover.html
-#docs/lr_structures.md
+docs/lr_structures.md
 #docs/lr_structures.html
 docs/lr_answer_key.csv
 #docs/TRY_GUARD_MOVE_DOWN-as-it-ran.html
@@ -50,7 +50,7 @@ docs/lr_answer_key.csv
 #docs/architecture.md
 #docs/data-files.md
 #docs/instrumentation-design.md
-#docs/workbench.md
+docs/workbench.md
 
 # instrumentation architecture
 # dynamic html to explain hooks for various 6502 operations
@@ -99,7 +99,7 @@ dossiers/lode_runner/annotations.json
 #docs/reports/lr_basic_blocks_analysis/lr_loop_members_0800.csv
 #docs/reports/lr_basic_blocks_analysis/lr_loops_0800.csv
 #docs/reports/lr_basic_blocks_analysis/lr_measurements.txt
-#docs/reports/lr_basic_blocks_analysis/lr_overview.txt
+docs/reports/lr_basic_blocks_analysis/lr_overview.txt
 docs/reports/lr_basic_blocks_analysis/lr_returns.csv
 #docs/reports/lr_basic_blocks_analysis/lr_routines.csv
 docs/reports/lr_basic_blocks_analysis/lr_split_tiles.csv
@@ -108,7 +108,7 @@ docs/reports/lr_basic_blocks_analysis/lr_split_transitions.csv
 #docs/reports/lr_basic_blocks_analysis/lr_unbroken_transitions.csv
 
 #docs/reports/lr_current/lr_listing.tsv
-docs/reports/lr_current/lr_overview.txt
+#docs/reports/lr_current/lr_overview.txt
 #docs/reports/lr_current/lr_routines.csv
 
 #docs/reports/load_level/lr_loop_members.csv
@@ -169,10 +169,10 @@ scripts/lr_basic_blocks_analysis.py
 #src/papple2/debug/stop_conditions.py
 
 ## programs
-src/papple2/programs/lode_runner.py
+#src/papple2/programs/lode_runner.py
 #src/papple2/programs/memory_tour.py
 #src/papple2/programs/nested_loops.py
-src/papple2/programs/rts_dispatch.py
+#src/papple2/programs/rts_dispatch.py
 
 ## workbench
 #src/papple2/workbench/annotations.py
@@ -183,10 +183,10 @@ src/papple2/workbench/basic_blocks_analysis.py
 #src/papple2/workbench/listing.py
 #src/papple2/workbench/listing_editor.py
 #src/papple2/workbench/memory_map.py
-#src/papple2/workbench/overview.py
+src/papple2/workbench/overview.py
 #src/papple2/workbench/session.py
 src/papple2/workbench/shell.py
-src/papple2/workbench/stack_tracking.py
+#src/papple2/workbench/stack_tracking.py
 #src/papple2/workbench/tiling.py
 
 ### --- Tests and fixtures data ---
@@ -234,11 +234,11 @@ tests/test_basic_blocks_analysis.py
 #tests/test_shell_hidden.py
 #tests/test_shell_hx.py
 #tests/test_softswitches.py
-tests/test_stack_tracking.py
+#tests/test_stack_tracking.py
 #tests/test_tiling.py
 #tests/test_throttle.py
 #tests/test_util.py
-tests/test_walkthrough.py
+#tests/test_walkthrough.py
 
 ### --- Data ---
 # `*.BIN` are not in VCS
