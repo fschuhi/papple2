@@ -150,7 +150,7 @@
 
 ## Code tidying
 
-- _First in the next session (2026-10-18):_ `make lr-tiles` fails: `scripts/lr_tiles.py` unpacks `emulator, rwts = boot(...)`, but since 2026-10-12 `boot()` returns the ready emulator alone. Fix it, or remove `lr-tiles` with its reports in `docs/reports/lr_tiles/`, if `lr_basic_blocks_analysis` does all it does.
+- ~~`make lr-tiles` fails: `scripts/lr_tiles.py` unpacks `emulator, rwts = boot(...)`, but since 2026-10-12 `boot()` returns the ready emulator alone. Fix it, or remove `lr-tiles` with its reports in `docs/reports/lr_tiles/`, if `lr_basic_blocks_analysis` does all it does.~~ *(Done 2026-10-18: removed `scripts/lr_tiles.py`, the `lr-tiles` target and `docs/reports/lr_tiles/`; `make lr-basic-blocks-analysis` writes the same tiling reports. The frozen `lr-count` stays.)*
 - Assembler: a program whose first instruction has no operand (`INX`, `NOP`, `PHA`, ...) fails with `UnboundLocalError`. In `assemble()`, `operand` is only set on lines that have one, but `find_info(mnemonic, addressmode, operand)` always passes it; later lines reuse the previous line's value by accident. Reset `operand` at the start of each line, and add a test. Found 2026-09-28; hit again 2026-10-04 by a test's stand-in program (`ENDLESS_PROGRAM` in `tests/test_shell.py` works around it).
 - The indexed modes (`abs,X`, `abs,Y`, `(zp),Y`) don't wrap at `$FFFF` as the 6502 does, in the CPU. (The disassembler wraps since 2026-10-09.)
 - `read_word_bug`: the three indirect modes in `core/cpu.py` call `memory.read_pointer_word()` directly; `CPU.read_word_bug()` goes; `Memory.read_word_bug()` has already gone. No change in behaviour: the page wrap lives in `read_pointer_word()`.
