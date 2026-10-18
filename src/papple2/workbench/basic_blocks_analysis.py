@@ -568,6 +568,39 @@ def shared_entries(
     return dict(sorted(entered.items()))
 
 
+def stops_below(tiles: list[SplitTile], entry: int) -> frozenset[int]:
+    """The blocks below entry that a routine starting there does not take
+    in: an edge into one of them jumps back past the entry, into code that
+    belongs to someone else, e.g. the JMPs at the end of
+    TRY_GUARD_MOVE_DOWN into the tail of TRY_GUARD_MOVE_UP.
+
+    The block that ends right at entry is no stop: it is the exit at the
+    door, where a routine's "give up early" branches lead, e.g. the RTS at
+    $71a1 in front of SHOULD_GUARD_MOVE_LEFT."""
+    return frozenset(
+        tile.start for tile in tiles if tile.start < entry and tile.end != entry
+    )
+
+
+def orphans(
+    graphs: Mapping[int, BlockGraph], edges: Mapping[tuple[int, int], int]
+) -> dict[int, int]:
+    """The blocks an edge leads to from a block of some routine, but that
+    no routine's graph holds, each with how often those edges were taken:
+    block -> count, in address order. graphs are the routines' graphs,
+    keyed by entry; edges are all edges of the run, as collect_edges()
+    gives them.
+
+    A jump back past a routine's entry (stops_below()) leaves its target
+    an orphan, unless another routine holds it."""
+    held = {block for graph in graphs.values() for block in graph.blocks}
+    entered: dict[int, int] = defaultdict(int)
+    for (source, target), count in edges.items():
+        if source in held and target not in held:
+            entered[target] += count
+    return dict(sorted(entered.items()))
+
+
 def find_routines(
     tiles: list[SplitTile],
     transitions: list[SplitTransition],
@@ -583,12 +616,15 @@ def find_routines(
     routine ends where another begins: an edge into another routine's
     entry, by JMP, branch or glide, is not followed. With redirected, as
     redirected_returns() gives them, a call that came back further on
-    continues its caller there.
+    continues its caller there. A routine never goes back below its own
+    entry, except to the block that ends right at it (stops_below()).
 
     Code reached from more than one routine becomes a routine of its own,
     starting where the shared part begins (shared_entries()), entered as
-    often as the edges into it from the other routines were taken. This
-    is repeated until no block lies in two routines."""
+    often as the edges into it from the other routines were taken. Code
+    that no routine holds, left behind by a jump back past an entry, does
+    too, starting at its lowest orphan (orphans()). This is repeated until
+    every block lies in exactly one routine."""
     block_starts = {tile.start for tile in tiles}
     extra = {
         entry: count
@@ -598,23 +634,34 @@ def find_routines(
     jsr_targets = {row.target_tile for row in transitions if row.opcode == JSR}
     all_edges = collect_edges(transitions, block_starts, redirected)
 
-    # Each round may make new entries of shared code. Entries are only
-    # added, never removed, so the rounds come to an end.
+    # Each round may make new entries, of shared code or of an orphan.
+    # Entries are only added, never removed, so the rounds come to an end.
     while True:
         entries = [start] + sorted((jsr_targets | set(extra)) - {start})
         all_entries = frozenset(entries)
         graphs = {
             entry: build_graph(
-                tiles, transitions, entry, stop_at=all_entries - {entry},
+                tiles,
+                transitions,
+                entry,
+                stop_at=(all_entries - {entry}) | stops_below(tiles, entry),
                 redirected=redirected,
             )
             for entry in entries
         }
         shared = shared_entries(graphs, all_edges)
-        if not shared:
+        if shared:
+            for entry, count in shared.items():
+                extra[entry] = extra.get(entry, 0) + count
+            continue
+        left_behind = orphans(graphs, all_edges)
+        if not left_behind:
             break
-        for entry, count in shared.items():
-            extra[entry] = extra.get(entry, 0) + count
+        # Only the lowest orphan: the code behind it may reach the others,
+        # e.g. a second door further into the same tail, which then stays
+        # inside it instead of becoming an entry of its own.
+        lowest = min(left_behind)
+        extra[lowest] = extra.get(lowest, 0) + left_behind[lowest]
 
     # How often each routine was entered: the counts of the JSRs into it,
     # plus those of the extra entries.

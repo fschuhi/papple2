@@ -748,6 +748,83 @@ def test_code_only_one_routine_jumps_into_stays_inside_it():
     assert sorted(routines.graphs[0x2000].blocks) == [0x2000, 0x2010]
 
 
+def test_a_jump_back_past_the_entry_leaves_a_routine_of_its_own():
+    # Like TRY_GUARD_MOVE_DOWN, called twice from $1000: it ends by
+    # jumping back into a tail at $2000 that nobody calls, once to the
+    # tail's start, once to a door further in, $2003. The tail lies below
+    # $3000, so $3000 doesn't take it in; $2000, the lowest orphan,
+    # becomes an entry, and $2003 stays inside it, since the JSR at $2000
+    # comes back there.
+    tiles = [
+        tile(0x1000, 0x1003), tile(0x1003, 0x1006), tile(0x1006, 0x1007),
+        tile(0x2000, 0x2003), tile(0x2003, 0x2004, 2),
+        tile(0x3000, 0x3003, 2), tile(0x3003, 0x3006), tile(0x3006, 0x3009),
+        tile(0x5000, 0x5001),
+    ]
+    transitions = [
+        leap(0x1000, 0x1000, JSR, 0x3000),
+        leap(0x3000, 0x3001, BNE, 0x3006, outcome="taken"),
+        leap(0x3006, 0x3006, JMP_absolute, 0x2000),
+        leap(0x2000, 0x2000, JSR, 0x5000),
+        leap(0x5000, 0x5000, RTS, 0x2003),
+        leap(0x2003, 0x2003, RTS, 0x1003),
+        leap(0x1003, 0x1003, JSR, 0x3000),
+        leap(0x3000, 0x3001, BNE, 0x3003, outcome="fall_through"),
+        leap(0x3003, 0x3003, JMP_absolute, 0x2003),
+        leap(0x2003, 0x2003, RTS, 0x1006),
+    ]
+    routines = find_routines(tiles, transitions, start=0x1000)
+
+    assert list(routines.graphs) == [0x1000, 0x2000, 0x3000, 0x5000]
+    assert sorted(routines.graphs[0x3000].blocks) == [0x3000, 0x3003, 0x3006]
+    assert sorted(routines.graphs[0x2000].blocks) == [0x2000, 0x2003]
+    # Entered once, by the JMP to its entry. The JMP to the door at $2003
+    # doesn't count: it doesn't lead to the entry.
+    assert routines.calls_into[0x2000] == 1
+    assert routine_exits(routines, transitions) == {(0x3000, 0x2000, "jmp"): 1}
+
+
+def test_a_branch_back_to_the_exit_at_the_door_stays_in_the_routine():
+    # Like SHOULD_GUARD_MOVE_LEFT: its entry is $2001, and its "give up
+    # early" branch goes back to the RTS right in front of it, at $2000.
+    # That block ends at the entry, so it is no stop.
+    tiles = [
+        tile(0x1000, 0x1003), tile(0x1003, 0x1004),
+        tile(0x2000, 0x2001), tile(0x2001, 0x2003),
+    ]
+    transitions = [
+        leap(0x1000, 0x1000, JSR, 0x2001),
+        leap(0x2001, 0x2001, BNE, 0x2000, outcome="taken"),
+        leap(0x2000, 0x2000, RTS, 0x1003),
+    ]
+    routines = find_routines(tiles, transitions, start=0x1000)
+
+    assert list(routines.graphs) == [0x1000, 0x2001]
+    assert sorted(routines.graphs[0x2001].blocks) == [0x2000, 0x2001]
+
+
+def test_a_tail_call_by_branch_back_past_the_entry_leaves_a_routine():
+    # Like CHECK_FOR_INPUT: $3000 is one block whose branch goes down to
+    # $2000, whose RTS returns to $3000's caller. $2000 becomes a routine,
+    # and the branch an exit into it.
+    tiles = [
+        tile(0x1000, 0x1003), tile(0x1003, 0x1004),
+        tile(0x2000, 0x2001), tile(0x3000, 0x3002),
+    ]
+    transitions = [
+        leap(0x1000, 0x1000, JSR, 0x3000),
+        leap(0x3000, 0x3000, BNE, 0x2000, outcome="taken"),
+        leap(0x2000, 0x2000, RTS, 0x1003),
+    ]
+    routines = find_routines(tiles, transitions, start=0x1000)
+
+    assert list(routines.graphs) == [0x1000, 0x2000, 0x3000]
+    assert sorted(routines.graphs[0x3000].blocks) == [0x3000]
+    assert sorted(routines.graphs[0x2000].blocks) == [0x2000]
+    assert routines.calls_into[0x2000] == 1
+    assert routine_exits(routines, transitions) == {(0x3000, 0x2000, "branch"): 1}
+
+
 # --- Loop reports -------------------------------------------------------------
 
 
