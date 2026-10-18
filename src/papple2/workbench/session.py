@@ -337,6 +337,16 @@ class Session:
             )
         return entry
 
+    def routine_of(self, address: int) -> int | None:
+        """The entry of the current run's routine whose blocks hold address,
+        anywhere in a block, not only at its start; None if no block holds
+        it. Every block lies in exactly one routine, so there is one answer."""
+        for entry, graph in self.current_routines().graphs.items():
+            for block in graph.blocks.values():
+                if block.start <= address < block.end:
+                    return entry
+        return None
+
     def listing_range(
         self, start: int | str, end: int | str | None = None
     ) -> tuple[int, int]:

@@ -204,18 +204,42 @@ def test_esc_leaves_the_comment_box_without_saving() -> None:
 
 
 # Following leaps. MAIN calls SUB, loops with BNE, and jumps into the ROM.
+# Then it jumps into the middle of TAIL, to 8ff1, where no routine starts,
+# and branches to TAIL's entry, which is not in MAIN's listing either.
 # SUB's entry is its second row: the RTS before it is one of its exits.
 MAIN = [
     ListingRow(0x9000, "", "20 10 90", "main", "JSR sub", "", target=0x9010),
     ListingRow(0x9003, "", "d0 fb", "", "BNE main", "", target=0x9000),
     ListingRow(0x9005, "", "4c 00 fc", "", "JMP $fc00", "", target=0xFC00),
+    ListingRow(0x9008, "", "4c f1 8f", "", "JMP $8ff1", "", target=0x8FF1),
+    ListingRow(0x900B, "", "f0 e3", "", "BEQ tail", "", target=0x8FF0),
 ]
 SUB = [
     ListingRow(0x900F, "", "60", "", "RTS", ""),
     ListingRow(0x9010, "", "e8", "sub", "INX", ""),
     ListingRow(0x9011, "", "d0 fc", "", "BNE $900f", "", target=0x900F),
 ]
-ROUTINES = {0x9000: Place(0x9000, lambda: MAIN), 0x9010: Place(0x9010, lambda: SUB)}
+TAIL = [
+    ListingRow(0x8FF0, "", "e8", "tail", "INX", ""),
+    ListingRow(0x8FF1, "", "c8", "", "INY", ""),
+    ListingRow(0x8FF2, "", "60", "", "RTS", ""),
+]
+ROUTINES = {
+    0x8FF0: Place(0x8FF0, lambda: TAIL),
+    0x9000: Place(0x9000, lambda: MAIN),
+    0x9010: Place(0x9010, lambda: SUB),
+}
+
+
+def routine_of(address: int) -> int | None:
+    """The entry of the routine whose rows hold address, as
+    Session.routine_of() gives it for a run."""
+    for entry, place in ROUTINES.items():
+        if any(row.address == address for row in place.load_rows()):
+            return entry
+    return None
+
+
 # SUB's one caller, made up for the tests: a JSR at 9003 in MAIN, not on
 # MAIN's entry, so a test can tell the call site from the entry.
 CALLERS = {0x9010: [PickerItem("9003  JSR     main (2)", 0x9000, 0x9003)]}
@@ -254,6 +278,7 @@ def navigate(
                 remembered=remembered,
                 goto_entries=sorted(ROUTINES),
                 callers_of=lambda entry: CALLERS.get(entry, []),
+                routine_of=routine_of,
             )
     return saved
 
@@ -282,6 +307,22 @@ def test_a_routine_opens_again_as_it_was_left() -> None:
 
 def test_a_jmp_where_no_routine_starts_is_not_followed() -> None:
     assert navigate("\x1b[B\x1b[B\r\t\rq") == [(0x9005, "label", "")]
+
+
+def test_enter_on_a_jmp_into_a_door_opens_the_routine_holding_it() -> None:
+    # The JMP at 9008 leads to 8ff1, inside TAIL: TAIL opens there.
+    assert navigate("\x1b[B\x1b[B\x1b[B\r\t\rq") == [(0x8FF1, "label", "")]
+
+
+def test_enter_on_a_branch_into_another_routine_opens_it() -> None:
+    # The BEQ at 900b leads to TAIL's entry, outside MAIN's listing.
+    assert navigate("\x1b[B\x1b[B\x1b[B\x1b[B\r\t\rq") == [(0x8FF0, "label", "tail")]
+
+
+def test_backspace_comes_back_from_the_routine_a_jmp_opened() -> None:
+    # Into TAIL by the JMP at 9008, down one row there, and back: the bar
+    # is on the JMP again, not one row below it in MAIN.
+    assert navigate("\x1b[B\x1b[B\x1b[B\r\x1b[B\x7f\t\rq") == [(0x9008, "label", "")]
 
 
 def test_the_routines_are_remembered_beyond_the_editor() -> None:

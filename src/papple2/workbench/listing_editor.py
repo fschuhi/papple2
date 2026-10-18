@@ -58,7 +58,9 @@ comment shows as one line, cut if it doesn't fit.
 
 Enter on a JSR opens the routine it calls, and so does Enter on a JMP into
 another routine's entry; Enter on a branch, or on a JMP to a row in the
-listing, moves the bar there. Backspace undoes the last Enter: the same
+listing, moves the bar there. A JMP or a branch to an address outside the
+listing opens the routine whose blocks hold it, with the bar on that
+address. Backspace undoes the last Enter: the same
 routine, window and bar as before. f undoes the last Backspace, as long as
 no new step was taken since: Enter, or going somewhere with the picker,
 forgets where Backspace came from. Each routine remembers its window and
@@ -575,6 +577,7 @@ def edit_rows(
     callers_of: Callable[[int], list[PickerItem]] = lambda entry: [],
     color_of: Callable[[int], str | None] = lambda entry: None,
     target_color_of: Callable[[int], str | None] = lambda address: None,
+    routine_of: Callable[[int], int | None] = lambda address: None,
 ) -> None:
     """Show the rows of place, inline, height lines at a time, and let
     labels and comments be edited, until q, Esc or Ctrl+C. After q, the
@@ -597,7 +600,10 @@ def edit_rows(
     color_of(entry) gives a breadcrumb's assigned color, or None for gray.
     Past and future names have normal weight; the current name is bold.
     target_color_of(address) gives the color of the address an operand
-    names, or None: the operand's name shows in it."""
+    names, or None: the operand's name shows in it.
+    routine_of(address) gives the entry of the routine whose blocks hold
+    address, or None: Enter on a JMP or a branch to an address outside the
+    listing opens that routine, with the bar on the address."""
 
     rows = place.load_rows()
     if not any(row.address is not None for row in rows):
@@ -721,7 +727,9 @@ def edit_rows(
     def follow() -> None:
         """Follow the leap on the bar's row: a JSR, or a JMP into another
         routine's entry, opens that routine; a branch, or a JMP to a row in
-        the listing, moves the bar there. Anything else: a message."""
+        the listing, moves the bar there; a branch or a JMP to an address
+        outside the listing opens the routine whose blocks hold it, with
+        the bar there. Anything else: a message."""
         state.message = ""
         row = state.rows[state.cursor]
         name = mnemonic(row)
@@ -740,6 +748,16 @@ def edit_rows(
                 arrive(routine, None)
                 return
         target_row = row_of(state.rows, row.target) if name != "JSR" else None
+        if target_row is None and name != "JSR":
+            # Into the middle of another routine: a JMP to a door further
+            # into another routine's code, or a branch out of this one.
+            holder = routine_of(row.target)
+            routine = open_routine(holder) if holder is not None else None
+            if routine is not None and routine.entry != state.place.entry:
+                remember()
+                step(here)
+                arrive(routine, None, row.target)
+                return
         if target_row is None:
             state.message = f"no routine at ${row.target:04x}"
             return

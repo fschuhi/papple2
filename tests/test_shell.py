@@ -525,6 +525,19 @@ def test_show_blocks_refuses_an_address_that_is_no_routine(
         show_blocks(0x6002)
 
 
+def test_routine_of_names_the_routine_whose_block_holds_the_address(
+    nested_loops_run, no_run: None
+) -> None:
+    # Anywhere in a block, not only at its start: 6011 lies in sub's one
+    # block, 6010-6013, and 6005 in 6004-6007 of the routine from 6000.
+    # No block of the run holds 7000.
+    make_nested_loops_current(nested_loops_run)
+
+    assert shell.session.routine_of(0x6011) == 0x6010
+    assert shell.session.routine_of(0x6005) == 0x6000
+    assert shell.session.routine_of(0x7000) is None
+
+
 def test_show_callers_lists_the_call_sites_with_the_routines_holding_them(
     nested_loops_run, tmp_path: Path, no_run: None, no_dossier: None
 ) -> None:

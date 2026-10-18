@@ -740,8 +740,9 @@ def edit(start: int | str, end: int | str | None = None, height: int = 25) -> No
     end as for Session.current_listing_rows(). Every label and comment changed there
     is saved to the current dossier at once, through save_edit(). The
     operand field labels the address an operand names, wherever the line
-    is. Enter on a JSR opens the routine it calls; each routine opens as it
-    was last left, while the run lasts. g opens a list of the run's
+    is. Enter on a JSR opens the routine it calls, and Enter on a JMP or a
+    branch into another routine opens that one, with the bar on the
+    target; each routine opens as it was last left, while the run lasts. g opens a list of the run's
     routines, to go to one of them; u a list of the callers of the routine
     shown, to go to one of their call sites. height is the number of lines the
     editor shows at a time. The name in an operand has the color of the
@@ -792,6 +793,7 @@ def edit(start: int | str, end: int | str | None = None, height: int = 25) -> No
         callers_of=caller_items,
         color_of=color_of,
         target_color_of=target_color_of,
+        routine_of=session.routine_of,
     )
 
 
