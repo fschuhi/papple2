@@ -161,6 +161,7 @@ make boot-bandits               # boot Bandits from Total Replay's ProDOS files
 make lr-count        # Early experiment (frozen): map which addresses Lode Runner's attract play runs (PNG and HTML)
 make lr-basic-blocks-analysis  # Every routine of the run; tiling, returns and loop reports (start 0800) in docs/reports/lr_basic_blocks_analysis/
 make lr-current      # IPython with the run from the committed reports; overview, routines and listing into docs/reports/lr_current/
+make lr-grade        # Grade the routines of the committed reports against Xekri's subroutines, docs/lr_answer_key.csv
 make walkthrough     # nested_loops through tiling and the basic blocks analysis, reports in tmp/walkthrough/nested_loops/
 make walkthrough-md  # The walkthrough's chapters as a document, tmp/walkthrough/walkthrough.md
 make ipython         # IPython in the venv; then e.g. %run scripts/lr_basic_blocks_analysis.py

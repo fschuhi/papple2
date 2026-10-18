@@ -8,12 +8,12 @@
 
 ## 📍 Current Session Pointer
 
-**Where we are:** `papple2` is a workbench for reverse engineering Apple II games by running them, with Lode Runner as the worked example: the run finds the structure, and Xekri's listing only grades it (`docs/lr_answer_key.csv`). At the prompt and in the listing editor: routines, blocks, loops, callers, the routine graph, the cross reference, the hexdump and the memory map, all with the dossier's labels, comments, hidden ranges and colors. Every block of the run lies in exactly one routine. `make lr-current` opens the committed run; the walkthrough explains the pipeline chapter by chapter, and `docs/lr_case_studies.md` reads real code with it.
+**Where we are:** `papple2` is a workbench for reverse engineering Apple II games by running them, with Lode Runner as the worked example: the run finds the structure, and Xekri's listing only grades it (`docs/lr_answer_key.csv`). At the prompt and in the listing editor: routines, blocks, loops, callers, the routine graph, the cross reference, the hexdump and the memory map, all with the dossier's labels, comments, hidden ranges and colors. Every block of the run lies in exactly one routine, and each routine's listing starts at its entry: a jump back past an entry leaves a routine of its own, and Enter in `edit()` follows a `JMP` or a branch into another routine. `make lr-grade` grades the routines against the key: 66 of Xekri's 79 subroutines have a routine with exactly their blocks. `make lr-current` opens the committed run; the walkthrough explains the pipeline chapter by chapter, and `docs/lr_case_studies.md` reads real code with it.
 
 **What's next:**
 
-1. Grade the routines against `docs/lr_answer_key.csv`: how many of Xekri's subroutines have a routine with exactly their blocks (`TODO.md`, "Routine structure"). No more reading of Xekri's source for it.
-2. Before the break next week: documentation, with HTML reading versions and a style guide (`TODO.md`, "Documentation"); pruning, and the project tree reorganized (the many markdown files in the root); a review of `TODO.md`: quick wins, and out with what has not moved.
+1. The rest of the grade, group by group (`TODO.md`, "Routine structure"): first the decision on group D, one rule for two ways into one body, whatever the direction of the jump; then groups C and B. `make lr-grade` after each. No more reading of Xekri's source for it.
+2. Before the break next week, documentation, the bulk of it: the HTML page "Routine" first, together with the style guide; then the other HTML reading versions, and `docs/lr_structures.md` brought up to date (`TODO.md`, "Documentation"); pruning, and the project tree reorganized (the many markdown files in the root); a review of `TODO.md`: quick wins, and out with what has not moved.
 3. After the break: the snapshot after relocation and the xrefs digest, then the cross reference, step 3, and xrefs while in `edit()` (`TODO.md`, "Cross reference").
 
 **Still to prune:** the Vision in `README.md`, a draft of 2026-10-12, for me to edit (`TODO.md`, "Explaining `papple2`").
