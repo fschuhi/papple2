@@ -144,6 +144,46 @@ def test_a_return_address_thrown_away_abandons_its_frame(make_emulator) -> None:
     assert tracking.frames == {}
 
 
+# PUTS takes its return address off the stack into zero page, as
+# PUT_STRING does, and moves it past the byte behind the JSR, TEXT. While
+# the address is off the stack, it calls CHAR, whose JSR pushes into the
+# same two bytes of page 1. Then PUTS pushes the moved address back, and
+# its RTS goes to 6004, behind TEXT, instead of 6003.
+PAYLOAD = """
+        *=$6000
+        JSR PUTS
+TEXT    .BYTE $00
+        JMP DONE
+PUTS    PLA
+        STA $10
+        PLA
+        STA $11
+        INC $10
+        JSR CHAR
+        LDA $11
+        PHA
+        LDA $10
+        PHA
+        RTS
+CHAR    RTS
+DONE    NOP
+"""
+
+
+def test_a_call_made_while_the_return_address_is_off_the_stack_keeps_the_frame(
+    make_emulator,
+) -> None:
+    # CHAR's frame lies on top of PUTS's frame, at the same SP. CHAR's
+    # RTS closes its own frame; PUTS's RTS then finds PUTS's frame, and
+    # lands behind the payload: redirected, not unmatched.
+    tracking = track(make_emulator, PAYLOAD, end=0x601A)
+
+    assert dict(tracking.returns) == {
+        Return(0x600F, 0x6019, 0x6019, 0x6012, MATCHED): 1,
+        Return(0x6000, 0x6007, 0x6018, 0x6004, REDIRECTED): 1,
+    }
+    assert tracking.frames == {}
+
 
 def report_lines(folder: Path) -> list[str]:
     return (folder / RETURNS_FILE).read_text(encoding="utf-8").splitlines()

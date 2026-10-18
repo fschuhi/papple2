@@ -22,8 +22,12 @@ looks for the frame at the SP the CPU is back at:
     frames still open when the run stops    -> open (in the report only)
 
 Looking frames up by SP, instead of popping the top one, lets the shadow
-stack fall back into step with the real one after a trick. A JSR that
-opens a frame at or above an old one's place abandons the old one too.
+stack fall back into step with the real one after a trick. A JSR
+abandons the frames deeper than its own place. A frame at the same place
+stays, under the new one: its routine may have taken its return address
+off the stack and keep it elsewhere, as PUT_STRING keeps it in zero page
+while it calls PUT_CHAR. So each place holds a pile of frames, and an RTS
+closes the one on top.
 
 A tail call (a routine ending in JMP to another one) is matched, not a
 mismatch: the second routine's RTS returns where the first one's caller
@@ -39,6 +43,10 @@ Known limits:
 - A trap that returns for the routine it stands in for (the RWTS
   stand-in's fake RTS) runs no instruction, so its frame ends up
   abandoned.
+- A routine that throws its return address away and then calls
+  something, without ever returning, leaves its frame under the new one.
+  A later RTS at that place finds it, and counts as redirected instead
+  of unmatched.
 
 The report, lr_returns.csv, has one row per frame or RTS with the same
 call site, entry, return site, return target and outcome, and how often
@@ -107,8 +115,9 @@ class StackTracking:
 
     def __init__(self, cpu: CPU) -> None:
         self.cpu = cpu
-        # The open frames, keyed by SP before the call.
-        self.frames: dict[int, Frame] = {}
+        # The open frames, keyed by SP before the call: a pile per place,
+        # the newest last. A place with no frames has no key.
+        self.frames: dict[int, list[Frame]] = {}
         self.returns: Counter[Return] = Counter()
 
     def after_instruction(self) -> None:
@@ -124,12 +133,15 @@ class StackTracking:
         cpu = self.cpu
         # JSR has pushed two bytes, so SP before the call was two higher.
         key = (cpu.SP + 2) & 0xFF
-        # Anything at this place or deeper has been overwritten by the push.
-        self._abandon(lambda other: other <= key)
-        self.frames[key] = Frame(
-            call_site=cpu.last_PC,
-            entry=cpu.PC,
-            expected_return=(cpu.last_PC + 3) & 0xFFFF,
+        # Anything deeper has been overwritten by the push. A frame at this
+        # very place stays, under the new one: see the module docstring.
+        self._abandon(lambda other: other < key)
+        self.frames.setdefault(key, []).append(
+            Frame(
+                call_site=cpu.last_PC,
+                entry=cpu.PC,
+                expected_return=(cpu.last_PC + 3) & 0xFFFF,
+            )
         )
 
     def _return(self) -> None:
@@ -137,10 +149,13 @@ class StackTracking:
         key = cpu.SP
         # Frames deeper than where the CPU is back at can never return.
         self._abandon(lambda other: other < key)
-        frame = self.frames.pop(key, None)
-        if frame is None:
+        pile = self.frames.get(key)
+        if not pile:
             self.returns[Return(None, None, cpu.last_PC, cpu.PC, UNMATCHED)] += 1
             return
+        frame = pile.pop()
+        if not pile:
+            del self.frames[key]
         outcome = MATCHED if cpu.PC == frame.expected_return else REDIRECTED
         self.returns[
             Return(frame.call_site, frame.entry, cpu.last_PC, cpu.PC, outcome)
@@ -150,8 +165,9 @@ class StackTracking:
         """Every row of the report with its count, in the report's order:
         the counted returns, plus one row per frame still open."""
         counted = Counter(self.returns)
-        for frame in self.frames.values():
-            counted[Return(frame.call_site, frame.entry, None, None, OPEN)] += 1
+        for pile in self.frames.values():
+            for frame in pile:
+                counted[Return(frame.call_site, frame.entry, None, None, OPEN)] += 1
 
         def order(row: Return) -> tuple:
             # Missing addresses (None) sort before every address.
@@ -187,7 +203,7 @@ class StackTracking:
         """Count and drop every open frame whose key is_gone() says is
         gone."""
         for key in [key for key in self.frames if is_gone(key)]:
-            frame = self.frames.pop(key)
-            self.returns[
-                Return(frame.call_site, frame.entry, None, None, ABANDONED)
-            ] += 1
+            for frame in self.frames.pop(key):
+                self.returns[
+                    Return(frame.call_site, frame.entry, None, None, ABANDONED)
+                ] += 1
