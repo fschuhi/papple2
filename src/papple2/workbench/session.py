@@ -30,6 +30,7 @@ from papple2.workbench.basic_blocks_analysis import (
     read_returns,
     read_split_tiles,
     read_split_transitions,
+    redirected_returns,
     stack_jumps,
 )
 from papple2.workbench.colors import Colors
@@ -285,15 +286,19 @@ class Session:
         xrefs stay as they are, since tiling_reports() calls this too."""
         tiles = read_split_tiles(split_tiles)
         transitions = read_split_transitions(split_transitions)
+        return_rows = read_returns(returns) if returns else None
         self.run_stack_jumps = (
-            stack_jumps(read_returns(returns), transitions) if returns else None
+            stack_jumps(return_rows, transitions) if return_rows is not None else None
         )
         # How often each target was entered by a stack jump.
         entered: dict[int, int] = {}
         for (_, target), count in (self.run_stack_jumps or {}).items():
             entered[target] = entered.get(target, 0) + count
         self.run_emulator = emulator
-        self.routines = find_routines(tiles, transitions, start, entered)
+        # The redirected returns go into the routines' graphs only, not into
+        # the run graph: a listing draws no arrow for a call.
+        redirected = redirected_returns(return_rows) if return_rows is not None else None
+        self.routines = find_routines(tiles, transitions, start, entered, redirected)
         self.editor_views.clear()
         self.run_graph = build_run_graph(tiles, transitions, start)
         self.run_transitions = transitions

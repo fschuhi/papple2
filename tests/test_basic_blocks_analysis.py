@@ -26,6 +26,7 @@ from papple2.workbench.basic_blocks_analysis import (
     read_split_reports,
     read_split_tiles,
     read_split_transitions,
+    redirected_returns,
     reverse_postorder,
     routine_calls,
     routine_exits,
@@ -540,7 +541,8 @@ def test_read_returns(tmp_path: Path):
 
 def test_stack_jumps_need_the_shadow_stack_and_no_jsr_in_front():
     # The JSR at $88cb makes $88ce an ordinary return point, whatever the
-    # shadow stack says. Matched and abandoned rows are no jumps.
+    # shadow stack says. Matched, redirected and abandoned rows are no
+    # jumps: a redirected return closed a JSR's frame.
     transitions = [leap(0x88CB, 0x88CB, JSR, 0x88D7)]
     returns = [
         ReturnRow(None, None, 0x7B23, 0x6F33, "unmatched", 2),
@@ -551,9 +553,50 @@ def test_stack_jumps_need_the_shadow_stack_and_no_jsr_in_front():
         ReturnRow(0x88CB, 0x88D7, None, None, "abandoned", 169),
     ]
     assert stack_jumps(returns, transitions) == {
-        (0x7B23, 0x6F33): 5,
+        (0x7B23, 0x6F33): 2,
         (0x7B23, 0x6F39): 1,
     }
+
+
+def test_redirected_returns_keep_only_the_redirected_rows():
+    # Keyed by the JSR whose frame the return closed, and where it landed.
+    returns = [
+        ReturnRow(0x6BE3, 0x87E1, 0x8810, 0x6BF3, "redirected", 1),
+        ReturnRow(0x7A05, 0x86E0, 0x86FF, 0x7A25, "redirected", 2),
+        ReturnRow(0x7A05, 0x86E0, 0x86FF, 0x7A25, "redirected", 1),
+        ReturnRow(None, None, 0x7B23, 0x6F33, "unmatched", 2),
+        ReturnRow(0x1000, 0x2000, 0x2003, 0x1003, "matched", 4),
+        ReturnRow(0x88CB, 0x88D7, None, None, "abandoned", 169),
+    ]
+    assert redirected_returns(returns) == {
+        (0x6BE3, 0x6BF3): 1,
+        (0x7A05, 0x7A25): 3,
+    }
+
+
+def test_a_redirected_return_gives_an_edge_from_the_jsr_and_no_routine():
+    # Like PUT_STRING: the JSR at $1000 has one byte of payload behind it,
+    # $1003, which never runs. The callee's RTS at $2003 lands at $1004.
+    # No block starts at $1003, so there is no call fall-through edge.
+    tiles = [tile(0x1000, 0x1003), tile(0x1004, 0x1005), tile(0x2000, 0x2004)]
+    transitions = [
+        leap(0x1000, 0x1000, JSR, 0x2000),
+        leap(0x2000, 0x2003, RTS, 0x1004),
+    ]
+    without = find_routines(tiles, transitions, start=0x1000)
+    routines = find_routines(
+        tiles, transitions, start=0x1000, redirected={(0x1000, 0x1004): 1}
+    )
+
+    # Without it, $1004 lies in no routine.
+    assert sorted(without.graphs[0x1000].blocks) == [0x1000]
+    # With it, the same kind of edge as a call fall-through, from the
+    # block holding the JSR to where the return landed. $1004 is no entry.
+    assert list(routines.graphs) == [0x1000, 0x2000]
+    assert sorted(routines.graphs[0x1000].blocks) == [0x1000, 0x1004]
+    assert routines.graphs[0x1000].edges == {(0x1000, 0x1004): 1}
+    # The run graph doesn't get the edge: a listing draws no arrow for it.
+    assert build_run_graph(tiles, transitions, start=0x1000).edges == {}
 
 
 def test_a_stack_jump_target_is_a_routine():

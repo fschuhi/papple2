@@ -233,14 +233,14 @@ def stack_jumps(
     (address of the RTS, target) -> how often, in address order.
 
     Two pieces of evidence are needed. The shadow stack found no frame
-    there, or one that expected another return (unmatched, redirected);
-    and the target does not lie right behind a JSR the run made. The
-    second test keeps out ordinary returns whose frame the shadow stack
-    dropped too early."""
+    there (unmatched); and the target does not lie right behind a JSR the
+    run made. The second test keeps out ordinary returns whose frame the
+    shadow stack dropped too early. A redirected return closed a JSR's
+    frame, so it is a return, not a jump: see redirected_returns()."""
     jsr_sites = {row.leap_from_pc for row in transitions if row.opcode == JSR}
     jumps: dict[tuple[int, int], int] = defaultdict(int)
     for row in returns:
-        if row.outcome not in (UNMATCHED, REDIRECTED):
+        if row.outcome != UNMATCHED:
             continue
         if (row.return_target - 3) & 0xFFFF in jsr_sites:
             continue
@@ -248,10 +248,31 @@ def stack_jumps(
     return dict(sorted(jumps.items()))
 
 
+def redirected_returns(returns: list[ReturnRow]) -> dict[tuple[int, int], int]:
+    """The returns that closed a JSR's frame, but landed somewhere other
+    than right behind the JSR: (address of the JSR, target) -> how often,
+    in address order.
+
+    Mostly a routine that reads the bytes behind its JSR and returns
+    behind them, as PUT_STRING does. The run can't tell that from a
+    return address rewritten in page 1. Seen from the caller, both are a
+    call that comes back further on."""
+    redirected: dict[tuple[int, int], int] = defaultdict(int)
+    for row in returns:
+        if row.outcome == REDIRECTED:
+            redirected[(row.call_site, row.return_target)] += row.count
+    return dict(sorted(redirected.items()))
+
+
 def collect_edges(
-        transitions: list[SplitTransition], block_starts: set[int]
+        transitions: list[SplitTransition],
+        block_starts: set[int],
+        redirected: Mapping[tuple[int, int], int] | None = None,
 ) -> dict[tuple[int, int], int]:
-    """Turn transition rows into edges, following briefing.md, section 3.B."""
+    """Turn transition rows into edges, following briefing.md, section 3.B.
+    With redirected, as redirected_returns() gives them, each one is a call
+    fall-through edge too: from the block holding the JSR to where the
+    return landed."""
     edges: dict[tuple[int, int], int] = defaultdict(int)
     for row in transitions:
         if row.outcome == GLIDE:
@@ -267,6 +288,14 @@ def collect_edges(
                 edges[(row.source_tile, return_point)] += row.count
         elif row.opcode not in NO_EDGE_OPCODES:
             edges[(row.source_tile, row.target_tile)] += row.count
+
+    # A call that came back further on, e.g. behind bytes the callee read.
+    # No block starts right behind such a JSR, so the loop above made no
+    # edge for it.
+    jsr_blocks = {row.leap_from_pc: row.source_tile for row in transitions if row.opcode == JSR}
+    for (call_site, target), count in (redirected or {}).items():
+        if call_site in jsr_blocks and target in block_starts:
+            edges[(jsr_blocks[call_site], target)] += count
 
     # The tiling's consistency checks guarantee that every transition starts
     # and ends at a split tile, so a stray edge means the reports don't
@@ -305,10 +334,12 @@ def build_graph(
         transitions: list[SplitTransition],
         entry: int,
         stop_at: frozenset[int] = frozenset(),
+        redirected: Mapping[tuple[int, int], int] | None = None,
 ) -> BlockGraph:
     """Build the graph of the basic blocks reachable from entry. An edge
     into a block in stop_at is not followed, and is left out of the graph;
-    entry itself is never a stop, so a jump back to it stays a loop."""
+    entry itself is never a stop, so a jump back to it stays a loop.
+    redirected as for collect_edges()."""
     all_blocks = {
         tile.start: BasicBlock(tile.start, tile.end, tile.executions)
         for tile in tiles
@@ -316,7 +347,7 @@ def build_graph(
     if entry not in all_blocks:
         raise ValueError(f"entry {entry:04x} is not the start of a basic block")
 
-    all_edges = collect_edges(transitions, set(all_blocks))
+    all_edges = collect_edges(transitions, set(all_blocks), redirected)
     reached = reachable_from(entry, all_edges, stop_at - {entry})
     return _graph(entry, all_blocks, all_edges, reached)
 
@@ -518,6 +549,7 @@ def find_routines(
     transitions: list[SplitTransition],
     start: int,
     extra_entries: Mapping[int, int] | None = None,
+    redirected: Mapping[tuple[int, int], int] | None = None,
 ) -> Routines:
     """Find every routine of the run: the code reachable from an entry
     without following calls. The entries are the run's start, every JSR
@@ -525,7 +557,9 @@ def find_routines(
     jumps, each with how often it was entered that way. An extra entry
     that starts no basic block is left out: no code ran from there. A
     routine ends where another begins: an edge into another routine's
-    entry, by JMP, branch or glide, is not followed."""
+    entry, by JMP, branch or glide, is not followed. With redirected, as
+    redirected_returns() gives them, a call that came back further on
+    continues its caller there."""
     block_starts = {tile.start for tile in tiles}
     extra = {
         entry: count
@@ -550,7 +584,8 @@ def find_routines(
     all_entries = frozenset(entries)
     for entry in entries:
         graphs[entry] = build_graph(
-            tiles, transitions, entry, stop_at=all_entries - {entry}
+            tiles, transitions, entry, stop_at=all_entries - {entry},
+            redirected=redirected,
         )
         loops_of[entry] = natural_loops(
             graphs[entry], immediate_dominators(graphs[entry])
