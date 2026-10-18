@@ -14,9 +14,9 @@ manifest.lst
 tmp/project_tree.txt
 
 # standard project documentation -- work in progress
-#README.md
+README.md
 GOALS.md
-#TODO.md
+TODO.md
 #HISTORY.md
 
 ### --- docs ---
@@ -114,12 +114,6 @@ docs/reports/lr_current/lr_overview.txt
 #docs/reports/load_level/lr_loop_members.csv
 #docs/reports/load_level/lr_loops.csv
 
-#docs/reports/lr_tiles/lr_measurements.txt
-#docs/reports/lr_tiles/lr_split_transitions.csv
-#docs/reports/lr_tiles/lr_split_tiles.csv
-#docs/reports/lr_tiles/lr_unbroken_tiles.csv
-#docs/reports/lr_tiles/lr_unbroken_transitions.csv
-
 # output from `show_routines()``
 #docs/diagrams/routine_graph.svg
 
@@ -151,7 +145,6 @@ scripts/lr_basic_blocks_analysis.py
 #scripts/boot_robotron.py
 #scripts/lr_count.py
 #scripts/lr_cross_reference.py
-scripts/lr_tiles.py
 #scripts/speed_test.py
 #scripts/walkthrough.py
 

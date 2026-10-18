@@ -159,7 +159,6 @@ make boot-lode-runner-headless  # run Lode Runner headless; save both hi-res pag
 make boot-lode-runner-break     # the same with the window, stopped after 4,000,000 instructions, where the experiments end; Ctrl-X continues
 make boot-bandits               # boot Bandits from Total Replay's ProDOS files
 make lr-count        # Early experiment (frozen): map which addresses Lode Runner's attract play runs (PNG and HTML)
-make lr-tiles        # Early experiment (frozen): tiling reports into tmp/lr_tiles/ (CSV and text)
 make lr-basic-blocks-analysis  # Every routine of the run; tiling, returns and loop reports (start 0800) in docs/reports/lr_basic_blocks_analysis/
 make lr-current      # IPython with the run from the committed reports; overview, routines and listing into docs/reports/lr_current/
 make walkthrough     # nested_loops through tiling and the basic blocks analysis, reports in tmp/walkthrough/nested_loops/
