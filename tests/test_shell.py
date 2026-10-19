@@ -917,10 +917,10 @@ def test_the_listing_of_a_routine_that_runs_on_says_where(
 
 
 # Like the JMP at the end of TRY_GUARD_MOVE_DOWN into the tail of
-# TRY_GUARD_MOVE_UP: DOWN jumps back to DOOR, which lies inside UP, where
+# TRY_GUARD_MOVE_UP: DOWN jumps backward to DOOR, which lies inside UP, where
 # the call to SUB returns. DOOR is no routine of its own, but a door into UP.
-# SUB lies between DOOR and DOWN: were DOWN right behind DOOR, DOOR's block
-# would be the exit at DOWN's door (stops_below()), and a routine of its own.
+# SUB lies between DOOR and DOWN: were DOWN directly after DOOR, DOOR's block
+# would be the exit at DOWN's door (stops_before()), and a routine of its own.
 #   6000 JSR UP      6003 JSR DOWN    6006 JMP DONE
 #   6009 JSR SUB     600c INC $10     600e RTS
 #   600f INC $11     6011 RTS

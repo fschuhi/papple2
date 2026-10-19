@@ -575,7 +575,7 @@ def test_redirected_returns_keep_only_the_redirected_rows():
 
 
 def test_a_redirected_return_gives_an_edge_from_the_jsr_and_no_routine():
-    # Like PUT_STRING: the JSR at $1000 has one byte of payload behind it,
+    # Like PUT_STRING: the JSR at $1000 has one byte of payload after it,
     # $1003, which never runs. The callee's RTS at $2003 lands at $1004.
     # No block starts at $1003, so there is no call fall-through edge.
     tiles = [tile(0x1000, 0x1003), tile(0x1004, 0x1005), tile(0x2000, 0x2004)]
@@ -601,7 +601,7 @@ def test_a_redirected_return_gives_an_edge_from_the_jsr_and_no_routine():
 
 def test_a_stack_jump_target_is_a_routine():
     # $2000 pushes $2fff (PHA, PHA) and "returns" to $3000 with its RTS at
-    # $2003; $3000's own RTS then goes back to $1003, behind the JSR.
+    # $2003; $3000's own RTS then returns to $1003, directly after the JSR.
     tiles = [
         tile(0x1000, 0x1003), tile(0x1003, 0x1004),
         tile(0x2000, 0x2004), tile(0x3000, 0x3001),
@@ -635,7 +635,7 @@ def test_an_extra_entry_that_starts_no_block_is_left_out():
 
 def test_a_jmp_into_a_routine_gives_no_call():
     # A tail call: $3000 ends in JMP $2000, so $2000's RTS returns to
-    # $1006, behind the JSR into $3000. Only the two JSRs give calls.
+    # $1006, directly after the JSR into $3000. Only the two JSRs give calls.
     tiles = [
         tile(0x1000, 0x1003), tile(0x1003, 0x1006), tile(0x1006, 0x1007),
         tile(0x2000, 0x2001, 2), tile(0x3000, 0x3003),
@@ -698,7 +698,7 @@ def test_a_shared_loop_entered_by_branch_and_glide_becomes_a_routine():
     # Like CLEAR_PAGE: $2000 branches into $3000, $2ffe glides into it.
     # $3000 is a loop of its own, so one of its predecessors is $3000
     # itself, in both routines; the other two lie in one routine each,
-    # which is enough. $3002 behind the loop stays with $3000.
+    # which is enough. $3002 after the loop stays with $3000.
     tiles = [
         tile(0x1000, 0x1003), tile(0x1003, 0x1006), tile(0x1006, 0x1007),
         tile(0x2000, 0x2002), tile(0x2FFE, 0x3000),
@@ -730,9 +730,9 @@ def test_a_shared_loop_entered_by_branch_and_glide_becomes_a_routine():
     }
 
 
-def test_a_branch_back_into_code_another_routine_glides_into_makes_a_routine():
+def test_a_branch_backward_into_code_another_routine_glides_into_makes_a_routine():
     # Like PUT_STATUS_BYTE: $2000 glides into $2004, and $2010 branches
-    # back into it. The branch goes back past $2010's own entry, so it is
+    # backward into it. The branch goes backward past $2010's own entry, so it is
     # not followed; $2004 becomes a routine all the same, as it does when
     # the branch goes forward (the test above, like CLEAR_PAGE).
     tiles = [
@@ -779,13 +779,13 @@ def test_code_only_one_routine_jumps_into_stays_inside_it():
     assert sorted(routines.graphs[0x2000].blocks) == [0x2000, 0x2010]
 
 
-def test_a_jump_back_past_the_entry_leaves_a_routine_of_its_own():
+def test_a_jump_backward_past_the_entry_leaves_a_routine_of_its_own():
     # Like TRY_GUARD_MOVE_DOWN, called twice from $1000: it ends by
-    # jumping back into a tail at $2000 that nobody calls, once to the
-    # tail's start, once to a door further in, $2003. The tail lies below
-    # $3000, so $3000 doesn't take it in; $2000, the lowest orphan,
-    # becomes an entry, and $2003 stays inside it, since the JSR at $2000
-    # comes back there.
+    # jumping backward into a tail at $2000 that nobody calls, once to the
+    # tail's start, once to a door after it, $2003. The tail lies before
+    # $3000, so $3000 doesn't take it in; $2000, the orphan with the lowest
+    # address, becomes an entry, and $2003 stays inside it, since the JSR
+    # at $2000 returns there.
     tiles = [
         tile(0x1000, 0x1003), tile(0x1003, 0x1006), tile(0x1006, 0x1007),
         tile(0x2000, 0x2003), tile(0x2003, 0x2004, 2),
@@ -815,9 +815,9 @@ def test_a_jump_back_past_the_entry_leaves_a_routine_of_its_own():
     assert routine_exits(routines, transitions) == {(0x3000, 0x2000, "jmp"): 1}
 
 
-def test_a_branch_back_to_the_exit_at_the_door_stays_in_the_routine():
+def test_a_branch_backward_to_the_exit_at_the_door_stays_in_the_routine():
     # Like SHOULD_GUARD_MOVE_LEFT: its entry is $2001, and its "give up
-    # early" branch goes back to the RTS right in front of it, at $2000.
+    # early" branch goes backward to the RTS directly before it, at $2000.
     # That block ends at the entry, so it is no stop.
     tiles = [
         tile(0x1000, 0x1003), tile(0x1003, 0x1004),
@@ -834,8 +834,8 @@ def test_a_branch_back_to_the_exit_at_the_door_stays_in_the_routine():
     assert sorted(routines.graphs[0x2001].blocks) == [0x2000, 0x2001]
 
 
-def test_a_tail_call_by_branch_back_past_the_entry_leaves_a_routine():
-    # Like CHECK_FOR_INPUT: $3000 is one block whose branch goes down to
+def test_a_tail_call_by_branch_backward_past_the_entry_leaves_a_routine():
+    # Like CHECK_FOR_INPUT: $3000 is one block whose branch goes backward to
     # $2000, whose RTS returns to $3000's caller. $2000 becomes a routine,
     # and the branch an exit into it.
     tiles = [

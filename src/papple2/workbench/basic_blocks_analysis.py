@@ -233,8 +233,8 @@ def stack_jumps(
     (address of the RTS, target) -> how often, in address order.
 
     Two pieces of evidence are needed. The shadow stack found no frame
-    there (unmatched); and the target does not lie right behind a JSR the
-    run made. The second test keeps out ordinary returns whose frame the
+    there (unmatched); and the target does not lie directly after a JSR
+    the run made. The second test keeps out ordinary returns whose frame the
     shadow stack dropped too early. A redirected return closed a JSR's
     frame, so it is a return, not a jump: see redirected_returns()."""
     jsr_sites = {row.leap_from_pc for row in transitions if row.opcode == JSR}
@@ -250,13 +250,13 @@ def stack_jumps(
 
 def redirected_returns(returns: list[ReturnRow]) -> dict[tuple[int, int], int]:
     """The returns that closed a JSR's frame, but landed somewhere other
-    than right behind the JSR: (address of the JSR, target) -> how often,
-    in address order.
+    than directly after the JSR: (address of the JSR, target) -> how
+    often, in address order.
 
-    Mostly a routine that reads the bytes behind its JSR and returns
-    behind them, as PUT_STRING does. The run can't tell that from a
+    Mostly a routine that reads the bytes after its JSR and returns
+    after them, as PUT_STRING does. The run can't tell that from a
     return address rewritten in page 1. Seen from the caller, both are a
-    call that comes back further on."""
+    call that comes back past the instruction directly after its JSR."""
     redirected: dict[tuple[int, int], int] = defaultdict(int)
     for row in returns:
         if row.outcome == REDIRECTED:
@@ -279,7 +279,7 @@ def collect_edges(
             edges[(row.source_tile, row.target_tile)] += row.count
         elif row.opcode == JSR:
             # The call fall-through edge: from the block holding the JSR to
-            # the block right behind it. The run never observes this edge,
+            # the block directly after it. The run never observes this edge,
             # so it carries the JSR's count: how often the call was made,
             # an upper bound for how often it returned. If no block starts
             # there, the JSR never returned during the run: no edge.
@@ -289,9 +289,9 @@ def collect_edges(
         elif row.opcode not in NO_EDGE_OPCODES:
             edges[(row.source_tile, row.target_tile)] += row.count
 
-    # A call that came back further on, e.g. behind bytes the callee read.
-    # No block starts right behind such a JSR, so the loop above made no
-    # edge for it.
+    # A call that came back past the instruction directly after its JSR,
+    # e.g. after bytes the callee read. No block starts directly after
+    # such a JSR, so the loop above made no edge for it.
     jsr_blocks = {row.leap_from_pc: row.source_tile for row in transitions if row.opcode == JSR}
     for (call_site, target), count in (redirected or {}).items():
         if call_site in jsr_blocks and target in block_starts:
@@ -568,15 +568,15 @@ def shared_entries(
     return dict(sorted(entered.items()))
 
 
-def stops_below(tiles: list[SplitTile], entry: int) -> frozenset[int]:
-    """The blocks below entry that a routine starting there does not take
-    in: an edge into one of them jumps back past the entry, into code that
+def stops_before(tiles: list[SplitTile], entry: int) -> frozenset[int]:
+    """The blocks before entry that a routine starting there does not take
+    in: an edge into one of them jumps backward past the entry, into code that
     belongs to someone else, e.g. the JMPs at the end of
     TRY_GUARD_MOVE_DOWN into the tail of TRY_GUARD_MOVE_UP.
 
     The block that ends right at entry is no stop: it is the exit at the
     door, where a routine's "give up early" branches lead, e.g. the RTS at
-    $71a1 in front of SHOULD_GUARD_MOVE_LEFT."""
+    $71a1 directly before SHOULD_GUARD_MOVE_LEFT."""
     return frozenset(
         tile.start for tile in tiles if tile.start < entry and tile.end != entry
     )
@@ -588,21 +588,22 @@ def shared_by_jump_back(
     glides: set[tuple[int, int]],
 ) -> dict[int, int]:
     """The blocks that one routine glides into and another routine jumps
-    back into, past its own entry, each with how often it was entered from
+    backward into, past its own entry, each with how often it was entered from
     outside, by the glide and by the jumps: block -> count, in address
     order. graphs are the routines' graphs, keyed by entry; edges are all
     edges of the run, as collect_edges() gives them; glides are the
     (source, target) pairs of the glide rows.
 
-    A jump back past an entry is not followed (stops_below()), so only the
+    A jump backward past an entry is not followed (stops_before()), so only the
     routine that glides in holds the block, and shared_entries() doesn't
     see the second way in. A jump forward into the same shape is followed,
     and shared_entries() finds it, e.g. CLEAR_PAGE, which CLEAR_HGR2
     glides into and CLEAR_HGR1 branches into. With both, the direction of
     the jump makes no difference: PUT_STATUS_BYTE, which PUT_STATUS_LIVES
-    glides into and PUT_STATUS_LEVEL branches back into, is a routine too.
+    glides into and PUT_STATUS_LEVEL branches backward into, is a routine
+    too.
 
-    Only a block that is glided into counts. A jump back into a block that
+    Only a block that is glided into counts. A jump backward into a block that
     a call's return leads to, e.g. the JMP at $6fae into $6f29 in the tail
     of TRY_GUARD_MOVE_UP, leaves the routine holding it whole."""
     holders: dict[int, frozenset[int]] = defaultdict(frozenset)
@@ -638,7 +639,7 @@ def orphans(
     keyed by entry; edges are all edges of the run, as collect_edges()
     gives them.
 
-    A jump back past a routine's entry (stops_below()) leaves its target
+    A jump backward past a routine's entry (stops_before()) leaves its target
     an orphan, unless another routine holds it."""
     held = {block for graph in graphs.values() for block in graph.blocks}
     entered: dict[int, int] = defaultdict(int)
@@ -662,17 +663,19 @@ def find_routines(
     that starts no basic block is left out: no code ran from there. A
     routine ends where another begins: an edge into another routine's
     entry, by JMP, branch or glide, is not followed. With redirected, as
-    redirected_returns() gives them, a call that came back further on
-    continues its caller there. A routine never goes back below its own
-    entry, except to the block that ends right at it (stops_below()).
+    redirected_returns() gives them, a call that came back past the
+    instruction directly after its JSR continues its caller where it
+    landed. A routine never jumps backward past its own entry, except to
+    the block that ends right at it (stops_before()).
 
     Code reached from more than one routine becomes a routine of its own,
     starting where the shared part begins (shared_entries()), entered as
     often as the edges into it from the other routines were taken. So does
-    code that one routine glides into and another routine jumps back into,
-    past its own entry (shared_by_jump_back()). Code that no routine holds, left behind by a jump back past an entry, does
-    too, starting at its lowest orphan (orphans()). This is repeated until
-    every block lies in exactly one routine."""
+    code that one routine glides into and another routine jumps backward
+    into, past its own entry (shared_by_jump_back()). Code that no routine
+    holds, because a jump backward past an entry was not followed, does
+    too, starting at the orphan with the lowest address (orphans()). This
+    is repeated until every block lies in exactly one routine."""
     block_starts = {tile.start for tile in tiles}
     extra = {
         entry: count
@@ -697,7 +700,7 @@ def find_routines(
                 tiles,
                 transitions,
                 entry,
-                stop_at=(all_entries - {entry}) | stops_below(tiles, entry),
+                stop_at=(all_entries - {entry}) | stops_before(tiles, entry),
                 redirected=redirected,
             )
             for entry in entries
@@ -712,9 +715,9 @@ def find_routines(
         left_behind = orphans(graphs, all_edges)
         if not left_behind:
             break
-        # Only the lowest orphan: the code behind it may reach the others,
-        # e.g. a second door further into the same tail, which then stays
-        # inside it instead of becoming an entry of its own.
+        # Only the orphan with the lowest address: the code after it may
+        # reach the others, e.g. a second door after it in the same tail,
+        # which then stays inside it instead of becoming an entry of its own.
         lowest = min(left_behind)
         extra[lowest] = extra.get(lowest, 0) + left_behind[lowest]
 
