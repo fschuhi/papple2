@@ -224,10 +224,22 @@ TAIL = [
     ListingRow(0x8FF1, "", "c8", "", "INY", ""),
     ListingRow(0x8FF2, "", "60", "", "RTS", ""),
 ]
+# LIVES runs on into BYTE without a leap, as PUT_STATUS_LIVES does into
+# PUT_STATUS_BYTE: its last row is no instruction, but says where.
+LIVES = [
+    ListingRow(0x9020, "", "a9 01", "lives", "LDA #$01", ""),
+    ListingRow(None, "", "", "", "... runs on into byte ...", "", target=0x9022),
+]
+BYTE = [
+    ListingRow(0x9022, "", "85 10", "byte", "STA $10", "", target=0x10),
+    ListingRow(0x9024, "", "60", "", "RTS", ""),
+]
 ROUTINES = {
     0x8FF0: Place(0x8FF0, lambda: TAIL),
     0x9000: Place(0x9000, lambda: MAIN),
     0x9010: Place(0x9010, lambda: SUB),
+    0x9020: Place(0x9020, lambda: LIVES),
+    0x9022: Place(0x9022, lambda: BYTE),
 }
 
 
@@ -323,6 +335,28 @@ def test_backspace_comes_back_from_the_routine_a_jmp_opened() -> None:
     # Into TAIL by the JMP at 9008, down one row there, and back: the bar
     # is on the JMP again, not one row below it in MAIN.
     assert navigate("\x1b[B\x1b[B\x1b[B\r\x1b[B\x7f\t\rq") == [(0x9008, "label", "")]
+
+
+# Running on. g and two Downs go from MAIN to LIVES; Down there moves the
+# bar onto the row that says where LIVES runs on into.
+
+
+def test_enter_on_the_row_that_runs_on_opens_the_routine_it_runs_into() -> None:
+    assert navigate("g\x1b[B\x1b[B\r\x1b[B\r\t\rq") == [(0x9022, "label", "byte")]
+
+
+def test_tab_on_the_row_that_runs_on_edits_nothing() -> None:
+    # No field opens: Up and Tab then edit LIVES's own label.
+    assert navigate("g\x1b[B\x1b[B\r\x1b[B\t\x1b[A\t\rq") == [
+        (0x9020, "label", "lives")
+    ]
+
+
+def test_e_on_the_row_that_runs_on_edits_nothing() -> None:
+    # No box opens: Up and e then edit LIVES's own comment.
+    assert navigate("g\x1b[B\x1b[B\r\x1b[Be\x1b[Aex\rq") == [
+        (0x9020, "comment", "x")
+    ]
 
 
 def test_the_routines_are_remembered_beyond_the_editor() -> None:

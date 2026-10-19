@@ -898,6 +898,24 @@ def test_show_callers_lists_a_glide_and_a_branch(
     ]
 
 
+def test_the_listing_of_a_routine_that_runs_on_says_where(
+    make_emulator, tmp_path: Path, no_run: None, no_reports_folder: None,
+    no_dossier: None
+) -> None:
+    # LIVES ends without a leap: it runs on into BYTE, a routine of its own.
+    _, emulator = make_emulator(GLIDE_AND_BRANCH_PROGRAM)
+    run(emulator, 12, Tiling)
+    use_reports_folder(tmp_path)
+    tiling_reports()
+
+    assert listing(0x6009).splitlines()[-1] == "... runs on into 600b ..."
+    # A range is no routine: it ends with its last instruction.
+    assert listing(0x6009, 0x600b).splitlines()[-1].startswith("6009")
+    # The listing editor shows the same row, leading to BYTE.
+    last = shell.routine_place(0x6009).load_rows()[-1]
+    assert (last.instruction, last.target) == ("... runs on into 600b ...", 0x600B)
+
+
 # Like the JMP at the end of TRY_GUARD_MOVE_DOWN into the tail of
 # TRY_GUARD_MOVE_UP: DOWN jumps back to DOOR, which lies inside UP, where
 # the call to SUB returns. DOOR is no routine of its own, but a door into UP.

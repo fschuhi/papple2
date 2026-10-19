@@ -821,12 +821,14 @@ def edit(start: int | str, end: int | str | None = None, height: int = 25) -> No
 
 def routine_place(entry: int) -> Place | None:
     """The routine of the current run starting at entry, as the listing
-    editor shows it: the whole routine, as listing(entry) lists it. None if
-    no routine starts there."""
+    editor shows it: the whole routine, as listing(entry) lists it, with
+    the row that says where it runs on into, if it does. None if no routine
+    starts there."""
     if session.routines is None or entry not in session.routines.graphs:
         return None
-    first, behind = session.listing_range(entry)
-    return Place(entry, lambda: session.current_listing_rows(first, behind))
+    # By its entry, not its range: a range is no routine, and gets no row
+    # that says where it runs on into.
+    return Place(entry, lambda: session.current_listing_rows(entry))
 
 
 def save_edit(address: int, field: str, text: str) -> str | None:

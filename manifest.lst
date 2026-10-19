@@ -31,6 +31,7 @@ docs/lr_answer_key.csv
 
 # html-only doc
 docs/TRY_GUARD_MOVE_DOWN-as-it-ran.html
+docs/TRY_MOVING_LEFT Inside MOVE_PLAYER.html
 docs/lode-runner-routine-ranges.html
 
 # `lr_xref.csv`

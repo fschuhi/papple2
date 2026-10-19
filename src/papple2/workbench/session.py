@@ -42,7 +42,7 @@ from papple2.workbench.cross_referencing import (
     read_xrefs,
 )
 from papple2.workbench.hidden import Hidden
-from papple2.workbench.listing import ListingRow, listing_rows
+from papple2.workbench.listing import ListingRow, listing_rows, runs_on
 from papple2.workbench.stack_tracking import RETURNS_FILE, StackTracking
 from papple2.workbench.tiling import (
     SPLIT_TILES_FILE,
@@ -365,26 +365,57 @@ class Session:
             )
         return self.address_of(start), self.address_of(end)
 
+    def runs_on_into(self, entry: int) -> int | None:
+        """Where the routine starting at entry runs on into another routine,
+        without a leap: the address right behind its highest block, if the
+        run went on from that block to there, by a glide, a branch not
+        taken, or the return of a JSR. None if it never did, e.g. behind an
+        RTS or a JMP. Every block lies in one routine, so that address lies
+        in another one: CLEAR_HGR2 runs on into CLEAR_PAGE."""
+        blocks = self.current_routines().graphs[entry].blocks
+        behind = max(block.end for block in blocks.values())
+        edges = self.run_graph.edges if self.run_graph is not None else {}
+        for start, block in blocks.items():
+            if block.end == behind and (start, behind) in edges:
+                return behind
+        return None
+
     def current_listing_rows(
         self, start: int | str, end: int | str | None = None
     ) -> list[ListingRow]:
         """The rows of the current run's memory in the range listing_range()
         gives, with the arrows of the whole run and the dossier's labels,
         comments and hidden ranges. The dossier files are read first, so
-        changes made in another session show too."""
+        changes made in another session show too.
+
+        For a whole routine, start alone, one more row follows if the
+        routine runs on into another one (runs_on_into()): "... runs on
+        into CLEAR_PAGE ...", with that address as its target. A range is
+        no routine, so start and end give no such row."""
         self.refresh_annotations()
         hidden_ranges = None
         if self.dossier_folder is not None and self.hidden is not None:
             self.hidden.reload()
             hidden_ranges = self.hidden.ranges
+        # The entry before the range: a routine's range may begin below it.
+        entry = self.routine_at(start) if end is None else None
         start, end = self.listing_range(start, end)
-        return listing_rows(
+        labels = self.annotations.labels if self.annotations is not None else None
+        rows = listing_rows(
             self.run_emulator,
             start,
             end,
-            self.annotations.labels if self.annotations is not None else None,
+            labels,
             self.run_graph,
             self.annotations.comments if self.annotations is not None else None,
             only_ran=True,
             hidden_ranges=hidden_ranges,
         )
+        target = self.runs_on_into(entry) if entry is not None else None
+        if target is not None:
+            name = (labels or {}).get(target, address(target))
+            # As wide as the other rows' gutters, so its text lines up with
+            # theirs.
+            gutter = " " * len(rows[-1].gutter) if rows else ""
+            rows.append(ListingRow(None, gutter, "", "", runs_on(name), "", target=target))
+        return rows

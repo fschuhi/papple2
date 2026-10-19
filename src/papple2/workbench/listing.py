@@ -31,6 +31,12 @@ class ListingRow:
     bytes never ran ..."). There, every other field but the gutter is
     empty, and the bar skips the row.
 
+    The row behind a routine that runs on into another one, without a
+    leap, has no address either. Its text says where it runs on into
+    ("... runs on into CLEAR_PAGE ...", runs_on()), and target holds that
+    address: the bar stops on it, and Enter in the listing editor goes
+    there. Session.current_listing_rows() adds it.
+
     target is the address the operand names, the one a label in the operand
     stands for: $1a85 in LDA $1a85,Y, the pointer $1b in STA ($1b),Y, a
     branch's target. None where the operand names no address: implied,
@@ -266,6 +272,12 @@ def never_ran(first: int, behind: int) -> str:
         f"... {first:04x}-{behind:04x}: {size:,} byte{'' if size == 1 else 's'}"
         " never ran ..."
     )
+
+
+def runs_on(name: str) -> str:
+    """The text of the row behind a routine that runs on into another one,
+    without a leap: name is where, a label or an address."""
+    return f"... runs on into {name} ..."
 
 
 def ran_in(graph: BlockGraph | None) -> Callable[[int], bool]:

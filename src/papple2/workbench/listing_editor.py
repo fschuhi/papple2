@@ -10,7 +10,8 @@ comment in a box over the bottom lines of the listing.
 Keys in the listing:
   Up / Down            : move the bar one line
   PageUp / PageDown    : move the bar one window
-  Enter                : follow the JSR, JMP or branch on the bar's row
+  Enter                : follow the JSR, JMP or branch on the bar's row,
+                         or go where the routine runs on into
   Backspace            : back to where the last Enter was pressed
   f                    : forward again, to where Backspace came from
   Tab                  : edit the label of the bar's row
@@ -97,6 +98,10 @@ instruction longer than INSTRUCTION_CAP is cut, and so is a comment that
 doesn't fit the terminal; both end in "...".
 
 The empty line before a .byte block is shown, but the bar skips it.
+
+A routine that runs on into another one, without a leap, ends with a faint
+row that says where ("... runs on into CLEAR_PAGE ..."). The bar stops on
+it, Enter goes there, and Tab and e have nothing to edit on it.
 
 The bar's row has a cyan > in front of it and a faint background. A thin
 line runs above and below the listing.
@@ -270,12 +275,19 @@ def format_row(row: ListingRow, widths: ColumnWidths, columns: int) -> str:
     return line.rstrip()
 
 
+def holds_bar(row: ListingRow) -> bool:
+    """Whether the bar can stop on row: an instruction, or the row behind a
+    routine that says where it runs on into, which Enter follows. Not a
+    gap, nor the empty line before a .byte block."""
+    return row.address is not None or row.target is not None
+
+
 def next_line(rows: list[ListingRow], index: int, step: int) -> int:
     """The index of the next row from index in direction step (+1 or -1)
-    that has an address; index itself if there is none."""
+    that the bar can stop on (holds_bar()); index itself if there is none."""
     candidate = index + step
     while 0 <= candidate < len(rows):
-        if rows[candidate].address is not None:
+        if holds_bar(rows[candidate]):
             return candidate
         candidate += step
     return index
@@ -283,11 +295,11 @@ def next_line(rows: list[ListingRow], index: int, step: int) -> int:
 
 def move(rows: list[ListingRow], index: int, distance: int) -> int:
     """Where the bar lands when it moves distance rows from index: kept
-    inside the rows, and never on a row without an address. If it would
-    land on one, it goes on in the same direction, or back if nothing
-    lies that way."""
+    inside the rows, and never on a row it can't stop on (holds_bar()). If
+    it would land on one, it goes on in the same direction, or back if
+    nothing lies that way."""
     target = max(0, min(len(rows) - 1, index + distance))
-    if rows[target].address is not None:
+    if holds_bar(rows[target]):
         return target
     step = 1 if distance > 0 else -1
     found = next_line(rows, target, step)
@@ -729,12 +741,15 @@ def edit_rows(
         routine's entry, opens that routine; a branch, or a JMP to a row in
         the listing, moves the bar there; a branch or a JMP to an address
         outside the listing opens the routine whose blocks hold it, with
-        the bar there. Anything else: a message."""
+        the bar there. The row behind a routine that runs on into another
+        one leads there as a JMP would. Anything else: a message."""
         state.message = ""
         row = state.rows[state.cursor]
         name = mnemonic(row)
+        # No instruction, but a target: the routine runs on into it.
+        runs_on = row.address is None and row.target is not None
         # JMP ($0036) names its pointer, not where it leads.
-        jmp = name == "JMP" and "(" not in row.instruction
+        jmp = (name == "JMP" and "(" not in row.instruction) or runs_on
         if row.target is None or not (name == "JSR" or jmp or name in BRANCHES):
             state.message = "Enter follows a JSR, a JMP or a branch"
             return
@@ -955,6 +970,14 @@ def edit_rows(
         step(here)
         arrive(routine, None, item.address)
 
+    def on_an_instruction() -> bool:
+        """Whether the bar's row is an instruction, with a label and a
+        comment to edit. If not, the routine runs on there: say so."""
+        if state.rows[state.cursor].address is not None:
+            return True
+        state.message = "nothing to edit here: Enter goes where it runs on into"
+        return False
+
     def open_field(name: str) -> None:
         """Open the field name on the bar's row, holding the label it
         edits, with the cursor behind the text."""
@@ -1039,11 +1062,13 @@ def edit_rows(
 
     @bindings.add("tab", filter=in_listing)
     def _edit(event: KeyPressEvent) -> None:
-        open_field("label")
+        if on_an_instruction():
+            open_field("label")
 
     @bindings.add("e", filter=in_listing)
     def _edit_comment(event: KeyPressEvent) -> None:
-        open_comment()
+        if on_an_instruction():
+            open_comment()
 
     @bindings.add("g", filter=in_listing)
     def _go_to(event: KeyPressEvent) -> None:
