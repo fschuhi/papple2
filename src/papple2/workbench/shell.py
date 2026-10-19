@@ -50,9 +50,10 @@ from pathlib import Path
 import graphviz
 from IPython import get_ipython
 
-from papple2.core.cpu import JMP_absolute, JMP_indirect, JSR
+from papple2.core.cpu import JMP_absolute, JMP_indirect, JSR, RTS
 from papple2.core.emulator import Emulator
 from papple2.workbench.basic_blocks_analysis import (
+    GLIDE,
     BlockGraph,
     Loop,
     Routines,
@@ -80,7 +81,7 @@ from papple2.workbench.memory_map import (
     print_memory_map,
 )
 from papple2.workbench.session import Session
-from papple2.workbench.tiling import address
+from papple2.workbench.tiling import BRANCH_OPCODES, address
 
 
 class Text(str):
@@ -292,9 +293,6 @@ def memory_map(
 
     return Text(shown(colored=False), shown(colored=True))
 
-
-# How show_callers() names the leaps that lead into a routine.
-CALL_KINDS = {JSR: "JSR", JMP_absolute: "JMP", JMP_indirect: "JMP ()"}
 
 # Where show_routine_graph() renders its picture: a view with the dossier's
 # labels, not a report, so it goes into tmp/, not the reports folder. The
@@ -562,40 +560,67 @@ def show_blocks(entry: int | str) -> None:
 
 
 @dataclass(frozen=True)
-class CallSite:
-    """One place that leaps into a routine: the address of the leap, its
-    opcode (JSR, JMP, JMP ()), how often it was taken, and the entries of
-    the routines whose blocks hold it, in address order."""
+class WayIn:
+    """One way into a routine: where it starts, its kind, how often it was
+    taken, and the entries of the routines whose blocks hold it, in address
+    order. The site is the address of the leap, or for a glide, which has
+    no leap, the start of the block that glides. The kind is "JSR", "JMP",
+    "JMP ()", "branch", "glide", or "RTS" for a stack jump."""
 
     site: int
-    opcode: int
+    kind: str
     count: int
     holders: tuple[int, ...]
 
 
-def call_sites(entry: int) -> list[CallSite]:
-    """Every place in the current run that leaps into the routine starting
-    at entry, in address order. Prints nothing; show_callers() prints them.
+def ways_in(entry: int) -> list[WayIn]:
+    """Every way into the routine starting at entry, in the current run, in
+    address order. Prints nothing; show_callers() prints them.
 
-    JMPs count as callers for now: a JMP into a routine's entry may be a
-    tail call, which only a shadow stack can tell apart. A site can lie in
-    several routines, where code is shared, so all of them are holders."""
+    A JSR leads into the entry, from anywhere. A JMP, a branch or a glide
+    counts if it comes from a block of another routine, into any block of
+    this one: into the entry, or through a door further in, e.g. the JMP at
+    $6fae into $6f29 in the tail of TRY_GUARD_MOVE_UP. From inside the
+    routine, it is a loop or the code running on. An RTS counts if it is a
+    stack jump, e.g. MOVE_GUARD's dispatch; other RTSs are returns.
+
+    JMPs count for now: a JMP into a routine may be a tail call, which only
+    a shadow stack can tell apart."""
     found = session.current_routines()
+    blocks = found.graphs[entry].blocks
+    jumps = session.run_stack_jumps or {}
 
-    # Count per site and leap, adding up in case a site has several rows.
-    counts: dict[tuple[int, int], int] = {}
+    # Count per site and kind, adding up in case a site has several rows.
+    counts: dict[tuple[int, str], int] = {}
     blocks_of: dict[int, int] = {}
     for row in session.run_transitions or []:
-        if row.target_tile != entry or row.opcode not in CALL_KINDS:
+        if row.target_tile not in blocks:
             continue
-        key = (row.leap_from_pc, row.opcode)
+        if row.opcode == JSR:
+            kind = "JSR"
+        elif row.source_tile in blocks:
+            continue
+        elif row.outcome == GLIDE:
+            kind = "glide"
+        elif row.opcode == JMP_absolute:
+            kind = "JMP"
+        elif row.opcode == JMP_indirect:
+            kind = "JMP ()"
+        elif row.opcode in BRANCH_OPCODES:
+            kind = "branch"
+        elif row.opcode == RTS and (row.leap_from_pc, row.target_tile) in jumps:
+            kind = "RTS"
+        else:
+            continue
+        site = row.source_tile if row.outcome == GLIDE else row.leap_from_pc
+        key = (site, kind)
         counts[key] = counts.get(key, 0) + row.count
-        blocks_of[row.leap_from_pc] = row.source_tile
+        blocks_of[site] = row.source_tile
 
     return [
-        CallSite(
+        WayIn(
             site,
-            opcode,
+            kind,
             count,
             tuple(
                 sorted(
@@ -605,51 +630,48 @@ def call_sites(entry: int) -> list[CallSite]:
                 )
             ),
         )
-        for (site, opcode), count in sorted(counts.items())
+        for (site, kind), count in sorted(counts.items())
     ]
 
 
 def caller_items(entry: int) -> list[PickerItem]:
     """The callers of the routine starting at entry, as the listing
-    editor's picker lists them: one line per call site and routine that
-    holds it, e.g. 8352  JSR     r_11x2_1 (1,782), with the site's count.
-    Enter opens that routine with the bar on the call site."""
+    editor's picker lists them: one line per way in (ways_in()) and routine
+    that holds it, e.g. 8352  JSR     r_11x2_1 (1,782), with the site's
+    count. Enter opens that routine with the bar on the site."""
     session.refresh_annotations()
     labels = session.annotations.labels if session.annotations is not None else {}
     items = []
-    for call in call_sites(entry):
-        for holder in call.holders:
+    for way in ways_in(entry):
+        for holder in way.holders:
             name = labels.get(holder, address(holder))
-            text = (
-                f"{address(call.site)}  {CALL_KINDS[call.opcode]:<6}  "
-                f"{name} ({call.count:,})"
-            )
-            items.append(PickerItem(text, holder, call.site))
+            text = f"{address(way.site)}  {way.kind:<6}  {name} ({way.count:,})"
+            items.append(PickerItem(text, holder, way.site))
     return items
 
 
 @returns_text
 def show_callers(entry: int | str) -> None:
-    """Every place that leaps into the routine starting at entry, an
-    address or a label: one line per call site, as call_sites() finds
-    them, with its leap (JSR, JMP, JMP ()), how often it was taken, and
+    """Every way into the routine starting at entry, an address or a
+    label: one line per way in, as ways_in() finds them, with its kind
+    (JSR, JMP, JMP (), branch, glide, RTS), how often it was taken, and
     the routines whose blocks hold the site, with the dossier's labels."""
     session.refresh_annotations()
     entry = session.routine_at(entry)
     labels = session.annotations.labels if session.annotations is not None else {}
 
-    calls = call_sites(entry)
-    if not calls:
-        print(f"no JSR or JMP leads into {address(entry)}")
+    ways = ways_in(entry)
+    if not ways:
+        print(f"nothing leads into {address(entry)}")
         return
-    print(f"{'site':<4}  {'leap':<6}  {'count':>6}  routines")
-    for call in calls:
+    print(f"{'site':<4}  {'kind':<6}  {'count':>6}  routines")
+    for way in ways:
         holders = [
             f"{address(holder)} {labels.get(holder, '')}".rstrip()
-            for holder in call.holders
+            for holder in way.holders
         ]
         print(
-            f"{address(call.site)}  {CALL_KINDS[call.opcode]:<6}  {call.count:>6,}  "
+            f"{address(way.site)}  {way.kind:<6}  {way.count:>6,}  "
             + ", ".join(holders)
         )
 

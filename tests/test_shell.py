@@ -549,7 +549,7 @@ def test_show_callers_lists_the_call_sites_with_the_routines_holding_them(
     label(0x6010, "sub")
 
     assert show_callers("sub").splitlines() == [
-        "site  leap     count  routines",
+        "site  kind     count  routines",
         "6004  JSR          6  6000 main",
     ]
 
@@ -570,11 +570,11 @@ def test_caller_items_lead_to_the_call_site_in_the_routine_holding_it(
 def test_show_callers_of_a_routine_nothing_leaps_into(
     nested_loops_run, no_run: None, no_dossier: None
 ) -> None:
-    # The run starts at 6000; no JSR or JMP leads there.
+    # The run starts at 6000; nothing leads there.
     make_nested_loops_current(nested_loops_run)
 
     assert show_callers(0x6000).splitlines() == [
-        "no JSR or JMP leads into 6000"
+        "nothing leads into 6000"
     ]
 
 
@@ -843,9 +843,98 @@ def test_show_callers_counts_a_jmp_into_a_routine(
     tiling_reports()
 
     assert show_callers(0x600e).splitlines() == [
-        "site  leap     count  routines",
+        "site  kind     count  routines",
         "6000  JSR          1  6000",
         "600b  JMP          1  6009",
+    ]
+
+
+def test_show_callers_leaves_out_the_routines_own_loop(
+    make_emulator, tmp_path: Path, no_run: None, no_reports_folder: None,
+    no_dossier: None
+) -> None:
+    # The JMP at 6002 leads back to 6000 from inside the routine: a loop,
+    # not a way in.
+    _, emulator = make_emulator(ENDLESS_PROGRAM)
+    run(emulator, 10, Tiling)
+    use_reports_folder(tmp_path)
+    tiling_reports()
+
+    assert show_callers(0x6000).splitlines() == ["nothing leads into 6000"]
+
+
+# Like PUT_STATUS_LIVES and PUT_STATUS_LEVEL: LIVES runs on into BYTE,
+# and LEVEL branches back into it. BYTE becomes a routine of its own.
+#   6000 JSR LIVES   6003 JSR LEVEL   6006 JMP DONE
+#   6009 LDA #$01    600b STA $10     600d RTS
+#   600e LDA #$02    6010 BNE BYTE
+GLIDE_AND_BRANCH_PROGRAM = """
+        *=$6000
+        JSR LIVES
+        JSR LEVEL
+DONE    JMP DONE
+LIVES   LDA #$01
+BYTE    STA $10
+        RTS
+LEVEL   LDA #$02
+        BNE BYTE
+"""
+
+
+def test_show_callers_lists_a_glide_and_a_branch(
+    make_emulator, tmp_path: Path, no_run: None, no_reports_folder: None,
+    no_dossier: None
+) -> None:
+    # A glide has no leap: its site is the start of the block that glides.
+    _, emulator = make_emulator(GLIDE_AND_BRANCH_PROGRAM)
+    run(emulator, 12, Tiling)
+    use_reports_folder(tmp_path)
+    tiling_reports()
+
+    assert show_callers(0x600b).splitlines() == [
+        "site  kind     count  routines",
+        "6009  glide        1  6009",
+        "6010  branch       1  600e",
+    ]
+
+
+# Like the JMP at the end of TRY_GUARD_MOVE_DOWN into the tail of
+# TRY_GUARD_MOVE_UP: DOWN jumps back to DOOR, which lies inside UP, where
+# the call to SUB returns. DOOR is no routine of its own, but a door into UP.
+# SUB lies between DOOR and DOWN: were DOWN right behind DOOR, DOOR's block
+# would be the exit at DOWN's door (stops_below()), and a routine of its own.
+#   6000 JSR UP      6003 JSR DOWN    6006 JMP DONE
+#   6009 JSR SUB     600c INC $10     600e RTS
+#   600f INC $11     6011 RTS
+#   6012 LDA #$02    6014 JMP DOOR
+DOOR_PROGRAM = """
+        *=$6000
+        JSR UP
+        JSR DOWN
+DONE    JMP DONE
+UP      JSR SUB
+DOOR    INC $10
+        RTS
+SUB     INC $11
+        RTS
+DOWN    LDA #$02
+        JMP DOOR
+"""
+
+
+def test_show_callers_lists_a_jmp_through_a_door(
+    make_emulator, tmp_path: Path, no_run: None, no_reports_folder: None,
+    no_dossier: None
+) -> None:
+    _, emulator = make_emulator(DOOR_PROGRAM)
+    run(emulator, 12, Tiling)
+    use_reports_folder(tmp_path)
+    tiling_reports()
+
+    assert show_callers(0x6009).splitlines() == [
+        "site  kind     count  routines",
+        "6000  JSR          1  6000",
+        "6014  JMP          1  6012",
     ]
 
 
@@ -897,6 +986,23 @@ def test_stack_tracking_reports_make_stack_jump_targets_routines(
     # After: the RTS at 600c is a stack jump, and TARGET a routine.
     assert shell.session.run_stack_jumps == {(0x600C, 0x600D): 1}
     assert list(shell.session.routines.graphs) == [0x6000, 0x6006, 0x600D]
+
+
+def test_show_callers_lists_a_stack_jump(
+    make_emulator, tmp_path: Path, no_run: None, no_reports_folder: None,
+    no_dossier: None
+) -> None:
+    # TARGET's only way in is DISPATCH's RTS at 600c.
+    _, emulator = make_emulator(STACK_JUMP_PROGRAM)
+    run(emulator, 12, Tiling, StackTracking)
+    use_reports_folder(tmp_path)
+    tiling_reports()
+    stack_tracking_reports()
+
+    assert show_callers(0x600D).splitlines() == [
+        "site  kind     count  routines",
+        "600c  RTS          1  6006",
+    ]
 
 
 def test_stack_tracking_reports_without_a_run_stop(no_run: None) -> None:

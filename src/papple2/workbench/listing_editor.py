@@ -1055,7 +1055,7 @@ def edit_rows(
             state.message = "u shows the callers of a routine, not of a range"
             return
         entry = state.place.entry
-        open_picker(callers_of(entry), f"no JSR or JMP leads into ${entry:04x}")
+        open_picker(callers_of(entry), f"nothing leads into ${entry:04x}")
 
     @bindings.add("up", filter=in_picker)
     def _picker_up(event: KeyPressEvent) -> None:
