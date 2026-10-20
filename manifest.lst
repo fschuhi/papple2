@@ -19,46 +19,36 @@ GOALS.md
 TODO.md
 HISTORY.md
 
-### --- notes ---
-
-notes/DIRECTION.md
-notes/instrumentation-design.md
-notes/ui-ideas.md
-
-## Main catalogue for NES/C64/other reveng platforms
-#docs/reveng-catalogue.md
-
-## Robotron disassembly project thread on 6502.org
-#docs/advice_from_6502org.md
-#docs/Robotron-thread-6502.org_compressed.pdf
-#docs/Robotron-thread-6502.org.pdf
-#docs/link_list.md
-
 ### --- docs ---
 
-# intermediate step: discover structures from Xekri's source
-#docs/listings/listing_clean.tsv
-docs/structures_handover.md
-docs/lr_structures.md
-docs/lr_answer_key.csv
-
-# html-only doc
-docs/html/TRY_GUARD_MOVE_DOWN-as-it-ran.html
-docs/html/TRY_MOVING_LEFT Inside MOVE_PLAYER.html
-docs/html/lode-runner-routine-ranges.html
-
-# html generated from markdown
-#docs/lr_structures.html
-#docs/structures_handover.html
-
-# `lr_xref.csv`
-#docs/lr_case_studies.md
+docs/index.html
+docs/style.css
 
 # proper documentation
+docs/instrumentation-design.md
 docs/architecture.md
 docs/data-files.md
 docs/routine.md
 docs/workbench.md
+
+# vision
+docs/DIRECTION.md
+docs/ui-ideas.md
+
+# dynamic html to explain hooks for various 6502 operations
+docs/diagrams/inner-loop-hooks.html
+
+# intermediate step: discover structures from Xekri's source
+#docs/listings/listing_clean.tsv
+docs/lr_structures.md
+#docs/lr_structures.html
+docs/lr_answer_key.csv
+docs/TRY_GUARD_MOVE_DOWN-as-it-ran.html
+docs/TRY_MOVING_LEFT_Inside_MOVE_PLAYER.html
+docs/lode-runner-routine-ranges.html
+
+# `lr_xref.csv`
+#docs/lr_case_studies.md
 
 # architecture diagrams (dot)
 docs/diagrams/core.dot
@@ -78,13 +68,18 @@ docs/diagrams/workbench.dot
 #docs/diagrams/run-loop.svg
 #docs/diagrams/workbench.svg
 
-# dynamic html to explain hooks for various 6502 operations (`-hook` is the current one)
-#docs/diagrams/inner-loop.html
-docs/diagrams/inner-loop-hooks.html
-
 # sections from XekriRedmane's literate-source
 #docs/listings/6238-LOAD_LEVEL.lst
 #docs/listings/6f39-TRY_GUARY_MOVE_DOWN.lst
+
+## Main catalogue for NES/C64/other reveng platforms
+#docs/reveng-catalogue.md
+
+## Robotron disassembly project thread on 6502.org
+#docs/advice_from_6502org.md
+#docs/Robotron-thread-6502.org_compressed.pdf
+#docs/Robotron-thread-6502.org.pdf
+#docs/link_list.md
 
 ### --- dossiers ---
 
