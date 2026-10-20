@@ -1,0 +1,341 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Lode Runner Routine Ranges</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+/* Layout: a reading column of prose, each case followed by a wide listing drawn like edit(): range bands at the left edge, jump arrows in a gutter, one row per basic block. */
+:root {
+  --bg: #f4f6f9;
+  --panel: #ffffff;
+  --fg: #1b2130;
+  --muted: #5b6475;
+  --rule: #d8dde6;
+  --arrow: #7a8294;
+  --jump: #b0244f;
+  --hl: #fff4d6;
+  --ra: #dce7f8; --ra-ink: #2f5f9e;
+  --rb: #f7e4c5; --rb-ink: #9a5f0f;
+  --rc: #d6efe2; --rc-ink: #24744d;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --band: 10px;
+  --gut: 76px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12161f; --panel: #191e29; --fg: #e4e8f0; --muted: #9aa3b5; --rule: #2d3442;
+    --arrow: #8c94a6; --jump: #ff6f97; --hl: #3a3220;
+    --ra: #22344f; --ra-ink: #8fb6ec; --rb: #43341b; --rb-ink: #e9b56a; --rc: #1d3c2e; --rc-ink: #79cfa1;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12161f; --panel: #191e29; --fg: #e4e8f0; --muted: #9aa3b5; --rule: #2d3442;
+  --arrow: #8c94a6; --jump: #ff6f97; --hl: #3a3220;
+  --ra: #22344f; --ra-ink: #8fb6ec; --rb: #43341b; --rb-ink: #e9b56a; --rc: #1d3c2e; --rc-ink: #79cfa1;
+  color-scheme: dark;
+}
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 15px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 64px;
+}
+main { max-width: 1040px; margin: 0 auto; display: grid; gap: 28px; }
+.prose { max-width: 68ch; display: grid; gap: 10px; }
+h1 { font-size: 1.7rem; line-height: 1.2; margin: 0; text-wrap: balance; font-weight: 600; }
+h2 { font-size: 1.25rem; margin: 0; text-wrap: balance; font-weight: 600; }
+h3 { font-size: 1.02rem; margin: 0; font-weight: 600; }
+p { margin: 0; }
+code, .mono { font-family: var(--mono); font-size: 0.92em; }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.terms { display: grid; gap: 8px; margin: 0; padding: 14px 16px; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; max-width: 68ch; }
+.terms div { display: grid; grid-template-columns: 9ch 1fr; gap: 12px; }
+.terms dt { font-weight: 600; }
+.terms dd { margin: 0; }
+.summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.summary div { padding: 12px 14px; border: 1px solid var(--rule); border-radius: 6px; background: var(--panel); display: grid; gap: 4px; }
+.case { display: grid; gap: 12px; }
+.scroll { overflow-x: auto; border: 1px solid var(--rule); border-radius: 6px; background: var(--panel); }
+.listing { position: relative; min-width: 960px; font-family: var(--mono); font-size: 12.5px; font-variant-numeric: tabular-nums; padding-block: 6px; }
+.row { display: grid; grid-template-columns: var(--band) var(--gut) 10ch 34ch minmax(32ch, 1fr) 6ch 10ch; align-items: center; min-height: 25px; column-gap: 10px; }
+.row > .band { align-self: stretch; }
+.row.head { color: var(--muted); font-family: var(--sans); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; min-height: 22px; border-bottom: 1px solid var(--rule); }
+.row.hl { background: var(--hl); }
+.row .runs { text-align: right; }
+.row .wide { grid-column: 3 / -1; }
+.row.range .wide { font-family: var(--sans); font-size: 12px; font-weight: 600; padding-top: 6px; }
+.row.gap .wide, .row.fold .wide { color: var(--muted); }
+.row.gap .wide { font-style: italic; }
+.mn { font-weight: 600; }
+.note { color: var(--muted); }
+.lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip { display: inline-block; padding: 0 6px; border-radius: 3px; font-size: 11.5px; line-height: 18px; }
+.r-a { background: var(--ra); } .r-b { background: var(--rb); } .r-c { background: var(--rc); }
+.ink-a { color: var(--ra-ink); } .ink-b { color: var(--rb-ink); } .ink-c { color: var(--rc-ink); }
+.chip.r-a { color: var(--ra-ink); } .chip.r-b { color: var(--rb-ink); } .chip.r-c { color: var(--rc-ink); }
+.mismatch { outline: 1.5px solid var(--jump); outline-offset: 0; }
+svg.arrows { position: absolute; top: 0; left: var(--band); width: var(--gut); height: 100%; overflow: visible; pointer-events: none; }
+svg.arrows path.line { fill: none; stroke: var(--arrow); stroke-width: 1.4; }
+svg.arrows path.head { fill: var(--arrow); stroke: none; }
+svg.arrows .strong path.line { stroke: var(--jump); stroke-width: 2; }
+svg.arrows .strong path.head { fill: var(--jump); }
+svg.arrows text { font-family: var(--mono); font-size: 10px; fill: var(--muted); }
+svg.arrows .strong text { fill: var(--jump); font-weight: 600; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { width: 10px; height: 14px; border-radius: 2px; display: inline-block; }
+.verdict { display: grid; gap: 6px; padding-left: 12px; border-left: 3px solid var(--rule); max-width: 68ch; }
+footer { color: var(--muted); font-size: 13px; max-width: 68ch; }
+</style>
+
+<main>
+  <header class="prose">
+    <span class="eyebrow">papple2 · grading the routines · 2026-10-18</span>
+    <h1>Lode Runner Routine Ranges</h1>
+    <p>Three places from the attract play, drawn the way <code>edit()</code> draws a routine: one row per basic block, the jumps as arrows in the gutter on the left. Each row shows only the instruction that ends its block, the leap the split reports record. The rest of each block is in <code>edit()</code>.</p>
+  </header>
+
+  <dl class="terms">
+    <div><dt>entry</dt><dd>The address where a routine starts. Today there are 76.</dd></div>
+    <div><dt>range</dt><dd>From a routine's entry up to the next entry, by address. Only the entries decide it, nothing the run did.</dd></div>
+    <div><dt>span</dt><dd>For comparison: from a routine's lowest block to its highest. The blocks decide it.</dd></div>
+    <div><dt>band</dt><dd>The colored strip at the left edge of a row: the range the row lies in.</dd></div>
+    <div><dt>today in</dt><dd>The chip on the right: the routine that holds the block today. A chip outlined in red has another color than its band: address order and today's routines disagree there.</dd></div>
+  </dl>
+
+  <section class="summary" aria-label="The two groups in one line each">
+    <div><h3>Group A: the range shows it</h3><p>The jump goes backwards, below the jumper's own entry, into another routine's range.</p></div>
+    <div><h3>Group B: the range can't see it</h3><p>The jump stays inside the jumper's range. The <code>RTS</code> right in front of the target shows it.</p></div>
+  </section>
+
+  <section class="case">
+    <div class="prose">
+      <span class="eyebrow">Group A, case 1</span>
+      <h2><code>TRY_GUARD_MOVE_DOWN</code> jumps up into <code>TRY_GUARD_MOVE_UP</code></h2>
+      <p><code>TRY_GUARD_MOVE_DOWN</code> ends with two <code>JMP</code>s up into the tail of <code>TRY_GUARD_MOVE_UP</code>: to <code>6f26</code> after a move within the row, to <code>6f29</code> after a move into the next row. <code>TRY_GUARD_MOVE_UP</code>'s own entry, <code>6eac</code>, never ran in the attract play.</p>
+      <p>Both targets lie below <code>6f39</code>, so they are outside <code>TRY_GUARD_MOVE_DOWN</code>'s range. By address they lie in <code>MOVE_GUARD</code>'s range, but <code>MOVE_GUARD</code> never goes there.</p>
+    </div>
+    <div class="scroll"><div class="listing" id="fig-a1"></div></div>
+    <div class="verdict">
+      <p><strong>Today:</strong> <code>find_routines()</code> follows the two jumps, because only one routine reaches the tail. So the five tail blocks belong to routine <code>6f39</code>; the grade said 5 of its 19.</p>
+      <p><strong>Rule on paper:</strong> a jump out of the range is not followed (part 5). No routine takes <code>6f26</code> in, so it starts a routine of its own (part 6). <code>6f29</code> joins it, because the return from the <code>JSR</code> at <code>6f26</code> lands there.</p>
+    </div>
+  </section>
+
+  <section class="case">
+    <div class="prose">
+      <span class="eyebrow">Group A, case 2</span>
+      <h2><code>CHECK_FOR_INPUT</code> branches down into <code>CHECK_FOR_MODE_1_INPUT</code></h2>
+      <p><code>CHECK_FOR_INPUT</code> is one block. <code>MOVE_PLAYER</code> calls it with the <code>JSR</code> at <code>6595</code>. Its <code>BEQ</code> jumped all 79 times, down to <code>CHECK_FOR_MODE_1_INPUT</code>, whose <code>RTS</code> returns to <code>6598</code>, behind that <code>JSR</code>. A tail call made with a branch.</p>
+      <p>The target <code>69b8</code> lies below <code>6a12</code>, outside <code>CHECK_FOR_INPUT</code>'s range, in the range of <code>TRY_DIGGING_LEFT_check_can_dig_left</code>, which never goes there.</p>
+    </div>
+    <div class="scroll"><div class="listing" id="fig-a2"></div></div>
+    <div class="verdict">
+      <p><strong>Today:</strong> the seven blocks of <code>CHECK_FOR_MODE_1_INPUT</code> belong to routine <code>6a12</code>; the grade said 7 of its 8.</p>
+      <p><strong>Rule on paper:</strong> the <code>BEQ</code> is not followed. No routine takes <code>69b8</code> in, so it starts a routine of its own, and the <code>BEQ</code> becomes an exit into it.</p>
+    </div>
+  </section>
+
+  <section class="case">
+    <div class="prose">
+      <span class="eyebrow">Group B, for contrast</span>
+      <h2><code>MOVE_PLAYER</code> jumps forward into <code>TRY_MOVING_LEFT</code></h2>
+      <p>The <code>JMP</code> at <code>65c8</code> goes forward, to <code>65d3</code>. No routine starts between <code>MOVE_PLAYER</code>'s entry <code>64bd</code> and <code>65d3</code>: the next entry is <code>67db</code>. So the target lies inside <code>MOVE_PLAYER</code>'s own range, and by address this looks like an ordinary jump inside the routine.</p>
+      <p>What shows it is the row right in front of the target. The block <code>65d2-65d3</code> is <code>MOVE_PLAYER</code>'s <code>RTS</code>, and it ends exactly at <code>65d3</code>. Nothing falls into <code>65d3</code>: the only way in is the <code>JMP</code>.</p>
+    </div>
+    <div class="scroll"><div class="listing" id="fig-b"></div></div>
+    <div class="verdict">
+      <p><strong>Today:</strong> <code>TRY_MOVING_LEFT</code>'s 16 blocks belong to routine <code>64bd</code>, together with <code>MOVE_PLAYER</code>'s 24. Band and chip agree everywhere, which is the point: the range gives no signal here.</p>
+      <p><strong>Rule on paper, part 7:</strong> the target of a <code>JMP</code> that lies right behind a block ending in <code>RTS</code>, and is never fallen into, starts a routine. Backed by this one case. The risk: a loop head right behind one of the routine's own <code>RTS</code> blocks, reached only by <code>JMP</code>, would be cut off wrongly.</p>
+    </div>
+  </section>
+
+  <div class="legend" aria-label="Legend">
+    <span><svg width="26" height="10" aria-hidden="true"><path d="M2 5 H20" stroke="var(--jump)" stroke-width="2"/><path d="M24 5 L18 1.5 L18 8.5 Z" fill="var(--jump)"/></svg>the jump in question</span>
+    <span><svg width="26" height="10" aria-hidden="true"><path d="M2 5 H20" stroke="var(--arrow)" stroke-width="1.4"/><path d="M24 5 L18 1.5 L18 8.5 Z" fill="var(--arrow)"/></svg>other jumps</span>
+    <span><i class="swatch" style="background: var(--hl)"></i>the rows the case is about</span>
+  </div>
+
+  <footer>Addresses, labels, counts and leaps come from <code>lr_split_tiles.csv</code>, <code>lr_split_transitions.csv</code> and <code>lr_overview.txt</code> in <code>docs/reports/lr_basic_blocks_analysis/</code>, and from the dossier's labels, checked by a script against the files in today's dump. "Today" is the grade of <code>make lr-grade</code>. The rule on paper is in <code>docs/lr_structures.md</code>, Part 3.</footer>
+</main>
+
+<script>
+// Rows: range = a range starts; blk = one basic block; fold = several blocks
+// shown as one row; gap = bytes that never ran. band/today name the range
+// color (a, b, c) within the figure. hl marks the rows the case is about.
+const FIGURES = {
+  "fig-a1": {
+    rows: [
+      { kind: "range", band: "a", text: "range of MOVE_GUARD: 6cdb-6f39" },
+      { kind: "fold", band: "a", today: "a", entry: "6cdb", text: "6cdb-6e85  16 more blocks of MOVE_GUARD" },
+      { kind: "blk", band: "a", today: "a", entry: "6cdb", blk: "6e85-6e8c", code: ["JSR", "DETERMINE_GUARD_MOVE"], runs: 112 },
+      { kind: "blk", band: "a", today: "a", entry: "6cdb", blk: "6e8c-6e97", code: ["RTS", ""], note: "dispatch: DOWN 76x, LEFT 26x, RIGHT 10x", runs: 112 },
+      { kind: "gap", band: "a", text: "... 6e97-6f26 never ran: GUARD_FN_TABLE, GUARD_DO_NOTHING, and TRY_GUARD_MOVE_UP from its entry 6eac on ..." },
+      { id: "up1", kind: "blk", band: "a", today: "b", entry: "6f39", hl: true, blk: "6f26-6f29", label: "TRY_GUARD_MOVE_UP_check_for_gold", code: ["JSR", "CHECK_FOR_GOLD_PICKED_UP_BY_GUARD"], runs: 60 },
+      { id: "up2", kind: "blk", band: "a", today: "b", entry: "6f39", hl: true, blk: "6f29-6f30", label: "TRY_GUARD_MOVE_UP_inc_anim_state", code: ["JSR", "INC_GUARD_ANIM_STATE"], runs: 76 },
+      { kind: "blk", band: "a", today: "b", entry: "6f39", hl: true, blk: "6f30-6f33", code: ["JSR", "GET_GUARD_SPRITE_AND_COORDS"], runs: 76 },
+      { kind: "blk", band: "a", today: "b", entry: "6f39", hl: true, blk: "6f33-6f36", code: ["JSR", "DRAW_SPRITE_AT_PIXEL_COORDS"], runs: 76 },
+      { kind: "blk", band: "a", today: "b", entry: "6f39", hl: true, blk: "6f36-6f39", code: ["JMP", "STORE_GUARD_DATA"], runs: 76 },
+      { kind: "range", band: "b", text: "range of TRY_GUARD_MOVE_DOWN: 6f39-6fbc" },
+      { kind: "blk", band: "b", today: "b", entry: "6f39", blk: "6f39-6f3f", label: "TRY_GUARD_MOVE_DOWN", code: ["BCC", "6f63"], runs: 76 },
+      { kind: "fold", band: "b", today: "b", entry: "6f39", text: "6f3f-6fac  11 more blocks of TRY_GUARD_MOVE_DOWN" },
+      { id: "d1", kind: "blk", band: "b", today: "b", entry: "6f39", blk: "6fae-6fb9", code: ["JMP", "TRY_GUARD_MOVE_UP_inc_anim_state"], runs: 16 },
+      { id: "d2", kind: "blk", band: "b", today: "b", entry: "6f39", blk: "6fb9-6fbc", code: ["JMP", "TRY_GUARD_MOVE_UP_check_for_gold"], runs: 60 },
+      { kind: "range", band: "c", text: "range of TRY_GUARD_MOVE_LEFT: from 6fbc, the next entry" },
+    ],
+    arrows: [
+      { from: "d2", to: "up1", lane: 0, label: "60x", strong: true },
+      { from: "d1", to: "up2", lane: 1, label: "16x", strong: true },
+    ],
+  },
+  "fig-a2": {
+    rows: [
+      { kind: "range", band: "a", text: "range of TRY_DIGGING_LEFT_check_can_dig_left: 67e7-6a12" },
+      { kind: "fold", band: "a", today: "a", entry: "67e7", text: "67e7-686a  22 blocks of TRY_DIGGING_LEFT_check_can_dig_left" },
+      { kind: "blk", band: "a", today: "a", entry: "67e7", blk: "686a-686e", code: ["RTS", ""], runs: 7 },
+      { kind: "gap", band: "a", text: "... 686e-69b8 never ran: TRY_DIGGING_RIGHT (68a1), then the tables from SPRITE_ANIM_SEQS (6968) to DIG_NOTE_DURATIONS (69ab) ..." },
+      { id: "t1", kind: "blk", band: "a", today: "b", entry: "6a12", hl: true, blk: "69b8-69bd", label: "CHECK_FOR_MODE_1_INPUT", code: ["BMI", ""], note: "never taken", runs: 79 },
+      { kind: "fold", band: "a", today: "b", entry: "6a12", hl: true, text: "69bd-69f2  5 more blocks of CHECK_FOR_MODE_1_INPUT" },
+      { kind: "blk", band: "a", today: "b", entry: "6a12", hl: true, blk: "69f2-6a0b", code: ["RTS", ""], note: "-> 6598 in MOVE_PLAYER, behind its JSR at 6595", runs: 79 },
+      { kind: "gap", band: "a", text: "... 6a0b-6a12 VALID_KEY_COMMANDS, a table ..." },
+      { kind: "range", band: "b", text: "range of CHECK_FOR_INPUT: 6a12-6b85" },
+      { id: "c1", kind: "blk", band: "b", today: "b", entry: "6a12", blk: "6a12-6a18", label: "CHECK_FOR_INPUT", code: ["BEQ", "CHECK_FOR_MODE_1_INPUT"], note: "taken 79 of 79", runs: 79 },
+      { kind: "gap", band: "b", text: "... 6a18-6b85 never ran: the key handlers and READ_JOYSTICK_FOR_COMMAND ..." },
+      { kind: "range", band: "c", text: "range of GET_SPRITE_AND_SCREEN_COORD_AT_PLAYER: from 6b85, the next entry" },
+    ],
+    arrows: [
+      { from: "c1", to: "t1", lane: 0, label: "79x", strong: true },
+    ],
+  },
+  "fig-b": {
+    rows: [
+      { kind: "range", band: "a", text: "range of MOVE_PLAYER: 64bd-67db" },
+      { kind: "blk", band: "a", today: "a", entry: "64bd", blk: "64bd-64c5", label: "MOVE_PLAYER", code: ["BEQ", "64cd"], runs: 85 },
+      { kind: "fold", band: "a", today: "a", entry: "64bd", text: "64c5-65bc  19 more blocks of MOVE_PLAYER, among them 64c7 JMP TRY_DIGGING_LEFT_check_can_dig_left (group C) and 6595 JSR CHECK_FOR_INPUT" },
+      { id: "p1", kind: "blk", band: "a", today: "a", entry: "64bd", blk: "65c2-65c8", code: ["BNE", "65cb"], note: "taken 2x, else on 76x", runs: 78 },
+      { id: "p2", kind: "blk", band: "a", today: "a", entry: "64bd", hl: true, blk: "65c8-65cb", code: ["JMP", "TRY_MOVING_LEFT"], runs: 76 },
+      { id: "p3", kind: "blk", band: "a", today: "a", entry: "64bd", blk: "65cb-65cf", code: ["BNE", "65d2"], runs: 2 },
+      { kind: "gap", band: "a", text: "... 65cf-65d2 never ran ..." },
+      { id: "p4", kind: "blk", band: "a", today: "a", entry: "64bd", hl: true, blk: "65d2-65d3", code: ["RTS", ""], note: "-> 60e7, behind the JSR MOVE_PLAYER at 60e4; this block ends at 65d3", runs: 2 },
+      { id: "p5", kind: "blk", band: "a", today: "a", entry: "64bd", hl: true, blk: "65d3-65ec", label: "TRY_MOVING_LEFT", code: ["BCS", "6600"], note: "entered only by the JMP", runs: 76 },
+      { kind: "fold", band: "a", today: "a", entry: "64bd", text: "65ec-6642  14 more blocks of TRY_MOVING_LEFT" },
+      { kind: "blk", band: "a", today: "a", entry: "64bd", blk: "6642-6645", code: ["JMP", "DRAW_PLAYER"], runs: 76 },
+      { kind: "gap", band: "a", text: "... 6645-67db never ran: TRY_MOVING_RIGHT, TRY_MOVING_UP, TRY_MOVING_DOWN ..." },
+      { kind: "range", band: "b", text: "range of TRY_DIGGING_LEFT: from 67db, the next entry" },
+    ],
+    arrows: [
+      { from: "p3", to: "p4", lane: 0, label: "2x" },
+      { from: "p1", to: "p3", lane: 1, label: "2x" },
+      { from: "p2", to: "p5", lane: 2, label: "76x", strong: true },
+    ],
+  },
+};
+
+const SVG = "http://www.w3.org/2000/svg";
+
+function cell(cls, text) {
+  const el = document.createElement("span");
+  if (cls) el.className = cls;
+  if (text !== undefined) el.textContent = text;
+  return el;
+}
+
+function buildRow(row) {
+  const el = document.createElement("div");
+  el.className = "row " + row.kind + (row.hl ? " hl" : "");
+  el.appendChild(cell("band r-" + row.band));
+  el.appendChild(cell("gut"));
+  if (row.kind === "range") {
+    el.appendChild(cell("wide ink-" + row.band, row.text));
+  } else if (row.kind === "gap") {
+    el.appendChild(cell("wide", row.text));
+  } else if (row.kind === "fold") {
+    const text = cell("wide");
+    text.style.gridColumn = "3 / 6";
+    text.textContent = "+ " + row.text;
+    el.appendChild(text);
+    el.appendChild(cell("runs", ""));
+    el.appendChild(todayChip(row));
+  } else {
+    el.appendChild(cell("", row.blk));
+    el.appendChild(cell("lbl", row.label || ""));
+    const code = cell("");
+    code.appendChild(cell("mn", row.code[0]));
+    if (row.code[1]) code.appendChild(document.createTextNode(" " + row.code[1]));
+    if (row.note) code.appendChild(cell("note", "  " + row.note));
+    el.appendChild(code);
+    el.appendChild(cell("runs", row.runs.toLocaleString("en")));
+    el.appendChild(todayChip(row));
+  }
+  return el;
+}
+
+function todayChip(row) {
+  const wrap = cell("");
+  const chip = cell("chip r-" + row.today + (row.today !== row.band ? " mismatch" : ""), row.entry);
+  chip.title = "today in routine " + row.entry;
+  wrap.appendChild(chip);
+  return wrap;
+}
+
+function render(id) {
+  const fig = FIGURES[id];
+  const listing = document.getElementById(id);
+  const head = document.createElement("div");
+  head.className = "row head";
+  ["", "", "block", "label", "leap at the end of the block", "runs", "today in"].forEach((t, i) => {
+    const c = cell(i === 5 ? "runs" : "", t);
+    head.appendChild(c);
+  });
+  listing.appendChild(head);
+  const byId = {};
+  fig.rows.forEach((row) => {
+    const el = buildRow(row);
+    if (row.id) byId[row.id] = el;
+    listing.appendChild(el);
+  });
+  const svg = document.createElementNS(SVG, "svg");
+  svg.setAttribute("class", "arrows");
+  svg.setAttribute("aria-hidden", "true");
+  listing.appendChild(svg);
+  const draw = () => drawArrows(svg, listing, fig.arrows, byId);
+  draw();
+  return draw;
+}
+
+function drawArrows(svg, listing, arrows, byId) {
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+  const width = svg.getBoundingClientRect().width;
+  const top = listing.getBoundingClientRect().top;
+  const mid = (el) => { const r = el.getBoundingClientRect(); return r.top - top + r.height / 2; };
+  arrows.forEach((a) => {
+    const y1 = mid(byId[a.from]);
+    const y2 = mid(byId[a.to]);
+    const xr = width - 4;
+    const xl = width - 18 - a.lane * 15;
+    const g = document.createElementNS(SVG, "g");
+    if (a.strong) g.setAttribute("class", "strong");
+    const line = document.createElementNS(SVG, "path");
+    line.setAttribute("class", "line");
+    line.setAttribute("d", `M ${xr - 2} ${y1} H ${xl} V ${y2} H ${xr - 6}`);
+    const head = document.createElementNS(SVG, "path");
+    head.setAttribute("class", "head");
+    head.setAttribute("d", `M ${xr} ${y2} L ${xr - 7} ${y2 - 4} L ${xr - 7} ${y2 + 4} Z`);
+    const label = document.createElementNS(SVG, "text");
+    label.setAttribute("x", xl - 3);
+    label.setAttribute("y", y1 + (y2 > y1 ? 12 : -4));
+    label.setAttribute("text-anchor", "end");
+    label.textContent = a.label;
+    g.append(line, head, label);
+    svg.appendChild(g);
+  });
+}
+
+const redraws = Object.keys(FIGURES).map(render);
+const redrawAll = () => redraws.forEach((f) => f());
+window.addEventListener("resize", redrawAll);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(redrawAll);
+</script>
+
+</body></html>
