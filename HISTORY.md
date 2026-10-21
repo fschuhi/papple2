@@ -9,6 +9,10 @@
 
 ---
 
+- **2026-10-21:** One glossary, `docs/glossary.md`, and every reference document checked against it and against the code, line by line.
+- **2026-10-21:** `docs/README.md` says what each document is; GitHub shows it when the folder is opened.
+- **2026-10-21:** The disk stand-ins are called what they are: `RwtsTrap` and `MliTrap`.
+- **2026-10-21:** The cross reference documented at the prompt, with an example a test keeps true.
 - **2026-10-19:** What a routine is, written down: `docs/routine.md`. The six ways a routine starts, the three ways it stops, the exit at the door, the span, and what the tools show, every example from the attract play and checked against the reports.
 - **2026-10-19:** One set of words for positions in code, named by address as a 6502 programmer would: lower and higher, before and after, a jump backward or forward. Above and below are left for rows on the screen. `stops_below()` is `stops_before()` now, and the routine code, its tests and the glossary all speak the same language.
 - **2026-10-19:** The listing never just stops any more. A routine that runs on into the next one, without a jump, ends in a grey row that says where: `... runs on into PUT_STATUS_BYTE ...`. Enter goes there, Backspace comes back. Five routines of the attract play end like this, `DRAW_SPRITE_PAGE2` 453 times on its way into `DRAW_SPRITE`.
