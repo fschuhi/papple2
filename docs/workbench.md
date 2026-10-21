@@ -60,7 +60,7 @@ What `%run scripts/lr_basic_blocks_analysis.py` leaves in the session:
 | Kind | Names                                                                                                                                                         |
 |---|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Commands: setting up | `use_reports_folder()`, `use_dossier()`, `run()`, `tiling_reports()`, `stack_tracking_reports()`, `cross_referencing_reports()`                                 |
-| Commands: the current run | `show_routines()`, `show_blocks()`, `show_callers()`, `show_routine_graph()`, `listing()`, `hexdump()`, `edit()`, `loop_reports()`                        |
+| Commands: the current run | `show_routines()`, `show_blocks()`, `show_callers()`, `show_xrefs()`, `show_routine_graph()`, `listing()`, `hexdump()`, `edit()`, `loop_reports()`        |
 | Commands: the clipboard | `clip()`                                                                                                                                                    |
 | Commands: the dossier | `label()`, `comment()`, `unlabel()`, `uncomment()`, `hide()`, `unhide()`, `color()`, `uncolor()`, `colors()`                                                      |
 | Commands: range bounds | `to_range()`                                                                                                                                                 |
@@ -131,6 +131,34 @@ The views share the lookup but use colors differently:
 
 Operand colors in `listing()` are not implemented yet. A breadcrumb's whole-span containment lookup is not a summary of byte colors for a map cell.
 
+## Cross references
+
+A cross reference (xref) links an instruction to a byte it touched, with the kind of access. The words are in [`glossary.md`](glossary.md), section 5. `CrossReferencing` counts the xrefs while the program runs. To have them, attach it, and afterwards call `cross_referencing_reports()`: it writes `lr_xrefs.csv` into the reports folder and keeps its rows for `show_xrefs()`. The walkthrough's `memory_tour` does both:
+
+```python
+%run scripts/walkthrough.py memory_tour
+from papple2.workbench.shell import show_xrefs
+show_xrefs(0x06)
+```
+
+```text
+instruction_address  code         kind          effective_address  bytes    count  indexes
+600d                 STA $06      write_data    0006-0007              1        1  -
+6015                 LDA ($06),Y  read_pointer  0006-0008              2        2  -
+6015                 LDA ($06),Y  read_data     0301-0302              1        1  01-02
+```
+
+- `show_xrefs(target)` takes an address or a label, and lists every access made by an instruction whose operand names it. The code is shown as the run left it in memory, with the dossier's labels.
+- Lines of one instruction and one kind are merged where their effective addresses follow each other without a gap. `bytes` is how many bytes the line covers, `count` how often they were touched, `indexes` the values of `X` or `Y` that were added, as half-open ranges.
+- In the example: the `STA` that builds the pointer, the pointer's two bytes read by `LDA ($06),Y`, and the byte it reached, `$0301`, with `Y` = 1. The data row has the pointer as its target, however far away the byte is.
+- `show_xrefs(target, raw=True)` prints the rows as they were recorded: one line per effective address, with the values seen.
+- Four kinds are counted: `read_immediate`, `read_pointer`, `read_data` and `write_data`. Opcode and operand fetches are not counted, since `Tiling` knows what ran; neither are stack and vector accesses, since `StackTracking` keeps the stack. The report's columns are described in the docstring of `papple2.workbench.cross_referencing`.
+- Observed, not proven: the xrefs say what this run did. An instruction that writes into its own operand, such as `INC *+1`, has its write counted under the new target.
+
+For Lode Runner, `lr_cross_reference.py` writes the attract play's report into `docs/reports/lr_cross_reference/`, and `lr_current.py` loads it together with the routines (see "Experiments in `scripts/`"). Next to the report lie `lr_xrefs_629c.csv` and `lr_xrefs_6fa6+6fb0.csv`, the rows of single instructions, as examples that are easier to read than the whole report; and the digest `lr_xrefs_compressed.csv`, which `make xrefs-compress` makes: the merging of `show_xrefs()`, for every row of the report. `make xrefs-overview` prints the accesses per kind, and the instructions, the instruction and target pairs, and the memory pages with the most rows.
+
+`edit()` and `listing()` do not show xrefs yet. Brushing, in [`ui-ideas.md`](ui-ideas.md), builds on them.
+
 ## Experiments in `scripts/`
 
 - **The `lr_*` experiments:** headless experiments on Lode Runner's attract play, each with a reports folder of its own (see "Experiments and recipes" above).
@@ -139,6 +167,7 @@ Operand colors in `listing()` are not implemented yet. A breadcrumb's whole-span
   - `lr_current.py`: the current run without a new analysis. It runs the attract play without instrumentations, only for the memory, and builds the run from the committed reports of `lr_basic_blocks_analysis` and `lr_cross_reference`, so `edit()` and `show_xrefs()` work in one session. It writes the overview with today's labels into `docs/reports/lr_current/`: `lr_overview.txt` (the whole run, the routines with their callees, the blocks in no routine, the loops), `lr_routines.csv` (the routines, for Excel) and `lr_listing.tsv` (every routine's listing, one after the other). `make lr-current` opens IPython with it.
   - `lr_grade.py`: no run. It builds the routines from the committed reports of `lr_basic_blocks_analysis`, as `set_current_run()` does, checks that they are the routines of its `lr_routines.csv`, and grades them against `docs/lr_answer_key.csv`: how many of Xekri's subroutines have a routine with exactly their blocks, and which routines hold the blocks of the others. The key only grades; nothing in it goes into the tools. `make lr-grade`.
   - Early experiments, frozen (2026-10-04): written before the recipes, with run code of their own, writing into `tmp/`. Kept as they are, as reminders and placeholders. `lr_count.py`: a 256x256 map of the memory, one cell per address, showing which addresses ran as opcode, operand or immediate (PNG and HTML).
+- **The xref scripts:** `compress_xrefs.py` (`make xrefs-compress`) makes the digest `lr_xrefs_compressed.csv` from `lr_xrefs.csv`; `explore_xrefs.py` (`make xrefs-overview`) prints an overview of `lr_xrefs.csv`. See "Cross references".
 - **`walkthrough.py`:** one of the walkthrough's programs (`nested_loops`, `rts_dispatch`, `memory_tour`) through the whole pipeline, reports into `tmp/walkthrough/<program>/`; made for `%run` in IPython, and the model for `tests/test_walkthrough.py`.
 
 ## Glossary
