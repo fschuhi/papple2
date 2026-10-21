@@ -1,6 +1,6 @@
 """Boot Lode Runner in papple2.
 
-How the game is loaded and started, including the RWTS hook that serves
+How the game is loaded and started, including the RWTS trap that serves
 its disk reads, is Lode Runner's setup in papple2.programs.lode_runner.
 This script runs it, in a window or headless.
 
@@ -23,7 +23,7 @@ Not tried by me -- my sandbox has no display.
 and renders both hi-res pages to PNG files with a simple monochrome
 renderer (no NTSC color).
 
-Both modes install the RWTS hook; at the end of a run the script prints
+Both modes install the RWTS trap; at the end of a run the script prints
 every read it served.
 """
 

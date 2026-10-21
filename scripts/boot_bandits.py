@@ -14,7 +14,7 @@ ProDOS returns to the byte after these three, so the caller's code goes on
 behind them.
 
 papple2 has no ProDOS, so nothing answers at $BF00. A trap there, the
-MLI hook, stands in for it, one command at a time:
+MLI trap, stands in for it, one command at a time:
 
 - GET_PREFIX: writes the prefix /BANDITS/ into the caller's buffer. With a
   non-empty prefix the game skips ON_LINE (see $0812 in BANDITS).
@@ -26,7 +26,7 @@ Run from the repo root:
     python scripts/boot_bandits.py
     python scripts/boot_bandits.py --headless
 
-With the window, the emulator stays stopped at $BF00 after the hook stops
+With the window, the emulator stays stopped at $BF00 after the trap stops
 it (Ctrl-X only stops it again); close the window to end the run.
 """
 
@@ -97,10 +97,10 @@ class OpenFile:
     position: int = 0  # where the next READ starts
 
 
-class MliHook:
+class MliTrap:
     """Stand in for ProDOS at $BF00: serve the commands we know, stop at the rest.
 
-    Like RwtsHook in boot_lode_runner.py, answers go into memory past the
+    Like RwtsTrap in papple2.programs.lode_runner, answers go into memory past the
     CPU's write hook, and the return to the caller is faked by moving SP and
     PC outside the instruction stream. Unlike RWTS, the return goes three
     bytes further than a plain RTS: behind the command byte and the
@@ -108,7 +108,7 @@ class MliHook:
     for printing after the run.
 
     Each served command has a method that returns a short description of
-    what it did, or None if it cannot serve this request; then the hook
+    what it did, or None if it cannot serve this request; then the trap
     prints the request and stops, as for an unknown command.
     """
 
@@ -261,7 +261,7 @@ def main() -> None:
     emulator.load_image(LOAD_ADDRESS, str(main_program))
     emulator.cpu.PC = LOAD_ADDRESS
 
-    mli = MliHook(directory)
+    mli = MliTrap(directory)
     emulator.add_trap(MLI_ENTRY, mli.serve)
     emulator.run()
 

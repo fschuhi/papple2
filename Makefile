@@ -55,7 +55,7 @@ boot-lode-runner-throttled: $(SETUP_STAMP) ## Boot Lode Runner with the pygame w
 boot-lode-runner-headless: $(SETUP_STAMP) ## Boot Lode Runner headless: print statistics, save both hi-res pages as PNG
 	$(RUN) scripts/boot_lode_runner.py data/bin/LODE_RUNNER.BIN --headless
 
-# no headless target: the MLI hook serves every file, so a headless run never stops
+# no headless target: the MLI trap serves every file, so a headless run never stops
 boot-bandits: $(SETUP_STAMP) ## Boot Bandits from its Total Replay files with the pygame window
 	$(RUN) scripts/boot_bandits.py
 

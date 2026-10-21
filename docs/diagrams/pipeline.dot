@@ -23,7 +23,7 @@ digraph pipeline {
           arrowsize=0.7];
 
     // 0 the machine, built before the run: the program's boot()
-    boot [label=<<FONT FACE="monospace">lode_runner.boot()</FONT><BR/><FONT POINT-SIZE="10">Emulator, headless,</FONT><BR/><FONT POINT-SIZE="10">with the RWTS hook</FONT>>,
+    boot [label=<<FONT FACE="monospace">lode_runner.boot()</FONT><BR/><FONT POINT-SIZE="10">Emulator, headless,</FONT><BR/><FONT POINT-SIZE="10">with the RWTS trap</FONT>>,
           fillcolor="#E1F5EE", color="#0F6E56"];
     boot -> loop [label=" emulator "];
 

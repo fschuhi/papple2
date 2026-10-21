@@ -5,17 +5,17 @@ Loads Xekri's golden_source.bin -- the `LODE RUNNER` B file from the disk,
 The file begins with JMP $2800, the relocation routine; it moves the game
 into place ($0000-$1FFF and $5F00-$BFFF) and starts it.
 
-RWTS hook: every disk access of the game ends in DISABLE_INTS_CALL_RWTS
+RWTS trap: every disk access of the game ends in DISABLE_INTS_CALL_RWTS
 at $B7B5 (main.nw, "disk routines"). A trap there serves reads from the
 disk image in data_dir/do/: it copies the sector straight into the
 buffer, clears carry, and returns to the caller as RTS would. Anything
 else (the high-score write at game over, format) prints the request and
 stops the emulator.
 
-boot() gives a ready machine, the game in memory and the RWTS hook
+boot() gives a ready machine, the game in memory and the RWTS trap
 installed: run(lode_runner.boot(), 4_000_000, Tiling) at the prompt and in
 the lr_* recipes. scripts/boot_lode_runner.py calls the two pieces, load()
-and install_rwts(), itself, and keeps the hook to print the reads it served.
+and install_rwts(), itself, and keeps the trap to print the reads it served.
 
 Needs the stack wrap and decimal mode fixes in cpu.py (2026-09-23 patch).
 """
@@ -46,7 +46,7 @@ RWTS_READ = 1
 RWTS_COMMANDS = {0: "seek", 1: "read", 2: "write", 4: "format"}
 
 
-class RwtsHook:
+class RwtsTrap:
     """Serve the game's RWTS reads from a .do disk image.
 
     The sector appears in the buffer "deus ex machina": written straight
@@ -99,16 +99,16 @@ def describe(instructions: int, command: int, track: int, sector: int, buffer: i
 def load(
     binary: str = DEFAULT_BINARY, headless: bool = True, speed: float | None = None
 ) -> Emulator:
-    """A machine with the game at LOAD_ADDRESS and PC there, no hook yet."""
+    """A machine with the game at LOAD_ADDRESS and PC there, no trap yet."""
     emulator = Emulator(no_display=headless, data_dir=load_data_dir(), speed=speed)
     emulator.load_image(LOAD_ADDRESS, binary)
     emulator.cpu.PC = LOAD_ADDRESS
     return emulator
 
 
-def install_rwts(emulator: Emulator) -> RwtsHook:
-    """Serve the game's disk reads from its disk image; return the hook."""
-    rwts = RwtsHook(DiskImage(Path(load_data_dir()) / "do" / DISK_IMAGE))
+def install_rwts(emulator: Emulator) -> RwtsTrap:
+    """Serve the game's disk reads from its disk image; return the trap."""
+    rwts = RwtsTrap(DiskImage(Path(load_data_dir()) / "do" / DISK_IMAGE))
     emulator.add_trap(DISABLE_INTS_CALL_RWTS, rwts.serve)
     return rwts
 
@@ -116,7 +116,7 @@ def install_rwts(emulator: Emulator) -> RwtsHook:
 def boot(
     binary: str = DEFAULT_BINARY, headless: bool = True, speed: float | None = None
 ) -> Emulator:
-    """The game, ready to run: loaded, with the RWTS hook installed."""
+    """The game, ready to run: loaded, with the RWTS trap installed."""
     emulator = load(binary, headless, speed)
     install_rwts(emulator)
     return emulator

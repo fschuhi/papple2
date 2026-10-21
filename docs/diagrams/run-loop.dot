@@ -33,7 +33,7 @@ digraph run_loop {
         node [color="#854F0B"];
 
         breakpoints [label=<<B>breakpoints</B><BR/><FONT POINT-SIZE="10">every should_break(PC) is asked,</FONT><BR/><FONT POINT-SIZE="10">so each sees every instruction</FONT>>];
-        trap [label=<<B>trap at PC?</B><BR/><FONT POINT-SIZE="10">trap(emulator) serves it, e.g. the</FONT><BR/><FONT POINT-SIZE="10">RWTS hook: True = served, go on</FONT>>];
+        trap [label=<<B>trap at PC?</B><BR/><FONT POINT-SIZE="10">trap(emulator) serves it, e.g. the</FONT><BR/><FONT POINT-SIZE="10">RWTS trap: True = served, go on</FONT>>];
         until [label=<<B>until(emulator)?</B><BR/><FONT POINT-SIZE="10">e.g. instruction_count_reaches(n)</FONT>>];
         breakpoints -> trap;
         trap -> until [label=" served, or none "];
