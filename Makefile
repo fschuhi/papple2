@@ -114,11 +114,11 @@ clean: ## Remove venv, cache, and tmp files
 	find . -name "*.egg-info" -type d -prune -exec rm -rf {} +
 
 showtree: ## Show project directory structure
-	tree -I ".venv|__pycache__|.idea|.pytest_cache|*egg-info|tmp"
+	tree --dirsfirst -I ".venv|__pycache__|.idea|.pytest_cache|*egg-info|tmp"
 
 gentree: ## Save tree structure to file
 	mkdir -p tmp
-	tree -I ".venv|__pycache__|.idea|.pytest_cache|*egg-info|tmp" > tmp/project_tree.txt
+	tree --dirsfirst -I ".venv|__pycache__|.idea|.pytest_cache|*egg-info|tmp" > tmp/project_tree.txt
 	# @if [ -d tmp/applied-patches ]; then tree tmp/applied-patches >> tmp/project_tree.txt; fi
 
 patch: ## apply all *.patch files in the repo root, then move them to tmp/applied-patches/
