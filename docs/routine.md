@@ -1,6 +1,6 @@
 # papple2 -- Routine
 
-What a routine is in `papple2`, where one starts and where it stops, and what the tools show of it. The words are those of the glossary in [`workbench.md`](workbench.md); positions in code are named by address (lower, higher, before, after, backward, forward). The examples come from Lode Runner's attract play, as recorded in `docs/reports/lr_basic_blocks_analysis/`. The code is `find_routines()` in `src/papple2/workbench/basic_blocks_analysis.py`; the names in brackets below are its helpers.
+What a routine is in `papple2`, where one starts and where it stops, and what the tools show of it. The words are those of [`glossary.md`](glossary.md); positions in code are named by address (lower, higher, before, after, backward, forward). The examples come from Lode Runner's attract play, as recorded in `docs/reports/lr_basic_blocks_analysis/`. The code is `find_routines()` in `src/papple2/workbench/basic_blocks_analysis.py`; the names in brackets below are its helpers.
 
 ---
 

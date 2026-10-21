@@ -1,6 +1,6 @@
 # Instrumentation design
 
-**Status:** decided, and implemented up to the tag `core-complete`. Section 9 lists what is still open. The old design this one replaces is at the tag `pre-redesign`.
+**Status:** implemented up to the tag `core-complete`. Section 9 lists what is still open. The old design this one replaces is at the tag `pre-redesign`.
 
     **Purpose:** one place for the rules that span `Emulator`, `CPU` and `Memory`, so that they are not spread over comments in several modules.
 
@@ -17,7 +17,7 @@ Three kinds of instrumentation, each with its own small interface. There is no c
 | What it does | decides whether to stop; changes nothing | does a routine's work in Python instead of the 6502 code at its address | reports what just happened |
 | Its answer | stop or not | served or not | none; the caller ignores it |
 
-- **Breakpoint:** by address, or by condition (a conditional breakpoint; `until` is one today).
+- **Breakpoint:** by address (`break_at`). An `until` condition is not a breakpoint (see [`glossary.md`](glossary.md)); section 9 asks whether it should become one.
 - **Trap:** the established term for doing a routine's work in the emulator's own language (high-level emulation). The disk stand-ins for Lode Runner (`$B7B5`) and Bandits (`$BF00`) are traps. A trap that cannot serve a request stops the run and says why; that is a trap failing, not a breakpoint.
 - **Hook:** optional. Hooks of one kind share one interface, one set of rules, and a deterministic order (their order in the list).
 

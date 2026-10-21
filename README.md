@@ -87,7 +87,7 @@ At the IPython prompt, the commands of `papple2.workbench.shell` show what was f
 
 <p align="center"><img src="docs/diagrams/workbench.svg" alt="Inside papple2.workbench, coloured by role" width="720"></p>
 
-See [`docs/workbench.md`](docs/workbench.md) for the commands, the experiments, the reports and the glossary.
+See [`docs/workbench.md`](docs/workbench.md) for the commands, the experiments and the reports, [`docs/glossary.md`](docs/glossary.md) for the words, and [`docs/README.md`](docs/README.md) for all documents.
 
 ---
 

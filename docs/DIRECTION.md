@@ -75,7 +75,7 @@ Two axes: static (reads the bytes) vs. dynamic (runs the game), and knowledge th
 - _Needs investigation:_ microM8's heat map comes close to a Code/Data Logger. Is there an Apple II tool that saves per-byte code/data marks to a file for a disassembler to use, or that tracks provenance? Not known to us yet.
 - The Robotron workbench independently arrived at two of these ideas: the memory heatmap (a Code/Data Logger) and "record everything, step through the recording" (omniscient debugging). "Mem of interest" corresponds to logging filters / trace conditions.
 
-## Glossary (first pass)
+## Established terms (first pass)
 
 "Close" = same concept. "Related" = overlapping, forcing the standard name would mislead.
 
@@ -107,7 +107,7 @@ One line each for now.
 - Bandits, in my high school times.
 - The ill-fated Robotron project.
 
-## Technical direction (moves to `README.md`)
+## Technical direction
 
 ### Direction in one paragraph
 

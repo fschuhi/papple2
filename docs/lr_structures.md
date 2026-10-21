@@ -1,6 +1,6 @@
 # The structures of Lode Runner, read from Xekri's source
 
-Started 2026-10-15, base commit `dc2d967`. Read from Xekri's literate source (`main.nw`) and its listing (`docs/listings/listing_clean.tsv`), with the counts from the attract play's split reports (`docs/reports/lr_basic_blocks_analysis/lr_split_tiles.csv` and `lr_split_transitions.csv`). Why this document exists and what it is for: `docs/structures_handover.md`. Continued 2026-10-17 in one go (one-shot session): the answer key, Part 1 completed, Part 2 entries 2 to 6, Part 3.
+Started 2026-10-15, base commit `dc2d967`. Read from Xekri's literate source (`main.nw`) and its listing (`docs/listings/listing_clean.tsv`), with the counts from the attract play's split reports (`docs/reports/lr_basic_blocks_analysis/lr_split_tiles.csv` and `lr_split_transitions.csv`). Continued 2026-10-17 in one go (one-shot session): the answer key, Part 1 completed, Part 2 entries 2 to 6, Part 3.
 
 ---
 
@@ -24,6 +24,8 @@ Started 2026-10-15, base commit `dc2d967`. Read from Xekri's literate source (`m
 ---
 
 ## Terms
+
+The terms as of 2026-10-17. The current ones are in [`glossary.md`](glossary.md).
 
 - **Xekri's subroutine**: a unit of Xekri's source, from his `SUBROUTINE` mark to its last instruction. Static: it holds its code whether that code ran or not.
 - **routine**: `papple2`'s word. The blocks that ran, found from one run. A routine is a hypothesis: another run can show blocks this run never reached.

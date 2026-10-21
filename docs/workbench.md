@@ -1,6 +1,6 @@
 # papple2 -- Workbench
 
-For the reverse engineer: the commands at the prompt, the experiments, the reports, and the words for all of it. `README.md` has the short version.
+For the reverse engineer: the commands at the prompt, the experiments and the reports. `README.md` has the short version.
 
 ---
 
@@ -143,40 +143,4 @@ Operand colors in `listing()` are not implemented yet. A breadcrumb's whole-span
 
 ## Glossary
 
-- **Hats:** the roles the user works in, each with its own question and its own artefacts. The **reverse engineer** asks what the code does (the prompt, the dossier, the reports); the **product manager** asks what the workbench should let me do, and in what order (`GOALS.md`, `TODO.md`, the contract in this document); the **developer** asks how it works and whether it is right (PyCharm, patches, tests). At the prompt, the reverse engineer notes what feels awkward instead of fixing the tool. In conversation, a prefix names the hat: "RE:", "PM:", "Dev:".
-- **Experiment:** one `lr_` script in `scripts/`: a recipe, and whatever analysis or functions of its own it adds. Some experiments only read the reports of others (`lr_current.py`).
-- **Recipe:** the part of an experiment that wires up the run and writes the reports: a few lines of commands, the same ones you could type at the prompt. No object of its own.
-- **Command:** a function in `shell.py` meant for the prompt and for experiments. The commands are the **contract** between `papple2`'s developers and its reverse engineers: documented, and kept working.
-- **Session:** the object that holds what the commands work on: the reports folder, the open dossier with its stores, and the current run with its routines. `shell.py` keeps one, `shell.session`; a second terminal has its own. It never prints: a command prints what it gives it.
-- **Machinery:** everything else reachable at the prompt (`shell.session.run_emulator`, `shell.session.routines`, ...): there for debugging and curiosity, with no guarantee.
-- **Graduate:** a function moves from its experiment into `shell.py`, once it proves useful beyond it.
-- **Program setup:** how `papple2` loads and starts one program, a module in `papple2.programs`: `lode_runner`. Not the program, not its dossier.
-- **Run:** one execution of an emulator for a number of instructions, from where its `PC` stands, with instrumentations attached. The **current run** is the one the commands work on. There is one at a time; a second one means a second terminal.
-- **Instrumentation:** a class whose objects watch a run through the emulator's hooks: after every instruction, or after reads and writes of memory. `Tiling`, or a class typed at the prompt.
-- **Report:** a file an experiment writes. The reports carry meaning on their own, they are easy to work with.
-- **Digest:** a CSV derived from one or more other CSVs and joined with the dossier's names, for reading in an editor or in Excel. Planned: `lr_xrefs_digest.csv`.
-- **Reports folder:** an experiment's home, `docs/reports/<experiment>/`: where its reports go, and where it reads its own. One at a time.
-- **Dossier:** everything we know about one program, a folder under git: `dossiers/lode_runner/`. Annotations, hidden ranges and color ranges are separate residents; snapshots may follow.
-- **Annotations:** the labels and comments in a dossier, by address, in `annotations.json`.
-- **Hidden range:** a named address span saved in `hidden.json`, shown as one collapsed row rather than decoded bytes.
-- **Color range:** a named address span and shade saved in `colors.json`, used by shared lookup functions and rendered according to each view's purpose.
-- **Label:** the name of one address; one text names one address only. Snake case: `lookup_hgr`; the Apple II's standard labels stay uppercase (`r:KBD`), so they stand out.
-- **`show_` and `print_`:** a `show_` command works on the current run and takes at most an address or a label; a `print_` function takes the objects it prints. A `show_` command returns what it shows as text, as `listing()` and `hexdump()` do, for IPython to show as `Out[n]` and `clip()` to copy; a `print_` function prints.
-- **Lower, higher, before, after, backward, forward:** positions in code are named by address. A lower address comes before, a higher one after; a jump to a lower address goes backward, to a higher one forward. The instruction directly after a `JSR` starts 3 bytes after the `JSR`'s address. A comparison of values names the address: "the orphan with the lowest address". Above and below are used only for rows on the screen, in `listing()` and `edit()`, where the lower address is shown above. Order in time, during a run, is earlier and later. Not used for positions in code: behind, in front of, up, down.
-- **Tile:** a run of instructions from an entry point to the leap that leaves it, as recorded. Tiles as recorded ("unbroken") may overlap.
-- **Target:** the address an operand names: `$1a85` in `LDA $1a85,Y`, the pointer `$1b` in `STA ($1b),Y`, a branch's target. `edit()`'s Operand field labels it, as the bytes stand after the run; the cross reference records it as it stood when the instruction ran, so a target the program wrote itself shows once per value it had. An immediate has none: it names no address.
-- **Effective address:** the byte an access actually touches: the target plus the index, or, through a pointer, the pointer's value plus `Y`. `LDA tbl,X` has one target and as many effective addresses as `X` had values.
-- **Index:** the value of `X` or `Y` that an addressing mode adds: for `abs,X`, `zp,X`, `abs,Y` and `zp,Y` to the target, for `(zp,X)` to find the pointer, for `(zp),Y` to the pointer's value. Also the `,X` part of an operand, as in the editor's syntax colors.
-- **Kind:** why the CPU touched a byte, named after `Memory`'s hook lists: `read_immediate`, `read_pointer`, `read_data`, `write_data`, and the ones the cross reference doesn't count (opcode, operand, stack, vector).
-- **Cross reference (xref):** a link from an instruction to a byte it touched, with the kind of access. `CrossReferencing` counts them per instruction, kind, target and effective address, with the indexes, values and old values seen, into `lr_xrefs.csv`. "Xref" is the short form, for the prompt; "cross reference" the long one, for prose and the class.
-- **Leap:** a branch, `JMP`, `JSR`, `RTS`, `RTI` or `BRK`. **Glide:** the CPU runs on into the next instruction, without a leap.
-- **Split tile:** a tile cut at every entry point inside it; split tiles do not overlap. Each split tile becomes one **basic block** of the graph; the graph's connections are **edges**. A **call fall-through edge** joins the block holding a `JSR` to the block directly after it, instead of an edge into the callee. A call whose return was redirected gets one too, to where the return landed, e.g. past the bytes directly after the `JSR` that the callee read. Neither is drawn as an arrow in a listing.
-- **Back edge:** an edge whose target dominates its source; it closes a loop. A term of the graph, not a direction in memory: most back edges jump backward, but the graph decides, not the addresses.
-- **Routine:** the code reachable from an entry, without following calls; every block of a run lies in exactly one routine. Where a routine starts, where it stops, its span, and what the tools show of it: [`routine.md`](routine.md).
-- **Entry:** the address where a routine starts.
-- **Orphan:** a block an edge leads to, but that no routine holds. Of the orphans, the one with the lowest address becomes an entry.
-- **Exit at the door:** the block directly before a routine's entry that ends right at it, e.g. the `RTS` at `71a1` before `SHOULD_GUARD_MOVE_LEFT`. A jump backward to it is followed; any other jump backward past the entry is not.
-- **Stack jump:** an unmatched `RTS` whose target lies directly after no `JSR` of the run: a jump made with `RTS`, e.g. a dispatch through a table. Its target is a routine's entry.
-- **Span:** a routine from the block with the lowest address to the one with the highest, as `listing()`, `edit()` and `lr_listing.tsv` show it. The block with the lowest address may lie before the entry, and the span includes the code of other routines that lies between the routine's blocks.
-- **Shadow stack:** a second stack outside the machine, kept by `StackTracking`. Each `JSR` opens a **frame** (call site, entry, expected return), kept by `SP` before the call. Frames at the same `SP` pile up, the newest on top: a routine may have taken its return address off the stack, into zero page, and call something meanwhile. Each `RTS` closes the top frame at the `SP` it returns to. **Outcomes:** matched (returned where expected), redirected (returned elsewhere: behind bytes the routine read after its `JSR`, or to a rewritten return address), unmatched (no frame there: bytes pushed by hand, e.g. `PHA`/`PHA`/`RTS`), abandoned (a frame that can never return), open (still open when the run stopped). A tail call is matched: it shows as a frame closed in another routine's code.
-- **Stretch:** a planned persistent object collecting what is understood about code, rather than a presentation setting or the structure of one run. See `GOALS.md`, "Routines as stretches".
+The words: [`glossary.md`](glossary.md).
