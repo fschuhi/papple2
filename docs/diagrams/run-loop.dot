@@ -17,7 +17,7 @@ digraph run_loop {
     fontsize=10;
     fontcolor="#5F5E5A";
     labelloc="b";
-    label="\nWhile stopped with a window, no instruction runs, but the passes go on: the window is still polled, so Ctrl-X can continue.\nThe hooks (blue) are where Tiling and StackTracking listen; Emulator.attach() puts their after_* methods into these lists.";
+    label="\nWhile stopped with a window, no instruction runs, but the passes go on: the window is still polled, so Ctrl-X can continue.\nThe hooks (blue) are where Tiling, StackTracking and CrossReferencing listen; Emulator.attach() puts their after_* methods into these lists.";
     node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=11,
           fillcolor="white", color="#5F5E5A", penwidth=1, margin="0.12,0.06"];
     edge [color="#5F5E5A", fontname="Helvetica", fontsize=10, fontcolor="#444441",

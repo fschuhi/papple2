@@ -57,7 +57,7 @@ The span of a routine runs from its block with the lowest address to the end of 
 - **`listing(entry)` and `edit(entry)`** show a routine over its span.
 - **The last row of a routine that runs on into another one** says where, e.g. `... runs on into CLEAR_PAGE ...` at the end of `CLEAR_HGR2`. In `edit()`, Enter goes there.
 - **Enter in `edit()`** follows a `JSR`, a `JMP` or a branch. Into another routine, it opens that routine with the bar on the target, also when the target is not the routine's entry (`Session.routine_of()`).
-- **`u` in `edit()`, and `show_callers()` at the prompt,** list every way into the routine shown: a `JSR`, a `JMP`, a branch, a glide, the `RTS` of a dispatch, and a `JMP` into the middle of the routine. A routine's own loop is not one of them.
+- **`u` in `edit()`, and `show_callers()` at the prompt,** list every way into the routine shown: a `JSR`, a `JMP`, a branch, a glide, the `RTS` of a dispatch, and a jump through a door (an address inside the routine other than its entry). A routine's own loop is not one of them.
 - **`show_routine_graph()`** draws the routines as boxes, with the calls and the other ways in as arrows.
 
 ## What is still open
