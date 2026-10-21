@@ -53,6 +53,7 @@ from papple2.workbench.shell import (  # noqa: F401
     run,
     show_blocks,
     show_routines,
+    show_xrefs,
     stack_tracking_reports,
     tiling_reports,
     use_reports_folder,
