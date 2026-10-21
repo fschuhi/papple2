@@ -11,7 +11,7 @@
 - **`LODE_RUNNER.BIN`** -- the main program of Lode Runner (Broderbund, 1983), for `make boot-lode-runner`. Also produced from a disk image:
   1. Download the disk image from [archive.org](https://archive.org/details/a2_Lode_Runner_1983_Broderbund_cr_Reset_Vector) (the release cracked by Reset Vector).
   2. Open it in CiderPress II.
-  3. Right-click on the `LODE RUNNER` entry (Type `B`, binary) and extract it. Its auxiliary type is `$0800`, the address DOS loads it to, which is also where `scripts/boot_lode_runner.py` loads it.
+  3. Right-click on the `LODE RUNNER` entry (Type `B`, binary) and extract it. Its auxiliary type is `$0800`, the address DOS loads it to, which is also where `papple2.programs.lode_runner` loads it (`LOAD_ADDRESS`).
   4. Check the extracted file's size: 33024 bytes, matching the Data Len CiderPress II shows for the entry. Rename it to `LODE_RUNNER.BIN`.
 - **`Lode_Runner_1983_Broderbund_cr_Reset_Vector.do`** -- the Lode Runner disk image itself, the same archive.org download as in step 1 above. Keep its name. `make boot-lode-runner` reads the levels and the high-score table from it once a real game starts. Its size must be 143360 bytes (35 tracks, 16 sectors of 256 bytes, DOS 3.3 order); `papple2.core.disk_image` refuses anything else.
 - **Bandits' files** -- the main program `BANDITS` and its data files `BANDITS.A` to `BANDITS.Z`, from Total Replay v6.1 (by 4am and qkumba), for `make boot-bandits`:
