@@ -63,7 +63,7 @@ The Apple II's own Monitor and Integer BASIC boot in `papple2`, and so do games 
 
 ## The workbench
 
-`papple2.workbench` is where the reverse engineering happens. You run a program with instrumentations attached, and they record what ran: `Tiling` which code ran and where it leapt, `StackTracking` which returns were real and which were tricks, `CrossReferencing` which instruction touched which byte, and how. They write their records as reports, plain files that carry meaning on their own, for you and for an LLM. The analysis reads the reports back and finds the routines, their basic blocks and their loops.
+`papple2.workbench` is where the reverse engineering happens. You run a program with instrumentations attached, and they record what ran: `Tiling` which code ran and where it leapt, `StackTracking` which returns were matched and which were not, `CrossReferencing` which instruction touched which byte, and how. They write their records as reports, plain files that carry meaning on their own, for you and for an LLM. The analysis reads the reports back and finds the routines, their basic blocks and their loops.
 
 At the IPython prompt, the commands of `papple2.workbench.shell` show what was found: the routines, a routine's blocks, the ways into it, a graph of the routines, listings, a hexdump, a memory map. The same commands are the recipes of the experiments in `scripts/`. What you learn goes into the program's dossier, under git: labels, comments, hidden ranges and color ranges. Every later view shows them.
 
