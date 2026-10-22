@@ -107,11 +107,9 @@ class EmulatorStoppedState( StateMachine ):
         }
 
     def on_enter(self, state: State, event: Event) -> None:
-        # formerly known as suspend_execution()
         self.window.status("execution stopped, %s" % str(self.cpu))
 
     def on_exit(self, state: State, event: Event) -> None:
-        # formerly known as resume_execution()
         self.window.status("execution resumed, %s" % str(self.cpu))
 
     def on_d(self, state: State, event: Event) -> None:

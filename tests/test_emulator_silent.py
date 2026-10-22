@@ -144,8 +144,7 @@ def test_rts_without_matching_jsr_does_not_crash(make_emulator):
     The classic 6502 "computed jump" trick pushes a target address by hand
     (PHA/PHA) and uses RTS to jump to it, with no JSR involved at all. This
     program does exactly that: it never executes a JSR, only two PHAs and an
-    RTS, and should land at `landed`. (It began as a regression test for the
-    emulator's old JSR/RTS bookkeeping, removed after tag pre-redesign.)
+    RTS, and should land at `landed`.
     """
     asm, emulator = make_emulator("""
             *=$6000
