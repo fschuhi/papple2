@@ -102,7 +102,7 @@ from papple2.workbench.shell import (  # noqa: F401
 )
 
 # One folder per script, named after it. Under git: the reports are what
-# the analysis leaves behind for reading, by us and by other LLMs.
+# the analysis leaves for reading, by us and by other LLMs.
 REPORTS_FOLDER = Path("docs/reports/lr_basic_blocks_analysis")
 
 # What we know about Lode Runner's addresses, kept across runs, under git.
@@ -148,7 +148,7 @@ if __name__ == "__main__":
     stack_tracking_reports()
     overview_reports()
 
-    # The loop reports the run leaves behind: those of the start, and of
+    # The loop reports of the run: those of the start, and of
     # every routine named with --loop-reports, each written once.
     for entry in dict.fromkeys([lode_runner.LOAD_ADDRESS, *arguments.loop_reports]):
         loop_reports(entry)

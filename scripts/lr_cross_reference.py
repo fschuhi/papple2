@@ -50,7 +50,7 @@ from papple2.workbench.shell import (  # noqa: F401
 )
 
 # One folder per script, named after it. Under git: the reports are what
-# the analysis leaves behind for reading, by us and by other LLMs.
+# the analysis leaves for reading, by us and by other LLMs.
 REPORTS_FOLDER = Path("docs/reports/lr_cross_reference")
 
 # What we know about Lode Runner's addresses, kept across runs, under git.

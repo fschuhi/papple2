@@ -9,7 +9,7 @@ immediate. A counter in zero page is read and written by one INC.
 boot() gives a ready machine, the program at $6000 and PC there:
 run(memory_tour.boot(), 38, CrossReferencing) at the prompt. 38
 instructions run it to its end; after them, PC stands at $6035, the byte
-behind done's NOP.
+after done's NOP.
 """
 
 from papple2.core.emulator import Emulator

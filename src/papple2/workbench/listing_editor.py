@@ -67,7 +67,7 @@ no new step was taken since: Enter, or going somewhere with the picker,
 forgets where Backspace came from. Each routine remembers its window and
 bar when it is left, and opens again as it was. The breadcrumbs in the
 rule above the listing show the routines followed into, the one shown last;
-a jump within a routine adds none. Behind it are the routines f would go
+a jump within a routine adds none. After it come the routines f would go
 forward to. Every name uses its assigned color, or gray without one;
 only the current name is bold. The editor keeps its height, whatever
 the routine's length.
@@ -276,7 +276,7 @@ def format_row(row: ListingRow, widths: ColumnWidths, columns: int) -> str:
 
 
 def holds_bar(row: ListingRow) -> bool:
-    """Whether the bar can stop on row: an instruction, or the row behind a
+    """Whether the bar can stop on row: an instruction, or the row below a
     routine that says where it runs on into, which Enter follows. Not a
     gap, nor the empty line before a .byte block."""
     return row.address is not None or row.target is not None
@@ -315,7 +315,7 @@ def mnemonic(row: ListingRow) -> str:
 
 def field_start(row: ListingRow, widths: ColumnWidths, field: str) -> int:
     """Where field ("label" or "operand") starts in row's line, as
-    format_row() lays it out: the label column, or the operand behind the
+    format_row() lays it out: the label column, or the operand after the
     mnemonic."""
     start = len(f"{row.gutter}{row.address:04x}  {row.hex_bytes:<8}  ")
     if field == "label":
@@ -328,7 +328,7 @@ def field_start(row: ListingRow, widths: ColumnWidths, field: str) -> int:
 def field_width(row: ListingRow, widths: ColumnWidths, field: str, text: str) -> int:
     """How wide field is while text is typed into it: at least as wide as
     its column, so nothing of the line shows through, and one more than
-    the text, for the cursor behind it."""
+    the text, for the cursor after it."""
     if field == "label":
         column = widths.label
     else:
@@ -468,14 +468,14 @@ def breadcrumbs(names: list[str], width: int) -> list[str]:
 
 
 def future_crumbs(names: list[str], room: int) -> list[str]:
-    """names, the nearest first, as many as fit into room behind the
+    """names, the nearest first, as many as fit into room after the
     breadcrumbs, each with CRUMB_SEPARATOR in front of it. The last ones
     are left out if need be, with "..." in their place."""
     shown: list[str] = []
     used = 0
     for index, name in enumerate(names):
         cost = len(CRUMB_SEPARATOR) + len(name)
-        # If more come behind this one, keep room for the "..." standing
+        # If more come after this one, keep room for the "..." standing
         # in for them.
         more = index < len(names) - 1
         reserve = len(CRUMB_SEPARATOR) + len(ELLIPSIS) if more else 0
@@ -727,7 +727,7 @@ def edit_rows(
             last = ahead[-1] if ahead else entries[-1]
             if followed.entry != last:
                 ahead.append(followed.entry)
-        # Room for the rule's ends: "── " before, " ─" behind.
+        # Room for the rule's ends: "── " before, " ─" after.
         room = text_width() + MARKER_WIDTH - 5
         return breadcrumb_text(entries, ahead, label_of, color_of, room)
 
@@ -741,7 +741,7 @@ def edit_rows(
         routine's entry, opens that routine; a branch, or a JMP to a row in
         the listing, moves the bar there; a branch or a JMP to an address
         outside the listing opens the routine whose blocks hold it, with
-        the bar there. The row behind a routine that runs on into another
+        the bar there. The row below a routine that runs on into another
         one leads there as a JMP would. Anything else: a message."""
         state.message = ""
         row = state.rows[state.cursor]
@@ -861,7 +861,7 @@ def edit_rows(
 
     def open_comment() -> None:
         """Open the comment box with the bar's row's comment, the cursor
-        behind it. If the bar's row lies under the box, the listing
+        after it. If the bar's row lies under the box, the listing
         scrolls up first."""
         lowest = height - box_lines - 1  # the lowest row above the box
         if state.cursor - state.top > lowest:
@@ -980,7 +980,7 @@ def edit_rows(
 
     def open_field(name: str) -> None:
         """Open the field name on the bar's row, holding the label it
-        edits, with the cursor behind the text."""
+        edits, with the cursor after the text."""
         row = state.rows[state.cursor]
         state.field = name
         state.message = ""

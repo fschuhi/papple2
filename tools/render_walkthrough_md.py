@@ -61,7 +61,7 @@ def render_docstring(docstring: str) -> list[str]:
             out.append("")
         else:
             if in_code:
-                # The blank lines behind the code belong to the prose.
+                # The blank lines after the code belong to the prose.
                 blanks = 0
                 while out[-1] == "":
                     out.pop()

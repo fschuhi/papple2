@@ -115,7 +115,7 @@ def print_memory_map(
 ) -> None:
     """Print the rows: a header with the columns' offsets, then each row
     with its address. No gridlines: a cell is as wide as its offset plus
-    the space behind it, so cells of one color run into one band.
+    the space after it, so cells of one color run into one band.
 
     colored shows each cell's color as its background. Plain, a colored
     cell shows its letter (MAP_LETTERS), a cell without color dots, and a

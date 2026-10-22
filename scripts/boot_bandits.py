@@ -11,7 +11,7 @@ call looks like this:
     .word parameter_block  ; address of a small table: what exactly to do
 
 ProDOS returns to the byte after these three, so the caller's code goes on
-behind them.
+after them.
 
 papple2 has no ProDOS, so nothing answers at $BF00. A trap there, the
 MLI trap, stands in for it, one command at a time:
@@ -103,7 +103,7 @@ class MliTrap:
     Like RwtsTrap in papple2.programs.lode_runner, answers go into memory past the
     CPU's write hook, and the return to the caller is faked by moving SP and
     PC outside the instruction stream. Unlike RWTS, the return goes three
-    bytes further than a plain RTS: behind the command byte and the
+    bytes further than a plain RTS: after the command byte and the
     parameter block address. `log` records every call seen, served or not,
     for printing after the run.
 
@@ -129,7 +129,7 @@ class MliTrap:
         mem = em.mem
 
         # JSR pushed the address of its own last byte; one more is the first
-        # of the three bytes behind the JSR. Peek for now: only a served
+        # of the three bytes directly after the JSR. Peek for now: only a served
         # command takes the address off the stack.
         low = mem[0x100 + (cpu.SP + 1 & 0xFF)]
         high = mem[0x100 + (cpu.SP + 2 & 0xFF)]

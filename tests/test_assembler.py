@@ -88,8 +88,8 @@ def dump_state(
     print(' '.join(res))
 
 
-def test_a_label_behind_a_word_gets_its_address() -> None:
-    # A .WORD is 2 bytes, so done lies at $6005, behind the JMP's 3 bytes
+def test_a_label_after_a_word_gets_its_address() -> None:
+    # A .WORD is 2 bytes, so done lies at $6005, after the JMP's 3 bytes
     # and the word's 2. The word holds done - 1, as in an RTS jump table.
     asm = Assembler()
     byte_array = compile(asm, """

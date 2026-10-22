@@ -31,7 +31,7 @@ class ListingRow:
     bytes never ran ..."). There, every other field but the gutter is
     empty, and the bar skips the row.
 
-    The row behind a routine that runs on into another one, without a
+    The row below a routine that runs on into another one, without a
     leap, has no address either. Its text says where it runs on into
     ("... runs on into CLEAR_PAGE ...", runs_on()), and target holds that
     address: the bar stops on it, and Enter in the listing editor goes
@@ -160,7 +160,7 @@ def listing_rows(
     hiding code. The ranges must not overlap, as Hidden enforces.
 
     An instruction that starts before end is listed whole, even if its
-    operand reaches past end. A block's end always lies behind its last
+    operand reaches past end. A block's end always lies after its last
     instruction, so this only shows for ranges that cut an instruction.
 
     Each instruction's row carries the address its operand names in target,
@@ -215,7 +215,7 @@ def listing_rows(
         instruction = f"{mnemonic} {operand}".rstrip()
         target = None
         if row_address:
-            # The disassembler gives "$6004": four hex digits behind the "$".
+            # The disassembler gives "$6004": four hex digits after the "$".
             address = int(row_address.removeprefix("$"), 16)
             if "." in label:
                 label = label[label.index(".") :]
@@ -275,7 +275,7 @@ def never_ran(start: int, end: int) -> str:
 
 
 def runs_on(name: str) -> str:
-    """The text of the row behind a routine that runs on into another one,
+    """The text of the row below a routine that runs on into another one,
     without a leap: name is where, a label or an address."""
     return f"... runs on into {name} ..."
 
@@ -389,8 +389,8 @@ def arrows_in(
         block = graph.blocks[source]
         if target == block.end:  # just the next instruction: no arrow
             continue
-        # The block ends behind its leap. With instruction-aligned hidden
-        # bounds, a hidden last byte means the leap is hidden too.
+        # The block ends directly after its leap. With instruction-aligned
+        # hidden bounds, a hidden last byte means the leap is hidden too.
         if any(
             definition.start <= block.end - 1 < definition.end
             for definition in (hidden_ranges or {}).values()

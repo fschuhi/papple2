@@ -39,7 +39,7 @@ chapter 14 on. It calls two routines through a jump table, with RTS:
     6016  48                 PHA
     6017  60                 RTS            ; "returns" into the routine
     6018  e6 10     inc_10   INC $10
-    601a  60                 RTS            ; a real return: behind the JSR
+    601a  60                 RTS            ; a real return: after the JSR
     601b  e6 11     inc_11   INC $11
     601d  60                 RTS
     601e  17 60     table    .WORD inc_10-1
@@ -132,7 +132,7 @@ def test_chapter_1_nested_loops_the_run(nested_loops_run) -> None:
     # The recipe ran 39 instructions. That is the whole program: 1 LDY,
     # then 2 outer passes of (LDX + 3 inner passes of JSR, INC, RTS, DEX,
     # BNE) + DEY + BNE, then JMP and NOP: 1 + 2 * (1 + 3 * 5 + 2) + 2.
-    # So PC stands behind done's NOP, on the first byte that never ran.
+    # So PC stands after done's NOP, on the first byte that never ran.
     assert nested_loops_run.emulator.cpu.PC == 0x6014
 
     # Tiling cuts the run into tiles: a tile starts where the run arrives,
@@ -181,7 +181,7 @@ def test_chapter_2_nested_loops_unbroken_tiles(nested_loops_run) -> None:
         # inner, entered 4 times by BNE inner: the second and third inner
         # passes, in each of the two outer passes. Only the JSR, 4 times.
         ("6004", "6004", "3", "4", "4", "4"),
-        # Behind the JSR, entered 6 times by sub's RTS. DEX and BNE inner,
+        # After the JSR, entered 6 times by sub's RTS. DEX and BNE inner,
         # 6 times each: 12 instructions. The BNE leaves it every time.
         ("6007", "6008", "3", "6", "6", "12"),
         # Entered twice when BNE inner falls through, once per outer pass.
@@ -227,7 +227,7 @@ def test_chapter_2_nested_loops_unbroken_tiles(nested_loops_run) -> None:
         ("600a", "600b", "$D0", "taken", "6002", "1"),
         # JMP done ($4C), over sub.
         ("600d", "600d", "$4C", "", "6013", "1"),
-        # sub's RTS ($60), back behind the JSR, once per call.
+        # sub's RTS ($60), back directly after the JSR, once per call.
         ("6010", "6012", "$60", "", "6007", "6"),
     ]
 
@@ -240,13 +240,13 @@ def test_chapter_3_nested_loops_split_tiles(nested_loops_run) -> None:
     # blocks.
     #
     # The columns: where the split tile starts; where it ends, half-open,
-    # so the end is the first byte behind it; and how often the run went
+    # so the end is the first byte after it; and how often the run went
     # through it, whether by a leap or by a glide.
     rows = read_rows(nested_loops_run.folder / SPLIT_TILES_FILE)
     assert [
         (row["tile_start_PC"], row["tile_end_PC"], row["executions"]) for row in rows
     ] == [
-        ("6000", "6002", "1"),  # LDY, once: cut off in front of outer
+        ("6000", "6002", "1"),  # LDY, once: cut off directly before outer
         ("6002", "6004", "2"),  # outer's LDX: 2 passes, a glide and a BNE
         ("6004", "6007", "6"),  # inner's JSR: 3 passes per outer pass
         ("6007", "600a", "6"),  # DEX, BNE inner: once per return from sub
@@ -287,7 +287,7 @@ def test_chapter_4_nested_loops_transitions(nested_loops_run) -> None:
         ("600a", "600b", "$D0", "taken", "6002", "1"),
         # JMP done, over sub.
         ("600d", "600d", "$4C", "", "6013", "1"),
-        # sub's RTS, back behind the JSR.
+        # sub's RTS, back directly after the JSR.
         ("6010", "6012", "$60", "", "6007", "6"),
     ]
 
@@ -306,7 +306,7 @@ def test_chapter_5_nested_loops_the_graph(nested_loops_run) -> None:
 
     # The JSR's edge into sub is replaced by the call fall-through edge
     # 6004 -> 6007, with the JSR's count: seen from this routine, the call
-    # is one step that comes back behind itself. The RTS gives no edge:
+    # is one step that comes back directly after itself. The RTS gives no edge:
     # it belongs to sub.
     assert graph.edges == {
         (0x6000, 0x6002): 1,  # glide: LDY into outer
@@ -349,11 +349,12 @@ def test_chapter_7_nested_loops_dominators(nested_loops_run) -> None:
         # outer, taken). Every path from the entry passes $6000 first.
         0x6002: 0x6000,
         # inner is reached from outer (the glide) or from $6007 (BNE inner,
-        # taken). $6007 itself lies behind inner, so every path into inner
+        # taken). $6007 itself lies after inner, so every path into inner
         # comes through outer.
         0x6004: 0x6002,
-        # Each of the rest has one way in: behind the call, behind BNE
-        # inner, behind BNE outer, and the JMP's target.
+        # Each of the rest has one way in: directly after the call,
+        # directly after BNE inner, directly after BNE outer, and the
+        # JMP's target.
         0x6007: 0x6004,
         0x600A: 0x6007,
         0x600D: 0x600A,
@@ -534,7 +535,7 @@ def test_chapter_14_rts_dispatch_the_run(rts_dispatch_run) -> None:
     # The recipe ran 24 instructions. That is the whole program: the main
     # line, LDA, JSR, LDA, JSR, JMP and NOP, is 6; each of the two routines
     # takes 9, dispatch's 7 (ASL, TAX, LDA, PHA, LDA, PHA, RTS) and its own
-    # INC and RTS. 6 + 2 * 9. So PC stands behind done's NOP.
+    # INC and RTS. 6 + 2 * 9. So PC stands after done's NOP.
     assert rts_dispatch_run.emulator.cpu.PC == 0x6023
 
     # The run stopped inside the tile at done, $6022, which the JMP led
@@ -552,7 +553,7 @@ def test_chapter_15_rts_dispatch_returns(rts_dispatch_run) -> None:
     # dispatch pushes two bytes itself, so its RTS finds no frame: it is
     # unmatched. It jumps into the routine. The routine's own RTS then
     # finds the frame that dispatch's JSR opened, and returns where that
-    # frame expected, behind the JSR: matched. The frame was opened for
+    # frame expected, directly after the JSR: matched. The frame was opened for
     # dispatch, but closed in the routine's code.
     stack_tracking_reports()
 
@@ -580,8 +581,8 @@ def test_chapter_15_rts_dispatch_returns(rts_dispatch_run) -> None:
         ("6007", "600d", "601d", "600a", "matched", "1"),
     ]
 
-    # An unmatched RTS whose target lies behind no JSR is a stack jump: a
-    # jump made with RTS. Both of dispatch's are.
+    # An unmatched RTS whose target lies directly after no JSR is a stack
+    # jump: a jump made with RTS. Both of dispatch's are.
     assert shell.session.run_stack_jumps == {
         (0x6017, 0x6018): 1,
         (0x6017, 0x601B): 1,
@@ -595,7 +596,7 @@ def test_chapter_16_rts_dispatch_routines_before_and_after(rts_dispatch_run) -> 
     assert show_routines().splitlines() == [
         "routine  blocks  bytes  called  loops",
         # $6000-$6005, $6005-$600a, $600a-$600d, and done's $6022-$6023:
-        # 5 + 5 + 3 + 1 bytes. The two JSRs come back behind themselves.
+        # 5 + 5 + 3 + 1 bytes. The two JSRs come back directly after themselves.
         "6000          4     14       1      0",
         # dispatch: one block, ASL to RTS, called by both JSRs.
         "600d          1     11       2      0",
@@ -664,7 +665,7 @@ def test_chapter_18_memory_tour_the_run(memory_tour_run) -> None:
     # 3 passes of copy (LDA, STA, DEX, BPL), the 7 instructions that build
     # the pointer and read through it, then 2 passes of again (LDA, STA,
     # STX, LDA, LDY, INC, DEX, BPL), and JMP and NOP: 1 + 3 * 4 + 7 + 2 * 8
-    # + 2. So PC stands behind done's NOP. The data between JMP and done
+    # + 2. So PC stands after done's NOP. The data between JMP and done
     # never ran.
     assert memory_tour_run.emulator.cpu.PC == 0x6035
 
@@ -687,7 +688,7 @@ def test_chapter_19_memory_tour_a_table(memory_tour_run) -> None:
     # range one instruction sweeps over.
     assert xref_rows(memory_tour_run.folder, 0x6000, 0x600B) == [
         # LDX #$02: an immediate names no address, so no target. Its byte
-        # sits in the instruction, behind the opcode, and is the value.
+        # sits in the instruction, after the opcode, and is the value.
         ("6000", "read_immediate", "", "6001", "1", "", "02", ""),
         # LDA table,X: three bytes of the table, with the X for each.
         ("6002", "read_data", "602f", "602f", "1", "00", "11", ""),

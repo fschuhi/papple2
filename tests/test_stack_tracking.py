@@ -2,7 +2,7 @@
 
 Each test runs a small program with StackTracking attached and checks
 how every frame ended. A row is (call site, entry, return site, return
-target, outcome). Each program ends at DONE, or at the byte behind its
+target, outcome). Each program ends at DONE, or at the byte after its
 last instruction, where the run stops.
 
 The programs keep their labels in column 0, as in conftest.py.
@@ -96,7 +96,7 @@ def test_a_return_address_pushed_by_hand_is_unmatched(make_emulator) -> None:
 
 
 # SUB overwrites the low byte of its return address in page 1, so its RTS
-# goes to OTHER (600c + 1) instead of behind the JSR.
+# goes to OTHER (600c + 1) instead of directly after the JSR.
 REWRITTEN = """
         *=$6000
         JSR SUB
@@ -145,10 +145,10 @@ def test_a_return_address_thrown_away_abandons_its_frame(make_emulator) -> None:
 
 
 # PUTS takes its return address off the stack into zero page, as
-# PUT_STRING does, and moves it past the byte behind the JSR, TEXT. While
+# PUT_STRING does, and moves it past the byte after the JSR, TEXT. While
 # the address is off the stack, it calls CHAR, whose JSR pushes into the
 # same two bytes of page 1. Then PUTS pushes the moved address back, and
-# its RTS goes to 6004, behind TEXT, instead of 6003.
+# its RTS goes to 6004, after TEXT, instead of 6003.
 PAYLOAD = """
         *=$6000
         JSR PUTS
@@ -175,7 +175,7 @@ def test_a_call_made_while_the_return_address_is_off_the_stack_keeps_the_frame(
 ) -> None:
     # CHAR's frame lies on top of PUTS's frame, at the same SP. CHAR's
     # RTS closes its own frame; PUTS's RTS then finds PUTS's frame, and
-    # lands behind the payload: redirected, not unmatched.
+    # lands after the payload: redirected, not unmatched.
     tracking = track(make_emulator, PAYLOAD, end=0x601A)
 
     assert dict(tracking.returns) == {

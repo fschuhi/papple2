@@ -367,9 +367,9 @@ class Session:
 
     def runs_on_into(self, entry: int) -> int | None:
         """Where the routine starting at entry runs on into another routine,
-        without a leap: the address right behind its highest block, if the
+        without a leap: the address directly after its highest block, if the
         run went on from that block to there, by a glide, a branch not
-        taken, or the return of a JSR. None if it never did, e.g. behind an
+        taken, or the return of a JSR. None if it never did, e.g. after an
         RTS or a JMP. Every block lies in one routine, so that address lies
         in another one: CLEAR_HGR2 runs on into CLEAR_PAGE."""
         blocks = self.current_routines().graphs[entry].blocks

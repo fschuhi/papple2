@@ -233,7 +233,7 @@ class Tiling:
         ran while this instrumentation was attached; the hook's own count
         must match it.
         """
-        # The checks come first, so a failed check leaves no reports behind.
+        # The checks come first, so a failed check writes no reports.
         check_consistency(self, expected_instructions)
         save_tiles(self, folder / TILES_FILE)
         save_transitions(self, folder / TRANSITIONS_FILE)
@@ -279,7 +279,7 @@ def check_consistency(instrumentation: Tiling, expected_instructions: int) -> No
         else:
             require(outcome == "", f"outcome on non-branch: {key!r}")
 
-        # A branch that is not taken continues right behind its operand.
+        # A branch that is not taken continues directly after its operand.
         if outcome == "fall_through":
             require(
                 target == (pc + 2) & 0xFFFF,
@@ -460,9 +460,10 @@ def check_split_consistency(
 def report_findings(instrumentation: Tiling) -> None:
     """Report what is unusual but not wrong.
 
-    An RTS normally returns right behind a JSR (its PC + 3). An RTS target
-    that is not behind any observed JSR points at an address pushed by the
-    code itself, e.g. the PHA-PHA-RTS jump through a table.
+    An RTS normally returns directly after a JSR (its PC + 3). An RTS
+    target that is not directly after any observed JSR points at an
+    address pushed by the code itself, e.g. the PHA-PHA-RTS jump through a
+    table.
     """
     keys = [TransitionKey._make(k) for k in instrumentation.transitions]
     jsr_pcs = {key.pc for key in keys if key.opcode == JSR}
@@ -471,7 +472,7 @@ def report_findings(instrumentation: Tiling) -> None:
         for key in keys
         if key.opcode == RTS and (key.target - 3) & 0xFFFF not in jsr_pcs
     )
-    print(f"RTS targets not behind an observed JSR: {len(unusual)}")
+    print(f"RTS targets not directly after an observed JSR: {len(unusual)}")
     for pc, target, count in unusual:
         print(f"    {address(pc)} -> {address(target)} ({count:,}x)")
 

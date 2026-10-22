@@ -6,7 +6,7 @@ under git: labels now, comments next. They belong to the program, not to
 a run or an IPython session, so a label given today shows tomorrow in a
 run that covers far more code.
 
-Every change is written at once, so the file is never behind the prompt.
+Every change is written at once, so the file is never out of date.
 Every change reads the file first, so a change made in another session in
 the meantime is kept, not overwritten. Nothing is written without a change:
 opening a dossier only to look leaves no trace.

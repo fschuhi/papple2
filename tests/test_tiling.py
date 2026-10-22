@@ -58,7 +58,7 @@ def test_run_stopped_right_after_a_leap_writes_its_reports(
 def test_run_stopped_after_the_last_tile_ran_leaves_nothing_out(
     tmp_path: Path
 ) -> None:
-    # Stopping behind the NOP: the tile at done has run, so it is a split
+    # Stopping after the NOP: the tile at done has run, so it is a split
     # tile like any other.
     run_with_tiling(DONE + 1, tmp_path)
 

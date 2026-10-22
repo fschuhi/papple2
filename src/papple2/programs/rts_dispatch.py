@@ -4,13 +4,13 @@ jump table, the way many Apple II programs dispatch.
 dispatch takes a routine number in A. It pushes the routine's address
 minus one from table, high byte first, and "returns" with RTS: RTS pulls
 that address, adds one, and continues there. So the RTS is a jump, not a
-return. The routine's own RTS then returns behind the JSR that called
-dispatch.
+return. The routine's own RTS then returns directly after the JSR that
+called dispatch.
 
 boot() gives a ready machine, the program at $6000 and PC there:
 run(rts_dispatch.boot(), 24, Tiling, StackTracking) at the prompt. 24
 instructions run it to its end; after them, PC stands at $6023, the byte
-behind done's NOP.
+after done's NOP.
 """
 
 from papple2.core.emulator import Emulator
@@ -37,7 +37,7 @@ dispatch ASL             ; A * 2: index into the table of words
         PHA
         RTS              ; "returns" into the routine
 inc_10  INC $10
-        RTS              ; a real return: behind the JSR
+        RTS              ; a real return: after the JSR
 inc_11  INC $11
         RTS
 table   .WORD inc_10-1

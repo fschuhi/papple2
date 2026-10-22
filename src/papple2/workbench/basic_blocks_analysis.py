@@ -373,8 +373,8 @@ def _graph(
         kept: set[int],
 ) -> BlockGraph:
     """The graph of the blocks in kept, with the edges between them."""
-    # Edges are kept if both ends are kept: an edge into a stop leaves
-    # its source behind.
+    # Edges are kept if both ends are kept: an edge into a stop is left
+    # out, and its source stays.
     edges = {
         (source, target): count
         for (source, target), count in sorted(all_edges.items())

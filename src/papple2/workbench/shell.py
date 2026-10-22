@@ -8,7 +8,7 @@ listing() and hexdump()) return it as Text, which IPython shows as Out[n]
 and keeps in _; clip() copies it. The print_* functions print.
 
 Ranges are half-open, as everywhere in the workbench: start is the first
-byte, end the first byte behind. So a block printed as 6004-6007 is
+byte, end the first byte after it. So a block printed as 6004-6007 is
 listing_rows(emulator, 0x6004, 0x6007).
 
 The reports folder is the home of an experiment: write_report() writes
@@ -25,7 +25,7 @@ dossier at a time, kept in the module's Session object. Named hidden
 ranges are kept separately in hidden.json; hide() and unhide() change
 their definitions.
 
-The current run is what one run left behind: the machine and the
+The current run is what one run leaves: the machine and the
 instrumentations that were attached to it, and, once the tiling's reports
 are written, the run's routines and the graph of every block it ran.
 run() only runs, with the instrumentations it is given; what is written

@@ -138,7 +138,7 @@ def type_into_editor(
 
 
 def test_tab_opens_the_label_and_enter_saves_it() -> None:
-    # The field starts with the label, the cursor behind it.
+    # The field starts with the label, the cursor after it.
     assert type_into_editor("\tx\rq") == [(0x8350, "label", ".loop1x")]
 
 
@@ -188,7 +188,7 @@ def test_a_field_starts_where_format_row_puts_its_column() -> None:
 
 
 def test_e_opens_the_comment_and_enter_saves_it() -> None:
-    # The box starts with the comment, the cursor behind it.
+    # The box starts with the comment, the cursor after it.
     assert type_into_editor("e, X\rq") == [(0x8350, "comment", "with Y, X")]
 
 

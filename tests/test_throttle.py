@@ -5,12 +5,12 @@ from papple2.core.emulator import APPLE_II_CYCLES_PER_SECOND, throttle_delay
 ONE_SECOND = APPLE_II_CYCLES_PER_SECOND  # cycles a real Apple II runs per second
 
 
-def test_ahead_of_the_apple_ii_sleeps_the_difference() -> None:
+def test_faster_than_the_apple_ii_sleeps_the_difference() -> None:
     # One Apple II second of cycles took only a quarter of a second.
     assert throttle_delay(ONE_SECOND, 0.25, 1.0) == pytest.approx(0.75)
 
 
-def test_behind_the_apple_ii_does_not_sleep() -> None:
+def test_slower_than_the_apple_ii_does_not_sleep() -> None:
     # One Apple II second of cycles took two seconds: nothing to wait for.
     assert throttle_delay(ONE_SECOND, 2.0, 1.0) == 0.0
 

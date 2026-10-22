@@ -72,7 +72,7 @@ def test_label_takes_global_and_full_local_labels(tmp_path: Path, text: str) -> 
         "ROUTINE 001",  # a space
         "1st",  # starts with a digit
         "a.b.c",  # more than one dot
-        "loop.",  # nothing behind the dot
+        "loop.",  # nothing after the dot
         "a.b:c",  # a colon in the local part
         "a-b",  # a character outside the rule
         "",

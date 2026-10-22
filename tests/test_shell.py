@@ -1,5 +1,5 @@
 """Tests for papple2.workbench.shell: the arrows in the gutter, the
-comments behind the instructions, the labels in the print_* views, the
+comments after the instructions, the labels in the print_* views, the
 reports folder, the current dossier, and the current run.
 
 The arrows are given as rows, not addresses: row 0 is the listing's first
@@ -184,7 +184,7 @@ def never_ran_graph() -> BlockGraph:
 
 
 def test_listing_rows_show_each_gap_that_never_ran_as_one_row(make_emulator) -> None:
-    # One gap between the blocks, and one behind the last: 6007 never ran.
+    # One gap between the blocks, and one after the last: 6007 never ran.
     _asm, emulator = make_emulator(ENDLESS_PROGRAM)
     emulator.apple2.memory.load_test_data(0x6000, NEVER_RAN_BYTES)
 
@@ -973,7 +973,7 @@ def test_stack_tracking_reports_write_the_report(
 
 # A dispatcher: DISPATCH pushes $600c (high byte first) and "returns"
 # with RTS to $600d, TARGET, which no JSR calls. TARGET's own RTS then
-# returns behind the JSR at 6000. Then the program loops at DONE.
+# returns directly after the JSR at 6000. Then the program loops at DONE.
 #   6000 JSR DISPATCH   6003 JMP DONE      6006 LDA #$60   6008 PHA
 #   6009 LDA #$0C       600b PHA           600c RTS
 #   600d INC $10        600f RTS
