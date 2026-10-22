@@ -1,14 +1,20 @@
-"""Basic blocks analysis: the graph of basic blocks, built from tiling reports.
+"""Basic blocks analysis: the graph of basic blocks, and the routines of a
+run, built from the reports.
 
-An analysis package: no Emulator. It reads the split reports that the
-tiling instrumentation wrote into a folder, builds a graph from them, and
-computes the dominator tree and the natural loops, and writes the two loop
-reports into a folder (briefing.md, section 3).
+An analysis, not an instrumentation: it runs no emulator. It reads the
+split reports Tiling wrote, and StackTracking's report if there is one,
+and builds:
+- the graph of the basic blocks, with the dominator tree and the natural
+  loops; write_loop_reports() writes the two loop reports
+- the routines of the run, find_routines(): where each one starts and
+  where it stops, as docs/routine.md describes
+- the JSRs between the routines and the exits from one into another,
+  routine_calls() and routine_exits(), for the routine graph
 
-The tiling reports speak of tiles and transitions; the graph speaks of
-basic blocks and edges. build_graph() is the only place that translates
-between the two: read_split_reports() returns tiles and transitions,
-build_graph() returns basic blocks and edges.
+The reports speak of tiles and transitions; the graph speaks of basic
+blocks and edges. _graph() is the only place that translates between the
+two: read_split_reports() returns tiles and transitions, build_graph()
+and build_run_graph() return basic blocks and edges.
 """
 
 import csv
@@ -20,8 +26,7 @@ from pathlib import Path
 from papple2.core.cpu import JMP_absolute, JMP_indirect, JSR, RTS
 
 # A "speaking" import: the analysis names the instrumentation whose reports
-# it reads. How an analysis states what it needs upstream is still open
-# (briefing.md, section 7).
+# it reads.
 from papple2.workbench.stack_tracking import REDIRECTED, UNMATCHED
 from papple2.workbench.tiling import (
     BRANCH_OPCODES,
@@ -39,8 +44,7 @@ NO_EDGE_OPCODES = frozenset({JSR, RTS, RTI, BRK})
 
 GLIDE = "glide"
 
-# The loop reports this analysis writes, and their columns (briefing.md,
-# section 3.E).
+# The loop reports this analysis writes, and their columns.
 # The loop reports describe one routine, so their names carry its entry,
 # e.g. lr_loops_6238.csv: LOOPS_FILE.format(entry=0x6238).
 LOOPS_FILE = "lr_loops_{entry:04x}.csv"
@@ -269,8 +273,10 @@ def collect_edges(
         block_starts: set[int],
         redirected: Mapping[tuple[int, int], int] | None = None,
 ) -> dict[tuple[int, int], int]:
-    """Turn transition rows into edges, following briefing.md, section 3.B.
-    With redirected, as redirected_returns() gives them, each one is a call
+    """Turn transition rows into edges. A glide, a branch and a JMP each
+    give an edge to their target. A JSR gives the call fall-through edge to
+    the block directly after it, instead of an edge into the callee. RTS,
+    RTI and BRK give none. With redirected, as redirected_returns() gives them, each one is a call
     fall-through edge too: from the block holding the JSR to where the
     return landed."""
     edges: dict[tuple[int, int], int] = defaultdict(int)
@@ -604,7 +610,7 @@ def shared_by_jump_backward(
     too.
 
     Only a block that is glided into counts. A jump backward into a block that
-    a call's return leads to, e.g. the JMP at $6fae into $6f29 in the tail
+    a call's return leads to, e.g. the JMP at $6fb6 into $6f29 in the tail
     of TRY_GUARD_MOVE_UP, leaves the routine holding it whole."""
     holders: dict[int, frozenset[int]] = defaultdict(frozenset)
     for entry, graph in graphs.items():

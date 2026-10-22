@@ -189,7 +189,7 @@ def report_lines(folder: Path) -> list[str]:
     return (folder / RETURNS_FILE).read_text(encoding="utf-8").splitlines()
 
 
-def test_the_report_puts_the_tricks_first(make_emulator, tmp_path: Path) -> None:
+def test_the_report_puts_the_abandoned_before_the_matched(make_emulator, tmp_path: Path) -> None:
     # The abandoned frame comes before the matched return, though its
     # addresses are higher.
     tracking = track(make_emulator, THROWN_AWAY, end=0x600D)

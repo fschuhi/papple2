@@ -1,8 +1,7 @@
 """Cross referencing: which instruction touched which byte, and how.
 
-An instrumentation package, like Tiling and StackTracking: run() builds it
-from the CPU, and its hook methods go into Memory's lists of the same
-names.
+An instrumentation, like Tiling and StackTracking: run() builds it from
+the CPU, and its hook methods go into Memory's lists of the same names.
 
 A cross reference (xref) links an instruction to a byte it touched. Four
 kinds are counted, named after Memory's hook lists:
@@ -13,7 +12,8 @@ kinds are counted, named after Memory's hook lists:
     write_data      a byte written as data
 
 Opcode and operand fetches are not counted: Tiling knows what ran. Neither
-are stack and vector reads: StackTracking keeps the stack.
+are the stack's reads and writes, nor vector reads: StackTracking keeps
+the stack.
 
 The report, lr_xrefs.csv, has one row per instruction, kind, target and
 effective address:
@@ -36,8 +36,8 @@ Each row then has how often it happened, and three sets:
 Observed, not proven: what this records is what this run did.
 
 Known limit: an instruction that writes into its own operand, e.g.
-INC *+1, has its write counted under the new target, since the write hook
-runs after the write.
+INC *+1, has its write counted under the new target, since
+after_write_data runs after the write.
 """
 
 import csv
