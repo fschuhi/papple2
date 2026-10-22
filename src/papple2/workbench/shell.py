@@ -30,7 +30,8 @@ instrumentations that were attached to it, and, once the tiling's reports
 are written, the run's routines and the graph of every block it ran.
 run() only runs, with the instrumentations it is given; what is written
 afterwards is up to the experiment, one command per kind of report:
-tiling_reports(), stack_tracking_reports(), cross_referencing_reports().
+tiling_reports(), stack_tracking_reports(), cross_referencing_reports(),
+overview_reports().
 set_current_run() sets the routines from a run made elsewhere, by its
 reports. show_routines(), show_blocks(), show_callers(),
 listing() and loop_reports() work on the routines, with the current
@@ -80,6 +81,7 @@ from papple2.workbench.memory_map import (
     print_map_legend,
     print_memory_map,
 )
+from papple2.workbench.overview import write_overview_reports
 from papple2.workbench.session import Session
 from papple2.workbench.tiling import BRANCH_OPCODES, address
 
@@ -376,6 +378,15 @@ def cross_referencing_reports() -> None:
     and old values seen. The run must have had CrossReferencing attached.
     The rows are read back from the file and kept in session.run_xrefs."""
     session.cross_referencing_reports()
+
+
+def overview_reports() -> None:
+    """Write the overview reports of the current run into the reports
+    folder: lr_overview.txt, lr_routines.csv and lr_listing.tsv, with the
+    current dossier's labels. Call it once the run's routines are built,
+    after tiling_reports() and stack_tracking_reports(), or after
+    set_current_run()."""
+    write_overview_reports(session)
 
 
 @dataclass(frozen=True)

@@ -58,7 +58,6 @@ import argparse
 from pathlib import Path
 
 from papple2.programs import lode_runner
-from papple2.workbench.overview import write_overview_reports
 from papple2.workbench import shell  # noqa: F401
 from papple2.workbench.stack_tracking import StackTracking
 from papple2.workbench.tiling import Tiling
@@ -79,6 +78,7 @@ from papple2.workbench.shell import (  # noqa: F401
     listing_rows,
     loop_reports,
     memory_map,
+    overview_reports,
     print_blocks,
     print_edges,
     print_listing,
@@ -146,7 +146,7 @@ if __name__ == "__main__":
     run(lode_runner.boot(arguments.binary), arguments.instructions, Tiling, StackTracking)
     tiling_reports()
     stack_tracking_reports()
-    write_overview_reports(shell.session)
+    overview_reports()
 
     # The loop reports the run leaves behind: those of the start, and of
     # every routine named with --loop-reports, each written once.

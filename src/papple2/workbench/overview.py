@@ -12,8 +12,8 @@ with the dossier's labels next to the addresses:
 Both are built from the Session's current run: its routines (with the
 targets of stack jumps, if the returns report was read), its transitions,
 its emulator's instruction count and memory. write_overview_reports() writes them
-into the Session's reports folder. It is no command: the recipes call it,
-lr_basic_blocks_analysis.py and lr_current.py.
+into the Session's reports folder; the command overview_reports() in
+shell.py calls it.
 
 The labels make these files go stale when a label changes in the dossier;
 the next run of the recipe brings them up to date.

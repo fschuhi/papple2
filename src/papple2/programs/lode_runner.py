@@ -28,8 +28,9 @@ from papple2.util import load_data_dir
 
 LOAD_ADDRESS = 0x0800
 
-# Relative to the repo root, where make and IPython are started.
-DEFAULT_BINARY = "data/bin/LODE_RUNNER.BIN"
+# In the bin/ folder of data_dir, as papple2.toml sets it, read when this
+# module is imported, from the repo root, where make and IPython start.
+DEFAULT_BINARY = str(Path(load_data_dir()) / "bin" / "LODE_RUNNER.BIN")
 
 # The game's disk, from the Internet Archive; see docs/data-files.md.
 DISK_IMAGE = "Lode_Runner_1983_Broderbund_cr_Reset_Vector.do"

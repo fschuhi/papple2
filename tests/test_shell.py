@@ -25,6 +25,7 @@ from papple2.workbench.basic_blocks_analysis import (
     routine_calls,
 )
 from papple2.workbench.listing_editor import PickerItem
+from papple2.workbench.overview import LISTING_FILE, OVERVIEW_FILE, ROUTINES_FILE
 from papple2.workbench.shell import (
     assign_lanes,
     caller_items,
@@ -37,6 +38,7 @@ from papple2.workbench.shell import (
     listing,
     listing_rows,
     loop_reports,
+    overview_reports,
     print_blocks,
     print_listing,
     print_routines,
@@ -1045,6 +1047,16 @@ def test_stack_tracking_reports_without_a_reports_folder_stop(
     run(emulator, 10, StackTracking)
     with pytest.raises(RuntimeError, match="use_reports_folder"):
         stack_tracking_reports()
+
+
+def test_overview_reports_write_the_three_files_into_the_reports_folder(
+    nested_loops_run,
+) -> None:
+    overview_reports()
+
+    assert (nested_loops_run.folder / OVERVIEW_FILE).exists()
+    assert (nested_loops_run.folder / ROUTINES_FILE).exists()
+    assert (nested_loops_run.folder / LISTING_FILE).exists()
 
 
 def test_cross_referencing_reports_keep_the_rows_until_the_next_run(

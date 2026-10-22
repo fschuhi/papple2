@@ -29,7 +29,7 @@ use_dossier(Path("dossiers/lode_runner"))
 run(lode_runner.boot(), 4_000_000, Tiling, StackTracking)
 tiling_reports()
 stack_tracking_reports()
-write_overview_reports(shell.session)
+overview_reports()
 loop_reports(0x0800)
 ```
 
@@ -60,7 +60,7 @@ What `%run scripts/lr_basic_blocks_analysis.py` leaves in the session:
 
 | Kind | Names                                                                                                                                                         |
 |---|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commands: setting up | `use_reports_folder()`, `use_dossier()`, `run()`, `tiling_reports()`, `stack_tracking_reports()`, `cross_referencing_reports()`                                 |
+| Commands: setting up | `use_reports_folder()`, `use_dossier()`, `run()`, `tiling_reports()`, `stack_tracking_reports()`, `cross_referencing_reports()`, `overview_reports()` |
 | Commands: the current run | `show_routines()`, `show_blocks()`, `show_callers()`, `show_xrefs()`, `show_routine_graph()`, `listing()`, `hexdump()`, `edit()`, `loop_reports()`        |
 | Commands: the clipboard | `clip()`                                                                                                                                                    |
 | Commands: the dossier | `label()`, `comment()`, `unlabel()`, `uncomment()`, `hide()`, `unhide()`, `color()`, `uncolor()`, `colors()`                                                      |
