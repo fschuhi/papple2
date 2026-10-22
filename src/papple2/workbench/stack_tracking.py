@@ -1,7 +1,7 @@
 """Stack tracking: a shadow stack that sorts every RTS by its frame.
 
-An instrumentation package: it watches a running Emulator through one
-after_instruction hook, like Tiling. run() builds it from the CPU.
+An instrumentation: it watches a run through one after_instruction hook,
+like Tiling. run() builds it from the CPU.
 
 The 6502 has no idea what a call is. JSR pushes its return address minus
 one onto page 1 and jumps; RTS pulls whatever two bytes are on top, adds
@@ -22,7 +22,8 @@ looks for the frame at the SP the CPU is back at:
     frames still open when the run stops    -> open (in the report only)
 
 Looking frames up by SP, instead of popping the top one, lets the shadow
-stack fall back into step with the real one after a trick. A JSR
+stack fall back into step with the real one after a program has pushed,
+thrown away or rewritten a return address itself. A JSR
 abandons the frames deeper than its own place. A frame at the same place
 stays, under the new one: its routine may have taken its return address
 off the stack and keep it elsewhere, as PUT_STRING keeps it in zero page
@@ -40,8 +41,8 @@ Known limits:
 - SP wrapping around page 1 confuses "deeper"; a run that wraps would
   show up as odd abandoned frames.
 - RTI and BRK are ignored.
-- A trap that returns for the routine it stands in for (the RWTS
-  stand-in's fake RTS) runs no instruction, so its frame ends up
+- A trap that returns for the routine it stands in for (the fake RTS of
+  RwtsTrap and MliTrap) runs no instruction, so its frame ends up
   abandoned.
 - A routine that throws its return address away and then calls
   something, without ever returning, leaves its frame under the new one.
@@ -50,10 +51,10 @@ Known limits:
 
 The report, lr_returns.csv, has one row per frame or RTS with the same
 call site, entry, return site, return target and outcome, and how often
-it happened. The tricks come first (unmatched, redirected, abandoned),
-then the matched returns, then the frames still open when the run
-stopped: what was being called at that moment. Within each outcome, rows
-are in address order.
+it happened. Unmatched, redirected and abandoned come first, then
+matched, then open: the frames still open when the run stopped, what was
+being called at that moment. Within each outcome, rows are in address
+order.
 """
 
 import csv
@@ -72,7 +73,8 @@ UNMATCHED = "unmatched"
 ABANDONED = "abandoned"
 OPEN = "open"
 
-# The order of the outcomes in the report: the tricks first.
+# The order of the outcomes in the report: unmatched, redirected and
+# abandoned first.
 OUTCOME_ORDER = (UNMATCHED, REDIRECTED, ABANDONED, MATCHED, OPEN)
 
 # The report, and its columns. The folder it goes into is the caller's
