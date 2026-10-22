@@ -17,7 +17,7 @@ Keys in the listing:
   Tab                  : edit the label of the bar's row
   e                    : edit the comment of the bar's row
   g                    : open the picker, to go to another routine
-  u                    : open the picker on the callers of the routine shown
+  u                    : open the picker on every way into the routine shown
   c                    : copy the visible lines to the clipboard
   q                    : leave, the lines stay on the screen
   Esc or Ctrl+C        : leave, the lines go

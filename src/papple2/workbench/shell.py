@@ -197,7 +197,8 @@ def color(
 ) -> None:
     """Save a named, half-open color range in the current dossier.
 
-    Bounds are addresses or labels, resolved before saving. Reusing name
+    Bounds are addresses or labels, resolved before saving. shade is one
+    of red, green, yellow, blue, magenta, cyan and white. Reusing name
     replaces its definition; overlaps are allowed. No current run is
     required. For a routine, use color(name, *to_range(routine), shade).
     """
@@ -213,7 +214,7 @@ def uncolor(name: str) -> None:
 
 @returns_text
 def colors() -> None:
-    """Show the current dossier's color definitions in address order."""
+    """Show the current dossier's color ranges in address order."""
     store = session.current_colors()
     store.reload()
     if not store.ranges:
@@ -235,9 +236,9 @@ def to_range(
 ) -> tuple[int, int]:
     """Return half-open bounds for argument unpacking into color().
 
-    With start alone, return the current routine's listing bounds. With
-    end, resolve both bounds as addresses or labels; no run is required.
-    Labels are read afresh before resolution.
+    With start alone, start is a routine's entry, and the bounds are its
+    span. With end, resolve both bounds as addresses or labels; no run is
+    required. Labels are read afresh before resolution.
     """
     session.refresh_annotations()
     if end is None:
@@ -269,8 +270,8 @@ def memory_map(
     A cell has the color of the bytes in it (Colors.color_of_bytes), light
     yellow where different colors meet. Below the map, a legend lists the
     color ranges in the range shown; legend=False leaves it out. The text
-    kept for str() and clip()
-    shows a letter per colored cell and dots for the others."""
+    kept for str() and clip() shows a letter per colored cell and dots for
+    the others."""
     store = session.current_colors()
     session.refresh_annotations()
     start_address, end_address = session.address_of(start), session.address_of(end)
@@ -327,7 +328,7 @@ def set_current_run(
     the stack tracking's report, the targets of the run's stack jumps
     become routines too. With xrefs, the cross reference's report,
     show_xrefs() works on the run. Every routine entry without a label
-    gets one in the current dossier, see label_routines()."""
+    gets one in the current dossier: routine_<address>."""
     count = session.set_current_run(
         emulator, start, split_tiles, split_transitions, returns, xrefs
     )
@@ -591,12 +592,12 @@ def ways_in(entry: int) -> list[WayIn]:
     A JSR leads into the entry, from anywhere. A JMP, a branch or a glide
     counts if it comes from a block of another routine, into any block of
     this one: into the entry, or through a door further in, e.g. the JMP at
-    $6fae into $6f29 in the tail of TRY_GUARD_MOVE_UP. From inside the
+    $6fb6 into $6f29 in the tail of TRY_GUARD_MOVE_UP. From inside the
     routine, it is a loop or the code running on. An RTS counts if it is a
     stack jump, e.g. MOVE_GUARD's dispatch; other RTSs are returns.
 
-    JMPs count for now: a JMP into a routine may be a tail call, which only
-    a shadow stack can tell apart."""
+    JMPs count: a JMP into a routine may be a tail call, which only a
+    shadow stack can tell apart."""
     found = session.current_routines()
     blocks = found.graphs[entry].blocks
     jumps = session.run_stack_jumps or {}
@@ -689,7 +690,7 @@ def show_callers(entry: int | str) -> None:
 
 def show_routine_graph() -> None:
     """Draw every routine of the current run, the JSRs between them and
-    the edges from one into another's entry, with the dossier's labels,
+    the exits from one into another's entry, with the dossier's labels,
     into tmp/routine_graph.svg, and put its link on the clipboard, to
     paste into a browser. It doesn't open the picture itself: the system's
     viewer for SVG may be the wrong one, e.g. Edge in the Windows VM.
@@ -752,9 +753,16 @@ def clip(text: str | None = None) -> None:
 
 
 def listing(start: int | str, end: int | str | None = None) -> Text:
-    """Show the current listing with location colors, retaining plain text
-    for string operations and the clipboard. Comments, arrows and collapsed
-    rows remain uncolored. Bounds as for Session.current_listing_rows()."""
+    """Show the current run's code. With start alone, an address or a
+    label, the routine starting there, as its span, and a last row that
+    says where it runs on into, if it does. With end, the range from start
+    up to, not including, end.
+
+    Only code that ran is decoded; each gap that never ran is one row.
+    With the whole run's arrows, and the dossier's labels, comments and
+    hidden ranges. Code in a color range has its color; comments, arrows
+    and the rows of hidden ranges stay plain. The text kept for str() and
+    clip() has no colors."""
     rows = session.current_listing_rows(start, end)
     with contextlib.redirect_stdout(io.StringIO()) as printed:
         print_listing(rows)
@@ -769,17 +777,24 @@ def listing(start: int | str, end: int | str | None = None) -> Text:
 
 
 def edit(start: int | str, end: int | str | None = None, height: int = 25) -> None:
-    """Open the listing editor on the same lines listing() prints. start and
-    end as for Session.current_listing_rows(). Every label and comment changed there
-    is saved to the current dossier at once, through save_edit(). The
-    operand field labels the address an operand names, wherever the line
-    is. Enter on a JSR opens the routine it calls, and Enter on a JMP or a
-    branch into another routine opens that one, with the bar on the
-    target; each routine opens as it was last left, while the run lasts. g opens a list of the run's
-    routines, to go to one of them; u a list of the callers of the routine
-    shown, to go to one of their call sites. height is the number of lines the
-    editor shows at a time. The name in an operand has the color of the
-    address it names, if that address lies in a color range.
+    """Open the listing editor on the rows listing(start, end) shows: with
+    start alone, the routine starting there; with end, the range from start
+    up to, not including, end. Every label and comment changed there is
+    saved to the current dossier at once.
+
+    In the listing: Up, Down, PageUp and PageDown move the bar. Enter
+    follows the JSR, JMP or branch on the bar's row, into another routine
+    too, with the bar on the target, or goes where the routine runs on
+    into; Backspace goes back, and f forward again. Tab edits the label of
+    the bar's row, and Tab again the label of the address its operand
+    names; e edits its comment. g lists the run's routines, to go to one of
+    them; u lists every way into the routine shown. c copies the lines
+    shown. q leaves and keeps them on the screen; Esc or Ctrl+C leaves and
+    clears them. All keys: papple2.workbench.listing_editor.
+
+    Each routine opens as it was last left, while the run lasts. The name
+    in an operand has the color of the address it names, if that address
+    lies in a color range. height is the number of lines shown at a time.
 
     Needs a real terminal."""
     # Stop before the editor opens, not at the first save.
@@ -1030,9 +1045,9 @@ def print_routines(
         labels: dict[int, str] | None = None,
 ) -> None:
     """One line per routine, in address order: its entry, how many basic
-    blocks and bytes it has, how often it was called, and how many loops
-    it has. If labels are given, a routine whose entry has a label shows
-    it at the end."""
+    blocks and bytes it has, how often it was entered (the column called),
+    and how many loops it has. If labels are given, a routine whose entry
+    has a label shows it at the end."""
     header = f"{'routine':<7}  {'blocks':>6}  {'bytes':>5}  {'called':>6}  {'loops':>5}"
     if labels is not None:
         header += "  label"
