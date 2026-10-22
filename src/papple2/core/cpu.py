@@ -306,9 +306,6 @@ class CPU:
         self.PC += inc
         return pc
 
-    def read_word_bug( self, address: int ) -> int:
-        return self.memory.read_pointer_word( address )
-
     def read_pc_byte( self ) -> int:
         return self.memory.read_operand( self.get_and_inc_pc( ) )
 
@@ -403,12 +400,12 @@ class CPU:
     def indirect_mode( self ) -> int:
         self.operand_length = 2
         self.cycles += 2
-        return self.read_word_bug( self.absolute_mode( ) )
+        return self.memory.read_pointer_word( self.absolute_mode( ) )
 
     def indirect_x_mode( self ) -> int:
         self.operand_length = 1
         self.cycles += 4
-        return self.read_word_bug( (self.read_pc_byte( ) + self.X) % 0x100 )
+        return self.memory.read_pointer_word( (self.read_pc_byte( ) + self.X) % 0x100 )
 
     def indirect_y_mode( self, rmw: bool = False ) -> int:
         self.operand_length = 1
@@ -416,7 +413,7 @@ class CPU:
             self.cycles += 4
         else:
             self.cycles += 3
-        return self.read_word_bug( self.read_pc_byte( ) ) + self.Y
+        return self.memory.read_pointer_word( self.read_pc_byte( ) ) + self.Y
 
     def relative_mode( self ) -> int:
         self.operand_length = 1

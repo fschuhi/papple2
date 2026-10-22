@@ -92,7 +92,6 @@ const I = {
   ['cpu', 1, 'read_pc_byte(): read_operand(PC), PC += 1'],
   ['mem', 2, 'read_operand(PC): read_byte -> $06'],
   ['hook', 3, 'after_read_operand(address, $06)'],
-  ['cpu', 1, 'read_word_bug($06): passes on to read_pointer_word($06)'],
   ['mem', 2, 'read_pointer_word($06): two pointer reads, low byte first; at $xxFF the high byte comes from $xx00'],
   ['mem', 3, 'read_pointer($06): read_byte -> low byte'],
   ['hook', 4, 'after_read_pointer($06, low byte)'],

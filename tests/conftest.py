@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 import pytest
+from papple2.core import apple
 from papple2.core.memory import Memory
 from papple2.core.cpu import CPU
 from papple2.core.emulator import Emulator
@@ -26,6 +27,23 @@ from papple2.workbench.shell import (
 )
 from papple2.workbench.stack_tracking import StackTracking
 from papple2.workbench.tiling import Tiling
+
+
+@pytest.fixture(scope="session")
+def zero_rom(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """A ROM of zeros, from ROM_ADDRESS to $FFFF, written once per test
+    session. No test depends on what the real ROM holds, and A2ROM.BIN
+    is not in the repo."""
+    path = tmp_path_factory.mktemp("rom") / "A2ROM-ZEROS.BIN"
+    path.write_bytes(bytes(0x10000 - apple.ROM_ADDRESS))
+    return path
+
+
+@pytest.fixture(autouse=True)
+def use_zero_rom(zero_rom: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every Apple2 a test builds reads zero_rom instead of A2ROM.BIN, so
+    the tests run the same with or without the real ROM."""
+    monkeypatch.setattr(apple, "rom_path", lambda data_dir: zero_rom)
 
 
 @pytest.fixture

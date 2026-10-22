@@ -22,6 +22,17 @@ from papple2.core.memory import Memory
 # So far, affects text output only.
 SOLID_PIXELS = True
 
+# The Apple II's ROM fills memory from here to $FFFF.
+ROM_ADDRESS = 0xD000
+
+
+def rom_path(data_dir: str | None) -> Path:
+    """Where Apple2 reads the ROM from: A2ROM.BIN in the bin/ folder of
+    data_dir, or of data/ without one. The tests replace this function with
+    one that gives a ROM of zeros (tests/conftest.py), so they need no
+    A2ROM.BIN."""
+    return Path(data_dir if data_dir is not None else "data") / "bin" / "A2ROM.BIN"
+
 class Display:
 
     characters = [
@@ -532,6 +543,5 @@ class Apple2:
         self.softswitches = SoftSwitches(self.display, self.speaker)
 
         self.memory = Memory(self)
-        rom_path = str(Path(data_dir) / "bin" / "A2ROM.BIN") if data_dir is not None else 'data/bin/A2ROM.BIN'
-        self.memory.load_image(0xD000, rom_path)
+        self.memory.load_image(ROM_ADDRESS, str(rom_path(data_dir)))
         self.cpu = CPU(self.memory, program_counter=None)
