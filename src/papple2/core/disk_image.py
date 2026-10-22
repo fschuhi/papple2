@@ -7,7 +7,7 @@ it calls RWTS. So sector S of track T starts at byte offset
 
     (T * 16 + S) * 256
 
-Checked 2026-09-26 against XekriRedmane's track files for Lode Runner: all
+Checked against XekriRedmane's track files for Lode Runner: all
 224 sectors of the 14 tracks they cover are identical to these slices.
 
 This module stands in for the disk only, not for the drive: no nibbles, no

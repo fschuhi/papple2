@@ -163,10 +163,11 @@ class EmulatorStates:
         return self.sm.dispatch(event)
 
 
-# Emulator.run() asks the window for keyboard/window events and redraws only
-# every WINDOW_POLL_INTERVAL loop passes, not on every instruction: calling
-# pygame.event.get() once per instruction took about a third of the windowed
-# run time (cProfile, Lode Runner, 2026-09-23).
+# Emulator.run() asks the window for keyboard/window events, redraws and
+# throttles only every WINDOW_POLL_INTERVAL loop passes, not on every
+# instruction: calling pygame.event.get() once per instruction took about a
+# third of the windowed run time (measured with cProfile on Lode Runner).
+# The breakpoints, the traps and `until` are asked on every pass.
 WINDOW_POLL_INTERVAL = 1000
 
 # The Apple II's 6502 runs at about 1.023 MHz. Windowed runs are throttled

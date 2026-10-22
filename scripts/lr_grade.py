@@ -125,8 +125,9 @@ def print_grade(
     """Print how the routines agree with the key: the counts, then each
     unit that disagrees with the routines holding its blocks, then the
     blocks in no unit."""
-    # Which routines hold each block. Since 2026-10-18 there should be
-    # exactly one per block, but the grade counts it rather than trusts it.
+    # Which routines hold each block. find_routines() puts every block into
+    # exactly one routine; the grade counts the holders rather than trusting
+    # that.
     holders_of: dict[int, list[int]] = defaultdict(list)
     for entry, graph in sorted(routines.graphs.items()):
         for block in graph.blocks:

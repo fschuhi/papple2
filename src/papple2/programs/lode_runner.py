@@ -16,8 +16,6 @@ boot() gives a ready machine, the game in memory and the RWTS trap
 installed: run(lode_runner.boot(), 4_000_000, Tiling) at the prompt and in
 the lr_* recipes. scripts/boot_lode_runner.py calls the two pieces, load()
 and install_rwts(), itself, and keeps the trap to print the reads it served.
-
-Needs the stack wrap and decimal mode fixes in cpu.py (2026-09-23 patch).
 """
 
 from pathlib import Path
@@ -51,7 +49,7 @@ class RwtsTrap:
     """Serve the game's RWTS reads from a .do disk image.
 
     The sector appears in the buffer "deus ex machina": written straight
-    into memory, past the CPU's write hook, so no write hook sees it. The
+    into Memory's list, past its hooks, so no hook sees the write. The
     fake RTS moves SP and PC outside the instruction stream. `log` records
     every read served, for looking into both later.
     """

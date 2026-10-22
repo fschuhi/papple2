@@ -4,8 +4,7 @@ from papple2.debug.stop_conditions import instruction_count_reaches, at_address,
 
 
 def test_create_no_display():
-    # 2026-09-11 This results in `AttributeError: 'Display' object has no attribute 'screen'`
-    # see `TODO.md` for details on M2.5
+    # Without a window, building the emulator needs no pygame screen.
     emulator = Emulator(no_display=True)
 
 

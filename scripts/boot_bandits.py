@@ -46,7 +46,7 @@ MAIN_PROGRAM = "BANDITS"
 
 MLI_ENTRY = 0xBF00
 
-# The commands found in BANDITS so far (2026-09-26); names from the ProDOS 8
+# The commands BANDITS was seen to call; names from the ProDOS 8
 # Technical Reference Manual. GET_PREFIX and OPEN confirmed by running.
 MLI_COMMANDS = {
     0xC5: "ON_LINE",
@@ -100,12 +100,12 @@ class OpenFile:
 class MliTrap:
     """Stand in for ProDOS at $BF00: serve the commands we know, stop at the rest.
 
-    Like RwtsTrap in papple2.programs.lode_runner, answers go into memory past the
-    CPU's write hook, and the return to the caller is faked by moving SP and
-    PC outside the instruction stream. Unlike RWTS, the return goes three
-    bytes further than a plain RTS: after the command byte and the
-    parameter block address. `log` records every call seen, served or not,
-    for printing after the run.
+    Like RwtsTrap in papple2.programs.lode_runner, answers go straight into
+    Memory's list, past its hooks, and the return to the caller is faked
+    by moving SP and PC outside the instruction stream. Unlike RWTS, the
+    return goes three bytes further than a plain RTS: after the command
+    byte and the parameter block address. `log` records every call seen,
+    served or not, for printing after the run.
 
     Each served command has a method that returns a short description of
     what it did, or None if it cannot serve this request; then the trap
