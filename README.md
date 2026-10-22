@@ -121,7 +121,7 @@ How the machine runs, its extension points, memory access by kind and the speed 
 
 `papple2` is tested in three ways:
 
-- **Automated (`make test`).** The pytest suite, always headless: the 6502 and its quirks, the Apple II's soft switches, display memory and disk image, headless runs with traps and `until`, the state machine, the throttle, the assembler and disassembler, the workbench's analyses, the dossier, and the shell's commands.
+- **Automated (`make test`).** The pytest suite, always headless: the 6502 and its quirks, the Apple II's soft switches, display memory and disk image, headless runs with traps and `until`, the state machine, the throttle, the assembler and disassembler, the workbench's analyses, the dossier, and the shell's commands. It needs no `A2ROM.BIN`: the tests read a ROM of zeros (`tests/conftest.py`); only three Robotron tests need `ROBOTRON.BIN`.
 - **The walkthrough's chapters (`tests/test_walkthrough.py`).** Part of the same suite, but written to be read: tiny programs through the whole pipeline, each chapter a test that checks one step's output row by row, with comments that say why each row is what it is. `make walkthrough-md` renders them as a document.
 - **Manual, with a window (`make boot-basic`, `make boot-robotron`, `make boot-lode-runner`, `make boot-bandits`).** Plain scripts in `scripts/`, for a human watching: the Monitor and Integer BASIC through the text page, Robotron through hi-res, Lode Runner and Bandits through their disk stand-ins, so the traps get checked too. They assert nothing, and `make test` never opens a window.
 
