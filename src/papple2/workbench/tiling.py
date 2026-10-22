@@ -1,29 +1,29 @@
 """Tiling: an instrumentation that collects tiles and transitions.
 
-A tile starts at the initial PC or at the destination of a control
-transfer. Every conditional branch ends a tile, taken or not. JMP, JSR,
-RTS, BRK, and RTI also end tiles.
-
-Ordinary instruction advancement stays in the current tile. Gliding
-does not check whether another tile starts at an address, so overlapping
-tiles remain separate.
+A tile starts at an entry point: where the run started, or where a leap
+led. Every leap ends it: a branch, taken or not, JMP, JSR, RTS, RTI or
+BRK. A glide stays in the current tile, even into an address where
+another tile starts, so the tiles as recorded ("unbroken") may overlap.
 
 The three jobs of an instrumentation, for `Tiling`:
-    set up:   emulator.attach(tiling), which hooks after_instruction
+    set up:   emulator.attach(tiling), which hooks after_instruction;
+              run(emulator, n, Tiling) does this
     collect:  after_instruction, once per instruction while the run lasts
     report:   tiling.write_reports(folder, ...), after the run
 
-write_reports() checks accounting first, then writes into the folder:
+write_reports() first checks that the counts add up, e.g. that the hook
+saw as many instructions as the emulator ran; if a check fails, no
+report is written. Then it writes into the folder:
     lr_unbroken_tiles.csv
     lr_unbroken_transitions.csv
     lr_measurements.txt
     lr_split_tiles.csv
     lr_split_transitions.csv
 
-The transformer pass breaks overlapping tiles into strictly disjoint
-split tiles (Basic Blocks) by splitting tiles at any observed
-entry point. Executions are perfectly reconstructed by conserving traffic
-across split points. Where a tile is cut, the piece before the cut runs
+split_tiles() cuts every tile at each entry point inside it. The pieces
+are the split tiles, which do not overlap; each becomes a basic block of
+the graph. A split tile ran as often as the tiles it lies in were
+entered, added up. Where a tile is cut, the piece before the cut runs
 straight on into the piece after it, without a leap; each cut is written
 as a transition with the outcome "glide". A tile that never ran (the run
 stopped right after the leap into it) gives no split tile; the leap into
