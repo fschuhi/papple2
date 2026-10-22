@@ -26,19 +26,17 @@ and pygame presentation.
 """
 
 import sys
-from pathlib import Path
 
+from papple2.core.apple import rom_path
 from papple2.core.emulator import Emulator
 from papple2.util import load_data_dir
 
 
 def main() -> None:
     data_dir = load_data_dir()
-    rom_path = Path(data_dir) / "bin" / "A2ROM.BIN"
-
-    if not rom_path.exists():
+    if not rom_path(data_dir).exists():
         sys.exit(
-            f"{rom_path} not found -- A2ROM.BIN is required for this manual "
+            f"{rom_path(data_dir)} not found -- A2ROM.BIN is required for this manual "
             "run; configure its location with papple2.toml"
         )
 

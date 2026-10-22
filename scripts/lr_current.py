@@ -98,9 +98,10 @@ if __name__ == "__main__":
     # The recipe: the same lines could be typed at the prompt.
     use_reports_folder(REPORTS_FOLDER)
     use_dossier(DOSSIER)
-    run(lode_runner.boot(), RUN_INSTRUCTIONS)
+    emulator = lode_runner.boot()
+    run(emulator, RUN_INSTRUCTIONS)
     set_current_run(
-        shell.session.run_emulator,
+        emulator,
         lode_runner.LOAD_ADDRESS,
         split_tiles=BASIC_BLOCKS_REPORTS / SPLIT_TILES_FILE,
         split_transitions=BASIC_BLOCKS_REPORTS / SPLIT_TRANSITIONS_FILE,

@@ -1,6 +1,6 @@
 """Overview: the current run on one page, and its routines as a table.
 
-Two files for reading outside the prompt, in a text editor and in Excel,
+Three files for reading outside the prompt, in a text editor and in Excel,
 with the dossier's labels next to the addresses:
 
     lr_overview.txt   the whole run, the routines, the blocks in no
@@ -9,7 +9,7 @@ with the dossier's labels next to the addresses:
                       lr_overview.txt
     lr_listing.tsv    the listing of every routine, one after the other
 
-Both are built from the Session's current run: its routines (with the
+All three are built from the Session's current run: its routines (with the
 targets of stack jumps, if the returns report was read), its transitions,
 its emulator's instruction count and memory. write_overview_reports() writes them
 into the Session's reports folder; the command overview_reports() in

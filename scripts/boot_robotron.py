@@ -20,17 +20,17 @@ from papple2.util import load_data_dir
 
 def main() -> None:
     data_dir = load_data_dir()
-    rom_path = Path(data_dir) / "bin" / "ROBOTRON.BIN"
+    binary = Path(data_dir) / "bin" / "ROBOTRON.BIN"
 
-    if not rom_path.exists():
+    if not binary.exists():
         sys.exit(
-            f"{rom_path} not found -- ROBOTRON.BIN isn't distributed with "
+            f"{binary} not found -- ROBOTRON.BIN isn't distributed with "
             f"papple2, see README.md for how to get a copy and point "
             f"papple2.toml's data_dir at it"
         )
 
     emulator = Emulator(no_display=False, data_dir=data_dir)
-    emulator.load_image(0x2dfd, str(rom_path))
+    emulator.load_image(0x2dfd, str(binary))
 
     # No `until` -- this only returns once the window is closed. Ctrl-X
     # pauses and resumes execution, it doesn't end the run. Nothing to
