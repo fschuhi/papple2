@@ -1,17 +1,18 @@
 """Session: the state of one working session at the IPython prompt.
 
-A Session owns what the commands of papple2.workbench.shell work on: the
-reports folder, the current dossier with the annotations, hidden ranges
-and colors read from it, and the current run with its routines. The
-commands stay the contract; the
-Session is where they keep their state, so that a reader sees which state
-a command needs, and a test can start from a fresh one.
+A Session holds what the commands of papple2.workbench.shell work on:
+the reports folder, the current dossier with the annotations, hidden
+ranges and color ranges read from it, and the current run with its
+routines. shell.py keeps one, shell.session; a second terminal has its
+own. The commands stay the contract; the Session is where they keep
+their state, so that a reader sees which state a command needs, and a
+test can start from a fresh one.
 
 A Session does not print and does not return Text: the commands in
 shell.py shape what it gives them for IPython.
 
-Everything starts empty, as the module variables of shell.py did. The
-attributes are plain, so a test may assign a stand-in to any of them.
+Everything starts empty. The attributes are plain, so a test may assign
+a stand-in to any of them.
 """
 
 import time
