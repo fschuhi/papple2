@@ -111,7 +111,7 @@ digraph pipeline {
         fontcolor="#27500A"; fontsize=12;
         node [fontname="monospace", fontsize=10, color="#3B6D11"];
 
-        show [label="show_routines()\nshow_blocks()\nshow_callers()\nshow_routine_graph()"];
+        show [label="show_routines()\nshow_blocks()\nshow_ways_in()\nshow_routine_graph()"];
         listing [label="listing()\nhexdump()"];
         edit [label="edit()\nthe listing editor", fillcolor="#FBEAF0", color="#993556"];
         loop_reports [label="loop_reports()\n-> lr_loops_<entry>.csv,\n   lr_loop_members_<entry>.csv"];

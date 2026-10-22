@@ -77,10 +77,10 @@ a list of the routines edit_rows() was given, by entry and label, the
 selection on the routine shown. Enter goes there, as Enter on a JSR would,
 so Backspace comes back and the breadcrumbs grow.
 
-u opens the same picker on the callers of the routine shown, as
-edit_rows() gets them from callers_of: one line per call site, with its
-leap, the routine that holds it, and how often it was taken. Enter opens
-that routine with the bar on the call site, and Backspace comes back.
+u opens the same picker on every way into the routine shown, as
+edit_rows() gets them from ways_in_of: one line per way in, with its site,
+its kind, the routine that holds it, and how often it was taken. Enter
+opens that routine with the bar on the site, and Backspace comes back.
 
 The operand field labels the address the operand names (row.target), not
 the line's own: $1a85 in LDA $1a85,Y, the pointer $1b in STA ($1b),Y.
@@ -586,7 +586,7 @@ def edit_rows(
     open_routine: Callable[[int], Place | None] = lambda address: None,
     remembered: dict[int, tuple[int, int]] | None = None,
     goto_entries: list[int] | None = None,
-    callers_of: Callable[[int], list[PickerItem]] = lambda entry: [],
+    ways_in_of: Callable[[int], list[PickerItem]] = lambda entry: [],
     color_of: Callable[[int], str | None] = lambda entry: None,
     target_color_of: Callable[[int], str | None] = lambda address: None,
     routine_of: Callable[[int], int | None] = lambda address: None,
@@ -607,7 +607,7 @@ def edit_rows(
     row of every routine left, (top, cursor); it outlives the editor, if
     the caller keeps it. goto_entries are the entries the picker lists, in
     the order given; g goes to one of them through open_routine().
-    callers_of(entry) gives the picker's items for the callers of the
+    ways_in_of(entry) gives the picker's items for every way into the
     routine starting at entry; u opens the picker on them.
     color_of(entry) gives a breadcrumb's assigned color, or None for gray.
     Past and future names have normal weight; the current name is bold.
@@ -1075,12 +1075,12 @@ def edit_rows(
         open_picker(goto_items(), "no routines to go to")
 
     @bindings.add("u", filter=in_listing)
-    def _callers(event: KeyPressEvent) -> None:
+    def _ways_in(event: KeyPressEvent) -> None:
         if not state.place.routine:
-            state.message = "u shows the callers of a routine, not of a range"
+            state.message = "u shows the ways into a routine, not into a range"
             return
         entry = state.place.entry
-        open_picker(callers_of(entry), f"nothing leads into ${entry:04x}")
+        open_picker(ways_in_of(entry), f"nothing leads into ${entry:04x}")
 
     @bindings.add("up", filter=in_picker)
     def _picker_up(event: KeyPressEvent) -> None:

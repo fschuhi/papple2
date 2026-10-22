@@ -28,7 +28,6 @@ from papple2.workbench.listing_editor import PickerItem
 from papple2.workbench.overview import LISTING_FILE, OVERVIEW_FILE, ROUTINES_FILE
 from papple2.workbench.shell import (
     assign_lanes,
-    caller_items,
     clip,
     comment,
     contiguous_ranges,
@@ -47,9 +46,9 @@ from papple2.workbench.shell import (
     save_edit,
     set_current_run,
     show_blocks,
-    show_callers,
     show_routine_graph,
     show_routines,
+    show_ways_in,
     show_xrefs,
     stack_tracking_reports,
     tiling_reports,
@@ -57,6 +56,7 @@ from papple2.workbench.shell import (
     unlabel,
     use_dossier,
     use_reports_folder,
+    way_in_items,
     write_report,
 )
 from papple2.workbench.stack_tracking import StackTracking
@@ -540,7 +540,7 @@ def test_routine_of_names_the_routine_whose_block_holds_the_address(
     assert shell.session.routine_of(0x7000) is None
 
 
-def test_show_callers_lists_the_call_sites_with_the_routines_holding_them(
+def test_show_ways_in_lists_the_sites_with_the_routines_holding_them(
     nested_loops_run, tmp_path: Path, no_run: None, no_dossier: None
 ) -> None:
     # sub has one caller: the JSR in inner, taken six times, in the
@@ -550,13 +550,13 @@ def test_show_callers_lists_the_call_sites_with_the_routines_holding_them(
     label(0x6000, "main")
     label(0x6010, "sub")
 
-    assert show_callers("sub").splitlines() == [
+    assert show_ways_in("sub").splitlines() == [
         "site  kind     count  routines",
         "6004  JSR          6  6000 main",
     ]
 
 
-def test_caller_items_lead_to_the_call_site_in_the_routine_holding_it(
+def test_way_in_items_lead_to_the_site_in_the_routine_holding_it(
     nested_loops_run, tmp_path: Path, no_run: None, no_dossier: None
 ) -> None:
     # sub's one caller: the JSR at 6004, taken six times, in main.
@@ -564,18 +564,18 @@ def test_caller_items_lead_to_the_call_site_in_the_routine_holding_it(
     use_dossier(tmp_path / "dossier")
     label(0x6000, "main")
 
-    assert caller_items(0x6010) == [
+    assert way_in_items(0x6010) == [
         PickerItem("6004  JSR     main (6)", 0x6000, 0x6004)
     ]
 
 
-def test_show_callers_of_a_routine_nothing_leaps_into(
+def test_show_ways_in_of_a_routine_nothing_leaps_into(
     nested_loops_run, no_run: None, no_dossier: None
 ) -> None:
     # The run starts at 6000; nothing leads there.
     make_nested_loops_current(nested_loops_run)
 
-    assert show_callers(0x6000).splitlines() == [
+    assert show_ways_in(0x6000).splitlines() == [
         "nothing leads into 6000"
     ]
 
@@ -727,7 +727,7 @@ def test_listing_of_an_address_alone_that_is_no_routine_stops(
     [
         (show_routines, ()),
         (show_blocks, (0x6000,)),
-        (show_callers, (0x6010,)),
+        (show_ways_in, (0x6010,)),
         (show_routine_graph, ()),
         (listing, (0x6000, 0x6002)),
         (loop_reports, (0x6000,)),
@@ -834,7 +834,7 @@ SUB     INC $10
 """
 
 
-def test_show_callers_counts_a_jmp_into_a_routine(
+def test_show_ways_in_counts_a_jmp_into_a_routine(
     make_emulator, tmp_path: Path, no_run: None, no_reports_folder: None,
     no_dossier: None
 ) -> None:
@@ -844,14 +844,14 @@ def test_show_callers_counts_a_jmp_into_a_routine(
     use_reports_folder(tmp_path)
     tiling_reports()
 
-    assert show_callers(0x600e).splitlines() == [
+    assert show_ways_in(0x600e).splitlines() == [
         "site  kind     count  routines",
         "6000  JSR          1  6000",
         "600b  JMP          1  6009",
     ]
 
 
-def test_show_callers_leaves_out_the_routines_own_loop(
+def test_show_ways_in_leaves_out_the_routines_own_loop(
     make_emulator, tmp_path: Path, no_run: None, no_reports_folder: None,
     no_dossier: None
 ) -> None:
@@ -862,7 +862,7 @@ def test_show_callers_leaves_out_the_routines_own_loop(
     use_reports_folder(tmp_path)
     tiling_reports()
 
-    assert show_callers(0x6000).splitlines() == ["nothing leads into 6000"]
+    assert show_ways_in(0x6000).splitlines() == ["nothing leads into 6000"]
 
 
 # Like PUT_STATUS_LIVES and PUT_STATUS_LEVEL: LIVES runs on into BYTE,
@@ -883,7 +883,7 @@ LEVEL   LDA #$02
 """
 
 
-def test_show_callers_lists_a_glide_and_a_branch(
+def test_show_ways_in_lists_a_glide_and_a_branch(
     make_emulator, tmp_path: Path, no_run: None, no_reports_folder: None,
     no_dossier: None
 ) -> None:
@@ -893,7 +893,7 @@ def test_show_callers_lists_a_glide_and_a_branch(
     use_reports_folder(tmp_path)
     tiling_reports()
 
-    assert show_callers(0x600b).splitlines() == [
+    assert show_ways_in(0x600b).splitlines() == [
         "site  kind     count  routines",
         "6009  glide        1  6009",
         "6010  branch       1  600e",
@@ -942,7 +942,7 @@ DOWN    LDA #$02
 """
 
 
-def test_show_callers_lists_a_jmp_through_a_door(
+def test_show_ways_in_lists_a_jmp_through_a_door(
     make_emulator, tmp_path: Path, no_run: None, no_reports_folder: None,
     no_dossier: None
 ) -> None:
@@ -951,7 +951,7 @@ def test_show_callers_lists_a_jmp_through_a_door(
     use_reports_folder(tmp_path)
     tiling_reports()
 
-    assert show_callers(0x6009).splitlines() == [
+    assert show_ways_in(0x6009).splitlines() == [
         "site  kind     count  routines",
         "6000  JSR          1  6000",
         "6014  JMP          1  6012",
@@ -1008,7 +1008,7 @@ def test_stack_tracking_reports_make_stack_jump_targets_routines(
     assert list(shell.session.routines.graphs) == [0x6000, 0x6006, 0x600D]
 
 
-def test_show_callers_lists_a_stack_jump(
+def test_show_ways_in_lists_a_stack_jump(
     make_emulator, tmp_path: Path, no_run: None, no_reports_folder: None,
     no_dossier: None
 ) -> None:
@@ -1019,7 +1019,7 @@ def test_show_callers_lists_a_stack_jump(
     tiling_reports()
     stack_tracking_reports()
 
-    assert show_callers(0x600D).splitlines() == [
+    assert show_ways_in(0x600D).splitlines() == [
         "site  kind     count  routines",
         "600c  RTS          1  6006",
     ]

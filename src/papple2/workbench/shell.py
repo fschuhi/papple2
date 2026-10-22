@@ -33,7 +33,7 @@ afterwards is up to the experiment, one command per kind of report:
 tiling_reports(), stack_tracking_reports(), cross_referencing_reports(),
 overview_reports().
 set_current_run() sets the routines from a run made elsewhere, by its
-reports. show_routines(), show_blocks(), show_callers(),
+reports. show_routines(), show_blocks(), show_ways_in(),
 listing() and loop_reports() work on the routines, with the current
 dossier's labels and comments if one is open. The print_* functions take
 the objects they print instead, for any graph.
@@ -587,7 +587,7 @@ class WayIn:
 
 def ways_in(entry: int) -> list[WayIn]:
     """Every way into the routine starting at entry, in the current run, in
-    address order. Prints nothing; show_callers() prints them.
+    address order. Prints nothing; show_ways_in() prints them.
 
     A JSR leads into the entry, from anywhere. A JMP, a branch or a glide
     counts if it comes from a block of another routine, into any block of
@@ -646,8 +646,8 @@ def ways_in(entry: int) -> list[WayIn]:
     ]
 
 
-def caller_items(entry: int) -> list[PickerItem]:
-    """The callers of the routine starting at entry, as the listing
+def way_in_items(entry: int) -> list[PickerItem]:
+    """Every way into the routine starting at entry, as the listing
     editor's picker lists them: one line per way in (ways_in()) and routine
     that holds it, e.g. 8352  JSR     r_11x2_1 (1,782), with the site's
     count. Enter opens that routine with the bar on the site."""
@@ -663,7 +663,7 @@ def caller_items(entry: int) -> list[PickerItem]:
 
 
 @returns_text
-def show_callers(entry: int | str) -> None:
+def show_ways_in(entry: int | str) -> None:
     """Every way into the routine starting at entry, an address or a
     label: one line per way in, as ways_in() finds them, with its kind
     (JSR, JMP, JMP (), branch, glide, RTS), how often it was taken, and
@@ -840,7 +840,7 @@ def edit(start: int | str, end: int | str | None = None, height: int = 25) -> No
         open_routine=routine_place,
         remembered=session.editor_views,
         goto_entries=sorted(session.current_routines().graphs),
-        callers_of=caller_items,
+        ways_in_of=way_in_items,
         color_of=color_of,
         target_color_of=target_color_of,
         routine_of=session.routine_of,

@@ -104,7 +104,7 @@ This runs Lode Runner's attract play, 4,000,000 instructions. Afterwards the run
 3. **Where we come from.**
 
    ```
-   show_callers("draw_at_hx")
+   show_ways_in("draw_at_hx")
    edit("draw_player")
    ```
 

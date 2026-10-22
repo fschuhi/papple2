@@ -253,7 +253,7 @@
 <path fill="white" stroke="#3b6d11" d="M1679.49,-201.32C1679.49,-201.32 1566.21,-201.32 1566.21,-201.32 1560.21,-201.32 1554.21,-195.32 1554.21,-189.32 1554.21,-189.32 1554.21,-153.68 1554.21,-153.68 1554.21,-147.68 1560.21,-141.68 1566.21,-141.68 1566.21,-141.68 1679.49,-141.68 1679.49,-141.68 1685.49,-141.68 1691.49,-147.68 1691.49,-153.68 1691.49,-153.68 1691.49,-189.32 1691.49,-189.32 1691.49,-195.32 1685.49,-201.32 1679.49,-201.32"/>
 <text xml:space="preserve" text-anchor="middle" x="1622.85" y="-187.5" font-family="monospace" font-size="10.00">show_routines()</text>
 <text xml:space="preserve" text-anchor="middle" x="1622.85" y="-174.75" font-family="monospace" font-size="10.00">show_blocks()</text>
-<text xml:space="preserve" text-anchor="middle" x="1622.85" y="-162" font-family="monospace" font-size="10.00">show_callers()</text>
+<text xml:space="preserve" text-anchor="middle" x="1622.85" y="-162" font-family="monospace" font-size="10.00">show_ways_in()</text>
 <text xml:space="preserve" text-anchor="middle" x="1622.85" y="-149.25" font-family="monospace" font-size="10.00">show_routine_graph()</text>
 </g>
 <!-- state&#45;&gt;show -->

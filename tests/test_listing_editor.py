@@ -254,7 +254,7 @@ def routine_of(address: int) -> int | None:
 
 # SUB's one caller, made up for the tests: a JSR at 9003 in MAIN, not on
 # MAIN's entry, so a test can tell the call site from the entry.
-CALLERS = {0x9010: [PickerItem("9003  JSR     main (2)", 0x9000, 0x9003)]}
+WAYS_IN = {0x9010: [PickerItem("9003  JSR     main (2)", 0x9000, 0x9003)]}
 
 
 def navigate(
@@ -289,7 +289,7 @@ def navigate(
                 open_routine=ROUTINES.get,
                 remembered=remembered,
                 goto_entries=sorted(ROUTINES),
-                callers_of=lambda entry: CALLERS.get(entry, []),
+                ways_in_of=lambda entry: WAYS_IN.get(entry, []),
                 routine_of=routine_of,
             )
     return saved
@@ -415,20 +415,20 @@ def test_f_without_a_backspace_goes_nowhere() -> None:
     assert navigate("f\t\rq") == [(0x9000, "label", "main")]
 
 
-# Callers. "u" opens the picker on the callers of the routine shown.
+# Ways in. "u" opens the picker on every way into the routine shown.
 
 
-def test_u_goes_to_the_call_site_of_the_caller_picked() -> None:
+def test_u_goes_to_the_site_of_the_way_in_picked() -> None:
     # Into SUB, then u and Enter: MAIN, the bar on the call site 9003.
     assert navigate("\ru\r\t\rq") == [(0x9003, "label", "")]
 
 
-def test_backspace_comes_back_from_the_caller() -> None:
+def test_backspace_comes_back_after_u() -> None:
     assert navigate("\ru\r\x7f\t\rq") == [(0x9010, "label", "sub")]
 
 
-def test_u_without_callers_leaves_the_listing_as_it_is() -> None:
-    # MAIN has no callers: no picker opens, so Tab edits MAIN's label.
+def test_u_without_ways_in_leaves_the_listing_as_it_is() -> None:
+    # Nothing leads into MAIN: no picker opens, so Tab edits MAIN's label.
     assert navigate("u\t\rq") == [(0x9000, "label", "main")]
 
 

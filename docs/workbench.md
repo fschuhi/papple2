@@ -49,7 +49,7 @@ listing(0x7a3e)               # one argument: the whole routine
 edit(0x7a3e)                  # edit the whole routine, i.e. add labels and comments
 label(0x7a3e, "lookup_hgr")
 listing("lookup_hgr")         # a label wherever a routine's address goes
-show_callers("lookup_hgr")    # every way into it
+show_ways_in("lookup_hgr")    # every way into it
 hexdump("hgr_rows_lo")        # one page of memory, as bytes and text
 clip()                        # the last output to the clipboard
 ```
@@ -61,7 +61,7 @@ What `%run scripts/lr_basic_blocks_analysis.py` leaves in the session:
 | Kind | Names                                                                                                                                                         |
 |---|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Commands: setting up | `use_reports_folder()`, `use_dossier()`, `run()`, `tiling_reports()`, `stack_tracking_reports()`, `cross_referencing_reports()`, `overview_reports()` |
-| Commands: the current run | `show_routines()`, `show_blocks()`, `show_callers()`, `show_xrefs()`, `show_routine_graph()`, `listing()`, `hexdump()`, `edit()`, `loop_reports()`        |
+| Commands: the current run | `show_routines()`, `show_blocks()`, `show_ways_in()`, `show_xrefs()`, `show_routine_graph()`, `listing()`, `hexdump()`, `edit()`, `loop_reports()`        |
 | Commands: the clipboard | `clip()`                                                                                                                                                    |
 | Commands: the dossier | `label()`, `comment()`, `unlabel()`, `uncomment()`, `hide()`, `unhide()`, `color()`, `uncolor()`, `colors()`                                                      |
 | Commands: range bounds | `to_range()`                                                                                                                                                 |
