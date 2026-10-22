@@ -1,12 +1,17 @@
 """The walkthrough, told as tests.
 
-Twenty bytes go through the whole pipeline: the run with Tiling attached,
-the unbroken and the split reports, the graph of basic blocks, the
-routines, the dominators, the loops and their reports, and the views at
-the IPython prompt. Each test is one chapter, in the order the
-pipeline goes; its name says which program it uses. The fixture named
-after the program, e.g. `nested_loops_run` in conftest.py, runs the
-program's recipe from scripts/walkthrough.py.
+Three small programs go through the whole pipeline:
+- nested_loops, twenty bytes, from chapter 1 on: the run with Tiling
+  attached, the unbroken and the split reports, the graph of basic
+  blocks, the routines, the dominators, the loops and their reports, and
+  the views at the IPython prompt
+- rts_dispatch, from chapter 14 on: the shadow stack
+- memory_tour, from chapter 18 on: the cross reference
+
+Each test is one chapter, in the order the pipeline goes; its name says
+which program it uses. The fixture named after the program, e.g.
+`nested_loops_run` in conftest.py, runs the program's recipe from
+scripts/walkthrough.py.
 
 The program, nested_loops (papple2.programs.nested_loops), with its
 addresses:
@@ -135,8 +140,9 @@ def test_chapter_1_nested_loops_the_run(nested_loops_run) -> None:
     # So PC stands after done's NOP, on the first byte that never ran.
     assert nested_loops_run.emulator.cpu.PC == 0x6014
 
-    # Tiling cuts the run into tiles: a tile starts where the run arrives,
-    # and ends at the next leap (chapter 2). The run arrived first at
+    # Tiling cuts the run into tiles: a tile starts at an entry point,
+    # where the run started or where a leap led, and ends at the next leap
+    # (chapter 2). The run arrived first at
     # $6000, without a leap: that is the tile with an initial entry. It
     # stopped inside the tile at done, $6013.
     first_tile = next(
@@ -149,7 +155,7 @@ def test_chapter_1_nested_loops_the_run(nested_loops_run) -> None:
 def test_chapter_2_nested_loops_unbroken_tiles(nested_loops_run) -> None:
     # Tiling starts a tile wherever the run arrives by a leap, and the tile
     # runs on until the next leap. The run starts at $6000 and runs LDY,
-    # LDX and JSR before its first leap. Later the two BNEs leap back to
+    # LDX and JSR before its first leap. Later the two BNEs leap backward to
     # $6002 and $6004, and each starts a tile of its own, over bytes that
     # the first tile already ran. So the tiles overlap: the JSR at $6004
     # lies in three of them, and its leap into sub is counted under three
@@ -196,10 +202,11 @@ def test_chapter_2_nested_loops_unbroken_tiles(nested_loops_run) -> None:
         ("6013", "6013", "1", "1", "0", "1"),
     ]
 
-    # One row per kind of leap: the tile it left, the leap's address and
-    # opcode, for a branch whether it was taken or fell through, the tile
-    # it led into, and how often. No glides here: an unbroken tile ends
-    # only at a leap. The counts add up to 21, the leaped_to above.
+    # One row per leap address, outcome and pair of tiles: the tile it
+    # left, the leap's address and opcode, for a branch whether it was
+    # taken or fell through, the tile it led into, and how often. No
+    # glides here: an unbroken tile ends only at a leap. The counts add up
+    # to 21, the leaped_to above.
     transitions = read_rows(nested_loops_run.folder / TRANSITIONS_FILE)
     assert [
         (
@@ -218,11 +225,11 @@ def test_chapter_2_nested_loops_unbroken_tiles(nested_loops_run) -> None:
         ("6002", "6004", "$20", "", "6010", "1"),
         ("6004", "6004", "$20", "", "6010", "4"),
         # BNE inner ($D0) at $6008: falls through when X reaches 0, twice;
-        # taken back to inner the other 4 times.
+        # taken backward to inner the other 4 times.
         ("6007", "6008", "$D0", "fall_through", "600a", "2"),
         ("6007", "6008", "$D0", "taken", "6004", "4"),
-        # BNE outer at $600b: falls through once, at the end; taken back
-        # to outer once.
+        # BNE outer at $600b: falls through once, at the end; taken
+        # backward to outer once.
         ("600a", "600b", "$D0", "fall_through", "600d", "1"),
         ("600a", "600b", "$D0", "taken", "6002", "1"),
         # JMP done ($4C), over sub.
@@ -236,8 +243,8 @@ def test_chapter_3_nested_loops_split_tiles(nested_loops_run) -> None:
     # The tile from $6000 ran straight through $6002 and $6004, which later
     # became entry points (the targets of the two BNEs). So it is cut there:
     # every split tile starts at an entry point and ends where the next
-    # begins, or at its leap. Split tiles don't overlap; they are the basic
-    # blocks.
+    # begins, or directly after its leap. Split tiles don't overlap; they
+    # are the basic blocks.
     #
     # The columns: where the split tile starts; where it ends, half-open,
     # so the end is the first byte after it; and how often the run went
@@ -306,8 +313,8 @@ def test_chapter_5_nested_loops_the_graph(nested_loops_run) -> None:
 
     # The JSR's edge into sub is replaced by the call fall-through edge
     # 6004 -> 6007, with the JSR's count: seen from this routine, the call
-    # is one step that comes back directly after itself. The RTS gives no edge:
-    # it belongs to sub.
+    # is one step that comes back directly after itself. The RTS gives no
+    # edge: it belongs to sub.
     assert graph.edges == {
         (0x6000, 0x6002): 1,  # glide: LDY into outer
         (0x6002, 0x6004): 2,  # glide: outer's LDX into inner
@@ -321,10 +328,12 @@ def test_chapter_5_nested_loops_the_graph(nested_loops_run) -> None:
 
 
 def test_chapter_6_nested_loops_routines(nested_loops_run) -> None:
-    # A routine starts at the run's start and at every JSR target. The
-    # program has two: the routine at $6000, entered once by the run itself,
-    # and sub at $6010, called six times. show_routines() lists them; with
-    # no dossier open, there are no labels.
+    # Here a routine starts where the run started and at every JSR target.
+    # docs/routine.md has the other ways a routine starts, which this
+    # program doesn't need. It has two: the routine at $6000, entered once
+    # by the run itself, and sub at $6010, called six times.
+    # show_routines() lists them; with no dossier open, there are no
+    # labels.
     #
     # The columns: the routine's entry; how many blocks it has; how many
     # bytes they hold; how often it was entered; how many loops it has.
@@ -366,11 +375,11 @@ def test_chapter_8_nested_loops_loops(nested_loops_run) -> None:
     graph = nested_loops_run.graph
 
     # An edge is a back edge if its target dominates its source: the run
-    # jumps back to a place it must have passed to get here. Here the two
-    # jumps back of the BNEs.
+    # comes again to a block it must have passed to get here. Here the two
+    # jumps backward of the BNEs.
     assert back_edges(graph, immediate_dominators(graph)) == [
-        (0x6007, 0x6004),  # BNE inner, back to inner
-        (0x600A, 0x6002),  # BNE outer, back to outer
+        (0x6007, 0x6004),  # BNE inner, backward to inner
+        (0x600A, 0x6002),  # BNE outer, backward to outer
     ]
 
     # Each back edge closes a natural loop: its header, plus every block
@@ -407,10 +416,10 @@ def test_chapter_9_nested_loops_loop_reports(nested_loops_run) -> None:
     # the loop it lies in; and its blocks.
     loops = read_rows(nested_loops_run.folder / LOOPS_FILE.format(entry=0x6000))
     assert [list(row.values()) for row in loops] == [
-        # outer's loop: BNE outer jumped back once, for the second pass.
+        # outer's loop: BNE outer jumped backward once, for the second pass.
         ["L01", "6002", "600a", "1", "0", "-", "6002 6004 6007 600a"],
-        # inner's loop, inside L01: BNE inner jumped back 4 times, 2 per
-        # outer pass.
+        # inner's loop, inside L01: BNE inner jumped backward 4 times, 2
+        # per outer pass.
         ["L02", "6004", "6007", "4", "1", "L01", "6004 6007"],
     ]
 
@@ -467,7 +476,7 @@ def test_chapter_10_nested_loops_the_views_at_the_prompt(nested_loops_run, capsy
 def test_chapter_11_nested_loops_one_block_disassembled(nested_loops_run, capsys) -> None:
     # The block 6004-6007 is one instruction: the JSR. The range is
     # half-open, so the end the block shows is the end listing_rows() takes.
-    # Without names, the operand shows the address.
+    # Without labels, the operand shows the address.
     print_listing(listing_rows(nested_loops_run.emulator, 0x6004, 0x6007))
 
     assert capsys.readouterr().out.splitlines() == [
@@ -477,23 +486,23 @@ def test_chapter_11_nested_loops_one_block_disassembled(nested_loops_run, capsys
 
 
 def test_chapter_12_nested_loops_the_whole_program_disassembled(nested_loops_run, capsys) -> None:
-    # The twenty bytes, read back from memory after the run, with the names
-    # given by hand. The four named addresses show their names twice: in
-    # the column before their own instruction, and in the operands that
-    # point at them. INC $10 keeps its address: $10 has no name.
+    # The twenty bytes, read back from memory after the run, with the
+    # labels given by hand. The four labelled addresses show their labels
+    # twice: in the label column, and in the operands that point at them.
+    # INC $10 keeps its address: $10 has no label.
     rows = listing_rows(nested_loops_run.emulator, 0x6000, 0x6014, nested_loops_run.labels)
     print_listing(rows)
 
     assert capsys.readouterr().out.splitlines() == [
         "6000  a0 02            LDY #$02",
-        "6002  a2 03     outer  LDX #$03",  # named, as BNE outer's target
-        "6004  20 10 60  inner  JSR sub",  # named, and calling a name
+        "6002  a2 03     outer  LDX #$03",  # labelled, as BNE outer's target
+        "6004  20 10 60  inner  JSR sub",  # labelled, and calling a label
         "6007  ca               DEX",
-        "6008  d0 fa            BNE inner",  # $FA: 6 bytes back, to $6004
+        "6008  d0 fa            BNE inner",  # $FA: 6 bytes backward, to $6004
         "600a  88               DEY",
-        "600b  d0 f5            BNE outer",  # $F5: 11 bytes back, to $6002
+        "600b  d0 f5            BNE outer",  # $F5: 11 bytes backward, to $6002
         "600d  4c 13 60         JMP done",  # the address, low byte first
-        "6010  e6 10     sub    INC $10",  # a zero-page address, unnamed
+        "6010  e6 10     sub    INC $10",  # a zero-page address, no label
         "6012  60               RTS",
         "6013  ea        done   NOP",
     ]
@@ -501,7 +510,7 @@ def test_chapter_12_nested_loops_the_whole_program_disassembled(nested_loops_run
 
 def test_chapter_13_nested_loops_the_jumps_as_arrows(nested_loops_run, capsys) -> None:
     # With the graph, listing_rows() draws the jumps the run took: the two
-    # BNEs jumping back, and the JMP over sub. An arrow starts with +-- at
+    # BNEs jumping backward, and the JMP over sub. An arrow starts with +-- at
     # its leap and ends with +-> at its target. The inner loop's arrow lies
     # inside the outer loop's, nearer the code. The JMP's arrow shares a
     # lane with the inner loop's, since the two don't overlap. Calls are
@@ -553,8 +562,8 @@ def test_chapter_15_rts_dispatch_returns(rts_dispatch_run) -> None:
     # dispatch pushes two bytes itself, so its RTS finds no frame: it is
     # unmatched. It jumps into the routine. The routine's own RTS then
     # finds the frame that dispatch's JSR opened, and returns where that
-    # frame expected, directly after the JSR: matched. The frame was opened for
-    # dispatch, but closed in the routine's code.
+    # frame expected, directly after the JSR: matched. The frame was opened
+    # for dispatch, but closed in the routine's code.
     stack_tracking_reports()
 
     # The columns: the JSR that opened the frame and where it jumped; the
@@ -596,7 +605,8 @@ def test_chapter_16_rts_dispatch_routines_before_and_after(rts_dispatch_run) -> 
     assert show_routines().splitlines() == [
         "routine  blocks  bytes  called  loops",
         # $6000-$6005, $6005-$600a, $600a-$600d, and done's $6022-$6023:
-        # 5 + 5 + 3 + 1 bytes. The two JSRs come back directly after themselves.
+        # 5 + 5 + 3 + 1 bytes. The two JSRs come back directly after
+        # themselves.
         "6000          4     14       1      0",
         # dispatch: one block, ASL to RTS, called by both JSRs.
         "600d          1     11       2      0",
