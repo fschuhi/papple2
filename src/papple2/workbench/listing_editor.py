@@ -409,9 +409,9 @@ def row_fragments(
         (operand_end, len(line), ""),
     ]
     return [
-        (style, line[first:behind])
-        for first, behind, style in cuts
-        if line[first:behind]
+        (style, line[start:end])
+        for start, end, style in cuts
+        if line[start:end]
     ]
 
 

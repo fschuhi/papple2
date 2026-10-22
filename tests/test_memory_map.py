@@ -27,7 +27,9 @@ RANGES = [(0x1C9A, 0x1D26, "green"), (0x1D26, 0x1DB2, "cyan")]
 def tables(start: int, end: int) -> str | None:
     """A stand-in for Colors.color_of_bytes over RANGES."""
     shades = {
-        shade for first, behind, shade in RANGES if first < end and start < behind
+        shade
+        for range_start, range_end, shade in RANGES
+        if range_start < end and start < range_end
     }
     if not shades:
         return None

@@ -74,7 +74,7 @@ def test_a_hidden_span_is_one_row_without_an_address(
 
 
 @pytest.mark.parametrize(
-    "first, behind, expected",
+    "start, end, expected",
     [
         (0x5FFF, 0x6002, "... 6000-6002 cut: note ..."),
         (0x6006, 0x6008, "... 6006-6007 cut: note ..."),
@@ -82,13 +82,13 @@ def test_a_hidden_span_is_one_row_without_an_address(
     ],
 )
 def test_hidden_bounds_are_clipped_to_the_listing(
-    machine: SimpleNamespace, first: int, behind: int, expected: str
+    machine: SimpleNamespace, start: int, end: int, expected: str
 ) -> None:
     rows = listing_rows(
         machine,
         0x6000,
         0x6007,
-        hidden_ranges={"cut": HiddenRange(first, behind, "note")},
+        hidden_ranges={"cut": HiddenRange(start, end, "note")},
     )
 
     assert [

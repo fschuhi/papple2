@@ -172,21 +172,21 @@ def listing_rows(
     rows: list[list[str]] = []
     gaps: dict[int, str] = {}
 
-    def add_visible(first: int, behind: int) -> None:
+    def add_visible(span_start: int, span_end: int) -> None:
         """List one span outside the hidden ranges, with its run gaps."""
-        if first >= behind:
+        if span_start >= span_end:
             return
-        position = first
+        position = span_start
         for part_start, part_end in ran_parts(
-            first, behind, graph if only_ran else None
+            span_start, span_end, graph if only_ran else None
         ):
             if part_start > position:
                 gaps[len(rows)] = never_ran(position, part_start)
                 rows.append(["", "", "", "", "", ""])
             rows.extend(disassembler.disassemble(part_start, part_end - 1))
             position = part_end
-        if position < behind:
-            gaps[len(rows)] = never_ran(position, behind)
+        if position < span_end:
+            gaps[len(rows)] = never_ran(position, span_end)
             rows.append(["", "", "", "", "", ""])
 
     position = start
@@ -194,15 +194,15 @@ def listing_rows(
         (hidden_ranges or {}).items(),
         key=lambda item: (item[1].start, item[0]),
     ):
-        first = max(start, definition.start)
-        behind = min(end, definition.end)
-        if first >= behind:
+        hidden_start = max(start, definition.start)
+        hidden_end = min(end, definition.end)
+        if hidden_start >= hidden_end:
             continue
-        add_visible(position, first)
+        add_visible(position, hidden_start)
         note = f": {definition.note}" if definition.note else ""
-        gaps[len(rows)] = f"... {first:04x}-{behind:04x} {name}{note} ..."
+        gaps[len(rows)] = f"... {hidden_start:04x}-{hidden_end:04x} {name}{note} ..."
         rows.append(["", "", "", "", "", ""])
-        position = behind
+        position = hidden_end
     add_visible(position, end)
     gutter = draw_gutter(len(rows), *arrows_in(rows, graph, hidden_ranges))
     # The addresses of the global labels, sorted, to find each line's scope.
@@ -246,7 +246,7 @@ def ran_parts(
     start: int, end: int, graph: BlockGraph | None
 ) -> list[tuple[int, int]]:
     """The parts of the range from start up to end to list instruction by
-    instruction, in address order, each as (first, behind). Without graph,
+    instruction, in address order, each as (start, end). Without graph,
     the whole range. With it, only the code the run executed: its blocks,
     cut to the range, adjoining blocks joined into one part. Whatever lies
     between the parts never ran."""
@@ -254,22 +254,22 @@ def ran_parts(
         return [(start, end)]
     parts: list[tuple[int, int]] = []
     for block in sorted(graph.blocks.values(), key=lambda block: block.start):
-        first, behind = max(block.start, start), min(block.end, end)
-        if first >= behind:  # the block lies outside the range
+        part_start, part_end = max(block.start, start), min(block.end, end)
+        if part_start >= part_end:  # the block lies outside the range
             continue
-        if parts and parts[-1][1] >= first:
-            parts[-1] = (parts[-1][0], max(parts[-1][1], behind))
+        if parts and parts[-1][1] >= part_start:
+            parts[-1] = (parts[-1][0], max(parts[-1][1], part_end))
         else:
-            parts.append((first, behind))
+            parts.append((part_start, part_end))
     return parts
 
 
-def never_ran(first: int, behind: int) -> str:
-    """The text of the row that stands for a gap: the bytes from first up
-    to, not including, behind."""
-    size = behind - first
+def never_ran(start: int, end: int) -> str:
+    """The text of the row that stands for a gap: the bytes from start up
+    to, not including, end."""
+    size = end - start
     return (
-        f"... {first:04x}-{behind:04x}: {size:,} byte{'' if size == 1 else 's'}"
+        f"... {start:04x}-{end:04x}: {size:,} byte{'' if size == 1 else 's'}"
         " never ran ..."
     )
 

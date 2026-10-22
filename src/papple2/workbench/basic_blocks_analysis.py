@@ -582,7 +582,7 @@ def stops_before(tiles: list[SplitTile], entry: int) -> frozenset[int]:
     )
 
 
-def shared_by_jump_back(
+def shared_by_jump_backward(
     graphs: Mapping[int, BlockGraph],
     edges: Mapping[tuple[int, int], int],
     glides: set[tuple[int, int]],
@@ -672,7 +672,7 @@ def find_routines(
     starting where the shared part begins (shared_entries()), entered as
     often as the edges into it from the other routines were taken. So does
     code that one routine glides into and another routine jumps backward
-    into, past its own entry (shared_by_jump_back()). Code that no routine
+    into, past its own entry (shared_by_jump_backward()). Code that no routine
     holds, because a jump backward past an entry was not followed, does
     too, starting at the orphan with the lowest address (orphans()). This
     is repeated until every block lies in exactly one routine."""
@@ -706,20 +706,20 @@ def find_routines(
             for entry in entries
         }
         shared = shared_entries(graphs, all_edges)
-        for entry, count in shared_by_jump_back(graphs, all_edges, glides).items():
+        for entry, count in shared_by_jump_backward(graphs, all_edges, glides).items():
             shared[entry] = shared.get(entry, 0) + count
         if shared:
             for entry, count in shared.items():
                 extra[entry] = extra.get(entry, 0) + count
             continue
-        left_behind = orphans(graphs, all_edges)
-        if not left_behind:
+        orphan_counts = orphans(graphs, all_edges)
+        if not orphan_counts:
             break
         # Only the orphan with the lowest address: the code after it may
         # reach the others, e.g. a second door after it in the same tail,
         # which then stays inside it instead of becoming an entry of its own.
-        lowest = min(left_behind)
-        extra[lowest] = extra.get(lowest, 0) + left_behind[lowest]
+        lowest = min(orphan_counts)
+        extra[lowest] = extra.get(lowest, 0) + orphan_counts[lowest]
 
     # How often each routine was entered: the counts of the JSRs into it,
     # plus those of the extra entries.

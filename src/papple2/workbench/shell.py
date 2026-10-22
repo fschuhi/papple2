@@ -273,14 +273,14 @@ def memory_map(
     shows a letter per colored cell and dots for the others."""
     store = session.current_colors()
     session.refresh_annotations()
-    first, behind = session.address_of(start), session.address_of(end)
+    start_address, end_address = session.address_of(start), session.address_of(end)
     store.reload()
-    rows = map_rows(store.color_of_bytes, first, behind, cell_bytes)
+    rows = map_rows(store.color_of_bytes, start_address, end_address, cell_bytes)
     entries = sorted(
         (
             (name, definition)
             for name, definition in store.ranges.items()
-            if definition.start < behind and first < definition.end
+            if definition.start < end_address and start_address < definition.end
         ),
         key=lambda item: (item[1].start, item[0]),
     )
@@ -789,8 +789,8 @@ def edit(start: int | str, end: int | str | None = None, height: int = 25) -> No
         if session.color_store is None:
             return None
         session.color_store.reload()
-        first, behind = session.listing_range(entry)
-        return session.color_store.color_for_range(first, behind)
+        start_address, end_address = session.listing_range(entry)
+        return session.color_store.color_for_range(start_address, end_address)
 
     def target_color_of(address: int) -> str | None:
         # Called for every visible operand on every redraw, so it reads the
@@ -811,9 +811,11 @@ def edit(start: int | str, end: int | str | None = None, height: int = 25) -> No
         # Turned into addresses once: the editor reloads the rows after
         # every save, and a label given as start could be the one just
         # renamed.
-        first, behind = session.listing_range(start, end)
+        start_address, end_address = session.listing_range(start, end)
         place = Place(
-            first, lambda: session.current_listing_rows(first, behind), routine=False
+            start_address,
+            lambda: session.current_listing_rows(start_address, end_address),
+            routine=False,
         )
     edit_rows(
         place,
@@ -895,12 +897,15 @@ def hexdump(start: int | str, end: int | str | None = None) -> Text:
     session.refresh_annotations()
     if session.run_emulator is None:
         raise RuntimeError("no run; call run() or set_current_run() first")
-    first = session.address_of(start)
+    start_address = session.address_of(start)
     if end is None:
-        behind = first - first % HEXDUMP_WIDTH + HEXDUMP_WIDTH * HEXDUMP_LINES
+        end_address = (
+            start_address - start_address % HEXDUMP_WIDTH
+            + HEXDUMP_WIDTH * HEXDUMP_LINES
+        )
     else:
-        behind = session.address_of(end)
-    rows = hexdump_rows(session.run_emulator, first, behind)
+        end_address = session.address_of(end)
+    rows = hexdump_rows(session.run_emulator, start_address, end_address)
     with contextlib.redirect_stdout(io.StringIO()) as printed:
         print_hexdump(rows)
     plain = printed.getvalue().rstrip("\n")
@@ -922,11 +927,11 @@ def hexdump_rows(emulator: Emulator, start: int, end: int) -> list[HexdumpRow]:
     hooks: read_byte() would flip a soft switch at $C0xx."""
     # Memory's own list, read from outside on purpose, as the disassembler does.
     memory = emulator.apple2.memory._mem
-    first = start - start % HEXDUMP_WIDTH
-    behind = min(-(-end // HEXDUMP_WIDTH) * HEXDUMP_WIDTH, len(memory))
+    first_line = start - start % HEXDUMP_WIDTH
+    lines_end = min(-(-end // HEXDUMP_WIDTH) * HEXDUMP_WIDTH, len(memory))
     return [
         HexdumpRow(address, list(memory[address: address + HEXDUMP_WIDTH]))
-        for address in range(first, behind, HEXDUMP_WIDTH)
+        for address in range(first_line, lines_end, HEXDUMP_WIDTH)
     ]
 
 

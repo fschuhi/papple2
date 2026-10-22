@@ -373,11 +373,11 @@ class Session:
         RTS or a JMP. Every block lies in one routine, so that address lies
         in another one: CLEAR_HGR2 runs on into CLEAR_PAGE."""
         blocks = self.current_routines().graphs[entry].blocks
-        behind = max(block.end for block in blocks.values())
+        end = max(block.end for block in blocks.values())
         edges = self.run_graph.edges if self.run_graph is not None else {}
         for start, block in blocks.items():
-            if block.end == behind and (start, behind) in edges:
-                return behind
+            if block.end == end and (start, end) in edges:
+                return end
         return None
 
     def current_listing_rows(

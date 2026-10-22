@@ -74,7 +74,7 @@ def map_rows(
     """The rows of the map from start up to, not including, end.
 
     start is rounded down and end up to whole rows. A cell is colored by
-    color_of_bytes(first, behind), asked only about the bytes of the cell
+    color_of_bytes(cell_start, cell_end), asked only about the bytes of the cell
     that lie in the range; a cell with none of them is OUTSIDE.
     """
     if not 0 <= start < end <= 0x10000:
@@ -88,15 +88,19 @@ def map_rows(
 
     row_bytes = MAP_COLUMNS * cell_bytes
     first_row = start - start % row_bytes
-    behind = min(-(-end // row_bytes) * row_bytes, 0x10000)
+    rows_end = min(-(-end // row_bytes) * row_bytes, 0x10000)
     rows = []
-    for address in range(first_row, behind, row_bytes):
+    for address in range(first_row, rows_end, row_bytes):
         cells: list[str | None] = []
         for column in range(MAP_COLUMNS):
             cell = address + column * cell_bytes
-            first = max(cell, start)
-            last = min(cell + cell_bytes, end)
-            cells.append(color_of_bytes(first, last) if first < last else OUTSIDE)
+            cell_start = max(cell, start)
+            cell_end = min(cell + cell_bytes, end)
+            cells.append(
+                color_of_bytes(cell_start, cell_end)
+                if cell_start < cell_end
+                else OUTSIDE
+            )
         rows.append(MapRow(address, cells))
     return rows
 
