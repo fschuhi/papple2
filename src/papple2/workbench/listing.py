@@ -3,7 +3,8 @@
 ListingRow is one line of a listing. listing_rows() builds the rows of an
 address range from the emulator's memory, with labels, comments, the
 jumps the run took as arrows, the gaps that never ran and the hidden
-ranges; print_listing() prints them, plain or with location colors.
+ranges; print_listing() prints them, plain or colored by the dossier's
+color ranges.
 
 Nothing here keeps state: the caller hands over the memory, the run graph
 and the dossier's entries. The commands in shell.py and the listing
@@ -123,18 +124,19 @@ def listing_rows(
     only_ran: bool = False,
     hidden_ranges: dict[str, HiddenRange] | None = None,
 ) -> list[ListingRow]:
-    """The rows of a listing from start up to, not including, end, one per
+    """The rows of a listing from start to end, not including end, one per
     instruction: address, bytes, instruction. Read from the emulator's
     memory as it is now, i.e. after the run, past anything that watches the
     CPU. Prints nothing; print_listing() prints the rows.
 
-    With labels, an operand whose address has a name shows the name
+    With labels, an operand whose address has a label shows the label
     (JSR sub instead of JSR $6010), and an instruction whose own address
-    has a name carries it in its label. A local label (routine_6238.loop1)
+    has a label carries it in its label. A local label (routine_6238.loop1)
     shows by its short part, .loop1: always in the label column, since the
-    dossier keeps every local label under the global label above it; in an
-    operand only if the line lies in the same scope, i.e. under the same
-    global label. An operand leading into another scope shows the full name.
+    dossier stores every local label with the global label before it as
+    its owner; in an operand only if the line lies in the same scope, i.e.
+    has the same owner. An operand leading into another scope shows the
+    full label.
 
     With comments, an instruction whose own address has a comment carries
     it in its comment.
@@ -245,11 +247,11 @@ def listing_rows(
 def ran_parts(
     start: int, end: int, graph: BlockGraph | None
 ) -> list[tuple[int, int]]:
-    """The parts of the range from start up to end to list instruction by
-    instruction, in address order, each as (start, end). Without graph,
-    the whole range. With it, only the code the run executed: its blocks,
-    cut to the range, adjoining blocks joined into one part. Whatever lies
-    between the parts never ran."""
+    """The parts of the range from start to end, not including end, to list
+    instruction by instruction, in address order, each as (start, end).
+    Without graph, the whole range. With it, only the code the run
+    executed: its blocks, cut to the range, adjoining blocks joined into
+    one part. Whatever lies between the parts never ran."""
     if graph is None:
         return [(start, end)]
     parts: list[tuple[int, int]] = []
@@ -265,8 +267,8 @@ def ran_parts(
 
 
 def never_ran(start: int, end: int) -> str:
-    """The text of the row that stands for a gap: the bytes from start up
-    to, not including, end."""
+    """The text of the row that stands for a gap: the bytes from start to
+    end, not including end."""
     size = end - start
     return (
         f"... {start:04x}-{end:04x}: {size:,} byte{'' if size == 1 else 's'}"
@@ -293,7 +295,7 @@ def scope_of(
     address: int, global_addresses: list[int], labels: dict[int, str]
 ) -> str | None:
     """The global label whose scope address lies in: the one at address
-    itself or the nearest above it. None above the first global label.
+    itself or the nearest before it. None before the first global label.
     global_addresses holds the addresses of labels' global labels, sorted."""
     index = bisect_right(global_addresses, address) - 1
     if index < 0:
@@ -303,8 +305,8 @@ def scope_of(
 
 def shorten_locals(instruction: str, owner: str) -> str:
     """instruction with owner's local labels shown short: BNE
-    routine_6238.loop1 -> BNE .loop1, if owner is routine_6238. A name that
-    only ends in the owner's name (xroutine_6238.loop1) is left alone."""
+    routine_6238.loop1 -> BNE .loop1, if owner is routine_6238. A label that
+    only ends in the owner's label (xroutine_6238.loop1) is left alone."""
     return re.sub(
         rf"(?<![A-Za-z0-9_:.]){re.escape(owner)}\.(?=[A-Za-z0-9_])",
         ".",
@@ -358,7 +360,7 @@ def print_listing(
         shade = color_of(row.address) if color_of is not None else None
         if shade is not None:
             # Keep alignment padding outside the color, and reset before
-            # the comment so location color does not spread into prose.
+            # the comment so the color does not spread into the comment.
             visible = code.rstrip()
             padding = code[len(visible):]
             code = LISTING_COLORS[shade] + visible + "\x1b[0m" + padding
