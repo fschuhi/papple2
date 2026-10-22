@@ -13,7 +13,7 @@ reports into tmp/walkthrough/<program>/. For nested_loops
     from the basic blocks analysis (papple2.workbench.basic_blocks_analysis):
         lr_loops_6000.csv
         lr_loop_members_6000.csv
-For rts_dispatch (papple2.programs.rts_dispatch: two commands called
+For rts_dispatch (papple2.programs.rts_dispatch: two routines called
 through a jump table, with RTS), the five tiling reports, and from
 StackTracking (papple2.workbench.stack_tracking):
         lr_returns.csv

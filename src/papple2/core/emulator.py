@@ -41,7 +41,7 @@ type Trap = Callable[[Emulator], bool]
 type Until = Callable[[Emulator], bool]
 
 # The hook lists that attach() and detach() know, by the name they have in
-# Memory and in CPU. An experiment names its hook methods the same way.
+# Memory and in CPU. An instrumentation names its hook methods the same way.
 MEMORY_HOOKS = (
     "after_read_opcode",
     "after_read_operand",
@@ -226,8 +226,8 @@ class Emulator:
 
     def add_breakpoint(self, new_breakpoint: object) -> None:
         """Put `new_breakpoint.should_break` into the breakpoint list, the
-        way attach() puts an experiment's hook methods into the hook lists.
-        Any object with a should_break(pc) method will do. Ready-made
+        way attach() puts an instrumentation's hook methods into the hook
+        lists. Any object with a should_break(pc) method will do. Ready-made
         breakpoints are in papple2/debug/stop_conditions.py."""
         self.breakpoints.append(getattr(new_breakpoint, "should_break"))
 
@@ -235,47 +235,49 @@ class Emulator:
         self.traps[address] = handler
 
 
-    def attach(self, experiment: object) -> None:
-        """Put each hook method of `experiment` into the list of the same
-        name in Memory or CPU, e.g. `experiment.after_read_opcode` into
+    def attach(self, instrumentation: object) -> None:
+        """Put each hook method of `instrumentation` into the list of the
+        same name in Memory or CPU, e.g.
+        `instrumentation.after_read_opcode` into
         `Memory.after_read_opcode`. A method whose name starts with
         `after_` but matches no list is refused before anything is
         attached, so a typo cannot go unnoticed."""
         unknown = [
-            name for name in dir(experiment)
+            name for name in dir(instrumentation)
             if name.startswith("after_") and name not in MEMORY_HOOKS + CPU_HOOKS
         ]
         if unknown:
             raise ValueError(
-                f"{type(experiment).__name__} has no hook list for: {', '.join(unknown)}"
+                f"{type(instrumentation).__name__} has no hook list for: {', '.join(unknown)}"
             )
         names = []
-        for name, hook, hook_list in self._hooks_of(experiment):
+        for name, hook, hook_list in self._hooks_of(instrumentation):
             hook_list.append(hook)
             names.append(name)
-        logger.info("attached %s: %s", type(experiment).__name__, ", ".join(names))
+        logger.info("attached %s: %s", type(instrumentation).__name__, ", ".join(names))
 
 
-    def detach(self, experiment: object) -> None:
-        """Take out again what attach() put in. `experiment.after_read_opcode`
-        gives a new method object each time it is written, so it is not the
+    def detach(self, instrumentation: object) -> None:
+        """Take out again what attach() put in.
+        `instrumentation.after_read_opcode` gives a new method object each
+        time it is written, so it is not the
         same object as the one in the list; but the two are equal (same
-        method, same experiment), and list.remove() looks for an equal
+        method, same instrumentation), and list.remove() looks for an equal
         entry."""
         names = []
-        for name, hook, hook_list in self._hooks_of(experiment):
+        for name, hook, hook_list in self._hooks_of(instrumentation):
             hook_list.remove(hook)
             names.append(name)
-        logger.info("detached %s: %s", type(experiment).__name__, ", ".join(names))
+        logger.info("detached %s: %s", type(instrumentation).__name__, ", ".join(names))
 
 
-    def _hooks_of(self, experiment: object) -> list[tuple[str, Callable[..., None], list[Callable[..., None]]]]:
-        """(name, the experiment's method, the list it belongs in) for each
-        known hook name the experiment has a method for."""
+    def _hooks_of(self, instrumentation: object) -> list[tuple[str, Callable[..., None], list[Callable[..., None]]]]:
+        """(name, the instrumentation's method, the list it belongs in) for
+        each known hook name the instrumentation has a method for."""
         found = []
         for owner, names in ((self.apple2.memory, MEMORY_HOOKS), (self.cpu, CPU_HOOKS)):
             for name in names:
-                hook = getattr(experiment, name, None)
+                hook = getattr(instrumentation, name, None)
                 if hook is not None:
                     found.append((name, hook, getattr(owner, name)))
         return found

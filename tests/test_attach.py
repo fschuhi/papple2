@@ -1,8 +1,8 @@
-"""Emulator.attach() and detach(): an experiment's hook methods go into the
-hook lists of the same name in Memory and CPU, and come out again.
+"""Emulator.attach() and detach(): an instrumentation's hook methods go
+into the hook lists of the same name in Memory and CPU, and come out again.
 
-The experiments here are small classes with one or two hook methods, like
-the real ones in scripts/."""
+The instrumentations here are small classes with one or two hook methods,
+like Tiling, StackTracking and CrossReferencing in papple2.workbench."""
 
 import logging
 
@@ -42,47 +42,47 @@ def emulator() -> Emulator:
 
 
 def test_attach_puts_each_method_into_its_list(emulator: Emulator) -> None:
-    experiment = OpcodeAndInstruction()
+    instrumentation = OpcodeAndInstruction()
 
-    emulator.attach(experiment)
+    emulator.attach(instrumentation)
 
-    assert emulator.apple2.memory.after_read_opcode == [experiment.after_read_opcode]
-    assert emulator.cpu.after_instruction == [experiment.after_instruction]
+    assert emulator.apple2.memory.after_read_opcode == [instrumentation.after_read_opcode]
+    assert emulator.cpu.after_instruction == [instrumentation.after_instruction]
     assert emulator.apple2.memory.after_read_data == []
 
 
 def test_attached_hooks_are_called(emulator: Emulator) -> None:
-    experiment = OpcodeAndInstruction()
-    emulator.attach(experiment)
+    instrumentation = OpcodeAndInstruction()
+    emulator.attach(instrumentation)
 
     emulator.cpu.do_next_step()
 
-    assert experiment.opcodes == [0x1000]
-    assert experiment.instructions == 1
+    assert instrumentation.opcodes == [0x1000]
+    assert instrumentation.instructions == 1
 
 
 def test_detach_takes_the_hooks_out(emulator: Emulator) -> None:
-    experiment = OpcodeAndInstruction()
-    emulator.attach(experiment)
+    instrumentation = OpcodeAndInstruction()
+    emulator.attach(instrumentation)
 
-    emulator.detach(experiment)
+    emulator.detach(instrumentation)
     emulator.cpu.do_next_step()
 
     assert emulator.apple2.memory.after_read_opcode == []
     assert emulator.cpu.after_instruction == []
-    assert experiment.opcodes == []
-    assert experiment.instructions == 0
+    assert instrumentation.opcodes == []
+    assert instrumentation.instructions == 0
 
 
 def test_detach_leaves_other_hooks_in_place(emulator: Emulator) -> None:
     def other(address: int, value: int) -> None:
         pass
 
-    experiment = OpcodeAndInstruction()
+    instrumentation = OpcodeAndInstruction()
     emulator.apple2.memory.after_read_opcode.append(other)
-    emulator.attach(experiment)
+    emulator.attach(instrumentation)
 
-    emulator.detach(experiment)
+    emulator.detach(instrumentation)
 
     assert emulator.apple2.memory.after_read_opcode == [other]
 
@@ -98,10 +98,10 @@ def test_attach_and_detach_are_logged(emulator: Emulator, caplog: pytest.LogCapt
     # caplog is pytest's own fixture: it collects what the logging module
     # writes during the test
     caplog.set_level(logging.INFO)
-    experiment = OpcodeAndInstruction()
+    instrumentation = OpcodeAndInstruction()
 
-    emulator.attach(experiment)
-    emulator.detach(experiment)
+    emulator.attach(instrumentation)
+    emulator.detach(instrumentation)
 
     assert "attached OpcodeAndInstruction: after_read_opcode, after_instruction" in caplog.text
     assert "detached OpcodeAndInstruction: after_read_opcode, after_instruction" in caplog.text

@@ -1,3 +1,18 @@
+"""Print statistics of the cross reference, for a first look at it.
+
+Reads lr_xrefs.csv and prints four tables: the rows and accesses of each
+kind; the instructions with the most accesses; the pairs of instruction
+and target with the most effective addresses; and the memory pages with
+the most accesses. --top N sets how many rows the last three show
+(default 5).
+
+Run from the repo root:
+
+    make xrefs-overview
+
+which shows the top 10.
+"""
+
 import argparse
 from pathlib import Path
 

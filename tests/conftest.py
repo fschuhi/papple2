@@ -127,8 +127,8 @@ def nested_loops_run(tmp_path: Path, fresh_session: None) -> NestedLoopsRun:
 # The labels for rts_dispatch's addresses, given by hand.
 RTS_DISPATCH_LABELS = {
     0x600D: "dispatch",
-    0x6018: "cmd0",
-    0x601B: "cmd1",
+    0x6018: "inc_10",
+    0x601B: "inc_11",
     0x601E: "table",
     0x6022: "done",
 }
