@@ -156,7 +156,7 @@ def listing_rows(
     same. Without only_ran, every byte in the range is listed.
 
     With hidden_ranges, each named range is clipped to the listing and
-    shown as one row, whether or not it ran. Hidden spans are omitted
+    shown as one row, whether or not it ran. Hidden ranges are omitted
     before disassembly. Their labels and comments are not shown; arrows
     with a hidden end are dropped. Place bounds between instructions when
     hiding code. The ranges must not overlap, as Hidden enforces.
@@ -169,13 +169,13 @@ def listing_rows(
     as the disassembler works it out, so the listing editor can label it.
     """
     disassembler = Disassembler(emulator.cpu, labels, comments, ran=ran_in(graph))
-    # disassemble() takes an inclusive end. A gap or hidden span gets an
+    # disassemble() takes an inclusive end. A gap or hidden range gets an
     # empty row; gaps keeps its display text, by row number.
     rows: list[list[str]] = []
     gaps: dict[int, str] = {}
 
     def add_visible(span_start: int, span_end: int) -> None:
-        """List one span outside the hidden ranges, with its run gaps."""
+        """List one range outside the hidden ranges, with its run gaps."""
         if span_start >= span_end:
             return
         position = span_start
@@ -227,7 +227,7 @@ def listing_rows(
             if mnemonic != ".byte":
                 info, _length = disassembler.collect_op_info(address)
                 target = info.get("operand_address")
-        else:  # the empty line before a .byte block, a gap or a hidden span
+        else:  # the empty line before a .byte block, a gap or a hidden range
             address = None
             instruction = gaps.get(index, "")
         result.append(

@@ -1,12 +1,12 @@
 """Persistent named color ranges in a program's dossier.
 
-Ranges are half-open. Overlaps are allowed: matching definitions with
-different shades give MIX_COLOR, while definitions with the same shade
-keep that shade. MIX_COLOR is the terminal's light yellow, which is no
-shade a range can be given, so a mix never looks like a range.
+Color ranges are half-open and may overlap: where the color ranges a
+lookup finds have different shades, it gives MIX_COLOR; where they have
+the same shade, that shade. MIX_COLOR is the terminal's light yellow,
+which is no shade a range can be given, so a mix never looks like a range.
 
 Every change reloads the file first to preserve another session's edits.
-Opening the store or repeating an unchanged definition writes nothing.
+Opening the store or repeating an unchanged color range writes nothing.
 Views choose how to display the colors; this module owns their lookup.
 """
 
@@ -38,10 +38,11 @@ class Colors:
         self.reload()
 
     def reload(self) -> None:
-        """Read the saved definitions.
+        """Read the saved color ranges.
 
-        Without a file, definitions already in memory stay, following
-        the dossier's existing annotation and hiding conventions.
+        Without a file, the color ranges already in memory stay, as they
+        do in Annotations and Hidden: nothing has been saved to replace
+        them.
         """
         if self.path.exists():
             data = json.loads(self.path.read_text(encoding="utf-8"))
@@ -55,7 +56,7 @@ class Colors:
             }
 
     def color(self, name: str, start: int, end: int, shade: str) -> None:
-        """Add or replace a named definition and save it immediately."""
+        """Add or replace a named color range and save it immediately."""
         self.reload()
         if not name.strip():
             raise ValueError("a color range needs a name")
@@ -65,7 +66,7 @@ class Colors:
             )
         if shade not in SHADES:
             raise ValueError(
-                f"unknown color {shade}; choose from {', '.join(sorted(SHADES))}"
+                f"unknown shade {shade}; choose from {', '.join(sorted(SHADES))}"
             )
 
         definition = ColorRange(start, end, shade)
@@ -75,7 +76,7 @@ class Colors:
         self._save()
 
     def uncolor(self, name: str) -> None:
-        """Remove a named definition and save; refuse an unknown name."""
+        """Remove a named color range and save; refuse an unknown name."""
         self.reload()
         if name not in self.ranges:
             raise ValueError(f"no color range {name}")
@@ -85,7 +86,7 @@ class Colors:
     def color_at(self, address: int) -> str | None:
         """The color assigned to address, or None if none is assigned.
 
-        Reads the definitions currently in memory. The caller reloads
+        Reads the color ranges currently in memory. The caller reloads
         once before drawing a view, not once per byte.
         """
         shades = {
@@ -96,11 +97,12 @@ class Colors:
         return _combined(shades)
 
     def color_for_range(self, start: int, end: int) -> str | None:
-        """The color of definitions containing the entire given span.
+        """The color of the color ranges that contain all bytes from start
+        to end, not including end.
 
         For a routine's breadcrumb: partial coverage does not assign its
         title a color. This is containment lookup, not a summary of the
-        colors of all bytes inside the span.
+        colors of all bytes in the range.
         """
         if not 0 <= start < end <= 0x10000:
             raise ValueError(
@@ -114,13 +116,13 @@ class Colors:
         return _combined(shades)
 
     def color_of_bytes(self, start: int, end: int) -> str | None:
-        """The color of the bytes from start up to, not including, end.
+        """The color of the bytes from start to end, not including end.
 
-        For a cell of the memory map: every definition that touches at
-        least one byte of the span counts, so partial coverage colors it.
+        For a cell of the memory map: every color range that touches at
+        least one of the bytes counts, so partial coverage colors it.
         Different shades give MIX_COLOR, whether they overlap at one byte
-        or lie in separate bytes. Unlike color_for_range(), no definition
-        has to contain the whole span.
+        or lie in separate bytes. Unlike color_for_range(), no color range
+        has to contain all of the bytes.
         """
         if not 0 <= start < end <= 0x10000:
             raise ValueError(
@@ -134,7 +136,7 @@ class Colors:
         return _combined(shades)
 
     def _save(self) -> None:
-        # Address order keeps related definitions together in the file.
+        # Address order keeps related color ranges together in the file.
         data = {
             name: {
                 "start": f"{definition.start:04x}",

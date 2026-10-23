@@ -122,7 +122,7 @@ def test_an_unknown_shade_is_refused_without_changing_the_file(
     colors.color("scores", 0x0010, 0x0014, "red")
     before = (tmp_path / "colors.json").read_text(encoding="utf-8")
 
-    with pytest.raises(ValueError, match="unknown color"):
+    with pytest.raises(ValueError, match="unknown shade"):
         colors.color("scores", 0x0010, 0x0014, "orange")
 
     assert colors.ranges["scores"].shade == "red"
@@ -321,7 +321,7 @@ def test_the_mix_color_is_no_shade_a_range_can_have(tmp_path: Path) -> None:
     assert MIX_COLOR not in SHADES
     assert "magenta" in SHADES
 
-    with pytest.raises(ValueError, match="unknown color"):
+    with pytest.raises(ValueError, match="unknown shade"):
         Colors(tmp_path).color("scores", 0x0010, 0x0014, MIX_COLOR)
 
 
