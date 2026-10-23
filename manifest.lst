@@ -21,9 +21,7 @@ HISTORY.md
 
 ### --- docs ---
 
-# TO BE ADDED
-#docs/index.html
-#docs/style.css
+docs/README.md
 
 # proper documentation
 docs/instrumentation-design.md
@@ -51,6 +49,11 @@ docs/lode-runner-routine-ranges.html
 
 # `lr_xref.csv`
 docs/lr_case_studies.md
+
+# html, LLM translation of markdown, using `style.css`
+docs/html/example.md
+docs/html/example.html
+docs/html/style.css
 
 # architecture diagrams (dot)
 docs/diagrams/core.dot
@@ -225,6 +228,7 @@ src/papple2/programs/rts_dispatch.py
 #tests/test_hexdump_colors.py
 #tests/test_hidden.py
 #tests/test_hidden_listing.py
+#tests/test_html_colors.py
 #tests/test_instruction_count.py
 #tests/test_listing_colors.py
 #tests/test_listing_editor.py

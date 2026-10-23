@@ -1,0 +1,218 @@
+/* papple2's HTML pages: the one stylesheet for all pages in docs/html/.
+
+   The pages are reading versions of the markdown in docs/; the markdown
+   stays the source. A page should look like edit(): a dark terminal, a
+   monospace font, and the listing editor's colors for mnemonics, bytes
+   and gaps. Everything else stays quiet, so that color in a listing
+   always means what it means in edit().
+
+   Prose keeps a reading width; listings use the width of the page, so
+   that wide code is not squeezed or scrolled sideways. */
+
+:root {
+  color-scheme: dark;
+
+  /* The page: a dark terminal. */
+  --background: #1e1e1e;
+  --text: #d4d4d4;
+  --muted: #8c8c8c;
+  --rule: #3a3a3a;
+  --note-background: #262626;
+  /* A listing sits on a background of its own, a little lighter than
+     the page, so that the code stands apart from the prose. */
+  --listing-background: #262626;
+  --arrow: #9a9a9a;
+
+  /* Local fonts only: the pages open from disk, without the network.
+     The monospace font should be the terminal's that edit() runs in.
+     ui-monospace is SF Mono in Safari; other browsers skip it. */
+  --mono: ui-monospace, Menlo, Consolas, "DejaVu Sans Mono", monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+
+  --prose-width: 68ch;
+  --page-width: 1240px;
+
+  /* One listing row. The arrows in the gutter are drawn on this grid,
+     so it is a fixed height, not a line-height of the font. */
+  --row-height: 20px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+main {
+  max-width: var(--page-width);
+  margin: 0 auto;
+  padding: 32px 16px 64px;
+}
+
+/* Prose */
+
+h1,
+h2,
+h3,
+p,
+ul,
+ol,
+.note {
+  max-width: var(--prose-width);
+}
+
+h1 {
+  font-size: 1.7rem;
+  line-height: 1.25;
+  margin: 0 0 16px;
+}
+
+h2 {
+  font-size: 1.25rem;
+  margin: 40px 0 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+}
+
+h3 {
+  font-size: 1.05rem;
+  margin: 24px 0 8px;
+}
+
+p,
+ul,
+ol {
+  margin: 0 0 12px;
+}
+
+li {
+  margin-bottom: 4px;
+}
+
+/* Links don't take a color of their own: every color on these pages
+   belongs to the editor. */
+a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--muted);
+  text-underline-offset: 2px;
+}
+
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+}
+
+.note {
+  background: var(--note-background);
+  border-left: 3px solid var(--rule);
+  padding: 10px 14px;
+  margin: 0 0 12px;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+footer {
+  margin-top: 48px;
+  max-width: var(--prose-width);
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* Tables of words, e.g. the mnemonic classes */
+
+table {
+  border-collapse: collapse;
+  margin: 0 0 16px;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 3px 18px 3px 0;
+  vertical-align: top;
+}
+
+th {
+  color: var(--muted);
+  font-weight: 600;
+  border-bottom: 1px solid var(--rule);
+}
+
+/* Listings, as edit() shows them: the gutter with the arrows on the left,
+   then one row per line, each laid out like format_row() in
+   listing_editor.py. The row's text is preformatted, so the columns line
+   up the way they do in the terminal. */
+
+.listing {
+  display: flex;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 12px 0 20px;
+  padding: 8px 0;
+  background: var(--listing-background);
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: var(--row-height);
+}
+
+.listing .gutter {
+  flex: none;
+}
+
+.listing .rows {
+  flex: none;
+  padding-right: 16px;
+}
+
+.listing .row {
+  height: var(--row-height);
+  white-space: pre;
+}
+
+.gutter .line {
+  fill: none;
+  stroke: var(--arrow);
+  stroke-width: 1.4;
+}
+
+.gutter .head {
+  fill: var(--arrow);
+}
+
+/* How often the run took the jump. edit() doesn't show it. */
+.gutter .count {
+  fill: var(--muted);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+/* The listing editor's colors, from STYLE in listing_editor.py: one rule
+   per class, in the form `.name { color: #rrggbb; }` on one line.
+   tests/test_html_colors.py keeps them equal to the editor's: change a
+   color there, then here. */
+
+.mn-load { color: #ff8a80; }
+.mn-trans { color: #ff80b0; }
+.mn-stack { color: #e080ff; }
+.mn-shift { color: #98a8f0; }
+.mn-logic { color: #98d0f0; }
+.mn-arith { color: #90e8a0; }
+.mn-inc { color: #c0f0a0; }
+.mn-ctrl { color: #fff060; }
+.mn-bra { color: #ffd060; }
+.mn-flags { color: #ffb860; }
+.mn-nop { color: #a8a8a8; }
+.bytes { color: #626262; }
+.gap { color: #585858; }
