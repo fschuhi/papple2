@@ -11,7 +11,7 @@ RUN           = $(ACTIVATE) && python
 SETUP_STAMP   = $(VENV_DIR)/.setup_stamp
 
 # --- Phony targets ---
-.PHONY: all setup test test-verbose boot-basic boot-robotron boot-lode-runner boot-lode-runner-break boot-lode-runner-throttled boot-lode-runner-headless boot-bandits lr-count lr-basic-blocks-analysis lr-cross-reference lr-current lr-grade xrefs-overview xrefs-compress walkthrough walkthrough-md ipython presentation clean showtree gentree commit-hash patch filesdump filesdump-detailed help
+.PHONY: all setup test test-verbose boot-basic boot-robotron boot-lode-runner boot-lode-runner-break boot-lode-runner-throttled boot-lode-runner-headless boot-bandits lr-count lr-basic-blocks-analysis lr-cross-reference lr-current lr-grade xrefs-overview xrefs-compress walkthrough walkthrough-md ipython presentation html clean showtree gentree commit-hash patch filesdump filesdump-detailed help
 
 all: setup
 
@@ -106,6 +106,10 @@ presentation: ## Render docs/diagrams/*.dot to SVG next to them, and to PDF and 
 		dot -Tpdf $$f -o tmp/presentation/$$name.pdf || exit 1; \
 		dot -Tpng -Gdpi=200 $$f -o tmp/presentation/$$name.png || exit 1; \
 	done
+
+# --- HTML pages (reading versions of the markdown, next to docs/html/style.css) ---
+html: $(SETUP_STAMP) ## Render one markdown file as a page in docs/html/, e.g. make html FILE=docs/lr_structures.md
+	$(RUN) tools/render_html.py $(FILE)
 
 # --- Utility Targets ---
 clean: ## Remove venv, cache, and tmp files

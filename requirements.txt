@@ -6,3 +6,4 @@ ipython
 graphviz
 prompt_toolkit
 pandas
+markdown-it-py

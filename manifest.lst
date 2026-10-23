@@ -142,6 +142,7 @@ Makefile
 
 ### --- DevOps tools ---
 #tools/concat_files.py
+#tools/render_html.py
 #tools/render_walkthrough_md.py
 
 ### --- Scripts, outside of the controlled package src ---
@@ -239,6 +240,7 @@ src/papple2/programs/rts_dispatch.py
 #tests/test_memory_map.py
 #tests/test_overview.py
 #tests/test_programs.py
+#tests/test_render_html.py
 #tests/test_shell.py
 #tests/test_shell_colors.py
 #tests/test_shell_hidden.py
@@ -248,7 +250,7 @@ src/papple2/programs/rts_dispatch.py
 #tests/test_tiling.py
 #tests/test_throttle.py
 #tests/test_util.py
-tests/test_walkthrough.py
+#tests/test_walkthrough.py
 
 ### --- Data ---
 # `*.BIN` are not in VCS
