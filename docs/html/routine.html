@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>papple2 -- Routine</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+<h1>papple2 -- Routine</h1>
+<p>What a routine is in <code>papple2</code>, where one starts and where it stops, and what the tools show of it. The words are those of <a href="../glossary.md"><code>glossary.md</code></a>; positions in code are named by address (lower, higher, before, after, backward, forward). The examples come from Lode Runner's attract play, as recorded in <code>docs/reports/lr_basic_blocks_analysis/</code>. The code is <code>find_routines()</code> in <code>src/papple2/workbench/basic_blocks_analysis.py</code>; the names in brackets below are its helpers.</p>
+<hr />
+<h2>What a routine is</h2>
+<p>A routine is the code reachable from an entry, without following calls. It is made of basic blocks that ran: a routine is found from one run, so code that never ran belongs to no routine, and another run may show more of it.</p>
+<p>The <strong>entry</strong> is the address where a routine starts. Every block of a run lies in exactly one routine.</p>
+<p>A routine is a result of the run, not of the source. It usually matches a subroutine of Xekri's listing, but not always: <code>make lr-grade</code> grades the routines against <code>docs/lr_answer_key.csv</code> and lists where they differ.</p>
+<h2>Where a routine starts</h2>
+<p>A block is an entry in one of six ways:</p>
+<ul>
+<li><strong>The run's start.</strong> <code>0800</code>, where Lode Runner is loaded and started.</li>
+<li><strong>A <code>JSR</code> target.</strong> <code>MOVE_GUARD</code> (<code>6cdb</code>), called 112 times by the <code>JSR</code> at <code>6c9b</code> in <code>MOVE_GUARDS</code>.</li>
+<li><strong>A stack jump's target</strong> (<code>stack_jumps()</code>). <code>TRY_GUARD_MOVE_DOWN</code> (<code>6f39</code>), reached 76 times by the <code>RTS</code> at <code>6e96</code> in <code>MOVE_GUARD</code>, which dispatches through a table.</li>
+<li><strong>Code that two routines reach</strong> (<code>shared_entries()</code>). <code>CLEAR_PAGE</code> (<code>7a5b</code>): <code>CLEAR_HGR2</code> glides into it, and <code>CLEAR_HGR1</code> branches forward into it. <code>TRY_DIGGING_LEFT_check_can_dig_left</code> (<code>67e7</code>) is the same case: <code>TRY_DIGGING_LEFT</code> glides into it, and <code>MOVE_PLAYER</code> jumps forward into it. Xekri's listing holds it inside <code>TRY_DIGGING_LEFT</code>; <code>papple2</code> differs there on purpose.</li>
+<li><strong>Code that one routine glides into and another jumps backward into</strong> (<code>shared_by_jump_backward()</code>). <code>PUT_STATUS_BYTE</code> (<code>7a74</code>): <code>PUT_STATUS_LIVES</code> glides into it, and <code>PUT_STATUS_LEVEL</code> branches backward into it. A jump backward past an entry is not followed (see &quot;Where a routine stops&quot;), so the case before would miss it; the direction of the jump makes no difference to the result.</li>
+<li><strong>An orphan</strong> (<code>orphans()</code>): a block an edge leads to, but that no routine holds. Of the orphans, the one with the lowest address becomes an entry. <code>TRY_GUARD_MOVE_UP_check_for_gold</code> (<code>6f26</code>): <code>TRY_GUARD_MOVE_DOWN</code> jumps backward into the tail of <code>TRY_GUARD_MOVE_UP</code>, whose own entry never ran. <code>CHECK_FOR_MODE_1_INPUT</code> (<code>69b8</code>) is the same case: <code>CHECK_FOR_INPUT</code> branches backward into it, 79 times.</li>
+</ul>
+<p>The last three kinds are found in rounds. <code>find_routines()</code> builds the routines from the entries it has, looks for shared code and orphans, makes them entries, and builds again, until every block lies in exactly one routine.</p>
+<h2>Where a routine stops</h2>
+<p>A routine is followed along the edges between its blocks. It stops in three ways:</p>
+<ul>
+<li><strong>At another routine's entry.</strong> A <code>JMP</code>, a branch or a glide into another entry is not followed. It is an exit of this routine, and a way into the other one.</li>
+<li><strong>At a call.</strong> A <code>JSR</code> is not followed into the routine it calls. Instead, a call fall-through edge leads to the instruction directly after the <code>JSR</code>. If the call came back past that instruction, as after <code>PUT_STRING</code>, which returns past the bytes it read (<code>redirected_returns()</code>), the edge leads to where it landed: the <code>JSR</code> at <code>7a05</code> in <code>PUT_STATUS</code> comes back at <code>7a25</code>, which stays in <code>PUT_STATUS</code>.</li>
+<li><strong>At a jump backward past its own entry</strong> (<code>stops_before()</code>). The code before the entry belongs to someone else, e.g. the tail of <code>TRY_GUARD_MOVE_UP</code> that <code>TRY_GUARD_MOVE_DOWN</code> jumps into.</li>
+</ul>
+<p>There is one exception to the last rule, the <strong>exit at the door</strong>: the block directly before the entry that ends right at it. A routine's &quot;give up early&quot; branches often lead there, so it belongs to the routine. In <code>SHOULD_GUARD_MOVE_LEFT</code>, the <code>BEQ</code> at <code>71a6</code> goes backward 110 times to the <code>RTS</code> at <code>71a1</code>:</p>
+<pre>71a1  <span class="bytes">60</span>                                <span class="mn-ctrl">RTS</span>                      ; the exit at the door
+71a2  <span class="bytes">a4 5a</span>     SHOULD_GUARD_MOVE_LEFT  <span class="mn-load">LDY</span> GUARD_LEFT_COL_LIMIT
+71a4  <span class="bytes">c4 55</span>                             <span class="mn-arith">CPY</span> SHARED_55
+71a6  <span class="bytes">f0 f9</span>                             <span class="mn-bra">BEQ</span> $71a1</pre>
+<p><code>GUARD_FIND_CANDIDATE_ROW_BELOW</code> (<code>739a</code> before its entry <code>739d</code>) and <code>SHOULD_GUARD_MOVE_RIGHT</code> (<code>720b</code> before <code>720c</code>) have the same shape.</p>
+<h2>Span</h2>
+<p>The span of a routine runs from its block with the lowest address to the end of its block with the highest, gaps included. It is what <code>listing()</code>, <code>edit()</code> and <code>lr_listing.tsv</code> show.</p>
+<ul>
+<li>The span can start before the entry: <code>SHOULD_GUARD_MOVE_LEFT</code>'s span starts at <code>71a1</code>, the exit at the door, one byte before its entry.</li>
+<li>The span can hold code of other routines, or code that never ran, between the routine's own blocks. <code>listing()</code> and <code>edit()</code> show code that never ran as one row, e.g. <code>... 6d64-6e85: 289 bytes never ran ...</code> in <code>MOVE_GUARD</code>.</li>
+</ul>
+<h2>What the tools show</h2>
+<ul>
+<li><strong><code>show_routines()</code></strong> lists every routine of the run, with its entry, label, blocks and how often it was entered.</li>
+<li><strong><code>listing(entry)</code> and <code>edit(entry)</code></strong> show a routine over its span.</li>
+<li><strong>The last row of a routine that runs on into another one</strong> says where, e.g. <code>... runs on into CLEAR_PAGE ...</code> at the end of <code>CLEAR_HGR2</code>. In <code>edit()</code>, Enter goes there.</li>
+<li><strong>Enter in <code>edit()</code></strong> follows a <code>JSR</code>, a <code>JMP</code> or a branch. Into another routine, it opens that routine with the bar on the target, also when the target is not the routine's entry (<code>Session.routine_of()</code>).</li>
+<li><strong><code>u</code> in <code>edit()</code>, and <code>show_ways_in()</code> at the prompt,</strong> list every way into the routine shown: a <code>JSR</code>, a <code>JMP</code>, a branch, a glide, the <code>RTS</code> of a dispatch, and a jump through a door (an address inside the routine other than its entry). A routine's own loop is not one of them.</li>
+<li><strong><code>show_routine_graph()</code></strong> draws the routines as boxes, with the calls and the other ways in as arrows.</li>
+</ul>
+<h2>What is still open</h2>
+<ul>
+<li><code>TRY_MOVING_LEFT</code> lies inside <code>MOVE_PLAYER</code>. The <code>JMP</code> at <code>65c8</code> goes forward to <code>65d3</code>, no other routine reaches it, and no entry lies between them, so nothing in the run separates it. Parked until a run where the player moves in all four directions (<code>TODO.md</code>, &quot;Routine structure&quot;, group B).</li>
+<li>The start-up code is one routine, <code>routine_0800</code>: the two relocations, <code>MAIN</code>, <code>LONG_DELAY</code> and <code>INIT_GAME_DATA</code>, joined by <code>JMP</code>s while no call is open (<code>TODO.md</code>, &quot;Routine structure&quot;, group E).</li>
+</ul>
+</main>
+</body>
+</html>

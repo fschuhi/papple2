@@ -20,6 +20,8 @@
   /* The lines between the cells of a table, so that a wide table can be
      read along its rows. */
   --grid: #4a4a4a;
+  /* Every second row of a table, a little lighter than the page. */
+  --stripe: #252525;
   --note-background: #262626;
   /* A code fence, a listing among them, sits on a background of its own,
      a little lighter than the page, so that the code stands apart from
@@ -119,9 +121,15 @@ a {
   text-underline-offset: 2px;
 }
 
+/* Inline code: names from the code and the files, on a small background
+   of their own, so that they stand out from the words around them. */
 code {
   font-family: var(--mono);
   font-size: 0.9em;
+  padding: 1px 5px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--code-background);
 }
 
 .note {
@@ -147,6 +155,10 @@ footer {
 table {
   border-collapse: collapse;
   margin: 0 0 16px;
+}
+
+tbody tr:nth-child(even) {
+  background: var(--stripe);
 }
 
 th,
