@@ -54,7 +54,7 @@ digraph run_loop {
         fetch [label=<<FONT FACE="monospace">memory.read_opcode(PC)</FONT><BR/><FONT POINT-SIZE="10">last_PC = PC, PC + 1, cycles + 2</FONT>>];
         op [label=<<FONT FACE="monospace">ops_dispatch[opcode]()</FONT><BR/><FONT POINT-SIZE="10">the operation, with its addressing mode</FONT>>];
         kinds [label=<<B>one kind method per access</B><BR/><FONT FACE="monospace" POINT-SIZE="10">read_opcode, read_operand, read_pointer,<BR/>read_data, read_immediate, read_stack,<BR/>read_vector, write_data, write_stack</FONT>>];
-        byte [label=<<FONT FACE="monospace">read_byte / write_byte</FONT><BR/><FONT POINT-SIZE="10">$C000-$CFFF: soft switches</FONT><BR/><FONT POINT-SIZE="10">screen areas: display.update()</FONT>>];
+        byte [label=<<FONT FACE="monospace">read_byte / write_byte</FONT><BR/><FONT POINT-SIZE="10">$C000..$CFFF: soft switches</FONT><BR/><FONT POINT-SIZE="10">screen areas: display.update()</FONT>>];
         after_instruction [label=<<FONT FACE="monospace">after_instruction</FONT> hooks>,
                            fillcolor="#E6F1FB", color="#185FA5"];
 

@@ -146,7 +146,7 @@ class Display:
         apple_height = 192 * 2
         if False:
             mem_width = 256 * 2 # bytes per page, each byte is a single pixel
-            mem_height = 208 * 2 # pages 0000-CFFF, each page is a single pixel line
+            mem_height = 208 * 2 # pages 0000..CFFF, each page is a single pixel line
         else:
             mem_width = 0
             mem_height = 0

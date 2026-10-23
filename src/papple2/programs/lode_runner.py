@@ -3,7 +3,7 @@
 Loads Xekri's golden_source.bin -- the `LODE RUNNER` B file from the disk,
 33024 bytes -- at $0800 and starts there, which is what DOS's BRUN does.
 The file begins with JMP $2800, the relocation routine; it moves the game
-into place ($0000-$1FFF and $5F00-$BFFF) and starts it.
+into place ($0000..$1FFF and $5F00..$BFFF) and starts it.
 
 RWTS trap: every disk access of the game ends in DISABLE_INTS_CALL_RWTS
 at $B7B5 (main.nw, "disk routines"). A trap there serves reads from the

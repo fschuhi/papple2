@@ -35,7 +35,7 @@ The terms as of 2026-10-17. The current ones are in [`glossary.md`](glossary.md)
 - **label**: what an address is called. This document uses Xekri's labels; the dossier's labels are not touched by it.
 - **stack jump**: an `RTS` to an address that is not right behind a `JSR`, i.e. not an ordinary return. The mechanism, whatever it is used for (`papple2`'s `stack_jumps()`).
 - **dispatch by `RTS`**: one use of a stack jump: pushing an address taken from a table and doing `RTS` to choose among several subroutines (`MOVE_GUARD`, `6e96`). The returns behind a payload are stack jumps too, but no dispatch.
-- **Addresses**: a pair like `6f26-6f39` includes the first address and excludes the second.
+- **Addresses**: a pair like `6f26..6f39` includes the first address and excludes the second.
 
 ### Names added on 2026-10-17
 
@@ -392,9 +392,9 @@ Status: written 2026-10-17. Part 6 lists alternatives, no decision. Explain-back
 **3. Xekri's example**: read from the listing.
 
 ```
-0800  JMP $2800            ; at the load address; 0800-1FFF is overwritten later by RELOCATE1
+0800  JMP $2800            ; at the load address; 0800..1FFF is overwritten later by RELOCATE1
 2800  RELOCATE0_ALIAS      ; listed at 5f00: the same bytes, before they are moved (+3700)
-      copies 0800-88FF to 3F00-BFFF (129 pages), itself included
+      copies 0800..88FF to 3F00..BFFF (129 pages), itself included
 282f  JMP RELOCATE1        ; to 5f32: from the old copy into the new one
 5f32  RELOCATE1            ; copies the segments in RELOCATE_TABLE, by rewriting its own operands
 5f66  JMP MAIN
@@ -403,7 +403,7 @@ Status: written 2026-10-17. Part 6 lists alternatives, no decision. Explain-back
 61cd  JMP INIT_GAME_DATA   ; from LONG_DELAY, when it times out
 ```
 
-`RELOCATE_TABLE` (`5fa7`) holds four segments: `3f00-46ff` to `0000`, `4700-5eff` to `0800`, and two that copy onto themselves (`6000-8dff`, `8e00-bfff`); read, purpose of the last two not understood. The bytes at `2800` lie in hi-res page 1 (`2000-3fff`), which `CLEAR_HGR1` fills later: the loop at `7a64` ran 16,384 times, two pages of 8,192 bytes (computed from the count; that `2800` was overwritten is read, not checked by a run).
+`RELOCATE_TABLE` (`5fa7`) holds four segments: `3f00..46ff` to `0000`, `4700..5eff` to `0800`, and two that copy onto themselves (`6000..8dff`, `8e00..bfff`); read, purpose of the last two not understood. The bytes at `2800` lie in hi-res page 1 (`2000..3fff`), which `CLEAR_HGR1` fills later: the loop at `7a64` ran 16,384 times, two pages of 8,192 bytes (computed from the count; that `2800` was overwritten is read, not checked by a run).
 
 **4. How it shows in a run**: `0800,0800,$4C,,2800,1`; `2821,2826,$D0,taken,2821,32895` (the first copy loop); `282f,282f,$4C,,5f32,1`; `5f4b,5f52,$D0,taken,5f4b,32640` (the second); `5f66,5f66,$4C,,5f7d,1`; `5f9a,5fa3,$4C,,619b,1`; `61bc,61cd,$4C,,6056,1`. Every jump in the chain runs once, and no `JSR` leads into any of it.
 
@@ -516,7 +516,7 @@ What each part contributes, computed by leaving it out and grading again:
 - **`GUARD_DO_NOTHING`'s timer fix-up**: does the reading in the notes of Part 1 match what is seen in play?
 - **Not yet understood: the adjustments and the nudging.** How `GUARD_X_ADJ` and `GUARD_Y_ADJ` (0 to 4, 2 = exactly on the cell) place a guard between cells, and why moving in one direction nudges him toward the middle of the other. Booked as "too difficult, yet"; a picture of one cell with its five positions would be the place to start.
 - **Fall-through or two doors** (2026-10-17): `PUT_STATUS_LIVES` into `PUT_STATUS_BYTE` and `DRAW_SPRITE_PAGE2` into `DRAW_SPRITE` look the same in a run; Xekri marks them differently. Should `papple2` follow the marks where it has them, or what a run can tell? (Entry 5, part 6.)
-- **The two self-copying segments of `RELOCATE_TABLE`** (2026-10-17): `6000-8dff` and `8e00-bfff` are copied onto themselves. Why?
+- **The two self-copying segments of `RELOCATE_TABLE`** (2026-10-17): `6000..8dff` and `8e00..bfff` are copied onto themselves. Why?
 - **Which outcome the shadow stack gives the five stack jumps** (2026-10-17): "unmatched" for the dispatch and "redirected" for the payload returns is the assumption of Part 3, part 2; `lr_returns.csv` would settle it.
 
 ---
