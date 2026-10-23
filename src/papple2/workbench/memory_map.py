@@ -1,4 +1,4 @@
-"""Memory map: the dossier's color ranges over a stretch of memory.
+"""Memory map: the dossier's color ranges over a range of memory.
 
 The map has MAP_COLUMNS cells per row. Each cell stands for cell_bytes
 bytes, a power of 2, so a row covers MAP_COLUMNS * cell_bytes bytes and
@@ -71,7 +71,7 @@ def map_rows(
     end: int,
     cell_bytes: int,
 ) -> list[MapRow]:
-    """The rows of the map from start up to, not including, end.
+    """The rows of the map from start to end, not including end.
 
     start is rounded down and end up to whole rows. A cell is colored by
     color_of_bytes(cell_start, cell_end), asked only about the bytes of the cell
