@@ -61,16 +61,15 @@ Enter on a JSR opens the routine it calls, and so does Enter on a JMP into
 another routine's entry; Enter on a branch, or on a JMP to a row in the
 listing, moves the bar there. A JMP or a branch to an address outside the
 listing opens the routine whose blocks hold it, with the bar on that
-address. Backspace undoes the last Enter: the same
-routine, window and bar as before. f undoes the last Backspace, as long as
-no new step was taken since: Enter, or going somewhere with the picker,
-forgets where Backspace came from. Each routine remembers its window and
-bar when it is left, and opens again as it was. The breadcrumbs in the
-rule above the listing show the routines followed into, the one shown last;
-a jump within a routine adds none. After it come the routines f would go
-forward to. Every name uses its assigned color, or gray without one;
-only the current name is bold. The editor keeps its height, whatever
-the routine's length.
+address. Backspace undoes the last Enter: the same routine, window and bar
+as before. f undoes the last Backspace, as long as no new step was taken
+since: Enter, or going somewhere with the picker, forgets where Backspace
+came from. Each routine remembers its window and bar when it is left, and
+opens again as it was. The breadcrumbs in the rule above the listing show
+the routines followed into, the one shown last; a jump within a routine
+adds none. After it come the routines f would go forward to. Each
+breadcrumb has its routine's color, or gray without one; only the current
+one is bold. The editor keeps its height, whatever the routine's length.
 
 g opens the picker over the bottom lines of the listing, PICKER_LINES high:
 a list of the routines edit_rows() was given, by entry and label, the
@@ -103,16 +102,16 @@ A routine that runs on into another one, without a leap, ends with a faint
 row that says where ("... runs on into CLEAR_PAGE ..."). The bar stops on
 it, Enter goes there, and Tab and e have nothing to edit on it.
 
-The bar's row has a cyan > in front of it and a faint background. A thin
+The bar's row has a cyan > left of it and a faint background. A thin
 line runs above and below the listing.
 
 Each mnemonic is colored by its class, as in the 6502 reference at
 pagetable.com (c64ref): load, trans, stack, shift, logic, arith, inc, ctrl,
-bra, flags, nop. The hex bytes are dark gray. The name in an operand has
-the color of the address it names, if that address lies in a color range:
-the table in LDA tbl,X, the pointer in STA (ptr),Y, the target of a JSR or
-a branch. Brackets and index stay plain, and so do labels, comments and
-immediates. c copies the lines as plain text.
+bra, flags, nop. The hex bytes are dark gray. The label or address in an
+operand has the color of the address it names, if that address lies in a
+color range: the table in LDA tbl,X, the pointer in STA (ptr),Y, the
+target of a JSR or a branch. Brackets and index stay plain, and so do the
+label column, comments and immediates. c copies the lines as plain text.
 
 At the prompt, edit() in papple2.workbench.shell opens it on the current
 run.
@@ -151,7 +150,7 @@ ELLIPSIS = "..."
 # Between the instruction column and a comment.
 COMMENT_START = "  ; "
 
-# The column in front of each line, where the bar's row shows "> ".
+# The column left of each line, where the bar's row shows "> ".
 MARKER_WIDTH = 2
 
 # How many lines of the listing the comment box covers, at most.
@@ -207,13 +206,14 @@ MNEMONIC_COLORS = {
 }
 
 # bar: the faint background of the bar's row, a little lighter than a dark
-# terminal's own; change the colour here if it is too faint or too loud.
-# marker: the > in front of it. rule: the lines above and below.
+# terminal's own; change the color here if it is too faint or too loud.
+# marker: the > left of it. rule: the lines above and below.
 # field: a label being edited. message: a refusal or a hint, in the line
 # under the listing. crumb: the routines followed into, in the line above;
-# crumb-here: the one shown; crumb-future: the ones f goes forward to. picker: the picker's box; its selected line
-# has the bar's look. gap: a row for bytes that never ran, kept faint.
-# bytes: the hex bytes of a row. mn-<class>: a mnemonic of that class.
+# crumb-here: the one shown; crumb-future: the ones f goes forward to.
+# picker: the picker's box; its selected line has the bar's look. gap: a
+# row for bytes that never ran, kept faint. bytes: the hex bytes of a row.
+# mn-<class>: a mnemonic of that class.
 STYLE = Style.from_dict(
     {
         **{f"mn-{group}": color for group, color in MNEMONIC_COLORS.items()},
@@ -360,9 +360,9 @@ def row_fragments(
     unstyled. Joined, the texts are exactly format_row()'s line. A row
     without an address is one faint piece.
 
-    With target_color_of, the name in the operand gets the color of the
-    address it names (row.target), if that address has one; brackets and
-    index stay plain."""
+    With target_color_of, the label or address in the operand gets the
+    color of the address it names (row.target), if that address has one;
+    brackets and index stay plain."""
     line = format_row(row, widths, columns)
     if row.address is None:
         return [("class:gap", line)]
@@ -378,8 +378,8 @@ def row_fragments(
     group = MNEMONIC_CLASS.get(name)
     name_style = f"class:mn-{group}" if group else ""
 
-    # The operand's name, if its target has a color. Where the instruction
-    # is cut, only the part before the "..." is colored.
+    # The operand's label or address, if its target has a color. Where the
+    # instruction is cut, only the part before the "..." is colored.
     operand_start = operand_end = name_end
     operand_style = ""
     span = operand_name_span(row)
@@ -469,7 +469,7 @@ def breadcrumbs(names: list[str], width: int) -> list[str]:
 
 def future_crumbs(names: list[str], room: int) -> list[str]:
     """names, the nearest first, as many as fit into room after the
-    breadcrumbs, each with CRUMB_SEPARATOR in front of it. The last ones
+    breadcrumbs, each with CRUMB_SEPARATOR before it. The last ones
     are left out if need be, with "..." in their place."""
     shown: list[str] = []
     used = 0
@@ -495,12 +495,11 @@ def breadcrumb_text(
     color_of: Callable[[int], str | None],
     width: int,
 ) -> FormattedText:
-    """Format the navigation path with each place's assigned color.
-
-    Only the current place is bold. Uncolored names, separators and
-    abbreviations are gray. Addresses remain attached to names while
-    fitting them to width, so equal labels do not confuse color lookup.
-    """
+    """The breadcrumbs as one line: the routines followed into, then the
+    ones f goes forward to, each in its routine's color (color_of), gray
+    without one; only the current one is bold. Separators and "..." are
+    gray. color_of takes an entry, so each crumb keeps its entry while the
+    crumbs are fitted to width."""
     names = [label_of(entry) or f"{entry:04x}" for entry in entries]
     shown = breadcrumbs(names, width)
     omitted = len(shown) > len(names) or shown != names
@@ -609,10 +608,11 @@ def edit_rows(
     the order given; g goes to one of them through open_routine().
     ways_in_of(entry) gives the picker's items for every way into the
     routine starting at entry; u opens the picker on them.
-    color_of(entry) gives a breadcrumb's assigned color, or None for gray.
-    Past and future names have normal weight; the current name is bold.
-    target_color_of(address) gives the color of the address an operand
-    names, or None: the operand's name shows in it.
+    color_of(entry) gives the color of the breadcrumb of the routine
+    starting at entry, or None for gray. Only the current breadcrumb is
+    bold. target_color_of(address) gives the color of the address an
+    operand names, or None: the label or address in the operand shows in
+    it.
     routine_of(address) gives the entry of the routine whose blocks hold
     address, or None: Enter on a JMP or a branch to an address outside the
     listing opens that routine, with the bar on the address."""
@@ -715,7 +715,7 @@ def edit_rows(
         )
 
     def crumbs_text() -> FormattedText:
-        """The navigation path above the listing, with assigned colors.
+        """The breadcrumbs above the listing, in their routines' colors.
         A jump within a routine adds no crumb."""
         entries: list[int] = []
         for followed, _top, _cursor in [*history, (state.place, 0, 0)]:
@@ -756,7 +756,7 @@ def edit_rows(
         here = (state.place, state.top, state.cursor)
         if name == "JSR" or jmp:
             routine = open_routine(row.target)
-            # A JMP back to the routine's own entry is a loop: stay.
+            # A JMP to the routine's own entry is a loop: stay.
             if routine is not None and (name == "JSR" or routine.entry != state.place.entry):
                 remember()
                 step(here)
@@ -764,8 +764,8 @@ def edit_rows(
                 return
         target_row = row_of(state.rows, row.target) if name != "JSR" else None
         if target_row is None and name != "JSR":
-            # Into the middle of another routine: a JMP to a door further
-            # into another routine's code, or a branch out of this one.
+            # Into the middle of another routine: a JMP through a door into
+            # another routine, or a branch out of this one.
             holder = routine_of(row.target)
             routine = open_routine(holder) if holder is not None else None
             if routine is not None and routine.entry != state.place.entry:
@@ -804,14 +804,14 @@ def edit_rows(
         history.append(here)
         arrive(place, (top, cursor))
 
-    # One window less than its height, so one line of the old window
-    # stays in view after a page.
+    # A page moves one line less than the window's height, so one line
+    # of the old window stays in view.
     page = max(1, height - 1)
 
     listing = Window(
         # Focusable, so the listing has the focus: prompt_toolkit
         # hides the terminal's cursor only for the focused
-        # window. Without it, the cursor blinked on and off at
+        # window. Without it, the cursor would blink on and off at
         # every key press.
         FormattedTextControl(listing_text, focusable=True, show_cursor=False),
         height=height,
