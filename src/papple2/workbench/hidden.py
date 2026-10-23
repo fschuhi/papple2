@@ -5,7 +5,7 @@ start is included, end is not. Adjacent ranges are allowed; overlapping
 ranges are refused.
 
 Every change reloads the file first, preserving changes made in another
-session. Opening the store or repeating an unchanged definition writes
+session. Opening the store or repeating an unchanged hidden range writes
 nothing. This module owns persistence, not how a listing displays a range.
 """
 
@@ -32,10 +32,10 @@ class Hidden:
         self.reload()
 
     def reload(self) -> None:
-        """Read the current definitions from disk.
+        """Read the saved hidden ranges from disk.
 
-        Without a file, definitions already in memory stay, as they do
-        in Annotations: nothing has been saved to replace them.
+        Without a file, the hidden ranges already in memory stay, as they
+        do in Annotations: nothing has been saved to replace them.
         """
         if self.path.exists():
             data = json.loads(self.path.read_text(encoding="utf-8"))
@@ -49,11 +49,11 @@ class Hidden:
             }
 
     def hide(self, name: str, start: int, end: int, note: str) -> None:
-        """Add or replace name's definition, saving it immediately.
+        """Add or replace the hidden range name, saving it immediately.
 
         A replacement is checked against every other named range, not
-        against its own previous definition. Refused changes leave the
-        saved definitions untouched.
+        against the hidden range it replaces. Refused changes leave the
+        saved hidden ranges untouched.
         """
         self.reload()
         if not name.strip():
@@ -77,7 +77,7 @@ class Hidden:
         self._save()
 
     def unhide(self, name: str) -> None:
-        """Remove a named definition and save; refuse an unknown name."""
+        """Remove a named hidden range and save; refuse an unknown name."""
         self.reload()
         if name not in self.ranges:
             raise ValueError(f"no hidden range {name}")
