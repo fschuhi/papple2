@@ -1,8 +1,8 @@
 """tools/render_html.py: a markdown file as an HTML page in docs/html/.
 
 What the script adds to markdown-it-py: listings in the editor's colors,
-other code fences kept exactly, and links that still lead to their file
-from docs/html/.
+other code fences kept exactly, links that still lead to their file from
+docs/html/, and diagrams drawn by an LLM, found by their id.
 """
 
 import sys
@@ -14,7 +14,16 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # tools/ is no package; its scripts are imported from their folder.
 sys.path.insert(0, str(REPO_ROOT / "tools"))
 
-from render_html import color_line, relink, render_code  # noqa: E402
+from render_html import (  # noqa: E402
+    code_fences,
+    color_line,
+    diagram_id,
+    is_listing,
+    load_drawings,
+    prompt_text,
+    relink,
+    render_code,
+)
 
 
 def test_a_listing_line_gets_the_editors_colors() -> None:
@@ -55,3 +64,47 @@ def test_a_fence_that_is_no_listing_stays_exactly() -> None:
     assert render_code(diagram) == (
         "<pre>MOVE_GUARDS --JSR--&gt; MOVE_GUARD\n   |  RTS &amp; back &lt;-- here</pre>\n"
     )
+
+
+def test_the_same_text_gives_the_same_id() -> None:
+    first = diagram_id("A --JSR--> B")
+    assert first == diagram_id("A --JSR--> B\n")
+    assert first != diagram_id("A --JMP--> B")
+    assert first.startswith("diagram-") and len(first) == len("diagram-") + 8
+
+
+def test_a_fence_with_a_drawing_becomes_the_svg(tmp_path: Path) -> None:
+    diagram = "A --JSR--> B"
+    command = "make html FILE=docs/routine.md"
+    # The LLM's answer, with words and a code fence around the SVGs.
+    answer = tmp_path / "answer.html"
+    answer.write_text(
+        "Here are the drawings:\n```html\n"
+        f'<svg id="{diagram_id(diagram)}" width="100" height="40"><text>A</text></svg>\n'
+        f'<svg id="{diagram_id(command)}" class="keep-text"/>\n```\n',
+        encoding="utf-8",
+    )
+    drawings = load_drawings(answer)
+    assert render_code(diagram, drawings) == (
+        '<div class="diagram">\n'
+        f'<svg id="{diagram_id(diagram)}" width="100" height="40"><text>A</text></svg>\n'
+        "</div>\n"
+    )
+    # Kept as text on purpose, and not drawn yet: both stay <pre>.
+    assert render_code(command, drawings) == f"<pre>{command}</pre>\n"
+    assert render_code("A --JMP--> B", drawings) == "<pre>A --JMP--&gt; B</pre>\n"
+    assert load_drawings(tmp_path / "no answer yet.html") == {}
+
+
+def test_the_prompt_holds_every_fence_that_is_no_listing() -> None:
+    markdown = (
+        "# Page\n\n```\n6c9b  20 db 6c  JSR MOVE_GUARD\n```\n\n"
+        "- item\n\n  ```\n  A --JSR--> B\n  ```\n\n```\nmake html\n```\n"
+    )
+    fences = [text for text in code_fences(markdown) if not is_listing(text)]
+    # The fence inside the list item comes without its indentation.
+    assert fences == ["A --JSR--> B", "make html"]
+    prompt = prompt_text(fences)
+    for text in fences:
+        assert f"{diagram_id(text)}:\n\n```\n{text}\n```\n" in prompt
+    assert "6c9b" not in prompt.split("The fences:")[1]
