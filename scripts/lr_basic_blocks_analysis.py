@@ -16,7 +16,7 @@ their reports into docs/reports/lr_basic_blocks_analysis/, under git:
 The last three (papple2.workbench.overview) carry the dossier's labels as
 they were at the time of the run.
 Then the basic blocks analysis (papple2.workbench.basic_blocks_analysis)
-finds every routine of the run: the run's start and every JSR target.
+finds every routine of the run (docs/routine.md).
 It writes the loop reports of the start, $0800, into the same folder:
     lr_loops_0800.csv
     lr_loop_members_0800.csv

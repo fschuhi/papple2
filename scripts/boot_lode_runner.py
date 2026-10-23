@@ -4,24 +4,22 @@ How the game is loaded and started, including the RWTS trap that serves
 its disk reads, is Lode Runner's setup in papple2.programs.lode_runner.
 This script runs it, in a window or headless.
 
-Run from the repo root, like `make run` (papple2.toml's data_dir is read
-relative to the current working directory):
+Run from the repo root, like `make boot-lode-runner` (papple2.toml's
+data_dir is read relative to the current working directory):
 
-    python boot_lode_runner.py path/to/golden_source.bin
-    python boot_lode_runner.py path/to/golden_source.bin --headless
-    python boot_lode_runner.py path/to/golden_source.bin --speed 1.0
-    python boot_lode_runner.py path/to/golden_source.bin --instructions 4000000
+    python scripts/boot_lode_runner.py path/to/golden_source.bin
+    python scripts/boot_lode_runner.py path/to/golden_source.bin --headless
+    python scripts/boot_lode_runner.py path/to/golden_source.bin --speed 1.0
+    python scripts/boot_lode_runner.py path/to/golden_source.bin --instructions 4000000
 
 Default: opens the pygame window and runs until you close it or Ctrl-X,
 as fast as the emulator can. --speed 1.0 throttles the window to the speed
 of a real Apple II (`make boot-lode-runner-throttled`). With --instructions N
 the window stops after N instructions, as if Ctrl-X had been pressed; the
 next Ctrl-X continues.
-Not tried by me -- my sandbox has no display.
 
---headless: the run from our session. Runs N instructions without a window
-and renders both hi-res pages to PNG files with a simple monochrome
-renderer (no NTSC color).
+--headless: runs N instructions without a window and renders both hi-res
+pages to PNG files with a simple monochrome renderer (no NTSC color).
 
 Both modes install the RWTS trap; at the end of a run the script prints
 every read it served.

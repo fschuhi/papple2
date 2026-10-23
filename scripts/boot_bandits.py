@@ -129,7 +129,7 @@ class MliTrap:
         mem = em.mem
 
         # JSR pushed the address of its own last byte; one more is the first
-        # of the three bytes directly after the JSR. Peek for now: only a served
+        # of the three bytes directly after the JSR. Peek first: only a served
         # command takes the address off the stack.
         low = mem[0x100 + (cpu.SP + 1 & 0xFF)]
         high = mem[0x100 + (cpu.SP + 2 & 0xFF)]
@@ -211,7 +211,7 @@ class MliTrap:
         # knowledge of ProDOS, unconfirmed); Bandits always asks for $FFFF
         write_word(mem, parameters + 6, len(chunk))
         last = buffer + len(chunk) - 1
-        return f"{len(chunk)} bytes of {file.name} at ${buffer:04X}-${last:04X}"
+        return f"{len(chunk)} bytes of {file.name} at ${buffer:04X}..${last:04X}"
 
     def close(self, em: Emulator, parameters: int) -> str | None:
         # parameter block: count, reference number; 0 means all open files

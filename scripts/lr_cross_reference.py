@@ -1,6 +1,7 @@
 """Count every access to memory in Lode Runner's attract play.
 
-Every access is counted by the instruction that made it. Boots Lode Runner headless, attaches the cross referencing
+Every access is counted by the instruction that made it. Boots Lode
+Runner headless, attaches the cross referencing
 (papple2.workbench.cross_referencing), runs the attract play, and writes
 its report into docs/reports/lr_cross_reference/:
     lr_xrefs.csv

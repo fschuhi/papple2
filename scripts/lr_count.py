@@ -3,10 +3,10 @@
 Boots Lode Runner headless (its setup in papple2.programs.lode_runner,
 including the RWTS trap), runs 4,000,000 instructions from the start, and
 counts for every address how often it was fetched as an opcode, as an
-operand, and as an immediate operand. Saves a 256 x 256 map as a PNG, one pixel per address,
-scaled up 3 times, and the same map as an HTML page, where a line above the
-map shows the address and counts under the mouse, and the address labels stay
-in place while the map scrolls:
+operand, and as an immediate operand. Saves a 256 x 256 map as a PNG,
+one pixel per address, scaled up 3 times, and the same map as an HTML
+page, where a line above the map shows the address and counts under the
+mouse, and the address labels stay in place while the map scrolls:
 
     row     = high byte of the address (the page)
     column  = low byte of the address
@@ -17,7 +17,7 @@ in place while the map scrolls:
     green   read as an immediate operand (the $0B in LDA #$0B)
     red     more than one of these -- worth a closer look
 
-The map shows "ran or not", not how often: see DIRECTION.md, the lessons
+The map shows "ran or not", not how often: see docs/DIRECTION.md, the lessons
 from the Robotron heat map. The full counts stay in ExecutionCounts for
 later maps.
 
@@ -114,7 +114,7 @@ def css_colour(colour: tuple[int, int, int]) -> str:
 
 def save_html(counts: ExecutionCounts, filename: str, instructions: int) -> None:
     """The same map as the PNG, as a plain HTML table: one row per page, one
-    cell per address. Only coloured cells carry their counts (the data-info
+    cell per address. Only colored cells carry their counts (the data-info
     attribute); black cells stay empty, which keeps the file small.
 
     The table sits in its own box that does the scrolling, so the title,

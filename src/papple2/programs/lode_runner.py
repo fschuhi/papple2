@@ -51,7 +51,7 @@ class RwtsTrap:
     The sector appears in the buffer "deus ex machina": written straight
     into Memory's list, past its hooks, so no hook sees the write. The
     fake RTS moves SP and PC outside the instruction stream. `log` records
-    every read served, for looking into both later.
+    every read served, for looking into them later.
     """
 
     def __init__(self, disk: DiskImage) -> None:

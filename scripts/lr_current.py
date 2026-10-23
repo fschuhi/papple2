@@ -20,7 +20,7 @@ now (papple2.workbench.overview), into docs/reports/lr_current/:
 
 The reports must come from a run of the same length: RUN_INSTRUCTIONS
 here, --instructions there. The run without instrumentations is a
-stand-in for a snapshot of the memory, which does not exist yet.
+stand-in for a snapshot of the memory.
 
 Run from the repo root:
 

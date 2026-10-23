@@ -20,7 +20,7 @@ import pandas as pd
 
 
 def explore_xrefs(csv_path: str, top_n: int = 5) -> None:
-    """Print cross-reference statistics for a CSV file."""
+    """Print cross reference statistics for a CSV file."""
     if top_n < 1:
         raise ValueError("top_n must be greater than zero.")
 
@@ -63,8 +63,8 @@ def explore_xrefs(csv_path: str, top_n: int = 5) -> None:
     print(fan_out, "\n")
 
     print(f"--- 4. TOP {top_n} MEMORY PAGES ---")
-    # Preserve the original grouping: pad address strings to at least four
-    # characters, then use the first two characters as the page identifier.
+    # The page: the first two hex digits of the effective address, padded
+    # to four digits.
     df["page"] = df["effective_address"].astype(str).str.zfill(4).str[:2]
 
     page_stats = (
@@ -81,11 +81,11 @@ def explore_xrefs(csv_path: str, top_n: int = 5) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Explore cross-reference statistics from a CSV file."
+        description="Explore cross reference statistics from a CSV file."
     )
     parser.add_argument(
         "csv_path",
-        help="Path to the cross-reference CSV file (absolute or relative).",
+        help="Path to the cross reference CSV file (absolute or relative).",
     )
     parser.add_argument(
         "--top",
