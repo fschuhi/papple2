@@ -18,12 +18,99 @@
 <h2>Where a routine starts</h2>
 <p>A block is an entry in one of six ways:</p>
 <ul>
-<li><strong>The run's start.</strong> <code>0800</code>, where Lode Runner is loaded and started.</li>
-<li><strong>A <code>JSR</code> target.</strong> <code>MOVE_GUARD</code> (<code>6cdb</code>), called 112 times by the <code>JSR</code> at <code>6c9b</code> in <code>MOVE_GUARDS</code>.</li>
-<li><strong>A stack jump's target</strong> (<code>stack_jumps()</code>). <code>TRY_GUARD_MOVE_DOWN</code> (<code>6f39</code>), reached 76 times by the <code>RTS</code> at <code>6e96</code> in <code>MOVE_GUARD</code>, which dispatches through a table.</li>
-<li><strong>Code that two routines reach</strong> (<code>shared_entries()</code>). <code>CLEAR_PAGE</code> (<code>7a5b</code>): <code>CLEAR_HGR2</code> glides into it, and <code>CLEAR_HGR1</code> branches forward into it. <code>TRY_DIGGING_LEFT_check_can_dig_left</code> (<code>67e7</code>) is the same case: <code>TRY_DIGGING_LEFT</code> glides into it, and <code>MOVE_PLAYER</code> jumps forward into it. Xekri's listing holds it inside <code>TRY_DIGGING_LEFT</code>; <code>papple2</code> differs there on purpose.</li>
-<li><strong>Code that one routine glides into and another jumps backward into</strong> (<code>shared_by_jump_backward()</code>). <code>PUT_STATUS_BYTE</code> (<code>7a74</code>): <code>PUT_STATUS_LIVES</code> glides into it, and <code>PUT_STATUS_LEVEL</code> branches backward into it. A jump backward past an entry is not followed (see &quot;Where a routine stops&quot;), so the case before would miss it; the direction of the jump makes no difference to the result.</li>
-<li><strong>An orphan</strong> (<code>orphans()</code>): a block an edge leads to, but that no routine holds. Of the orphans, the one with the lowest address becomes an entry. <code>TRY_GUARD_MOVE_UP_check_for_gold</code> (<code>6f26</code>): <code>TRY_GUARD_MOVE_DOWN</code> jumps backward into the tail of <code>TRY_GUARD_MOVE_UP</code>, whose own entry never ran. <code>CHECK_FOR_MODE_1_INPUT</code> (<code>69b8</code>) is the same case: <code>CHECK_FOR_INPUT</code> branches backward into it, 79 times.</li>
+<li>
+<p><strong>The run's start.</strong> <code>0800</code>, where Lode Runner is loaded and started.</p>
+</li>
+<li>
+<p><strong>A <code>JSR</code> target.</strong> <code>MOVE_GUARD</code> (<code>6cdb</code>), called 112 times by the <code>JSR</code> at <code>6c9b</code> in <code>MOVE_GUARDS</code>.</p>
+<pre>6c9b  <span class="bytes">20 db 6c</span>  <span class="mn-ctrl">JSR</span> MOVE_GUARD
+6c9e  <span class="bytes">a5 9a</span>     <span class="mn-load">LDA</span> ALIVE</pre>
+</li>
+<li>
+<p><strong>A stack jump's target</strong> (<code>stack_jumps()</code>). <code>TRY_GUARD_MOVE_DOWN</code> (<code>6f39</code>), reached 76 times by the <code>RTS</code> at <code>6e96</code> in <code>MOVE_GUARD</code>, which dispatches through a table.</p>
+<pre>6e89  <span class="bytes">20 d8 70</span>  <span class="mn-ctrl">JSR</span> DETERMINE_GUARD_MOVE
+6e8c  <span class="bytes">0a</span>        <span class="mn-shift">ASL</span>
+6e8d  <span class="bytes">a8</span>        <span class="mn-trans">TAY</span>
+6e8e  <span class="bytes">b9 98 6e</span>  <span class="mn-load">LDA</span> $6e98,Y
+6e91  <span class="bytes">48</span>        <span class="mn-stack">PHA</span>
+6e92  <span class="bytes">b9 97 6e</span>  <span class="mn-load">LDA</span> GUARD_FN_TABLE,Y
+6e95  <span class="bytes">48</span>        <span class="mn-stack">PHA</span>
+6e96  <span class="bytes">60</span>        <span class="mn-ctrl">RTS</span></pre>
+</li>
+<li>
+<p><strong>Code that two routines reach</strong> (<code>shared_entries()</code>). <code>CLEAR_PAGE</code> (<code>7a5b</code>): <code>CLEAR_HGR2</code> glides into it, and <code>CLEAR_HGR1</code> branches forward into it. <code>TRY_DIGGING_LEFT_check_can_dig_left</code> (<code>67e7</code>) is the same case: <code>TRY_DIGGING_LEFT</code> glides into it, and <code>MOVE_PLAYER</code> jumps forward into it. Xekri's listing holds it inside <code>TRY_DIGGING_LEFT</code>; <code>papple2</code> differs there on purpose.</p>
+<pre>    7a51  <span class="bytes">a9 20</span>     CLEAR_HGR1  <span class="mn-load">LDA</span> #$20
+    7a53  <span class="bytes">a2 40</span>                 <span class="mn-load">LDX</span> #$40
++-- 7a55  <span class="bytes">d0 04</span>                 <span class="mn-bra">BNE</span> CLEAR_PAGE
+|   7a57  <span class="bytes">a9 40</span>     CLEAR_HGR2  <span class="mn-load">LDA</span> #$40
+|   7a59  <span class="bytes">a2 60</span>                 <span class="mn-load">LDX</span> #$60
++-&gt; 7a5b  <span class="bytes">85 0b</span>     CLEAR_PAGE  <span class="mn-load">STA</span> $0b</pre>
+</li>
+<li>
+<p><strong>Code that one routine glides into and another jumps backward into</strong> (<code>shared_by_jump_backward()</code>). <code>PUT_STATUS_BYTE</code> (<code>7a74</code>): <code>PUT_STATUS_LIVES</code> glides into it, and <code>PUT_STATUS_LEVEL</code> branches backward into it. A jump backward past an entry is not followed (see &quot;Where a routine stops&quot;), so the case before would miss it; the direction of the jump makes no difference to the result.</p>
+<pre>    7a70  <span class="bytes">a5 98</span>     PUT_STATUS_LIVES  <span class="mn-load">LDA</span> LIVES
+    7a72  <span class="bytes">a2 10</span>                       <span class="mn-load">LDX</span> #$10
++-&gt; 7a74  <span class="bytes">86 85</span>     PUT_STATUS_BYTE   <span class="mn-load">STX</span> GAME_COLNUM
+|   7a76  <span class="bytes">20 f8 7a</span>                    <span class="mn-ctrl">JSR</span> TO_DECIMAL3
+|   7a79  <span class="bytes">a9 10</span>                       <span class="mn-load">LDA</span> #$10
+|   7a7b  <span class="bytes">85 86</span>                       <span class="mn-load">STA</span> GAME_ROWNUM
+|   7a7d  <span class="bytes">a5 89</span>                       <span class="mn-load">LDA</span> HUNDREDS
+|   7a7f  <span class="bytes">20 15 7b</span>                    <span class="mn-ctrl">JSR</span> PUT_DIGIT
+|   7a82  <span class="bytes">a5 8a</span>                       <span class="mn-load">LDA</span> TENS
+|   7a84  <span class="bytes">20 15 7b</span>                    <span class="mn-ctrl">JSR</span> PUT_DIGIT
+|   7a87  <span class="bytes">a5 8b</span>                       <span class="mn-load">LDA</span> UNITS
+|   7a89  <span class="bytes">4c 15 7b</span>                    <span class="mn-ctrl">JMP</span> PUT_DIGIT
+|   7a8c  <span class="bytes">a5 a6</span>     PUT_STATUS_LEVEL  <span class="mn-load">LDA</span> LEVELNUM
+|   7a8e  <span class="bytes">a2 19</span>                       <span class="mn-load">LDX</span> #$19
++-- 7a90  <span class="bytes">d0 e2</span>                       <span class="mn-bra">BNE</span> PUT_STATUS_BYTE</pre>
+</li>
+<li>
+<p><strong>An orphan</strong> (<code>orphans()</code>): a block an edge leads to, but that no routine holds. Of the orphans, the one with the lowest address becomes an entry. <code>TRY_GUARD_MOVE_UP_check_for_gold</code> (<code>6f26</code>): <code>TRY_GUARD_MOVE_DOWN</code> jumps backward into the tail of <code>TRY_GUARD_MOVE_UP</code>, whose own entry never ran. <code>CHECK_FOR_MODE_1_INPUT</code> (<code>69b8</code>) is the same case: <code>CHECK_FOR_INPUT</code> branches backward into it, 79 times.</p>
+<pre>+---&gt; 69b8  <span class="bytes">ad 00 c0</span>  CHECK_FOR_MODE_1_INPUT  <span class="mn-load">LDA</span> KBD
+|     69bb  <span class="bytes">30 10</span>                             <span class="mn-bra">BMI</span> $69cd
+|     69bd  <span class="bytes">a5 95</span>                             <span class="mn-load">LDA</span> INPUT_MODE
+|     69bf  <span class="bytes">c9 cb</span>                             <span class="mn-arith">CMP</span> #$cb
+|     69c1  <span class="bytes">f0 13</span>                             <span class="mn-bra">BEQ</span> $69d6
+|     69c3  <span class="bytes">ad 62 c0</span>                          <span class="mn-load">LDA</span> BUTN1
+|     69c6  <span class="bytes">30 05</span>                             <span class="mn-bra">BMI</span> $69cd
+|     69c8  <span class="bytes">ad 61 c0</span>                          <span class="mn-load">LDA</span> BUTN0
+| +-- 69cb  <span class="bytes">10 09</span>                             <span class="mn-bra">BPL</span> $69d6
+| |   <span class="gap">... 69cd-69d6: 9 bytes never ran ...</span>
+| +-&gt; 69d6  <span class="bytes">a5 ab</span>                             <span class="mn-load">LDA</span> $ab
+| +-- 69d8  <span class="bytes">d0 18</span>                             <span class="mn-bra">BNE</span> $69f2
+| |   69da  <span class="bytes">a0 00</span>                             <span class="mn-load">LDY</span> #$00
+| |   69dc  <span class="bytes">b1 a8</span>                             <span class="mn-load">LDA</span> ($a8),Y
+| |   69de  <span class="bytes">85 aa</span>                             <span class="mn-load">STA</span> $aa
+| |   69e0  <span class="bytes">c8</span>                                <span class="mn-inc">INY</span>
+| |   69e1  <span class="bytes">b1 a8</span>                             <span class="mn-load">LDA</span> ($a8),Y
+| |   69e3  <span class="bytes">85 ab</span>                             <span class="mn-load">STA</span> $ab
+| |   69e5  <span class="bytes">a5 a8</span>                             <span class="mn-load">LDA</span> $a8
+| |   69e7  <span class="bytes">18</span>                                <span class="mn-flags">CLC</span>
+| |   69e8  <span class="bytes">69 02</span>                             <span class="mn-arith">ADC</span> #$02
+| |   69ea  <span class="bytes">85 a8</span>                             <span class="mn-load">STA</span> $a8
+| |   69ec  <span class="bytes">a5 a9</span>                             <span class="mn-load">LDA</span> $a9
+| |   69ee  <span class="bytes">69 00</span>                             <span class="mn-arith">ADC</span> #$00
+| |   69f0  <span class="bytes">85 a9</span>                             <span class="mn-load">STA</span> $a9
+| +-&gt; 69f2  <span class="bytes">a5 aa</span>                             <span class="mn-load">LDA</span> $aa
+|     69f4  <span class="bytes">29 0f</span>                             <span class="mn-logic">AND</span> #$0f
+|     69f6  <span class="bytes">aa</span>                                <span class="mn-trans">TAX</span>
+|     69f7  <span class="bytes">bd 0b 6a</span>                          <span class="mn-load">LDA</span> VALID_KEY_COMMANDS,X
+|     69fa  <span class="bytes">85 9e</span>                             <span class="mn-load">STA</span> KEY_COMMAND
+|     69fc  <span class="bytes">a5 aa</span>                             <span class="mn-load">LDA</span> $aa
+|     69fe  <span class="bytes">4a</span>                                <span class="mn-shift">LSR</span>
+|     69ff  <span class="bytes">4a</span>                                <span class="mn-shift">LSR</span>
+|     6a00  <span class="bytes">4a</span>                                <span class="mn-shift">LSR</span>
+|     6a01  <span class="bytes">4a</span>                                <span class="mn-shift">LSR</span>
+|     6a02  <span class="bytes">aa</span>                                <span class="mn-trans">TAX</span>
+|     6a03  <span class="bytes">bd 0b 6a</span>                          <span class="mn-load">LDA</span> VALID_KEY_COMMANDS,X
+|     6a06  <span class="bytes">85 9f</span>                             <span class="mn-load">STA</span> KEY_COMMAND_LR
+|     6a08  <span class="bytes">c6 ab</span>                             <span class="mn-inc">DEC</span> $ab
+|     6a0a  <span class="bytes">60</span>                                <span class="mn-ctrl">RTS</span>
+|     <span class="gap">... 6a0b-6a12: 7 bytes never ran ...</span>
+|     6a12  <span class="bytes">a5 a7</span>     CHECK_FOR_INPUT         <span class="mn-load">LDA</span> GAME_MODE
+|     6a14  <span class="bytes">c9 01</span>                             <span class="mn-arith">CMP</span> #$01
++---- 6a16  <span class="bytes">f0 a0</span>                             <span class="mn-bra">BEQ</span> CHECK_FOR_MODE_1_INPUT</pre>
+</li>
 </ul>
 <p>The last three kinds are found in rounds. <code>find_routines()</code> builds the routines from the entries it has, looks for shared code and orphans, makes them entries, and builds again, until every block lies in exactly one routine.</p>
 <h2>Where a routine stops</h2>
@@ -34,10 +121,10 @@
 <li><strong>At a jump backward past its own entry</strong> (<code>stops_before()</code>). The code before the entry belongs to someone else, e.g. the tail of <code>TRY_GUARD_MOVE_UP</code> that <code>TRY_GUARD_MOVE_DOWN</code> jumps into.</li>
 </ul>
 <p>There is one exception to the last rule, the <strong>exit at the door</strong>: the block directly before the entry that ends right at it. A routine's &quot;give up early&quot; branches often lead there, so it belongs to the routine. In <code>SHOULD_GUARD_MOVE_LEFT</code>, the <code>BEQ</code> at <code>71a6</code> goes backward 110 times to the <code>RTS</code> at <code>71a1</code>:</p>
-<pre>71a1  <span class="bytes">60</span>                                <span class="mn-ctrl">RTS</span>                      ; the exit at the door
-71a2  <span class="bytes">a4 5a</span>     SHOULD_GUARD_MOVE_LEFT  <span class="mn-load">LDY</span> GUARD_LEFT_COL_LIMIT
-71a4  <span class="bytes">c4 55</span>                             <span class="mn-arith">CPY</span> SHARED_55
-71a6  <span class="bytes">f0 f9</span>                             <span class="mn-bra">BEQ</span> $71a1</pre>
+<pre>+-&gt; 71a1  <span class="bytes">60</span>                                <span class="mn-ctrl">RTS</span>
+|   71a2  <span class="bytes">a4 5a</span>     SHOULD_GUARD_MOVE_LEFT  <span class="mn-load">LDY</span> GUARD_LEFT_COL_LIMIT
+|   71a4  <span class="bytes">c4 55</span>                             <span class="mn-arith">CPY</span> SHARED_55
++-- 71a6  <span class="bytes">f0 f9</span>                             <span class="mn-bra">BEQ</span> $71a1</pre>
 <p><code>GUARD_FIND_CANDIDATE_ROW_BELOW</code> (<code>739a</code> before its entry <code>739d</code>) and <code>SHOULD_GUARD_MOVE_RIGHT</code> (<code>720b</code> before <code>720c</code>) have the same shape.</p>
 <h2>Span</h2>
 <p>The span of a routine runs from its block with the lowest address to the end of its block with the highest, gaps included. It is what <code>listing()</code>, <code>edit()</code> and <code>lr_listing.tsv</code> show.</p>
