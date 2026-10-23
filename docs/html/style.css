@@ -17,6 +17,9 @@
   --text: #d4d4d4;
   --muted: #8c8c8c;
   --rule: #3a3a3a;
+  /* The lines between the cells of a table, so that a wide table can be
+     read along its rows. */
+  --grid: #4a4a4a;
   --note-background: #262626;
   /* A code fence, a listing among them, sits on a background of its own,
      a little lighter than the page, so that the code stands apart from
@@ -149,14 +152,14 @@ table {
 th,
 td {
   text-align: left;
-  padding: 3px 18px 3px 0;
+  padding: 4px 10px;
   vertical-align: top;
+  border: 1px solid var(--grid);
 }
 
 th {
   color: var(--muted);
   font-weight: 600;
-  border-bottom: 1px solid var(--rule);
 }
 
 /* A column of numbers, e.g. counts: right-aligned, so the digits line
