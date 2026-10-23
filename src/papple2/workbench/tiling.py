@@ -60,7 +60,7 @@ OTHER_LEAP_OPCODES = frozenset({JMP_absolute, JMP_indirect, JSR, RTS, BRK, RTI})
 CALL_RETURN_OPCODES = frozenset({JSR, RTS, RTI})
 
 # Precomputed fast opcode lookup for the hot loop:
-# 0 = straight-line, 1 = conditional branch, 2 = other leap (jump, call, return, trap)
+# 0 = no leap, 1 = branch, 2 = another leap (JMP, JSR, RTS, RTI, BRK)
 OPCODE_KIND = bytearray(256)
 for _op in BRANCH_OPCODES:
     OPCODE_KIND[_op] = 1
@@ -321,8 +321,9 @@ def check_consistency(instrumentation: Tiling, expected_instructions: int) -> No
         )
 
         # The PC glides from the tile's start to the first leap, so every
-        # visit leaves through the same instruction, the furthest one. A tile
-        # without exits can only be the open tile, stopped in its first visit.
+        # visit leaves through the same instruction, the one with the highest
+        # address. A tile without exits can only be the open tile, stopped in
+        # its first visit.
         if exit_pcs[start_pc]:
             require(
                 exit_pcs[start_pc] == {tile.furthest_pc},
@@ -462,8 +463,8 @@ def report_findings(instrumentation: Tiling) -> None:
 
     An RTS normally returns directly after a JSR (its PC + 3). An RTS
     target that is not directly after any observed JSR points at an
-    address pushed by the code itself, e.g. the PHA-PHA-RTS jump through a
-    table.
+    address pushed by the code itself: a stack jump, e.g. a dispatch by RTS
+    through a table (PHA/PHA/RTS).
     """
     keys = [TransitionKey._make(k) for k in instrumentation.transitions]
     jsr_pcs = {key.pc for key in keys if key.opcode == JSR}

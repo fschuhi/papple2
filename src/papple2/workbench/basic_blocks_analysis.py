@@ -118,7 +118,7 @@ class BlockGraph:
 
     Blocks are keyed by their start address. edges maps (source, target)
     to how often the edge was taken; successors and predecessors list the
-    neighbours of each block in address order. Both are kept because the
+    neighbors of each block in address order. Both are kept because the
     later steps walk the graph in both directions.
     """
 
@@ -131,9 +131,10 @@ class BlockGraph:
 
 @dataclass
 class Routines:
-    """Every routine of a run, each analysed on its own. All three dicts
+    """Every routine of a run, each analyzed on its own. All three dicts
     are keyed by entry, in the same order: the run's start first, then
-    every JSR target in address order."""
+    every other entry in address order: the JSR targets and the extra
+    entries (stack jumps, shared code, orphans)."""
 
     graphs: dict[int, BlockGraph]
     loops_of: dict[int, dict[int, Loop]]
@@ -276,9 +277,9 @@ def collect_edges(
     """Turn transition rows into edges. A glide, a branch and a JMP each
     give an edge to their target. A JSR gives the call fall-through edge to
     the block directly after it, instead of an edge into the callee. RTS,
-    RTI and BRK give none. With redirected, as redirected_returns() gives them, each one is a call
-    fall-through edge too: from the block holding the JSR to where the
-    return landed."""
+    RTI and BRK give none. With redirected, as redirected_returns() gives
+    them, each one is a call fall-through edge too: from the block holding
+    the JSR to where the return landed."""
     edges: dict[tuple[int, int], int] = defaultdict(int)
     for row in transitions:
         if row.outcome == GLIDE:
@@ -344,7 +345,7 @@ def build_graph(
 ) -> BlockGraph:
     """Build the graph of the basic blocks reachable from entry. An edge
     into a block in stop_at is not followed, and is left out of the graph;
-    entry itself is never a stop, so a jump back to it stays a loop.
+    entry itself is never a stop, so a jump to it stays a loop.
     redirected as for collect_edges()."""
     all_blocks = {
         tile.start: BasicBlock(tile.start, tile.end, tile.executions)
@@ -493,8 +494,8 @@ def back_edges(graph: BlockGraph, idom: dict[int, int]) -> list[tuple[int, int]]
 def loop_body(graph: BlockGraph, header: int, source: int) -> set[int]:
     """The body of the loop closed by the back edge source -> header: the
     header, plus every block that can reach source without passing through
-    the header. The header is in the set from the start, so the backward
-    walk stops there and never leaves the loop."""
+    the header. The header is in the set from the start, so the walk along
+    predecessors stops there and never leaves the loop."""
     body = {header}
     stack = []
     if source not in body:  # a self-loop's body is just the header
@@ -560,9 +561,9 @@ def shared_entries(
 
     A block is shared if more than one routine's graph holds it. Its
     shared part begins there if an edge leads into it from a block held
-    by a different set of routines. Blocks further in, whose predecessors
-    are all held by the same set, are no beginning, and neither is an
-    edge back from inside, e.g. a loop's own branch."""
+    by a different set of routines. Blocks reached only from blocks held
+    by the same set are no beginning, and neither is an edge from inside,
+    e.g. a loop's back edge."""
     holders: dict[int, frozenset[int]] = defaultdict(frozenset)
     for entry, graph in graphs.items():
         for block in graph.blocks:
@@ -577,7 +578,7 @@ def shared_entries(
 def stops_before(tiles: list[SplitTile], entry: int) -> frozenset[int]:
     """The blocks before entry that a routine starting there does not take
     in: an edge into one of them jumps backward past the entry, into code that
-    belongs to someone else, e.g. the JMPs at the end of
+    belongs to another routine, e.g. the JMPs at the end of
     TRY_GUARD_MOVE_DOWN into the tail of TRY_GUARD_MOVE_UP.
 
     The block that ends right at entry is no stop: it is the exit at the
@@ -610,8 +611,9 @@ def shared_by_jump_backward(
     too.
 
     Only a block that is glided into counts. A jump backward into a block that
-    a call's return leads to, e.g. the JMP at $6fb6 into $6f29 in the tail
-    of TRY_GUARD_MOVE_UP, leaves the routine holding it whole."""
+    a call's return leads to, e.g. the JMP at $6fb6 into $6f29
+    (TRY_GUARD_MOVE_UP_inc_anim_state), inside the routine at $6f26, leaves
+    the routine holding it whole."""
     holders: dict[int, frozenset[int]] = defaultdict(frozenset)
     for entry, graph in graphs.items():
         for block in graph.blocks:
@@ -752,10 +754,8 @@ def routine_calls(
     -> calls, in address order. Only JSRs count: a JMP into an entry may be
     a tail call, which only a shadow stack can tell apart.
 
-    The callers of a JSR are all routines whose blocks hold the JSR's
-    block. Code shared by several routines gives a call from each of them,
-    each with the site's whole count: the run does not record through
-    which routine the shared code was reached."""
+    The caller of a JSR is the routine whose blocks hold the JSR's block.
+    Every block lies in exactly one routine, so each JSR has one caller."""
     calls: dict[tuple[int, int], int] = defaultdict(int)
     for row in transitions:
         if row.opcode != JSR:
@@ -778,8 +778,8 @@ def routine_exits(
     stack_jumps() gives them. JSRs are calls, see routine_calls(); other
     RTSs, RTI and BRK are left out.
 
-    As for calls, every routine whose blocks hold an edge's source block
-    gets the edge, each with its whole count."""
+    As for calls, the routine whose blocks hold an edge's source block gets
+    the edge."""
     exits: dict[tuple[int, int, str], int] = defaultdict(int)
     for row in transitions:
         if row.target_tile not in routines.graphs:
@@ -797,7 +797,7 @@ def routine_exits(
         else:
             continue
         for holder, graph in routines.graphs.items():
-            # A jump back to a routine's own entry is a loop, not an exit.
+            # A jump to a routine's own entry is a loop, not an exit.
             if holder != row.target_tile and row.source_tile in graph.blocks:
                 exits[(holder, row.target_tile, kind)] += row.count
     return dict(sorted(exits.items()))
