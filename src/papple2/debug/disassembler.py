@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+"""Disassembler: 6502 instructions read from memory, as rows of address,
+bytes, label, mnemonic, operand and comment."""
+
 from collections.abc import Callable
 
 from papple2.util import signed, hexbyte, chunks, hexaddr
@@ -10,7 +13,7 @@ from papple2.core.cpu import CPU
 # collect_op_info adds "address" (int), "bytes" (list[int]) and "mnemonic" (str).
 type OperandInfo = dict[str, str | int | list[int]]
 
-# Names for Apple II addresses: soft switches and ROM routines. They describe
+# Labels for Apple II addresses: soft switches and ROM routines. They describe
 # the machine, not a program, so the disassembler doesn't add them by itself;
 # whoever wants them passes them in with the other labels.
 STANDARD_LABELS = {
@@ -44,7 +47,7 @@ class Disassembler:
         # address as code, which makes this a plain static disassembler
         self.is_code = is_code
         self.memory = self.cpu.memory
-        # labels: the name for an address, shown in the label column of the
+        # labels: the label of an address, shown in the label column of the
         # instruction at that address and in operands that point at it
         self.labels = labels if labels is not None else {}
         # comments: the comment for an address, shown in the comment column
@@ -330,8 +333,8 @@ class Disassembler:
             "mnemonic": op_info[1],
         }
 
-        # no need to read any argument for immediate addressing mode (has just one entry in the opcode list)
-        # if address mode indicates an argument: info[2] is function pointer for the address mode
+        # An implied or accumulator instruction has no mode function (None)
+        # and no operand to read; otherwise op_info[2] is the mode function.
         if len(op_info) > 2 and op_info[2] is not None:
             specific_instruction_data = op_info[2](pc)
             r.update(specific_instruction_data)
@@ -350,7 +353,7 @@ class Disassembler:
         additional_spaces = byte_block_start % 16
         hexbytes = ['  '] * additional_spaces + hexbytes
 
-        # first address shown must is of course unadjusted
+        # the first line starts at the block's own address
         address = byte_block_start
         for index, chunk in enumerate(list(chunks(hexbytes, 16))):
             line = [
@@ -398,7 +401,7 @@ class Disassembler:
                     self.__disassemble_byte_blocks( byte_block_start, byte_block_end, lines )
                     byte_block_start = None
 
-                # the name of this instruction's own address, if it has one
+                # the label of this instruction's own address, if it has one
                 inline_label = self.labels.get(address, '')
 
                 instruction, length = self.collect_op_info( address )
@@ -438,7 +441,7 @@ class Disassembler:
 
 
     def __name_of(self, address: int) -> str | None:
-        """The name an operand shows for address: its label; else, if
+        """What an operand shows for address: its label; else, if
         address lies inside an instruction that ran and has a label, that
         label and the offset, e.g. selfmod1+2 for the high byte of
         selfmod1's operand, where code that changes itself writes. None if

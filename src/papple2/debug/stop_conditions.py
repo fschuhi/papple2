@@ -1,8 +1,8 @@
-# Ready-made `until` conditions for Emulator.run(), and ready-made
-# breakpoints for Emulator.add_breakpoint(). They live outside core: the
-# core only knows the shape of a condition (the type Until) and of a
-# breakpoint (the type Breakpoint), not which ones an experiment or a test
-# brings along.
+"""Ready-made `until` conditions for Emulator.run(), and ready-made
+breakpoints for Emulator.add_breakpoint(). They live outside core: the
+core only knows the shape of a condition (the type Until) and of a
+breakpoint (the type Breakpoint), not which ones an experiment or a test
+brings along."""
 
 from papple2.core.emulator import Emulator, Until
 

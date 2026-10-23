@@ -1,3 +1,5 @@
+"""Window: the pygame window, and NoWindow for headless runs."""
+
 import time
 from typing import TYPE_CHECKING
 

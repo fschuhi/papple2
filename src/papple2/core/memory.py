@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+"""Memory: the Apple II's 64 KB, and one hook list per kind of access."""
+
 from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING
 
@@ -53,8 +55,8 @@ class Memory:
             self._mem[address + offset] = datum
 
     def read_byte(self, address: int) -> int:
-        # Access to the $C0xx pages with soft switches might be masked by
-        # the soft-switch mechanism.
+        # Reads from $C000..$CFFF go to the soft switches, which may mask
+        # the byte.
         if 0xC000 <= address <= 0xCFFF:
             return (
                 self.apple2.softswitches.read_byte(address)

@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+"""Small helpers: hex formatting, Apple II ASCII, and data_dir from
+papple2.toml."""
+
 import itertools
 import tomllib
 from collections.abc import Iterable, Iterator
@@ -36,7 +39,6 @@ def hexaddr(address: int | None, show_dollar: bool = True, lower: bool = True) -
 
 def hexbyte(byte: int | None, show_dollar: bool = False, lower: bool = True) -> str:
     res = "-" if byte is None else ("$" if show_dollar else "") + hex(byte)[2:].zfill(2)
-    # res = "-" if byte is None else hex(byte)[2:].zfill(2)
     return res if lower else res.upper()
 
 def hexbytes(values: Iterable[int]) -> list[str]:

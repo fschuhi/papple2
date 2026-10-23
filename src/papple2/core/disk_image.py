@@ -13,7 +13,7 @@ Checked against XekriRedmane's track files for Lode Runner: all
 This module stands in for the disk only, not for the drive: no nibbles, no
 disk controller, no timing. Whoever intercepts a program's disk access (for
 Lode Runner, a trap in `papple2.programs.lode_runner`) asks it for
-sectors. Reading only, for now.
+sectors. Reading only.
 """
 
 from pathlib import Path

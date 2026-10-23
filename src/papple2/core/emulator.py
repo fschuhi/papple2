@@ -1,23 +1,7 @@
 #!/usr/bin/env python3
 
-# http://rogerdudler.github.io/git-guide/
-
-# snippets
-# http://www.obelisk.me.uk/6502/maclib.inc
-
-# http://wilsonminesco.com/StructureMacros/
-# http://wilsonminesco.com/6502primer/PgmWrite.html
-# http://wilsonminesco.com/6502primer/PgmTips.html
-# http://wilsonminesco.com/stacks/index.html
-
-# https://www.lysator.liu.se/~nisse/misc/6502-mul.html
-# http://nparker.llx.com/a2/mult.html
-
-# https://news.ycombinator.com/item?id=11661313
-# http://www.capstone-engine.org/documentation.html
-# https://bitbucket.org/mihaila/bindead/wiki/Home
-# https://www.hopperapp.com
-# https://www.hex-rays.com/products/ida/
+"""Emulator: runs the Apple II's CPU, in a window or headless, with
+breakpoints, traps and `until` conditions."""
 
 import logging
 import time
@@ -210,18 +194,10 @@ class Emulator:
         self.instructions = 0
 
 
-    """
-    BIN loading
-    """
-
     def load_image(self, start_address: int, fn: str) -> None:
         self.apple2.memory.load_image(start_address, fn)
         if self.apple2.cpu.PC is None:
             self.apple2.cpu.PC = start_address
-
-    """
-    event loop
-    """
 
     def add_breakpoint(self, new_breakpoint: object) -> None:
         """Put `new_breakpoint.should_break` into the breakpoint list, the
@@ -258,11 +234,11 @@ class Emulator:
 
     def detach(self, instrumentation: object) -> None:
         """Take out again what attach() put in.
+
         `instrumentation.after_read_opcode` gives a new method object each
-        time it is written, so it is not the
-        same object as the one in the list; but the two are equal (same
-        method, same instrumentation), and list.remove() looks for an equal
-        entry."""
+        time it is looked up, so it is not the same object as the one in the
+        list; but the two are equal (same method, same instrumentation), and
+        list.remove() looks for an equal entry."""
         names = []
         for name, hook, hook_list in self._hooks_of(instrumentation):
             hook_list.remove(hook)
@@ -380,5 +356,5 @@ class Emulator:
             if until is not None and not self.is_executing():
                 exit_while = True
 
-        # do some cleanup here
+        # The state the run ended in.
         print(self.states.leaf_state.name)
