@@ -22,7 +22,6 @@
   --grid: #4a4a4a;
   /* Every second row of a table, a little lighter than the page. */
   --stripe: #252525;
-  --note-background: #262626;
   /* A code fence, a listing among them, sits on a background of its own,
      a little lighter than the page, so that the code stands apart from
      the prose. */
@@ -65,8 +64,7 @@ h2,
 h3,
 p,
 ul,
-ol,
-.note {
+ol {
   max-width: var(--prose-width);
 }
 
@@ -132,25 +130,8 @@ code {
   background: var(--code-background);
 }
 
-.note {
-  background: var(--note-background);
-  border-left: 3px solid var(--rule);
-  padding: 10px 14px;
-  margin: 0 0 12px;
-}
-
-.muted {
-  color: var(--muted);
-}
-
-footer {
-  margin-top: 48px;
-  max-width: var(--prose-width);
-  color: var(--muted);
-  font-size: 0.9rem;
-}
-
-/* Tables of words, e.g. the mnemonic classes */
+/* Tables. A column aligned right in the markdown (---:) gets its
+   alignment from markdown-it-py, as style="text-align:right". */
 
 table {
   border-collapse: collapse;
@@ -172,14 +153,6 @@ td {
 th {
   color: var(--muted);
   font-weight: 600;
-}
-
-/* A column of numbers, e.g. counts: right-aligned, so the digits line
-   up. In markdown, a column aligned right (---:). */
-th.number,
-td.number {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
 }
 
 /* Code fences, listings among them: preformatted, the text exactly as in

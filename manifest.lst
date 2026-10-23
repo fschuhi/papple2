@@ -35,24 +35,12 @@ docs/workbench.md
 docs/DIRECTION.md
 docs/ui-ideas.md
 
-# dynamic html to explain hooks for various 6502 operations
-docs/diagrams/inner-loop-hooks.html
-
-# intermediate step: discover structures from Xekri's source
-#docs/listings/listing_clean.tsv
-docs/lr_structures.md
-#docs/lr_structures.html
-docs/lr_answer_key.csv
-docs/TRY_GUARD_MOVE_DOWN-as-it-ran.html
-docs/TRY_MOVING_LEFT_Inside_MOVE_PLAYER.html
-docs/lode-runner-routine-ranges.html
-
 # `lr_xref.csv`
 docs/lr_case_studies.md
 
 # html, LLM translation of markdown, using `style.css`
-docs/html/example.md
-docs/html/example.html
+docs/html/lr_structures.html
+docs/html/routine.html
 docs/html/style.css
 docs/html/style-guide.md
 
@@ -73,6 +61,17 @@ docs/diagrams/workbench.dot
 #docs/diagrams/listing.svg
 #docs/diagrams/run-loop.svg
 #docs/diagrams/workbench.svg
+
+# dynamic html to explain hooks for various 6502 operations
+docs/diagrams/inner-loop-hooks.html
+
+# intermediate step: discover structures from Xekri's source
+#docs/listings/listing_clean.tsv
+docs/lr_structures.md
+docs/lr_answer_key.csv
+docs/TRY_GUARD_MOVE_DOWN-as-it-ran.html
+docs/TRY_MOVING_LEFT_Inside_MOVE_PLAYER.html
+docs/lode-runner-routine-ranges.html
 
 # sections from XekriRedmane's literate-source
 docs/listings/6238-LOAD_LEVEL.lst
