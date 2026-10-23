@@ -35,7 +35,7 @@ from pathlib import Path
 
 from papple2.core.emulator import APPLE_II_CYCLES_PER_SECOND
 from papple2.debug.stop_conditions import instruction_count_reaches
-from papple2.programs.lode_runner import boot
+from papple2.programs.lode_runner import install_rwts, load
 
 MEMORY_SIZE = 0x10000
 SCALE = 3
@@ -236,7 +236,8 @@ def main() -> None:
     # shows the line attach() logs
     logging.basicConfig(level=logging.INFO)
 
-    emulator, rwts = boot(args.binary, headless=True)
+    emulator = load(args.binary, headless=True)
+    rwts = install_rwts(emulator)
 
     counts = ExecutionCounts()
     emulator.attach(counts)

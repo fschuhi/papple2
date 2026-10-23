@@ -458,26 +458,6 @@ def check_split_consistency(
     print("split tile consistency checks passed")
 
 
-def report_findings(instrumentation: Tiling) -> None:
-    """Report what is unusual but not wrong.
-
-    An RTS normally returns directly after a JSR (its PC + 3). An RTS
-    target that is not directly after any observed JSR points at an
-    address pushed by the code itself: a stack jump, e.g. a dispatch by RTS
-    through a table (PHA/PHA/RTS).
-    """
-    keys = [TransitionKey._make(k) for k in instrumentation.transitions]
-    jsr_pcs = {key.pc for key in keys if key.opcode == JSR}
-    unusual = sorted(
-        (key.pc, key.target, instrumentation.transitions[key])
-        for key in keys
-        if key.opcode == RTS and (key.target - 3) & 0xFFFF not in jsr_pcs
-    )
-    print(f"RTS targets not directly after an observed JSR: {len(unusual)}")
-    for pc, target, count in unusual:
-        print(f"    {address(pc)} -> {address(target)} ({count:,}x)")
-
-
 def save_tiles(instrumentation: Tiling, filename: Path) -> None:
     filename.parent.mkdir(parents=True, exist_ok=True)
     with filename.open("w", newline="", encoding="utf-8") as output:
@@ -708,7 +688,7 @@ def save_measurements(
     )
 
     lines = [
-        "LODE RUNNER TILE MEASUREMENTS",
+        "TILE MEASUREMENTS",
         "",
         "ACCOUNTING",
         "  Consistency checks: passed",
