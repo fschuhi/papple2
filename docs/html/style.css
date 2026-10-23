@@ -18,9 +18,10 @@
   --muted: #8c8c8c;
   --rule: #3a3a3a;
   --note-background: #262626;
-  /* A listing sits on a background of its own, a little lighter than
-     the page, so that the code stands apart from the prose. */
-  --listing-background: #262626;
+  /* A code fence, a listing among them, sits on a background of its own,
+     a little lighter than the page, so that the code stands apart from
+     the prose. */
+  --code-background: #262626;
   --arrow: #9a9a9a;
 
   /* Local fonts only: the pages open from disk, without the network.
@@ -31,10 +32,6 @@
 
   --prose-width: 68ch;
   --page-width: 1240px;
-
-  /* One listing row. The arrows in the gutter are drawn on this grid,
-     so it is a fixed height, not a line-height of the font. */
-  --row-height: 20px;
 }
 
 * {
@@ -96,6 +93,20 @@ li {
   margin-bottom: 4px;
 }
 
+hr {
+  max-width: var(--prose-width);
+  margin: 24px 0;
+  border: 0;
+  border-top: 1px solid var(--rule);
+}
+
+/* A heading of the second level draws its own line; directly after a
+   rule, a second line would only double it. */
+hr + h2 {
+  border-top: 0;
+  padding-top: 0;
+}
+
 /* Links don't take a color of their own: every color on these pages
    belongs to the editor. */
 a {
@@ -148,54 +159,71 @@ th {
   border-bottom: 1px solid var(--rule);
 }
 
-/* Listings, as edit() shows them: the gutter with the arrows on the left,
-   then one row per line, each laid out like format_row() in
-   listing_editor.py. The row's text is preformatted, so the columns line
-   up the way they do in the terminal. */
+/* A column of numbers, e.g. counts: right-aligned, so the digits line
+   up. In markdown, a column aligned right (---:). */
+th.number,
+td.number {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
 
-.listing {
-  display: flex;
+/* Code fences, listings among them: preformatted, the text exactly as in
+   the markdown, so the columns line up the way they do in the terminal.
+   In a listing, spans give the bytes, the mnemonics and the gap rows the
+   editor's colors (below); the arrows in the gutter stay plain, as in
+   edit(). */
+
+pre {
   width: max-content;
   max-width: 100%;
   overflow-x: auto;
   margin: 12px 0 20px;
-  padding: 8px 0;
-  background: var(--listing-background);
+  padding: 8px 16px;
+  background: var(--code-background);
   border-radius: 4px;
   font-family: var(--mono);
   font-size: 13px;
-  line-height: var(--row-height);
+  line-height: 1.45;
 }
 
-.listing .gutter {
-  flex: none;
+/* Diagrams: an ASCII diagram from the markdown, drawn as inline SVG in
+   the same layout. Names stand in boxes, arrows join them, labels say
+   what an arrow is. */
+
+.diagram {
+  margin: 12px 0 20px;
+  max-width: 100%;
+  overflow-x: auto;
 }
 
-.listing .rows {
-  flex: none;
-  padding-right: 16px;
+.diagram svg {
+  display: block;
+  font-family: var(--mono);
+  font-size: 13px;
 }
 
-.listing .row {
-  height: var(--row-height);
-  white-space: pre;
+.diagram .box {
+  fill: var(--code-background);
+  stroke: var(--muted);
+  stroke-width: 1;
 }
 
-.gutter .line {
+.diagram .name {
+  fill: var(--text);
+}
+
+.diagram .label {
+  fill: var(--muted);
+}
+
+.diagram .arrow {
   fill: none;
   stroke: var(--arrow);
   stroke-width: 1.4;
 }
 
-.gutter .head {
+.diagram .head {
   fill: var(--arrow);
-}
-
-/* How often the run took the jump. edit() doesn't show it. */
-.gutter .count {
-  fill: var(--muted);
-  font-family: var(--mono);
-  font-size: 10px;
 }
 
 /* The listing editor's colors, from STYLE in listing_editor.py: one rule
