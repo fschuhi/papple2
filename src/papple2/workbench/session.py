@@ -60,8 +60,8 @@ class Session:
         # Where write_report() writes; None until use_reports_folder().
         self.reports_folder: Path | None = None
         # The current dossier's folder and the stores read from it; None
-        # until use_dossier(). Hidden ranges and colors are kept apart from
-        # the labels and comments.
+        # until use_dossier(). Hidden ranges and color ranges are kept apart
+        # from the labels and comments.
         self.dossier_folder: Path | None = None
         self.annotations: Annotations | None = None
         self.hidden: Hidden | None = None
@@ -150,7 +150,7 @@ class Session:
         return self.hidden
 
     def current_colors(self) -> Colors:
-        """The open dossier's colors; stops if no dossier is open."""
+        """The open dossier's color ranges; stops if no dossier is open."""
         if self.dossier_folder is None or self.color_store is None:
             raise RuntimeError("no dossier open; call use_dossier() first")
         return self.color_store
@@ -309,11 +309,11 @@ class Session:
         return len(self.routines.graphs)
 
     def label_routines(self) -> None:
-        """Give each routine entry without a label the name routine_<address>,
-        if a dossier is open."""
+        """Give each routine entry without a label the label
+        routine_<address>, if a dossier is open."""
         # A global label at every entry keeps local labels from belonging
-        # to the routine above. Entries with a label keep it, so names
-        # given by hand stay.
+        # to the global label of the routine before. Entries with a label
+        # keep it, so labels given by hand stay.
         if self.annotations is None or self.routines is None:
             return
         self.annotations.add_labels(
@@ -351,12 +351,13 @@ class Session:
     def listing_range(
         self, start: int | str, end: int | str | None = None
     ) -> tuple[int, int]:
-        """The addresses from start up to, not including, end. start and end are
-        addresses or labels.
+        """The addresses from start to end, not including end. start and end
+        are addresses or labels.
 
         With start alone, start is a routine's entry, and the range covers the
-        whole routine: from its lowest block to its highest, so any gap between
-        its blocks shows too, e.g. code the run never reached."""
+        whole routine: from its block with the lowest address to the end of
+        its block with the highest, so any gap between its blocks shows too,
+        e.g. code the run never reached."""
         found = self.current_routines()
         if end is None:
             blocks = found.graphs[self.routine_at(start)].blocks.values()
@@ -368,7 +369,7 @@ class Session:
 
     def runs_on_into(self, entry: int) -> int | None:
         """Where the routine starting at entry runs on into another routine,
-        without a leap: the address directly after its highest block, if the
+        without a leap: the end of its block with the highest address, if the
         run went on from that block to there, by a glide, a branch not
         taken, or the return of a JSR. None if it never did, e.g. after an
         RTS or a JMP. Every block lies in one routine, so that address lies
@@ -398,7 +399,8 @@ class Session:
         if self.dossier_folder is not None and self.hidden is not None:
             self.hidden.reload()
             hidden_ranges = self.hidden.ranges
-        # The entry before the range: a routine's range may begin below it.
+        # The entry, looked up before the range: a routine's range may start
+        # before its entry.
         entry = self.routine_at(start) if end is None else None
         start, end = self.listing_range(start, end)
         labels = self.annotations.labels if self.annotations is not None else None

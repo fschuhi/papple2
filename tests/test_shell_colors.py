@@ -170,7 +170,7 @@ def test_colors_shows_definitions_in_address_order(
     color("scores", 0x0010, 0x0014, "red")
 
     assert colors().splitlines() == [
-        "range      color    name",
+        "range      shade    name",
         "0010-0014  red      scores",
         "8336-8438  blue     sprites",
     ]

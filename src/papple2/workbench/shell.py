@@ -23,7 +23,7 @@ current one; label(), comment(), unlabel() and uncomment() change its
 annotations, and every change is saved at once. There is one current
 dossier at a time, kept in the module's Session object. Named hidden
 ranges are kept separately in hidden.json; hide() and unhide() change
-their definitions.
+them.
 
 The current run is what one run leaves: the machine and the
 instrumentations that were attached to it, and, once the tiling's reports
@@ -177,10 +177,11 @@ def uncomment(address: int | str) -> None:
 def hide(name: str, start: int | str, end: int | str, note: str) -> None:
     """Save a named hidden range in the current dossier's hidden.json.
 
-    start and end are addresses or labels; end is exclusive. Reusing name
-    replaces its definition. Overlaps with other named ranges are refused.
-    Labels are read afresh before the bounds are resolved, so labels given
-    in another session can be used too. No current run is required.
+    start and end are addresses or labels; end is exclusive. Reusing a name
+    replaces that hidden range. Overlaps with other named ranges are
+    refused. Labels are read afresh before the bounds are resolved, so
+    labels given in another session can be used too. No current run is
+    required.
     """
     store = session.current_hidden()
     session.refresh_annotations()
@@ -198,8 +199,8 @@ def color(
     """Save a named, half-open color range in the current dossier.
 
     Bounds are addresses or labels, resolved before saving. shade is one
-    of red, green, yellow, blue, magenta, cyan and white. Reusing name
-    replaces its definition; overlaps are allowed. No current run is
+    of red, green, yellow, blue, magenta, cyan and white. Reusing a name
+    replaces that color range; overlaps are allowed. No current run is
     required. For a routine, use color(name, *to_range(routine), shade).
     """
     store = session.current_colors()
@@ -220,7 +221,7 @@ def colors() -> None:
     if not store.ranges:
         print("no color ranges")
         return
-    print(f"{'range':<9}  {'color':<7}  name")
+    print(f"{'range':<9}  {'shade':<7}  name")
     for name, definition in sorted(
             store.ranges.items(),
             key=lambda item: (item[1].start, item[0]),
@@ -261,8 +262,8 @@ def memory_map(
         cell_bytes: int = 0x100,
         legend: bool = True,
 ) -> Text:
-    """Show the current dossier's color ranges from start up to, not
-    including, end: 16 cells per row, each cell_bytes bytes, a power of 2.
+    """Show the current dossier's color ranges from start to end, not
+    including end: 16 cells per row, each cell_bytes bytes, a power of 2.
     The default shows the whole 64 KB, a page per cell; cell_bytes=0x10
     makes each row one page. start and end are addresses or labels, and
     are rounded out to whole rows. No run is needed.
@@ -303,7 +304,7 @@ def memory_map(
 ROUTINE_GRAPH_FILE = Path("tmp/routine_graph")
 
 # How routine_graph() draws an exit into another routine's entry, by its
-# kind: the word in front of the count, and the arrow's look. Calls (JSR)
+# kind: the word before the count, and the arrow's look. Calls (JSR)
 # are drawn plain, with the count alone.
 EXIT_LOOKS = {
     "jmp": ("JMP", {"style": "dashed", "color": "blue"}),
@@ -591,10 +592,11 @@ def ways_in(entry: int) -> list[WayIn]:
 
     A JSR leads into the entry, from anywhere. A JMP, a branch or a glide
     counts if it comes from a block of another routine, into any block of
-    this one: into the entry, or through a door further in, e.g. the JMP at
-    $6fb6 into $6f29 in the tail of TRY_GUARD_MOVE_UP. From inside the
-    routine, it is a loop or the code running on. An RTS counts if it is a
-    stack jump, e.g. MOVE_GUARD's dispatch; other RTSs are returns.
+    this one: into the entry, or through a door, e.g. the JMP at $6fb6
+    into $6f29 (TRY_GUARD_MOVE_UP_inc_anim_state), inside the routine at
+    $6f26. From inside the routine, it is a loop or the code running on.
+    An RTS counts if it is a stack jump, e.g. MOVE_GUARD's dispatch; other
+    RTSs are returns.
 
     JMPs count: a JMP into a routine may be a tail call, which only a
     shadow stack can tell apart."""
@@ -756,7 +758,7 @@ def listing(start: int | str, end: int | str | None = None) -> Text:
     """Show the current run's code. With start alone, an address or a
     label, the routine starting there, as its span, and a last row that
     says where it runs on into, if it does. With end, the range from start
-    up to, not including, end.
+    to end, not including end.
 
     Only code that ran is decoded; each gap that never ran is one row.
     With the whole run's arrows, and the dossier's labels, comments and
@@ -779,7 +781,7 @@ def listing(start: int | str, end: int | str | None = None) -> Text:
 def edit(start: int | str, end: int | str | None = None, height: int = 25) -> None:
     """Open the listing editor on the rows listing(start, end) shows: with
     start alone, the routine starting there; with end, the range from start
-    up to, not including, end. Every label and comment changed there is
+    to end, not including end. Every label and comment changed there is
     saved to the current dossier at once.
 
     In the listing: Up, Down, PageUp and PageDown move the bar. Enter
@@ -792,9 +794,10 @@ def edit(start: int | str, end: int | str | None = None, height: int = 25) -> No
     shown. q leaves and keeps them on the screen; Esc or Ctrl+C leaves and
     clears them. All keys: papple2.workbench.listing_editor.
 
-    Each routine opens as it was last left, while the run lasts. The name
-    in an operand has the color of the address it names, if that address
-    lies in a color range. height is the number of lines shown at a time.
+    Each routine opens as it was last left, while the run lasts. The label
+    or address in an operand has the color of the address it names, if
+    that address lies in a color range. height is the number of lines
+    shown at a time.
 
     Needs a real terminal."""
     # Stop before the editor opens, not at the first save.
@@ -809,7 +812,7 @@ def edit(start: int | str, end: int | str | None = None, height: int = 25) -> No
 
     def target_color_of(address: int) -> str | None:
         # Called for every visible operand on every redraw, so it reads the
-        # definitions in memory: loaded below when the editor opens, and
+        # color ranges in memory: loaded below when the editor opens, and
         # again whenever color_of() reloads them for the breadcrumbs.
         if session.color_store is None:
             return None
@@ -865,8 +868,9 @@ def save_edit(address: int, field: str, text: str) -> str | None:
     dossier's changes nothing, not even the file. Returns why the change
     was refused (e.g. a label already used elsewhere), or None.
 
-    A label typed as .name is a local label: the dossier saves it by its
-    full name, with the global label above it, e.g. routine_6238.loop1."""
+    A label typed as .loop1 is a local label: the dossier stores it in
+    full, with the global label before it as its owner, e.g.
+    routine_6238.loop1."""
     dossier = session.current_annotations()
     entries = dossier.labels if field == "label" else dossier.comments
     if text == entries.get(address, ""):
@@ -900,7 +904,7 @@ class HexdumpRow:
 
 
 def hexdump(start: int | str, end: int | str | None = None) -> Text:
-    """Show the current run's memory from start up to, not including, end,
+    """Show the current run's memory from start to end, not including end,
     16 bytes per line: hex on the left, text on the right. start and end are
     addresses or labels. start may lie anywhere in the first line, and end
     is rounded up to a full line, see hexdump_rows(). Without end, 16
@@ -934,7 +938,7 @@ def hexdump(start: int | str, end: int | str | None = None) -> Text:
 
 
 def hexdump_rows(emulator: Emulator, start: int, end: int) -> list[HexdumpRow]:
-    """The lines of a hexdump from start up to, not including, end. start
+    """The lines of a hexdump from start to end, not including end. start
     is rounded down to the start of its line, end up to a full line, and
     neither goes past $FFFF. Prints nothing; print_hexdump() prints them.
 
@@ -1124,7 +1128,7 @@ def routine_graph(
     for entry in sorted(routines.graphs):
         text = address(entry)
         if entry in labels:
-            # \n, two characters: dot's own line break, centred
+            # \n, two characters: dot's own line break, centered
             text = labels[entry] + "\\n" + text
         look: dict[str, str] = {}
         if entry in shades:
