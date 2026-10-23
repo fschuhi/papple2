@@ -460,7 +460,7 @@ def test_save_edit_refuses_a_dotted_label_without_a_global_label_above(
     use_dossier(tmp_path)
 
     assert save_edit(0x6252, "label", ".loop1") == (
-        ".loop1: no global label above $6252 to belong to"
+        ".loop1: no global label before $6252 to belong to"
     )
     assert Annotations(tmp_path).labels == {0x6300: "routine_002"}
 

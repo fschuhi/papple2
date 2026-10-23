@@ -123,7 +123,7 @@ def test_a_local_label_without_a_global_label_above_is_refused(
     annotations = Annotations(tmp_path)
     annotations.label(0x6300, "routine_6300")
 
-    with pytest.raises(ValueError, match=r"no global label above \$6252"):
+    with pytest.raises(ValueError, match=r"no global label before \$6252"):
         annotations.label(0x6252, ".loop1")
 
     assert annotations.labels == {0x6300: "routine_6300"}

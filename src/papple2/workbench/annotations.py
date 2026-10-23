@@ -2,7 +2,7 @@
 
 A dossier is a folder for one program (dossiers/lode_runner/,
 dossiers/nested_loops/). Its annotations live in annotations.json there,
-under git: labels now, comments next. They belong to the program, not to
+under git: labels and comments. They belong to the program, not to
 a run or an IPython session, so a label given today shows tomorrow in a
 run that covers far more code.
 
@@ -12,7 +12,7 @@ the meantime is kept, not overwritten. Nothing is written without a change:
 opening a dossier only to look leaves no trace.
 
 Addresses are the ones the code runs at, i.e. memory after relocation,
-which is what dis() reads.
+which is what listing() and edit() show.
 """
 
 import json
@@ -20,9 +20,9 @@ import re
 from pathlib import Path
 
 # A global label: a letter or _, then letters, digits, _ and : (the colon
-# groups labels, as in rw:HIRES). A local label is stored by its full name:
+# groups labels, as in rw:HIRES). A local label is stored in full:
 # a global label, one dot, then letters, digits and _, e.g.
-# routine_6238.loop2. Stored names stay full and unique, so they don't change
+# routine_6238.loop2. Stored labels stay full and unique, so they don't change
 # when the rules for typing or showing .loop2 change. A local label is typed
 # by its short part alone, .loop2, which is why the rule takes that too.
 # No spaces anywhere.
@@ -32,9 +32,11 @@ VALID_LABEL = re.compile(
 
 
 class Annotations:
+    """The labels and comments in one dossier's annotations.json."""
+
     def __init__(self, folder: Path) -> None:
         self.path = folder / "annotations.json"
-        # Plain dicts, so dis() takes them as they are.
+        # Plain dicts, so the Disassembler takes them as they are.
         self.labels: dict[int, str] = {}
         self.comments: dict[int, str] = {}
         self.reload()
@@ -54,11 +56,11 @@ class Annotations:
         address is refused: dasm would refuse it too, and at the prompt it's
         almost always a typo.
 
-        A local label is typed as .loop1 and gets the global label above it
-        (see with_owners()). Typed by its full name, it must have the owner
-        it would get anyway; otherwise it's refused. Any label change can
-        move local labels to another owner: refused if that gives two labels
-        the same name."""
+        A local label is typed as .loop1 and gets the global label before it
+        as its owner (see with_owners()). Typed in full, it must have the
+        owner it would get anyway; otherwise it's refused. Any label change
+        can move local labels to another owner: refused if that gives two
+        labels the same text."""
         self.reload()
         if not VALID_LABEL.fullmatch(text):
             raise ValueError(
@@ -87,8 +89,8 @@ class Annotations:
             raise ValueError(f"${address:04x} has no label")
         changed = dict(self.labels)
         del changed[address]
-        # Removing a global label merges its scope into the one above:
-        # with_owners() refuses if that gives two local labels one name.
+        # Removing a global label merges its scope into the one before:
+        # with_owners() refuses if that gives two local labels one text.
         self._take(with_owners(changed))
 
     def add_labels(self, labels: dict[int, str]) -> None:
@@ -143,13 +145,13 @@ class Annotations:
 
 
 def with_owners(labels: dict[int, str]) -> dict[int, str]:
-    """labels, with every local label named after the global label above it
-    now: its short part (.loop1) kept, the owner in front given anew. Done
-    for all of them on every change, not just the ones a change touches:
+    """labels, with every local label given the global label before it as
+    its owner: its short part (.loop1) kept, its owner given anew. Done for
+    all of them on every change, not just the ones a change touches:
     simpler, and fast enough for a program's few thousand lines.
 
     Raises ValueError, naming the problem, if a local label has no global
-    label above it, or if two labels would get the same name. labels itself
+    label before it, or if two labels would get the same text. labels itself
     is left alone, so a refused change changes nothing."""
     result: dict[int, str] = {}
     owner = None
@@ -162,7 +164,7 @@ def with_owners(labels: dict[int, str]) -> dict[int, str]:
         short = text[text.index(".") :]
         if owner is None:
             raise ValueError(
-                f"{short}: no global label above ${address:04x} to belong to"
+                f"{short}: no global label before ${address:04x} to belong to"
             )
         result[address] = owner + short
     first_at: dict[str, int] = {}
