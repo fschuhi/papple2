@@ -519,7 +519,7 @@ class SoftSwitches:
         elif address == 0xC057:
             self.display.hires()
         elif address == 0xC060:
-            # no cassette support anymore
+            # no cassette support
             pass
         else:
             pass  # print "%04X" % address

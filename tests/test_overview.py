@@ -2,7 +2,7 @@
 of nested_loops' run.
 
 nested_loops has two routines: the program from 6000, seven blocks, 17
-bytes, running up to done's NOP at 6013-6014, so its span is 20 bytes; and
+bytes, running to done's NOP at 6013-6014, so its span is 20 bytes; and
 sub at 6010, one block of three bytes, called six times by the JSR in
 inner.
 """
@@ -55,9 +55,10 @@ def test_overview_text_names_the_loops_and_the_routines(
 def test_listing_tsv_lists_every_routine_with_a_separator_row_between(
     nested_loops_run, tmp_path: Path
 ) -> None:
-    # 6000's listing runs up to done's NOP and includes sub, which lies
+    # 6000's listing runs to done's NOP and includes sub, which lies
     # inside its span; sub follows with a listing of its own. The separator
-    # row carries sub's name and first address, so no address cell is empty.
+    # row carries sub's label and the first address of its listing, so no
+    # address cell is empty.
     use_dossier(tmp_path / "dossier")
     label(0x6010, "sub")
 

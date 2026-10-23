@@ -16,10 +16,10 @@ def disassembler(memory: Memory, cpu: CPU) -> Disassembler:
     "offset, target",
     [
         (0x00, 0x1002),  # no jump: the instruction right after the branch
-        (0x7E, 0x1080),  # the two longest forward branches, which used to
-        (0x7F, 0x1081),  # come out as backward jumps ($0F80, $0F81)
+        (0x7E, 0x1080),  # the two longest forward branches; with the sign
+        (0x7F, 0x1081),  # read wrong, they would be backward jumps ($0F80, $0F81)
         (0x80, 0x0F82),  # the longest backward branch
-        (0xFE, 0x1000),  # back to the branch itself: an endless loop
+        (0xFE, 0x1000),  # to the branch itself: an endless loop
     ],
 )
 def test_branch_target(
@@ -77,8 +77,8 @@ def test_addresses_that_are_not_code_become_a_byte_block(
 def test_a_named_address_fills_the_label_column(
     memory: Memory, cpu: CPU
 ) -> None:
-    # The label column holds the name of the instruction's own address;
-    # addresses without a name leave it empty.
+    # The label column holds the label of the instruction's own address;
+    # addresses without a label leave it empty.
     disassembler = Disassembler(cpu, {0x0300: "START"})
     memory.load_test_data(0x0300, [0xA9, 0x05, 0x60])  # LDA #$05 / RTS
 
@@ -179,8 +179,8 @@ def test_no_offset_into_a_labelled_byte_that_never_ran(
 def test_an_address_past_ffff_wraps_round(memory: Memory, cpu: CPU) -> None:
     # LDA ($10),Y with the pointer $fff0 and Y = $20 reads at $10010,
     # which wraps round to $0010, as on the 6502. Such bytes turn up in
-    # data decoded as code; they used to stop the listing with an
-    # IndexError.
+    # data decoded as code; without the wrap, they would stop the listing
+    # with an IndexError.
     memory.load_test_data(0x0010, [0xF0, 0xFF])
     memory.load_test_data(0x0300, [0xB1, 0x10])  # LDA ($10),Y
     cpu.Y = 0x20

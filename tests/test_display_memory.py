@@ -25,7 +25,7 @@ def test_write_outside_hires_range_does_not_call_display_update(apple2):
     calls = []
     apple2.display.update = lambda address, value: calls.append((address, value))
 
-    apple2.memory.write_byte(0x6000, 0x11)  # just above the Memory's checked range
+    apple2.memory.write_byte(0x6000, 0x11)  # just after the Memory's checked range
 
     apple2.memory.write_byte(0x5fff, 0x11)  # just on the Memory's checked range
     assert calls == [(0x5fff, 0x11)]

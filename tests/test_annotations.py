@@ -88,10 +88,10 @@ def test_label_refuses_a_text_that_breaks_the_rule(tmp_path: Path, text: str) ->
     assert not (tmp_path / "annotations.json").exists()
 
 
-# Local labels. Throughout: routine_6238 at 6238, and local labels below it.
+# Local labels. Throughout: routine_6238 at 6238, and local labels after it.
 
 
-def test_a_local_label_typed_short_gets_the_global_label_above(
+def test_a_local_label_typed_short_gets_the_global_label_before(
     tmp_path: Path,
 ) -> None:
     annotations = Annotations(tmp_path)
@@ -103,7 +103,7 @@ def test_a_local_label_typed_short_gets_the_global_label_above(
     assert read_file(tmp_path)["labels"]["6252"] == "routine_6238.loop1"
 
 
-def test_a_local_label_typed_by_its_full_name_must_fit(tmp_path: Path) -> None:
+def test_a_local_label_typed_in_full_must_fit(tmp_path: Path) -> None:
     annotations = Annotations(tmp_path)
     annotations.label(0x6238, "routine_6238")
     annotations.label(0x6250, "bla_bla")
@@ -117,7 +117,7 @@ def test_a_local_label_typed_by_its_full_name_must_fit(tmp_path: Path) -> None:
     assert 0x6252 not in annotations.labels
 
 
-def test_a_local_label_without_a_global_label_above_is_refused(
+def test_a_local_label_without_a_global_label_before_is_refused(
     tmp_path: Path,
 ) -> None:
     annotations = Annotations(tmp_path)
@@ -129,7 +129,7 @@ def test_a_local_label_without_a_global_label_above_is_refused(
     assert annotations.labels == {0x6300: "routine_6300"}
 
 
-def test_a_new_global_label_takes_over_the_local_labels_below_it(
+def test_a_new_global_label_takes_over_the_local_labels_after_it(
     tmp_path: Path,
 ) -> None:
     annotations = Annotations(tmp_path)
@@ -143,7 +143,7 @@ def test_a_new_global_label_takes_over_the_local_labels_below_it(
     assert annotations.labels[0x6252] == "bla_bla.loop4"
 
 
-def test_removing_a_global_label_gives_its_local_labels_to_the_one_above(
+def test_removing_a_global_label_gives_its_local_labels_to_the_one_before(
     tmp_path: Path,
 ) -> None:
     annotations = Annotations(tmp_path)
@@ -169,12 +169,12 @@ def test_renaming_a_global_label_renames_its_local_labels(tmp_path: Path) -> Non
     assert annotations.labels[0x6252] == "load_level.loop1"
 
 
-def test_a_change_that_merges_two_scopes_with_one_short_name_is_refused(
+def test_a_change_that_merges_two_scopes_with_one_short_part_is_refused(
     tmp_path: Path,
 ) -> None:
-    # .loop1 under routine_6238, bla_bla below it, .loop1 again under
-    # bla_bla. Removing bla_bla, or making it a local label, would put both
-    # .loop1 under routine_6238.
+    # .loop1 owned by routine_6238, bla_bla after it, .loop1 again owned by
+    # bla_bla. Removing bla_bla, or making it a local label, would give both
+    # .loop1 to routine_6238.
     annotations = Annotations(tmp_path)
     annotations.label(0x6238, "routine_6238")
     annotations.label(0x6252, ".loop1")

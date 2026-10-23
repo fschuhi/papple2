@@ -27,7 +27,7 @@ def make_zeropage_dump_handler(addresses):
 def test_zeropage_dump_handler_reports_given_addresses():
     """
     Attaches a dump handler to the 'l' key on `EmulatorStoppedState`,
-    the way `on_l` used to work before it moved out of the core. The
+    the way code outside the core adds a handler. The
     handler only fires in the 'Stopped' state, so the test drives the
     state machine there first via 'ctrlx' -- the same event a real
     Ctrl-X keypress sends -- before dispatching 'l'.

@@ -235,7 +235,7 @@ def test_listing_rows_show_local_labels_short_within_their_scope(
     make_emulator, capsys
 ) -> None:
     # main.loop shows as .loop in its own line and in the BNE inside main;
-    # the JMP from sub leads into another scope, so it shows the full name.
+    # the JMP from sub leads into another scope, so it shows the full label.
     _asm, emulator = make_emulator(LOCAL_LABELS_PROGRAM)
     labels = {0x6000: "main", 0x6002: "main.loop", 0x6008: "sub"}
 
@@ -437,7 +437,7 @@ def test_save_edit_returns_why_a_label_was_refused(
     assert Annotations(tmp_path).labels == {0x6238: "LOAD_LEVEL"}
 
 
-def test_save_edit_gives_a_dotted_label_the_nearest_global_label_above(
+def test_save_edit_gives_a_dotted_label_the_nearest_global_label_before(
     tmp_path: Path, no_dossier: None
 ) -> None:
     # 6252 is nearer to 6250 than to 6238, but 6250's label is local, so
@@ -453,7 +453,7 @@ def test_save_edit_gives_a_dotted_label_the_nearest_global_label_above(
     assert Annotations(tmp_path).labels[0x6252] == "routine_001.loop1"
 
 
-def test_save_edit_refuses_a_dotted_label_without_a_global_label_above(
+def test_save_edit_refuses_a_dotted_label_without_a_global_label_before(
     tmp_path: Path, no_dossier: None
 ) -> None:
     Annotations(tmp_path).label(0x6300, "routine_002")
@@ -498,7 +498,7 @@ def test_set_current_run_labels_the_routine_entries_without_a_label(
     nested_loops_run, tmp_path: Path, no_run: None, no_dossier: None
 ) -> None:
     # nested_loops' routines start at 6000 and 6010. 6010 has a label
-    # given by hand, which stays; 6000 gets the default name.
+    # given by hand, which stays; 6000 gets the default label.
     Annotations(tmp_path).label(0x6010, "sub")  # not new: no seeding
     use_dossier(tmp_path)
 
@@ -742,9 +742,8 @@ def test_the_run_commands_stop_without_a_current_run(
 
 
 # An endless loop at $6000, so any number of instructions can run. Only
-# lines like nested_loops': begun with INX, the program made the
-# assembler fail (UnboundLocalError for operand), which is not looked into
-# yet.
+# lines like nested_loops': begun with INX, the program makes the
+# assembler fail (UnboundLocalError for operand; TODO.md, "Code tidying").
 ENDLESS_PROGRAM = """
         *=$6000
 LOOP    INC $10
@@ -855,7 +854,7 @@ def test_show_ways_in_leaves_out_the_routines_own_loop(
     make_emulator, tmp_path: Path, no_run: None, no_reports_folder: None,
     no_dossier: None
 ) -> None:
-    # The JMP at 6002 leads back to 6000 from inside the routine: a loop,
+    # The JMP at 6002 leads to 6000 from inside the routine: a loop,
     # not a way in.
     _, emulator = make_emulator(ENDLESS_PROGRAM)
     run(emulator, 10, Tiling)
@@ -866,7 +865,7 @@ def test_show_ways_in_leaves_out_the_routines_own_loop(
 
 
 # Like PUT_STATUS_LIVES and PUT_STATUS_LEVEL: LIVES runs on into BYTE,
-# and LEVEL branches back into it. BYTE becomes a routine of its own.
+# and LEVEL branches backward into it. BYTE becomes a routine of its own.
 #   6000 JSR LIVES   6003 JSR LEVEL   6006 JMP DONE
 #   6009 LDA #$01    600b STA $10     600d RTS
 #   600e LDA #$02    6010 BNE BYTE

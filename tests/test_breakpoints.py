@@ -28,7 +28,7 @@ class AskedAt:
 
 @pytest.fixture
 def emulator() -> Emulator:
-    # four NOPs at $1000-$1003, PC at $1000
+    # four NOPs at $1000..$1003, PC at $1000
     emulator = Emulator(no_display=True)
     emulator.apple2.memory.load_test_data(0x1000, [NOP] * 4)
     emulator.cpu.PC = 0x1000

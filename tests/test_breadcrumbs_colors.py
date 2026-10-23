@@ -42,7 +42,7 @@ def path(
     )
 
 
-def test_past_current_and_future_names_use_their_assigned_colors() -> None:
+def test_past_current_and_future_crumbs_use_their_routines_colors() -> None:
     fragments = path([0x6238, 0x8336], [0x7A3E])
 
     assert ("ansigreen", "load_level") in fragments
@@ -50,7 +50,7 @@ def test_past_current_and_future_names_use_their_assigned_colors() -> None:
     assert ("ansicyan", "lookup_hgr") in fragments
 
 
-def test_only_the_current_name_is_bold() -> None:
+def test_only_the_current_crumb_is_bold() -> None:
     fragments = path([0x6238, 0x8336], [0x7A3E])
 
     assert [
@@ -58,7 +58,7 @@ def test_only_the_current_name_is_bold() -> None:
     ] == ["sprites"]
 
 
-def test_all_uncolored_names_are_gray_and_current_is_bold() -> None:
+def test_all_uncolored_crumbs_are_gray_and_current_is_bold() -> None:
     fragments = path([0x6238, 0x8336], [0x7A3E], shades={})
 
     assert ("class:crumb", "load_level") in fragments
@@ -89,7 +89,7 @@ def test_truncating_the_past_keeps_colors_attached_to_visible_places() -> None:
     assert not any(text == "load_level" for _style, text in fragments)
 
 
-def test_the_current_name_stays_when_the_border_is_too_narrow() -> None:
+def test_the_current_crumb_stays_when_the_border_is_too_narrow() -> None:
     fragments = path([0x6238, 0x8336, 0x7A3E], [], width=5)
 
     assert ("class:crumb", "...") in fragments
@@ -155,7 +155,7 @@ def test_the_shell_supplies_a_live_routine_color_lookup(
     assert callable(lookup)
     assert lookup(0x8336) is None
 
-    # A definition saved after the editor opens is read by the callback.
+    # A color range saved after the editor opens is read by the callback.
     Colors(tmp_path).color("sprites", 0x8336, 0x83A7, "blue")
     assert lookup(0x8336) == "blue"
 

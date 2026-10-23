@@ -85,7 +85,7 @@ def test_branch_and_jmp_edges_are_kept():
 
 
 def test_self_loop_edge():
-    # Like .loop1 in LOAD_LEVEL: a block that branches back to its own start.
+    # Like .loop1 in LOAD_LEVEL: a block that branches to its own start.
     tiles = [tile(0x1000, 0x1006, 31), tile(0x1006, 0x1008, 1)]
     transitions = [
         leap(0x1000, 0x1004, BNE, 0x1000, 30, outcome="taken"),
@@ -328,7 +328,7 @@ def test_natural_loops_of_nested_loops():
 
 
 def test_back_edges_into_one_header_make_one_loop():
-    # Like a `continue`: both a and b branch back to h.
+    # Like a `continue`: both a and b branch to h.
     h, a, b, x = 0x1010, 0x1020, 0x1030, 0x1040
     loops = loops_of([(E, h), (h, a), (a, h), (a, b), (b, h), (b, x)], E)
 
@@ -498,8 +498,8 @@ def test_a_routine_ends_where_it_runs_on_into_another_routine():
     assert routine_exits(routines, transitions) == {(0x2000, 0x2003, "glide"): 1}
 
 
-def test_a_branch_back_to_the_routines_own_entry_stays_a_loop():
-    # $2000 branches back to its own start twice: its entry is no stop.
+def test_a_branch_to_the_routines_own_entry_stays_a_loop():
+    # $2000 branches to its own start twice: its entry is no stop.
     tiles = [
         tile(0x1000, 0x1003), tile(0x1003, 0x1004),
         tile(0x2000, 0x2002, 3), tile(0x2002, 0x2003),
@@ -539,7 +539,7 @@ def test_read_returns(tmp_path: Path):
     ]
 
 
-def test_stack_jumps_need_the_shadow_stack_and_no_jsr_in_front():
+def test_stack_jumps_need_the_shadow_stack_and_no_jsr_directly_before():
     # The JSR at $88cb makes $88ce an ordinary return point, whatever the
     # shadow stack says. Matched, redirected and abandoned rows are no
     # jumps: a redirected return closed a JSR's frame.
@@ -722,7 +722,7 @@ def test_a_shared_loop_entered_by_branch_and_glide_becomes_a_routine():
     assert sorted(routines.graphs[0x3000].blocks) == [0x3000, 0x3002]
     assert list(routines.loops_of[0x3000]) == [0x3000]
     # Entered once by the branch, once by the glide; the loop's own
-    # branch back doesn't count.
+    # branch doesn't count.
     assert routines.calls_into == {0x1000: 1, 0x2000: 1, 0x2FFE: 1, 0x3000: 2}
     assert routine_exits(routines, transitions) == {
         (0x2000, 0x3000, "branch"): 1,

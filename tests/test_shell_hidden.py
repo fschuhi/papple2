@@ -102,7 +102,7 @@ def test_hide_refuses_an_unknown_label_without_saving(
     assert not (tmp_path / "hidden.json").exists()
 
 
-def test_hide_replaces_a_definition_with_the_same_name(
+def test_hide_replaces_a_hidden_range_with_the_same_name(
     tmp_path: Path, no_dossier: None
 ) -> None:
     use_dossier(tmp_path)
@@ -115,7 +115,7 @@ def test_hide_replaces_a_definition_with_the_same_name(
     }
 
 
-def test_hide_refuses_overlap_without_changing_the_saved_definition(
+def test_hide_refuses_overlap_without_changing_the_saved_hidden_range(
     tmp_path: Path, no_dossier: None
 ) -> None:
     use_dossier(tmp_path)
@@ -129,7 +129,7 @@ def test_hide_refuses_overlap_without_changing_the_saved_definition(
     }
 
 
-def test_unhide_removes_the_saved_definition(
+def test_unhide_removes_the_saved_hidden_range(
     tmp_path: Path, no_dossier: None
 ) -> None:
     use_dossier(tmp_path)

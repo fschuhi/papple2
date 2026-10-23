@@ -102,7 +102,7 @@ def test_an_unknown_label_is_refused_without_saving(
     assert not (tmp_path / "colors.json").exists()
 
 
-def test_color_replaces_a_named_definition(
+def test_color_replaces_a_named_color_range(
     tmp_path: Path, no_dossier: None
 ) -> None:
     use_dossier(tmp_path)
@@ -127,7 +127,7 @@ def test_color_allows_overlaps(
     assert len(Colors(tmp_path).ranges) == 2
 
 
-def test_uncolor_removes_a_saved_definition(
+def test_uncolor_removes_a_saved_color_range(
     tmp_path: Path, no_dossier: None
 ) -> None:
     use_dossier(tmp_path)
@@ -162,7 +162,7 @@ def test_color_commands_stop_without_a_dossier(
             colors()
 
 
-def test_colors_shows_definitions_in_address_order(
+def test_colors_shows_color_ranges_in_address_order(
     tmp_path: Path, no_dossier: None
 ) -> None:
     use_dossier(tmp_path)
@@ -185,7 +185,7 @@ def test_colors_reports_an_empty_store(
     assert not (tmp_path / "colors.json").exists()
 
 
-def test_colors_reloads_definitions_from_another_session(
+def test_colors_reloads_color_ranges_from_another_session(
     tmp_path: Path, no_dossier: None
 ) -> None:
     use_dossier(tmp_path)

@@ -19,7 +19,7 @@ def test_a_new_store_has_no_ranges_and_writes_nothing(tmp_path: Path) -> None:
     assert not (tmp_path / "lode_runner").exists()
 
 
-def test_hide_writes_the_definition_at_once(tmp_path: Path) -> None:
+def test_hide_writes_the_hidden_range_at_once(tmp_path: Path) -> None:
     hidden = Hidden(tmp_path)
 
     hidden.hide(
@@ -40,7 +40,7 @@ def test_hide_writes_the_definition_at_once(tmp_path: Path) -> None:
     }
 
 
-def test_a_second_store_reads_the_saved_definitions(tmp_path: Path) -> None:
+def test_a_second_store_reads_the_saved_hidden_ranges(tmp_path: Path) -> None:
     Hidden(tmp_path).hide(
         "relocation_bytes", 0x2800, 0x2832, "overwritten"
     )
@@ -52,7 +52,7 @@ def test_a_second_store_reads_the_saved_definitions(tmp_path: Path) -> None:
     }
 
 
-def test_reusing_a_name_replaces_its_definition(tmp_path: Path) -> None:
+def test_reusing_a_name_replaces_its_hidden_range(tmp_path: Path) -> None:
     hidden = Hidden(tmp_path)
     hidden.hide("relocation_bytes", 0x2800, 0x2830, "first bounds")
 
@@ -64,7 +64,7 @@ def test_reusing_a_name_replaces_its_definition(tmp_path: Path) -> None:
     assert Hidden(tmp_path).ranges == hidden.ranges
 
 
-def test_repeating_a_definition_leaves_the_file_untouched(
+def test_repeating_a_hidden_range_leaves_the_file_untouched(
     tmp_path: Path,
 ) -> None:
     hidden = Hidden(tmp_path)
@@ -78,7 +78,7 @@ def test_repeating_a_definition_leaves_the_file_untouched(
     assert (tmp_path / "hidden.json").read_text(encoding="utf-8") == compact
 
 
-def test_repeating_a_definition_does_not_recreate_a_missing_file(
+def test_repeating_a_hidden_range_does_not_recreate_a_missing_file(
     tmp_path: Path,
 ) -> None:
     hidden = Hidden(tmp_path)
@@ -183,7 +183,7 @@ def test_a_replacement_cannot_overlap_another_range(tmp_path: Path) -> None:
     assert Hidden(tmp_path).ranges == before
 
 
-def test_unhide_removes_the_definition_at_once(tmp_path: Path) -> None:
+def test_unhide_removes_the_hidden_range_at_once(tmp_path: Path) -> None:
     hidden = Hidden(tmp_path)
     hidden.hide("relocation_bytes", 0x2800, 0x2832, "overwritten")
 
@@ -204,7 +204,7 @@ def test_unhide_refuses_an_unknown_name_without_writing(
     assert not (tmp_path / "hidden.json").exists()
 
 
-def test_definitions_are_saved_in_address_order(tmp_path: Path) -> None:
+def test_hidden_ranges_are_saved_in_address_order(tmp_path: Path) -> None:
     hidden = Hidden(tmp_path)
     hidden.hide("relocation_bytes", 0x2800, 0x2832, "overwritten")
     hidden.hide("startup", 0x0800, 0x0803, "overwritten")
@@ -212,7 +212,7 @@ def test_definitions_are_saved_in_address_order(tmp_path: Path) -> None:
     assert list(read_file(tmp_path)) == ["startup", "relocation_bytes"]
 
 
-def test_a_change_keeps_a_definition_from_another_session(
+def test_a_change_keeps_a_hidden_range_from_another_session(
     tmp_path: Path,
 ) -> None:
     first = Hidden(tmp_path)
@@ -228,7 +228,7 @@ def test_a_change_keeps_a_definition_from_another_session(
     assert second.ranges == Hidden(tmp_path).ranges
 
 
-def test_overlap_with_a_definition_from_another_session_is_refused(
+def test_overlap_with_a_hidden_range_from_another_session_is_refused(
     tmp_path: Path,
 ) -> None:
     first = Hidden(tmp_path)
@@ -243,7 +243,7 @@ def test_overlap_with_a_definition_from_another_session_is_refused(
     }
 
 
-def test_unhide_keeps_other_definitions_from_another_session(
+def test_unhide_keeps_other_hidden_ranges_from_another_session(
     tmp_path: Path,
 ) -> None:
     first = Hidden(tmp_path)
