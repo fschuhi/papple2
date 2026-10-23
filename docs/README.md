@@ -49,6 +49,5 @@ Also reference, outside `docs/`: the walkthrough, `tests/test_walkthrough.py`, w
 - [`reports/`](reports/) -- the committed reports of the experiments, one reports folder per experiment.
 - [`diagrams/`](diagrams/) -- the diagrams' Graphviz sources (`.dot`) and the SVGs `make presentation` renders from them; `routine_graph.svg` is an output of `show_routine_graph()`.
 - [`listings/`](listings/) -- Xekri's listing: the whole of it as a table (`listing_clean.tsv`), and single subroutines (`.lst`).
-- [`html/`](html/) -- the HTML pages, reading versions of the markdown, made by `make html FILE=docs/<file>.md` (`tools/render_html.py`): listings in the listing editor's colors, from the stylesheet `style.css`. `example.md` holds every element a page can have.
-- [`lr_structures.html`](lr_structures.html) -- an HTML version of `lr_structures.md`.
+- [`html/`](html/) -- the HTML pages, reading versions of the markdown, made by `make html FILE=docs/<file>.md` (`tools/render_html.py`): listings in the listing editor's colors, from the stylesheet `style.css`. A page's diagrams, drawn by an LLM from the prompt `make html` writes, are in `<name>-diagrams.html`.
 - [`images/`](images/) -- the screenshots in the top-level `README.md`.

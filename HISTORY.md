@@ -9,6 +9,9 @@
 
 ---
 
+- **2026-10-23:** Drawn diagrams, without drawing them one by one. `make html` writes one prompt per document; an LLM answers with the SVGs of all its diagrams at once, and the next `make html` puts each in its place. The four diagrams of `lr_structures.md`, drawn in one answer.
+- **2026-10-23:** "Routine" as a page: every way a routine starts, and the exit at the door, with its real listing and arrows from the attract play, each one checked against the reports.
+- **2026-10-23:** Any markdown file as a reading page, in a second: `make html FILE=docs/routine.md` writes `docs/html/routine.html`, dark, with listings in the colors of `edit()`, taken from the code and kept equal to the editor by a test.
 - **2026-10-23:** Every docstring and comment read against the glossary: the workbench line by line, then the programs, scripts, core, debug and tools; the tests and the ApplePy code by search. 41 tests got names that say the same.
 - **2026-10-22:** The code speaks the glossary. Not one "behind" is left in the code, its comments or its names, and a test keeps it that way: the first new one fails `make test`.
 - **2026-10-22:** `help()` at the prompt tells the truth. Every command says what it does, `listing()` and `edit()` for themselves. The pipeline's module docstrings, from the tiling to the routines, speak the glossary, and "the transformer pass" of the first week is gone.

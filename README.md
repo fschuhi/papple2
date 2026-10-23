@@ -166,6 +166,7 @@ make walkthrough     # nested_loops through tiling and the basic blocks analysis
 make walkthrough-md  # The walkthrough's chapters as a document, tmp/walkthrough/walkthrough.md
 make ipython         # IPython in the venv; then e.g. %run scripts/lr_basic_blocks_analysis.py
 make presentation    # Render the diagrams: SVG next to docs/diagrams/*.dot, PDF and PNG into tmp/presentation/
+make html FILE=docs/routine.md  # The markdown as a reading page in docs/html/; a prompt for an LLM to draw its diagrams into tmp/html/
 ```
 
 `make setup` will happily produce a broken install if your default `python3` resolves to 3.14. If needed: `rm -rf .venv && python3.12 -m venv .venv && make setup`.
