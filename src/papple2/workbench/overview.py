@@ -10,7 +10,7 @@ with the dossier's labels next to the addresses:
     lr_listing.tsv    the listing of every routine, one after the other
 
 All three are built from the Session's current run: its routines (with the
-targets of stack jumps, if the returns report was read), its transitions,
+targets of stack jumps, if lr_returns.csv was read), its transitions,
 its emulator's instruction count and memory. write_overview_reports() writes them
 into the Session's reports folder; the command overview_reports() in
 shell.py calls it.
@@ -58,10 +58,10 @@ LISTING_FIELDS = (
 @dataclass(frozen=True)
 class RoutineLine:
     """One routine as the overview shows it. end is exclusive, the end of
-    its highest block, as listing() lists the routine; span_bytes is
-    end - entry, gaps included; blocks_bytes counts only the bytes of its
-    blocks. calls holds the names of the routines it calls by JSR: their
-    labels, or their addresses where they have none."""
+    its block with the highest address, as listing() lists the routine;
+    span_bytes is end - entry, gaps included; blocks_bytes counts only the
+    bytes of its blocks. calls holds the routines it calls by JSR, each as
+    its label, or as its address where it has none."""
 
     entry: int
     label: str
@@ -220,13 +220,15 @@ def overview_text(session: Session) -> str:
 def listing_tsv(session: Session) -> str:
     """The text of lr_listing.tsv: the listing of every routine of the
     current run, in address order, as listing(entry) shows it, without
-    the arrows. Code shared by several routines shows once in each.
+    the arrows. Code that lies within the spans of several routines shows
+    once in each.
 
     Every row has an address, so that Excel can sort and filter on it: a
     row that stands for no instruction (a gap that never ran, a hidden
     range, the empty line before .byte data) takes the address of the next
     row that has one. Between two routines, an empty row carries the next
-    routine's name and first address."""
+    routine, as its label or its entry, and the first address of its
+    listing."""
     labels = current_labels(session)
     out = io.StringIO()
     writer = csv.writer(out, delimiter="\t")
