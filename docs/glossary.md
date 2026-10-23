@@ -20,7 +20,7 @@ The words used across `papple2`'s code, tests, documentation and dialogue, gover
 
 ## 2. Positions in Code
 
-- **Lower, higher, before, after, backward, forward:** positions in code are named by address. A lower address comes before, a higher one after; a jump to a lower address goes backward, to a higher one forward. The instruction directly after a `JSR` starts 3 bytes after the `JSR`'s address. A comparison of values names the address: "the orphan with the lowest address". Above and below are used only for rows on the screen, in `listing()` and `edit()`, where the lower address is shown above. Order in time, during a run, is earlier and later. Not used for positions in code: behind, in front of, up, down.
+- **Lower, higher, before, after, backward, forward:** positions in code are named by address. A lower address comes before, a higher one after; a jump to a lower address goes backward, to a higher one forward. The instruction directly after a `JSR` starts 3 bytes after the `JSR`'s address. A comparison of values names the address: "the orphan with the lowest address". Above and below are used only for rows on the screen, in `listing()` and `edit()`, where the lower address is shown above. Order in time, during a run, is earlier and later. In `edit()`, Backspace goes back and f forward through the places shown: history, not positions. Not used for positions in code: behind, in front of, up, down.
 - **Range, start, end:** a range of addresses is half-open: `start` is its first byte, `end` the first byte after it. `6004-6007` holds three bytes. `end` is never the last byte. A pair that includes both bounds is `first` and `last`. An inclusive range, from first to last, is written with two dots: `$0000..$1FFF`. The Monitor writes it with one dot, `0.1FFF`; outside sources are quoted as they are written.
 
 ---
@@ -40,8 +40,8 @@ The words used across `papple2`'s code, tests, documentation and dialogue, gover
 - **Dossier:** everything we know about one program, a folder under git: `dossiers/lode_runner/`. Annotations, hidden ranges and color ranges are separate files; snapshots may follow.
 - **Annotations:** the labels and comments in a dossier, by address, in `annotations.json`.
 - **Label:** the name of one address; one text names one address only. Snake case: `lookup_hgr`; the Apple II's standard labels stay uppercase (`r:KBD`), so they stand out. A local label is typed as `.loop1` and stored with the global label before it as its owner (`routine_6238.loop1`).
-- **Hidden range:** a named address span saved in `hidden.json`, shown as one collapsed row rather than decoded bytes.
-- **Color range:** a named address span and shade saved in `colors.json`, used by shared lookup functions and rendered according to each view's purpose.
+- **Hidden range:** a named range of addresses saved in `hidden.json`, shown as one collapsed row rather than decoded bytes.
+- **Color range:** a named range of addresses and a shade saved in `colors.json`, used by shared lookup functions and rendered according to each view's purpose.
 
 ---
 

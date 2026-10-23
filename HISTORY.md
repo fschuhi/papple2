@@ -9,6 +9,7 @@
 
 ---
 
+- **2026-10-23:** Every docstring and comment read against the glossary: the workbench line by line, then the programs, scripts, core, debug and tools; the tests and the ApplePy code by search. 41 tests got names that say the same.
 - **2026-10-22:** The code speaks the glossary. Not one "behind" is left in the code, its comments or its names, and a test keeps it that way: the first new one fails `make test`.
 - **2026-10-22:** `help()` at the prompt tells the truth. Every command says what it does, `listing()` and `edit()` for themselves. The pipeline's module docstrings, from the tiling to the routines, speak the glossary, and "the transformer pass" of the first week is gone.
 - **2026-10-21:** One glossary, `docs/glossary.md`, and every reference document checked against it and against the code, line by line.
